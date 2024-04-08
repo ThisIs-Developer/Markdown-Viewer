@@ -3,6 +3,13 @@ body {
   padding: 20px;
   display: flex;
   height: 100vh;
+  flex-direction: column;
+}
+
+#navbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 #markdown-container {
@@ -21,7 +28,6 @@ body {
 #markdown-input {
   margin-right: 10px;
   line-height: 2;
-  padding: 10px;
 }
 
 #markdown-output {

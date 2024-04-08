@@ -7,6 +7,31 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <div id="navbar">
+      <button id="btn-reset">Reset</button>
+      <button id="btn-copy">Copy</button>
+      <button id="btn-sync-scroll">Sync Scroll</button>
+
+      <select id="preview-as">
+        <option disabled selected value="">Select</option>
+        <option value="html">Preview as HTML</option>
+        <option value="pdf">Preview as PDF</option>
+        <option value="markdown">Preview as Markdown</option>
+      </select>
+
+      <select id="export-as">
+        <option disabled selected value="">Select</option>
+        <option value="html">Export as HTML</option>
+        <option value="pdf">Export as PDF</option>
+        <option value="markdown">Export as Markdown</option>
+      </select>
+
+      <select id="import">
+        <option disabled selected value="">Select</option>
+        <option value="html">Import HTML</option>
+        <option value="markdown">Import Markdown</option>
+      </select>
+    </div>
     <div id="markdown-container">
       <textarea
         id="markdown-input"
@@ -16,6 +41,9 @@
       <div id="markdown-output"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
