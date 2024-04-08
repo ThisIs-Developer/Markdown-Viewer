@@ -1,0 +1,35 @@
+body {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  display: flex;
+  height: 100vh;
+}
+
+#markdown-container {
+  display: flex;
+  flex: 1;
+  height: 100%;
+}
+
+#markdown-input, #markdown-output {
+  flex: 1;
+  padding: 10px;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+#markdown-input {
+  margin-right: 10px;
+  line-height: 2;
+  padding: 10px;
+}
+
+#markdown-output {
+  border: 1px solid #ccc;
+  overflow-y: auto;
+}
+
+#markdown-output img {
+  max-width: 100%;
+  height: auto;
+}
