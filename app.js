@@ -6,6 +6,7 @@ const md = window.markdownit({
   
   const markdownInput = document.getElementById('markdown-input');
   const markdownOutput = document.getElementById('markdown-output');
+  const chkSyncScroll = document.getElementById('chk-sync-scroll');
   
   markdownInput.addEventListener('input', () => {
     const markdownText = markdownInput.value;
@@ -22,12 +23,24 @@ const md = window.markdownit({
     markdownInput.select();
     document.execCommand('copy');
   });
-  
-  document.getElementById('btn-sync-scroll').addEventListener('click', () => {
-    markdownInput.addEventListener('scroll', () => {
-      markdownOutput.scrollTop = markdownInput.scrollTop;
-    });
+
+  chkSyncScroll.addEventListener('change', () => {
+    if (chkSyncScroll.checked) {
+        markdownInput.addEventListener('scroll', syncScroll);
+    markdownOutput.addEventListener('scroll', syncScroll);
+    } else {
+      markdownInput.removeEventListener('scroll', syncScroll);
+      markdownOutput.removeEventListener('scroll', syncScroll);
+    }
   });
+
+function syncScroll(event) {
+  const target = event.target;
+  const scrollValue = target.scrollTop;
+  const otherElement = target === markdownInput ? markdownOutput : markdownInput;
+  otherElement.scrollTop = scrollValue;
+}
+
   
   document.getElementById('preview-as').addEventListener('change', () => {
     const selectedOption = document.getElementById('preview-as').value;

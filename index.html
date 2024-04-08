@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/assets/logo.png">
     <title>Markdown Viewer</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -10,27 +12,39 @@
     <div id="navbar">
       <button id="btn-reset">Reset</button>
       <button id="btn-copy">Copy</button>
-      <button id="btn-sync-scroll">Sync Scroll</button>
+      <div class="sync">
+        <input type="checkbox" id="chk-sync-scroll" />
+        <label for="chk-sync-scroll">Sync Scroll</label>
+      </div>
 
-      <select id="preview-as">
-        <option disabled selected value="">Select</option>
-        <option value="html">Preview as HTML</option>
-        <option value="pdf">Preview as PDF</option>
-        <option value="markdown">Preview as Markdown</option>
-      </select>
+      <div class="preview">
+        <label for="preview-as">Preview as:</label>
+        <select id="preview-as">
+          <option disabled selected value="">Select</option>
+          <option value="html">Preview as HTML</option>
+          <option value="pdf">Preview as PDF</option>
+          <option value="markdown">Preview as Markdown</option>
+        </select>
+      </div>
 
-      <select id="export-as">
-        <option disabled selected value="">Select</option>
-        <option value="html">Export as HTML</option>
-        <option value="pdf">Export as PDF</option>
-        <option value="markdown">Export as Markdown</option>
-      </select>
+      <div class="export">
+        <label for="export-as">Export as:</label>
+        <select id="export-as">
+          <option disabled selected value="">Select</option>
+          <option value="html">Export as HTML</option>
+          <option value="pdf">Export as PDF</option>
+          <option value="markdown">Export as Markdown</option>
+        </select>
+      </div>
 
-      <select id="import">
-        <option disabled selected value="">Select</option>
-        <option value="html">Import HTML</option>
-        <option value="markdown">Import Markdown</option>
-      </select>
+      <div class="import">
+        <label for="import">Import:</label>
+        <select id="import">
+          <option disabled selected value="">Select</option>
+          <option value="html">Import HTML</option>
+          <option value="markdown">Import Markdown</option>
+        </select>
+      </div>
     </div>
     <div id="markdown-container">
       <textarea
