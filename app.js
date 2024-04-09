@@ -117,6 +117,52 @@ document.getElementById('export-as').addEventListener('change', () => {
   document.getElementById('export-as').selectedIndex = 0;
 });
 
-document.getElementById('import').addEventListener('change', () => {
-  const selectedOption = document.getElementById('import').value;
+document.getElementById('import').addEventListener('change', (event) => {
+  const selectedOption = event.target.value;
+  const turndown = new TurndownService();
+
+  if (selectedOption === 'html') {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.html';
+
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const importedHtml = event.target.result;
+        const markdownText = turndown.turndown(importedHtml);
+        markdownInput.value = markdownText.trim();
+        const htmlText = md.render(markdownText);
+        markdownOutput.innerHTML = htmlText;
+      };
+
+      reader.readAsText(file);
+    };
+
+    input.click();
+  } else if (selectedOption === 'markdown') {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md, .markdown';
+
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const importedMarkdown = event.target.result;
+        markdownInput.value = importedMarkdown.trim();
+        const htmlText = md.render(importedMarkdown);
+        markdownOutput.innerHTML = htmlText;
+      };
+
+      reader.readAsText(file);
+    };
+
+    input.click();
+  }
+
+  document.getElementById('import').selectedIndex = 0;
 });
