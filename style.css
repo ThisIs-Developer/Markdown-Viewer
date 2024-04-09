@@ -4,6 +4,7 @@ body {
   display: flex;
   height: 100vh;
   flex-direction: column;
+  background-color: #ebe0fb;
 }
 
 #navbar {
@@ -11,7 +12,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  background-color: #fff;
+  background-color: #BEADFA;
   z-index: 1000;
   display: flex;
   justify-content: space-around;
@@ -81,9 +82,9 @@ body {
 
 #navbar select {
   padding: 8px;
-  border: 1px solid #ccc;
+  border: 1px solid #BEADFA;
   border-radius: 4px;
-  background-color: #f8f9fa;
+  background-color: #DFCCFB;
   border-radius: 15px;
 }
 
