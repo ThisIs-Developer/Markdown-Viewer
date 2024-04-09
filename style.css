@@ -69,8 +69,7 @@ body {
   background-color: #ee172d;
   color: #fff;
   border: none;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 8px 16px;
   cursor: pointer;
   transition: background-color 0.3s ease;
   border-radius: 15px;
@@ -112,6 +111,11 @@ body {
 
 .sync {
   margin-top: 5px;
+}
+
+#navbar-logo {
+  display: block;
+  height: 40px;
 }
 
 @media (max-width: 1200px) {
@@ -162,5 +166,9 @@ body {
   #navbar #btn-reset,
   #navbar #btn-copy {
     width: calc(50% - 5px);
+  }
+
+  #navbar #navbar-logo {
+    display: none;
   }
 }
