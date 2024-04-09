@@ -153,12 +153,15 @@ body {
   #markdown-container {
     flex-direction: column;
     margin-top: 0;
-    margin-bottom: 10px;
   }
 
   #markdown-input {
     margin-right: 0;
-    margin-bottom: 7px;
+    margin-bottom: 10px;
+  }
+
+  #markdown-output {
+    margin-bottom: 30px;
   }
 
   #navbar .btn-container {
