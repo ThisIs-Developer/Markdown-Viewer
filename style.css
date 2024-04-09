@@ -14,7 +14,7 @@ body {
   background-color: #fff;
   z-index: 1000;
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   margin-bottom: 10px;
   padding: 10px 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -58,6 +58,7 @@ body {
   cursor: pointer;
   transition: background-color 0.3s ease;
   border-radius: 15px;
+  width: 100px;
 }
 
 #navbar button:hover {
@@ -68,7 +69,8 @@ body {
   background-color: #ee172d;
   color: #fff;
   border: none;
-  padding: 8px 16px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   cursor: pointer;
   transition: background-color 0.3s ease;
   border-radius: 15px;
@@ -112,9 +114,10 @@ body {
   margin-top: 5px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   #navbar {
     flex-direction: column;
+    position: static;
   }
 
   #navbar button {
@@ -130,17 +133,34 @@ body {
     margin-bottom: 20px;
   }
 
-  #navbar label, select {
+  #navbar label,
+  select {
     margin-top: 5px;
-    margin-bottom: 5px;
+    margin-bottom: 9px;
+    width: 100%;
+  }
+
+  #navbar label {
+    margin-left: 7PX;
   }
 
   #markdown-container {
     flex-direction: column;
+    margin-top: 0;
   }
 
   #markdown-input {
     margin-right: 0;
     margin-bottom: 10px;
+  }
+
+  #navbar .btn-container {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  #navbar #btn-reset,
+  #navbar #btn-copy {
+    width: calc(50% - 5px);
   }
 }
