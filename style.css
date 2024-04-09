@@ -122,6 +122,7 @@ body {
   #navbar {
     flex-direction: column;
     position: static;
+    border-radius: 7px;
   }
 
   #navbar button {
