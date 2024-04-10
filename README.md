@@ -1,4 +1,4 @@
-# Markdown Viewer 👀
+# Markdown Viewer<img src="https://github.com/ThisIs-Developer/Markdown-Viewer/assets/109382325/f3e4b5d0-3277-46fd-8565-06f1f3142d3b" alt="screen_1" height="50" width="50">
 
 ## Description ℹ️
 This _Markdown Viewer_ is a simple web application that allows you to preview and manipulate Markdown text. You can input Markdown text, view the rendered HTML output, and perform various actions such as copying the text, exporting it in different formats, and more.
