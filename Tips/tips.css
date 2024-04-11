@@ -1,0 +1,128 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #ebe0fb;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1, h2, h3 {
+    color: black;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 15px;
+    text-align: left;
+}
+
+.basic-description {
+    margin-bottom: 40px;
+}
+
+.extended-description {
+    margin-bottom: 40px;
+}
+
+@media screen and (max-width: 1200px) {
+    .container {
+        padding: 10px;
+        margin: 10px; 
+    }
+
+    table {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+
+    th, td {
+        padding: 6px;
+    }
+
+    .navbar .logo {
+        display: none;
+    }
+
+    .logo-link {
+        display: inline-block;
+        margin-left: 1rem;
+    }
+
+    .nav-links {
+        display: flex;
+    }
+}
+
+.navbar {
+    background-color: #BEADFA;
+    color: black;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    margin: 0;
+    font-size: 24px;
+    display: inline;
+    padding-left: 2rem;
+}
+
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+    margin-left: 1rem;
+}
+
+.nav-links {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+.nav-links li {
+    margin-right: 20px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: black;
+    font-size: 18px;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: #6148bb;
+}
+
+.navbar-logo {
+    height: 30px;
+}
+
+.first {
+    display: flex;
+    align-items: center;
+}
+
+.second .nav-links {
+    display: flex;
+    align-items: center;
+}
+
+.github {
+    height: 30px;
+}

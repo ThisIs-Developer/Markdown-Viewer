@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <title>Cheat Sheet</title>
+    <link rel="stylesheet" href="tips.css" />
+  </head>
+<body>
+
+    <nav class="navbar">
+        <div class="first">
+            <h1 class="logo">Markdown Syntax Cheat Sheet</h1>
+            <a href="../index.html" target="_blank" class="logo-link">
+                <img src="../assets/logo-navbar.png" alt="Logo" class="navbar-logo" />
+            </a>
+        </div>
+
+        <div class="second">
+            <ul class="nav-links">
+                <li><a href="#basic">Basic </a></li>
+                <li><a href="#extended">Extended</a></li>
+                <li>
+                    <a href="https://github.com/ThisIs-Developer/Markdown-Viewer" target="_blank">
+                        <img src="../assets/github.png" alt="Github" class="github">
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <section id="basic" class="basic-description">
+            <h2>Basic Syntax</h2>
+            <p>These are the elements outlined in John Gruber’s original design document. All Markdown applications support these elements.</p>
+        </section>
+
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Element</th>
+                    <th scope="col">Markdown Syntax</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Heading</td>
+                    <td># H1<br>## H2<br>### H3</td>
+                </tr>
+                <tr>
+                    <td>Bold</td>
+                    <td>**bold text**</td>
+                </tr>
+                <tr>
+                    <td>Italic</td>
+                    <td>*italicized text*</td>
+                </tr>
+                <tr>
+                    <td>Blockquote</td>
+                    <td>&gt; blockquote</td>
+                </tr>
+                <tr>
+                    <td>Ordered List</td>
+                    <td>1. First item<br>2. Second item<br>3. Third item</td>
+                </tr>
+                <tr>
+                    <td>Unordered List</td>
+                    <td>- First item<br>- Second item<br>- Third item</td>
+                </tr>
+                <tr>
+                    <td>Code</td>
+                    <td>`code`</td>
+                </tr>
+                <tr>
+                    <td>Horizontal Rule</td>
+                    <td>---</td>
+                </tr>
+                <tr>
+                    <td>Link</td>
+                    <td>[title](https://www.example.com)</td>
+                </tr>
+                <tr>
+                    <td>Image</td>
+                    <td>![alt text](image.jpg)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <section id="extended" class="extended-description">
+            <h2>Extended Syntax</h2>
+            <p>These elements extend the basic syntax by adding additional features. Not all Markdown applications support these elements.</p>
+        </section>
+
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Element</th>
+                    <th scope="col">Markdown Syntax</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Table</td>
+                    <td>| Syntax | Description |<br>| ----------- | ----------- |<br>| Header | Title |<br>| Paragraph | Text |</td>
+                </tr>
+                <tr>
+                    <td>Fenced Code Block</td>
+                    <td>```<br>{<br>  "firstName": "John",<br>  "lastName": "Smith",<br>  "age": 25<br>}<br>```</td>
+                </tr>
+                <tr>
+                    <td>Footnote</td>
+                    <td>Here's a sentence with a footnote. [^1]<br><br>[^1]: This is the footnote.</td>
+                </tr>
+                <tr>
+                    <td>Heading ID</td>
+                    <td>### My Great Heading {#custom-id}</td>
+                </tr>
+                <tr>
+                    <td>Definition List</td>
+                    <td>term<br>: definition</td>
+                </tr>
+                <tr>
+                    <td>Strikethrough</td>
+                    <td>~~The world is flat.~~</td>
+                </tr>
+                <tr>
+                    <td>Task List</td>
+                    <td>- [x] Write the press release<br>- [ ] Update the website<br>- [ ] Contact the media</td>
+                </tr>
+                <tr>
+                    <td>Emoji</td>
+                    <td>That is so funny! :joy:</td>
+                </tr>
+                <tr>
+                    <td>Highlight</td>
+                    <td>I need to highlight these ==very important words==.</td>
+                </tr>
+                <tr>
+                    <td>Subscript</td>
+                    <td>H~2~O</td>
+                </tr>
+                <tr>
+                    <td>Superscript</td>
+                    <td>X^2^</td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+</body>
+</html>

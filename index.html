@@ -6,13 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="/assets/logo.png">
     <title>Markdown Viewer</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div id="navbar">
-      <a href="https://github.com/ThisIs-Developer/Markdown-Viewer" target="_blank">
+      <div class="small" style="display: none;">
+        <div class="small-head">
+          <a href="index.html" target="_blank" onclick="window.location.reload();">
+            <img src="assets/logo-navbar.png" alt="Logo" id="small-logo" style="height: 30px;"/>
+          </a>
+          <span>Viwer</span>
+        </div>
+        <div class="small-tail">
+          <div class="git">
+            <a href="https://github.com/ThisIs-Developer/Markdown-Viewer" target="_blank">
+              <img src="../assets/github.png" alt="Github" class="github">
+            </a>
+          </div>
+          <a href="Tips/tips.html">
+            <span class="material-symbols-outlined help">
+              help
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <a href="index.html" target="_blank" onclick="window.location.reload();">
         <img src="assets/logo-navbar.png" alt="Logo" id="navbar-logo" />
-      </a>
+      </a>      
 
       <div class="btn-container">
         <button id="btn-reset">Reset</button>
@@ -51,6 +73,20 @@
           <option value="html">Import HTML</option>
           <option value="markdown">Import Markdown</option>
         </select>
+      </div>
+
+      <div class="extra">
+        <div class="git">
+          <a href="https://github.com/ThisIs-Developer/Markdown-Viewer" target="_blank">
+            <img src="../assets/github.png" alt="Github" class="github">
+          </a>
+        </div>
+  
+        <a href="Tips/tips.html">
+          <span class="material-symbols-outlined help">
+            help
+          </span>
+        </a>
       </div>
     </div>
     <div id="markdown-container">

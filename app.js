@@ -166,3 +166,29 @@ document.getElementById('import').addEventListener('change', (event) => {
 
   document.getElementById('import').selectedIndex = 0;
 });
+
+window.addEventListener('DOMContentLoaded', () => {
+  const smallNavbar = document.querySelector('.small');
+  const extraNavbar = document.querySelector('.extra');
+  const navbarLogo = document.getElementById('navbar-logo');
+  const smallLogo = document.getElementById('small-logo');
+
+  const mediaQuery = window.matchMedia('(max-width: 1200px)');
+
+  const handleMediaQuery = (mediaQuery) => {
+    if (mediaQuery.matches) {
+      smallNavbar.style.display = 'flex';
+      extraNavbar.style.display = 'none';
+      navbarLogo.style.display = 'none';
+      smallLogo.style.display = 'inline';
+    } else {
+      smallNavbar.style.display = 'none';
+      extraNavbar.style.display = 'flex';
+      navbarLogo.style.display = 'inline';
+      smallLogo.style.display = 'none';
+    }
+  };
+
+  handleMediaQuery(mediaQuery);
+  mediaQuery.addEventListener('change', (e) => handleMediaQuery(e.currentTarget));
+});

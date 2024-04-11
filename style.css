@@ -16,6 +16,7 @@ body {
   z-index: 1000;
   display: flex;
   justify-content: space-around;
+  align-items: center;
   margin-bottom: 10px;
   padding: 10px 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -119,8 +120,29 @@ body {
   height: 40px;
 }
 
+.github {
+  height: 30px;
+}
+
+.extra {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+
+.extra .git{
+  display: inline;
+}
+
+.extra .help{
+  font-size: 1.8rem;
+  color: black;
+  font-weight: 500;
+}
+
 @media (max-width: 1200px) {
   #navbar {
+    align-items: normal;
     flex-direction: column;
     position: static;
     border-radius: 7px;
@@ -176,5 +198,47 @@ body {
 
   #navbar #navbar-logo {
     display: none;
+  }
+
+  .extra {
+    display: none;
+  }
+
+  .small {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+  }
+
+  .small span {
+    font-size: 24px;
+    margin-left: 10px;
+  }
+
+  .small .git {
+    display: flex;
+    align-items: center;
+  }
+
+  .small .github {
+    margin-left: 10px;
+  }
+
+  #navbar .small .small-head {
+    display: flex;
+    align-items: center;
+  }
+
+  #navbar .small .small-tail {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  #navbar .small .small-tail .help{
+    font-size: 1.8rem;
+    color: black;
+    font-weight: 500;
   }
 }
