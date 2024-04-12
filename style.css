@@ -359,4 +359,43 @@ body {
   #navbar {
     font-size: 0.95rem;
   }
+
+  .git, .help {
+    position: relative;
+  }
+  
+  .git::after {
+    content: "GitHub";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .help::after {
+    content: "Help";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #000;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .git:hover::after,
+  .help:hover::after {
+    opacity: 1;
+  }
 }
