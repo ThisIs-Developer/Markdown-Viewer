@@ -11,12 +11,13 @@
   </head>
   <body>
     <div id="navbar">
+
       <div class="small" style="display: none;">
         <div class="small-head">
           <a href="index.html" target="_blank" onclick="window.location.reload();">
             <img src="assets/logo-navbar.png" alt="Logo" id="small-logo" style="height: 30px;"/>
           </a>
-          <span>Viwer</span>
+          <span>Viewer</span>
         </div>
         <div class="small-tail">
           <div class="git">
@@ -89,6 +90,7 @@
         </a>
       </div>
     </div>
+
     <div id="reading-stats">
       <p id="reading-time">Reading Time: <span id="reading-time-value"></span></p>
       <p id="word-count">Word Count: <span id="word-count-value"></span></p>
@@ -96,13 +98,10 @@
     </div>
     
     <div id="markdown-container">
-      <textarea
-        id="markdown-input"
-        placeholder="Enter Markdown here..."
-        rows="10"
-      ></textarea>
+      <textarea id="markdown-input" placeholder="Enter Markdown here..." rows="10"></textarea>
       <div id="markdown-output"></div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="app.js"></script>
