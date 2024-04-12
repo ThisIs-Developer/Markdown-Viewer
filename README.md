@@ -10,7 +10,8 @@ This _Markdown Viewer_ is a simple web application that allows you to preview an
 - *Import* HTML or Markdown content into the application.
 
 ## Usage 📝
-![screencapture-127-0-0-1-5501-index-html-2024-04-10-01_23_42](https://github.com/ThisIs-Developer/Markdown-Viewer/assets/109382325/0e9ea738-405b-4790-85dc-afa74f4f903f)
+![screencapture-127-0-0-1-5501-index-html-2024-04-12-20_50_14](https://github.com/ThisIs-Developer/Markdown-Viewer/assets/109382325/3f9a1e4e-6e02-40bd-b515-76c14405e5ee)
+
 ### UI Responsive 📱
 <img src="https://github.com/ThisIs-Developer/Markdown-Viewer/assets/109382325/e0d1504f-8a5e-4f99-943d-3952a0bd8619" alt="screen_1" height="400" width="200">
 <img src="https://github.com/ThisIs-Developer/Markdown-Viewer/assets/109382325/7d49331d-63e3-4003-804c-e188c18929ef" alt="screen_2" height="400" width="200">
