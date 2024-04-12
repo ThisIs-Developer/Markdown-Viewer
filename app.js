@@ -169,7 +169,7 @@ document.getElementById('import').addEventListener('change', (event) => {
 
 window.addEventListener('DOMContentLoaded', () => {
   const smallNavbar = document.querySelector('.small');
-  const extraNavbar = document.querySelector('.extra');
+  const extraNavbar = document.querySelector('.more');
   const navbarLogo = document.getElementById('navbar-logo');
   const smallLogo = document.getElementById('small-logo');
 
@@ -229,3 +229,24 @@ document.getElementById('word-count-value').textContent = initialStats.wordCount
 document.getElementById('char-count-value').textContent = initialStats.charCount;
 
 document.getElementById('markdown-input').addEventListener('input', updateStats);
+
+document.addEventListener('DOMContentLoaded', function () {
+  const moreIcon = document.getElementById('more-icon');
+  const moreContent = document.getElementById('more-content');
+
+  moreIcon.addEventListener('click', function () {
+    moreContent.classList.toggle('show');
+  });
+
+  window.addEventListener('click', function (event) {
+    if (!event.target.matches('.material-symbols-outlined')) {
+      const dropdowns = document.getElementsByClassName('more-content');
+      for (const dropdown of dropdowns) {
+        if (dropdown.classList.contains('show')) {
+          dropdown.classList.remove('show');
+        }
+      }
+    }
+  });
+});
+

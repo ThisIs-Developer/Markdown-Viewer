@@ -126,18 +126,8 @@ body {
   height: 30px;
 }
 
-.extra {
-  display: flex;
-  align-items: center;
-  gap: 1.4rem;
-}
-
-.extra .git{
-  display: inline;
-}
-
-.extra .help{
-  font-size: 1.8rem;
+.more .help span{
+  font-size: 1.25rem;
   color: black;
   font-weight: 500;
 }
@@ -157,6 +147,103 @@ body {
   margin-right: 1.5rem;
   font-size: small;
   color: rgb(98, 98, 98);
+}
+
+.more {
+  position: relative;
+  display: inline-block;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.more-content {
+  display: none;
+  position: absolute;
+  background-color: #DFCCFB;
+  border: 2px solid DFCCFB;
+  border-radius: 5px;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  right: 0;
+  transform: translateX(-7%);
+  top:25px;
+}
+
+.more-content.show {
+  display: block;
+}
+
+.more-content div {
+  padding: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.more-content a, .more-content p {
+  display: inline-block;
+  margin-left: 10px;
+  text-decoration: none;
+  color: #333;
+  font-size: 16px;
+  transition: all 0.25s ease;
+}
+
+.github img {
+  height: 20px;
+  margin-right: 5px;
+}
+
+.help .material-symbols-outlined {
+  font-size: 16px;
+  margin-right: 5px;
+}
+
+.more-content a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #333;
+  font-size: 14px;
+}
+
+.github img,
+.help .material-symbols-outlined {
+  height: 20px;
+  margin-right: 10px;
+}
+
+.github p,
+.help p {
+  margin: 0;
+}
+
+.more-content .help {
+  font-size: 1.2rem;
+}
+
+.more-content a:hover {
+  font-size: 15px;
+  transform: translateY(-5px);
+}
+
+.more::after {
+  content: "More";
+  position: absolute;
+  top: 110%;
+  left: -45%;
+  transform: translateX(-50%);
+  background-color: black;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.more:hover::after {
+  opacity: 1;
 }
 
 @media (max-width: 1200px) {
