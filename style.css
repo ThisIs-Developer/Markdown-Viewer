@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Poppins', sans-serif;
   padding: 20px;
   display: flex;
   height: 100vh;
@@ -20,13 +22,13 @@ body {
   margin-bottom: 10px;
   padding: 10px 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
 }
 
 #markdown-container {
   display: flex;
   flex: 1;
   height: 100%;
-  margin-top: 60px;
 }
 
 #markdown-input, #markdown-output {
@@ -111,8 +113,8 @@ body {
   margin: 10px 0;
 }
 
-.sync {
-  margin-top: 5px;
+#markdown-output a:visited{
+  color: blue;
 }
 
 #navbar-logo {
@@ -138,6 +140,23 @@ body {
   font-size: 1.8rem;
   color: black;
   font-weight: 500;
+}
+
+#reading-stats {
+  margin: 10px 0;
+  padding: 10px;
+  margin-top: 50px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#reading-stats p {
+  margin: 5px 0;
+  margin-right: 1.5rem;
+  font-size: small;
+  color: rgb(98, 98, 98);
 }
 
 @media (max-width: 1200px) {
@@ -240,5 +259,18 @@ body {
     font-size: 1.8rem;
     color: black;
     font-weight: 500;
+  }
+
+  #reading-stats {
+    padding: 8px;
+    margin-top: 0px;
+  }
+
+  #reading-stats p {
+    font-size: small;
+  }
+
+  #navbar {
+    font-size: 0.95rem;
   }
 }

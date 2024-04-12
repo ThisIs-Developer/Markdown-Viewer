@@ -192,3 +192,40 @@ window.addEventListener('DOMContentLoaded', () => {
   handleMediaQuery(mediaQuery);
   mediaQuery.addEventListener('change', (e) => handleMediaQuery(e.currentTarget));
 });
+
+const initialStats = {
+  wordCount: 0,
+  charCount: 0,
+  readingTime: '0 Min Read'
+};
+
+function updateStats() {
+  const text = document.getElementById('markdown-input').value;
+  const stats = calculateStats(text);
+
+  document.getElementById('reading-time-value').textContent = stats.readingTime;
+  document.getElementById('word-count-value').textContent = stats.wordCount;
+  document.getElementById('char-count-value').textContent = stats.charCount;
+}
+
+function calculateStats(text) {
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  const wordCount = words.length;
+  const charCount = text.replace(/\s+/g, '').length;
+  const avgReadingSpeed = 200;
+
+  const readingTimeMinutes = Math.ceil(wordCount / avgReadingSpeed);
+  const readingTime = readingTimeMinutes > 0 ? `${readingTimeMinutes} Min Read` : '0 Min Read';
+
+  return {
+    wordCount,
+    charCount,
+    readingTime
+  };
+}
+
+document.getElementById('reading-time-value').textContent = initialStats.readingTime;
+document.getElementById('word-count-value').textContent = initialStats.wordCount;
+document.getElementById('char-count-value').textContent = initialStats.charCount;
+
+document.getElementById('markdown-input').addEventListener('input', updateStats);
