@@ -23,7 +23,7 @@ This _Markdown Viewer_ is a simple web application that allows you to preview an
 - [jQuery](https://jquery.com/): JavaScript library used for DOM manipulation and event handling.
 
 ## License ⚖️
-This project is licensed under the [MIT License](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/LICENSE). See the LICENSE file for more details.
+This project is licensed under the [Apache-2.0 License](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/LICENSE). See the LICENSE file for more details.
 
 ---
 
