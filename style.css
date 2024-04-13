@@ -227,6 +227,11 @@ body {
   transform: translateY(-5px);
 }
 
+#more-icon{
+  font-size: 1.5rem;
+  color: rgb(43, 43, 43);
+  font-weight: bold;
+}
 .more::after {
   content: "More";
   position: absolute;
