@@ -1,5 +1,8 @@
 # Markdown Viewer <img src="assets/logo-navbar.png" alt="screen_1" height="35" width="35" style="margin-top: 15px;">
 
+[![Apache 2.0 License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
+
 ## Description ℹ️
 This _Markdown Viewer_ is a simple web application that allows you to preview and manipulate Markdown text. You can input Markdown text, view the rendered HTML output, and perform various actions such as copying the text, exporting it in different formats, and more.
 
@@ -28,3 +31,8 @@ This project is licensed under the [Apache-2.0 License](https://github.com/ThisI
 ---
 
 Feel free to customize and enhance this Markdown Viewer as per your needs. If you encounter any issues or have suggestions for improvements, please open an issue on the GitHub repository. Happy Markdown editing and viewing! 😊
+
+[license-shield]: https://img.shields.io/badge/License-Apache%202.0-red.svg
+[license-url]: https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/LICENSE
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat&logo=linkedin&colorB=blue
+[linkedin-url]: https://www.linkedin.com/in/baivabsarkar/
