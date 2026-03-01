@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Syntax Cheat Sheet – Markdown Viewer</title>
+    <link href="assets/icon.jpg" rel="icon" type="image/jpg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css">
+    <link rel="stylesheet" id="highlight-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="container-fluid d-flex justify-content-between align-items-center header-container">
+                <!-- Left section -->
+                <div class="d-flex align-items-center header-left">
+                    <a href="index.html" class="tool-button me-2" title="Back to Editor" style="text-decoration:none;">
+                        <i class="bi bi-arrow-left"></i> <span class="d-none d-sm-inline">Back</span>
+                    </a>
+                    <h1 class="h4 mb-0 me-2">Markdown Cheat Sheet</h1>
+                </div>
+
+                <!-- Right section -->
+                <div class="toolbar d-flex header-right">
+                    <button id="theme-toggle" class="tool-button" title="Toggle Dark Mode">
+                        <i class="bi bi-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="cheatsheet-container">
+            <div class="cheatsheet-content">
+
+                <!-- ── Headings ─────────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-type-h1 me-2"></i>Headings</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source"># Heading 1</div>
+                        <div class="cheatsheet-preview markdown-body"><h1>Heading 1</h1></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">## Heading 2</div>
+                        <div class="cheatsheet-preview markdown-body"><h2>Heading 2</h2></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">### Heading 3</div>
+                        <div class="cheatsheet-preview markdown-body"><h3>Heading 3</h3></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">#### Heading 4</div>
+                        <div class="cheatsheet-preview markdown-body"><h4>Heading 4</h4></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">##### Heading 5</div>
+                        <div class="cheatsheet-preview markdown-body"><h5>Heading 5</h5></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">###### Heading 6</div>
+                        <div class="cheatsheet-preview markdown-body"><h6>Heading 6</h6></div>
+                    </div>
+                </div>
+
+                <!-- ── Text Formatting ───────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-type-bold me-2"></i>Text Formatting</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">**Bold text**</div>
+                        <div class="cheatsheet-preview markdown-body"><strong>Bold text</strong></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">*Italic text*</div>
+                        <div class="cheatsheet-preview markdown-body"><em>Italic text</em></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">***Bold and italic***</div>
+                        <div class="cheatsheet-preview markdown-body"><strong><em>Bold and italic</em></strong></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">~~Strikethrough~~</div>
+                        <div class="cheatsheet-preview markdown-body"><del>Strikethrough</del></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">`Inline code`</div>
+                        <div class="cheatsheet-preview markdown-body"><code>Inline code</code></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">&gt; Blockquote</div>
+                        <div class="cheatsheet-preview markdown-body"><blockquote><p>Blockquote</p></blockquote></div>
+                    </div>
+                </div>
+
+                <!-- ── Lists ─────────────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-list-ul me-2"></i>Lists</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">- Item 1
+- Item 2
+  - Nested item
+- Item 3</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <ul>
+                                <li>Item 1</li>
+                                <li>Item 2
+                                    <ul><li>Nested item</li></ul>
+                                </li>
+                                <li>Item 3</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">1. First item
+2. Second item
+3. Third item</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <ol>
+                                <li>First item</li>
+                                <li>Second item</li>
+                                <li>Third item</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">- [x] Completed task
+- [ ] Pending task</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <ul class="contains-task-list">
+                                <li class="task-list-item"><input type="checkbox" checked disabled> Completed task</li>
+                                <li class="task-list-item"><input type="checkbox" disabled> Pending task</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Links & Images ────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-link-45deg me-2"></i>Links &amp; Images</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">[Link text](https://example.com)</div>
+                        <div class="cheatsheet-preview markdown-body"><a href="https://example.com" target="_blank" rel="noopener">Link text</a></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">[Link with title](https://example.com "Title")</div>
+                        <div class="cheatsheet-preview markdown-body"><a href="https://example.com" title="Title" target="_blank" rel="noopener">Link with title</a></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">![Alt text](assets/icon.jpg)</div>
+                        <div class="cheatsheet-preview markdown-body"><img src="assets/icon.jpg" alt="Alt text" style="max-height:48px;border-radius:4px;"></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">&lt;https://example.com&gt;</div>
+                        <div class="cheatsheet-preview markdown-body"><a href="https://example.com" target="_blank" rel="noopener">https://example.com</a></div>
+                    </div>
+                </div>
+
+                <!-- ── Code ──────────────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-code-slash me-2"></i>Code</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">```javascript
+function hello(name) {
+  return `Hello, ${name}!`;
+}
+```</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <pre><code class="language-javascript hljs" id="cs-js-block"></code></pre>
+                        </div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">```python
+def greet(name):
+    return f"Hello, {name}!"
+```</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <pre><code class="language-python hljs" id="cs-py-block"></code></pre>
+                        </div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">```bash
+echo "Hello, World!"
+```</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <pre><code class="language-bash hljs" id="cs-bash-block"></code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Tables ────────────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-table me-2"></i>Tables</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">| Column 1 | Column 2 | Column 3 |
+|----------|:--------:|---------:|
+| Left     | Center   | Right    |
+| Cell     | Cell     | Cell     |</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <table>
+                                <thead>
+                                    <tr><th>Column 1</th><th style="text-align:center">Column 2</th><th style="text-align:right">Column 3</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Left</td><td style="text-align:center">Center</td><td style="text-align:right">Right</td></tr>
+                                    <tr><td>Cell</td><td style="text-align:center">Cell</td><td style="text-align:right">Cell</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Horizontal Rule ───────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-dash-lg me-2"></i>Horizontal Rule</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">---</div>
+                        <div class="cheatsheet-preview markdown-body"><hr></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">***</div>
+                        <div class="cheatsheet-preview markdown-body"><hr></div>
+                    </div>
+                </div>
+
+                <!-- ── Math (LaTeX) ──────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-calculator me-2"></i>Math (LaTeX)</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">Inline: $E = mc^2$</div>
+                        <div class="cheatsheet-preview markdown-body">Inline: \(E = mc^2\)</div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">$$
+\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+$$</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            \[\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}\]
+                        </div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">$$
+\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+$$</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            \[\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}\]
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Mermaid Diagrams ──────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-diagram-3 me-2"></i>Mermaid Diagrams</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">```mermaid
+flowchart LR
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Do it]
+  B -->|No| D[Skip]
+```</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <div class="mermaid" id="cs-mermaid-flow">flowchart LR
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Do it]
+  B -->|No| D[Skip]</div>
+                        </div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">```mermaid
+sequenceDiagram
+  Alice->>Bob: Hello Bob!
+  Bob-->>Alice: Hi Alice!
+```</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <div class="mermaid" id="cs-mermaid-seq">sequenceDiagram
+  Alice->>Bob: Hello Bob!
+  Bob-->>Alice: Hi Alice!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Emojis ────────────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-emoji-smile me-2"></i>Emojis</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">:smile: :heart: :thumbsup: :fire: :rocket: :sparkles:</div>
+                        <div class="cheatsheet-preview markdown-body" id="cs-emoji-preview">:smile: :heart: :thumbsup: :fire: :rocket: :sparkles:</div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">:warning: :white_check_mark: :x: :information_source:</div>
+                        <div class="cheatsheet-preview markdown-body" id="cs-emoji-preview2">:warning: :white_check_mark: :x: :information_source:</div>
+                    </div>
+                </div>
+
+                <!-- ── HTML ──────────────────────────────────── -->
+                <div class="cheatsheet-section">
+                    <h2 class="cheatsheet-section-title"><i class="bi bi-filetype-html me-2"></i>Inline HTML</h2>
+                    <div class="cheatsheet-header-labels">
+                        <span>Markdown</span><span>Rendered</span>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">&lt;kbd&gt;Ctrl&lt;/kbd&gt; + &lt;kbd&gt;C&lt;/kbd&gt;</div>
+                        <div class="cheatsheet-preview markdown-body"><kbd>Ctrl</kbd> + <kbd>C</kbd></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">&lt;mark&gt;Highlighted text&lt;/mark&gt;</div>
+                        <div class="cheatsheet-preview markdown-body"><mark>Highlighted text</mark></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">&lt;sub&gt;subscript&lt;/sub&gt; and &lt;sup&gt;superscript&lt;/sup&gt;</div>
+                        <div class="cheatsheet-preview markdown-body"><sub>subscript</sub> and <sup>superscript</sup></div>
+                    </div>
+                    <div class="cheatsheet-row">
+                        <div class="cheatsheet-source">&lt;details&gt;
+  &lt;summary&gt;Collapsible section&lt;/summary&gt;
+  Hidden content here.
+&lt;/details&gt;</div>
+                        <div class="cheatsheet-preview markdown-body">
+                            <details>
+                                <summary>Collapsible section</summary>
+                                Hidden content here.
+                            </details>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /.cheatsheet-content -->
+        </div><!-- /.cheatsheet-container -->
+    </div><!-- /.app-container -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ── Dark mode ──────────────────────────────────────
+        const themeToggle = document.getElementById('theme-toggle');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        let currentTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeToggle.innerHTML = theme === 'dark'
+                ? '<i class="bi bi-sun"></i>'
+                : '<i class="bi bi-moon"></i>';
+            document.getElementById('highlight-theme').href = theme === 'dark'
+                ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+                : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+        }
+
+        applyTheme(currentTheme);
+
+        themeToggle.addEventListener('click', function () {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme', currentTheme);
+            applyTheme(currentTheme);
+            // Re-initialise Mermaid for the new theme
+            initAndRenderMermaid();
+        });
+
+        // ── Syntax highlighting ────────────────────────────
+        document.getElementById('cs-js-block').textContent =
+            'function hello(name) {\n  return `Hello, ${name}!`;\n}';
+        document.getElementById('cs-py-block').textContent =
+            'def greet(name):\n    return f"Hello, {name}!"';
+        document.getElementById('cs-bash-block').textContent =
+            'echo "Hello, World!"';
+        hljs.highlightAll();
+
+        // ── Emojis ─────────────────────────────────────────
+        if (typeof joypixels !== 'undefined') {
+            ['cs-emoji-preview', 'cs-emoji-preview2'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = joypixels.toImage(el.textContent);
+            });
+        }
+
+        // ── Mermaid ────────────────────────────────────────
+        function initAndRenderMermaid() {
+            const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+            mermaid.initialize({ startOnLoad: false, theme: theme, securityLevel: 'loose' });
+            document.querySelectorAll('.mermaid').forEach(function (el) {
+                const src = el.textContent.trim();
+                el.removeAttribute('data-processed');
+                el.innerHTML = src;
+            });
+            mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
+        }
+
+        try { initAndRenderMermaid(); } catch (e) { console.warn('Mermaid error:', e); }
+    });
+    </script>
+</body>
+</html>
