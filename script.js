@@ -13,7 +13,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const markdownEditor = document.getElementById("markdown-editor");
   const markdownPreview = document.getElementById("markdown-preview");
   const themeToggle = document.getElementById("theme-toggle");
-  const importButton = document.getElementById("import-button");
+  const importFileBtn = document.getElementById("import-file");
+  const importGithubBtn = document.getElementById("import-github");
   const fileInput = document.getElementById("file-input");
   const exportMd = document.getElementById("export-md");
   const exportHtml = document.getElementById("export-html");
@@ -51,7 +52,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const mobileWordCount     = document.getElementById("mobile-word-count");
   const mobileCharCount     = document.getElementById("mobile-char-count");
   const mobileToggleSync    = document.getElementById("mobile-toggle-sync");
-  const mobileImportBtn     = document.getElementById("mobile-import-button");
+  const mobileImportFileBtn = document.getElementById("mobile-import-file");
+  const mobileImportGithubBtn = document.getElementById("mobile-import-github");
   const mobileExportMd      = document.getElementById("mobile-export-md");
   const mobileExportHtml    = document.getElementById("mobile-export-html");
   const mobileExportPdf     = document.getElementById("mobile-export-pdf");
@@ -59,6 +61,14 @@ document.addEventListener("DOMContentLoaded", function () {
   const mobileThemeToggle   = document.getElementById("mobile-theme-toggle");
   const shareButton         = document.getElementById("share-button");
   const mobileShareButton   = document.getElementById("mobile-share-button");
+
+  // GitHub Import Modal Elements
+  const githubImportModal = document.getElementById("github-import-modal");
+  const githubUrlInput = document.getElementById("github-url-input");
+  const githubModalCancel = document.getElementById("github-modal-cancel");
+  const githubModalImport = document.getElementById("github-modal-import");
+  const githubErrorMessage = document.getElementById("github-error-message");
+  const githubLoading = document.getElementById("github-loading");
 
   // Check dark mode preference first for proper initialization
   const prefersDarkMode =
@@ -812,6 +822,127 @@ This is a fully client-side application. Your content never leaves your browser 
     reader.readAsText(file);
   }
 
+  // GitHub URL parsing and import functions
+  function parseGitHubUrl(url) {
+    // Support various GitHub URL formats:
+    // 1. https://github.com/user/repo/blob/branch/path/to/file.md
+    // 2. https://github.com/user/repo/raw/branch/path/to/file.md
+    // 3. https://raw.githubusercontent.com/user/repo/branch/path/to/file.md
+
+    url = url.trim();
+
+    // Check if it's a raw.githubusercontent.com URL
+    const rawMatch = url.match(/^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\/(.+)$/);
+    if (rawMatch) {
+      return {
+        owner: rawMatch[1],
+        repo: rawMatch[2],
+        branch: rawMatch[3],
+        path: rawMatch[4],
+        rawUrl: url
+      };
+    }
+
+    // Check if it's a github.com URL
+    const githubMatch = url.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/(?:blob|raw)\/([^\/]+)\/(.+)$/);
+    if (githubMatch) {
+      const owner = githubMatch[1];
+      const repo = githubMatch[2];
+      const branch = githubMatch[3];
+      const path = githubMatch[4];
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+
+      return {
+        owner,
+        repo,
+        branch,
+        path,
+        rawUrl
+      };
+    }
+
+    return null;
+  }
+
+  async function fetchMarkdownFromGitHub(url) {
+    const parsedUrl = parseGitHubUrl(url);
+
+    if (!parsedUrl) {
+      throw new Error('Invalid GitHub URL. Please provide a URL in the format: https://github.com/user/repo/blob/branch/file.md');
+    }
+
+    // Fetch the raw content
+    const response = await fetch(parsedUrl.rawUrl);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('File not found. Please check the URL and ensure the repository is public.');
+      } else if (response.status === 403) {
+        throw new Error('Access denied. The repository may be private or rate limit exceeded.');
+      } else {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+    }
+
+    const content = await response.text();
+
+    // Extract filename from path
+    const filename = parsedUrl.path.split('/').pop().replace(/\.md$/i, '');
+
+    return {
+      content,
+      filename
+    };
+  }
+
+  function showGitHubImportModal() {
+    githubImportModal.style.display = 'flex';
+    githubUrlInput.value = '';
+    githubErrorMessage.style.display = 'none';
+    githubLoading.style.display = 'none';
+    githubUrlInput.focus();
+  }
+
+  function hideGitHubImportModal() {
+    githubImportModal.style.display = 'none';
+  }
+
+  async function importFromGitHub() {
+    const url = githubUrlInput.value.trim();
+
+    if (!url) {
+      githubErrorMessage.textContent = 'Please enter a GitHub URL';
+      githubErrorMessage.style.display = 'block';
+      return;
+    }
+
+    // Hide error, show loading
+    githubErrorMessage.style.display = 'none';
+    githubLoading.style.display = 'block';
+    githubModalImport.disabled = true;
+
+    try {
+      const { content, filename } = await fetchMarkdownFromGitHub(url);
+
+      // Create a new tab with the imported content
+      newTab(content, filename);
+
+      // Close modal
+      hideGitHubImportModal();
+
+      // Close mobile menu if open
+      if (mobileMenuPanel.classList.contains('show')) {
+        closeMobileMenu();
+      }
+    } catch (error) {
+      githubErrorMessage.textContent = error.message;
+      githubErrorMessage.style.display = 'block';
+    } finally {
+      githubLoading.style.display = 'none';
+      githubModalImport.disabled = false;
+    }
+  }
+
   function processEmojis(element) {
     const walker = document.createTreeWalker(
       element,
@@ -1140,7 +1271,6 @@ This is a fully client-side application. Your content never leaves your browser 
       mobileToggleSync.classList.remove("border-primary");
     }
   });
-  mobileImportBtn.addEventListener("click", () => fileInput.click());
   mobileExportMd.addEventListener("click", () => exportMd.click());
   mobileExportHtml.addEventListener("click", () => exportHtml.click());
   mobileExportPdf.addEventListener("click", () => exportPdf.click());
@@ -1239,8 +1369,45 @@ This is a fully client-side application. Your content never leaves your browser 
     renderMarkdown();
   });
 
-  importButton.addEventListener("click", function () {
+  importFileBtn.addEventListener("click", function (e) {
+    e.preventDefault();
     fileInput.click();
+  });
+
+  importGithubBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    showGitHubImportModal();
+  });
+
+  mobileImportFileBtn.addEventListener("click", function () {
+    fileInput.click();
+    closeMobileMenu();
+  });
+
+  mobileImportGithubBtn.addEventListener("click", function () {
+    showGitHubImportModal();
+  });
+
+  // GitHub modal event listeners
+  githubModalCancel.addEventListener("click", function () {
+    hideGitHubImportModal();
+  });
+
+  githubModalImport.addEventListener("click", function () {
+    importFromGitHub();
+  });
+
+  githubUrlInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      importFromGitHub();
+    }
+  });
+
+  // Close modal when clicking outside
+  githubImportModal.addEventListener("click", function (e) {
+    if (e.target === githubImportModal) {
+      hideGitHubImportModal();
+    }
   });
 
   fileInput.addEventListener("change", function (e) {

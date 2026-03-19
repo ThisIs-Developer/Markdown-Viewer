@@ -1643,3 +1643,30 @@ a:focus {
   border-color: var(--accent-color);
 }
 
+/* ========================================
+   GITHUB IMPORT MODAL
+   ======================================== */
+
+.github-error-message {
+  color: var(--color-danger-fg, #d73a49);
+  font-size: 12px;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.github-loading {
+  color: var(--accent-color);
+  font-size: 13px;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.github-loading i {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
