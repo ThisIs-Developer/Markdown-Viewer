@@ -61,6 +61,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const mobileThemeToggle   = document.getElementById("mobile-theme-toggle");
   const shareButton         = document.getElementById("share-button");
   const mobileShareButton   = document.getElementById("mobile-share-button");
+  const sharePresence       = document.getElementById("share-presence");
+  const mobileSharePresence = document.getElementById("mobile-share-presence");
   const githubImportModal = document.getElementById("github-import-modal");
   const githubImportTitle = document.getElementById("github-import-title");
   const githubImportUrlInput = document.getElementById("github-import-url");
@@ -2599,6 +2601,199 @@ This is a fully client-side application. Your content never leaves your browser 
   // ============================================
 
   const MAX_SHARE_URL_LENGTH = 32000;
+  const SHARE_PRESENCE_KEY = "mdv:share-presence";
+  const SHARE_PRESENCE_HEARTBEAT_MS = 15000;
+  const SHARE_PRESENCE_STALE_MS = SHARE_PRESENCE_HEARTBEAT_MS * 2;
+  const clientId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const clientName = generateClientName();
+  const clientIcon = animalEmojiForId(clientId);
+  let sharePresenceHeartbeatTimer = null;
+
+  const adjectives = [
+    'Acidic','Awesome','Bitter','Burnt','Buttery','Creamy','Fantastic','Fresh','Fried',
+    'Good','Juicy','Moist','Raw','Roasted','Salty','Seasoned','Sharp','Sour','Sugary',
+    'Sweet','Stale',
+  ];
+
+  const nouns = [
+    'Bamboo','Cabbage','Cactus','Fern','Garlic','Lemon','Lily','Melon','Onion',
+    'Palm','Plum','Tofu','Tomato','Watermelon',
+  ];
+
+  const animalIcons = ['🐶', '🐱', '🦊', '🐼', '🐨', '🐯', '🦁', '🐸', '🐵', '🐧', '🦉', '🦄'];
+
+  function arrayRandom(array) {
+    return array[Math.floor(Math.random() * array.length)];
+  }
+
+  function generateClientName() {
+    return `${arrayRandom(adjectives)} ${arrayRandom(nouns)}`;
+  }
+
+  function animalEmojiForId(id) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
+    return animalIcons[Math.abs(hash) % animalIcons.length];
+  }
+
+  function readPresenceState() {
+    try {
+      return JSON.parse(localStorage.getItem(SHARE_PRESENCE_KEY)) || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writePresenceState(state) {
+    try {
+      localStorage.setItem(SHARE_PRESENCE_KEY, JSON.stringify(state));
+    } catch (_) {
+      // ignore storage write failures
+    }
+  }
+
+  function cleanPresenceState(state) {
+    const now = Date.now();
+    const cleaned = {};
+    Object.keys(state).forEach((id) => {
+      const user = state[id];
+      if (!user || typeof user.lastSeen !== 'number') return;
+      if (now - user.lastSeen <= SHARE_PRESENCE_STALE_MS) {
+        cleaned[id] = user;
+      }
+    });
+    return cleaned;
+  }
+
+  function updatePresence(shareId) {
+    if (!shareId) return;
+    const state = cleanPresenceState(readPresenceState());
+    state[clientId] = {
+      id: clientId,
+      shareId,
+      name: clientName,
+      icon: clientIcon,
+      lastSeen: Date.now(),
+    };
+    writePresenceState(state);
+  }
+
+  function leavePresence() {
+    const state = readPresenceState();
+    if (state[clientId]) {
+      delete state[clientId];
+      writePresenceState(state);
+    }
+  }
+
+  function getShareIdFromHash() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#share=')) return null;
+    return hash.slice('#share='.length) || null;
+  }
+
+  function renderPresence() {
+    const shareId = getShareIdFromHash();
+    const isSharedSession = Boolean(shareId);
+    contentContainer.classList.toggle('shared-active', isSharedSession);
+
+    [sharePresence, mobileSharePresence].forEach((container) => {
+      if (!container) return;
+      container.innerHTML = '';
+      if (!isSharedSession) {
+        container.style.display = 'none';
+        return;
+      }
+
+      const state = cleanPresenceState(readPresenceState());
+      const users = Object.values(state)
+        .filter((u) => u && u.shareId === shareId)
+        .sort((a, b) => b.lastSeen - a.lastSeen);
+
+      if (!users.length) {
+        container.style.display = 'none';
+        return;
+      }
+
+      container.style.display = '';
+      const visibleUsers = users.slice(0, 4);
+      const extraUsers = users.slice(4);
+
+      visibleUsers.forEach((user) => {
+        const avatar = document.createElement('span');
+        avatar.className = `share-presence-avatar${user.id === clientId ? ' self' : ''}`;
+        avatar.textContent = user.icon || '🐾';
+        avatar.title = user.name || 'Shared user';
+        avatar.setAttribute('aria-label', user.name || 'Shared user');
+        container.appendChild(avatar);
+      });
+
+      if (extraUsers.length) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'dropdown';
+        const button = document.createElement('button');
+        button.className = 'btn btn-sm dropdown-toggle share-presence-toggle';
+        button.type = 'button';
+        button.setAttribute('data-bs-toggle', 'dropdown');
+        button.setAttribute('aria-expanded', 'false');
+        button.textContent = `+${extraUsers.length}`;
+
+        const menu = document.createElement('ul');
+        menu.className = 'dropdown-menu dropdown-menu-end share-presence-more-list';
+
+        extraUsers.forEach((user) => {
+          const item = document.createElement('li');
+          const label = document.createElement('span');
+          label.className = 'dropdown-item share-presence-item';
+          const avatarInline = document.createElement('span');
+          avatarInline.className = 'avatar-inline';
+          avatarInline.textContent = user.icon || '🐾';
+          avatarInline.style.background = 'linear-gradient(135deg, #58a6ff, #1f6feb)';
+          const nameText = document.createElement('span');
+          nameText.textContent = user.name || 'Shared user';
+          label.appendChild(avatarInline);
+          label.appendChild(nameText);
+          item.appendChild(label);
+          menu.appendChild(item);
+        });
+
+        wrapper.appendChild(button);
+        wrapper.appendChild(menu);
+        container.appendChild(wrapper);
+      }
+    });
+  }
+
+  function syncPresenceLoop() {
+    const shareId = getShareIdFromHash();
+    if (!shareId) {
+      if (sharePresenceHeartbeatTimer) {
+        clearInterval(sharePresenceHeartbeatTimer);
+        sharePresenceHeartbeatTimer = null;
+      }
+      leavePresence();
+      renderPresence();
+      return;
+    }
+
+    updatePresence(shareId);
+    renderPresence();
+
+    if (!sharePresenceHeartbeatTimer) {
+      sharePresenceHeartbeatTimer = setInterval(() => {
+        const activeShareId = getShareIdFromHash();
+        if (!activeShareId) {
+          clearInterval(sharePresenceHeartbeatTimer);
+          sharePresenceHeartbeatTimer = null;
+          leavePresence();
+          renderPresence();
+          return;
+        }
+        updatePresence(activeShareId);
+        renderPresence();
+      }, SHARE_PRESENCE_HEARTBEAT_MS);
+    }
+  }
 
   function encodeMarkdownForShare(text) {
     const compressed = pako.deflate(new TextEncoder().encode(text));
@@ -2682,6 +2877,12 @@ This is a fully client-side application. Your content never leaves your browser 
   }
 
   loadFromShareHash();
+  syncPresenceLoop();
+  window.addEventListener('hashchange', syncPresenceLoop);
+  window.addEventListener('storage', (e) => {
+    if (e.key === SHARE_PRESENCE_KEY) renderPresence();
+  });
+  window.addEventListener('beforeunload', leavePresence);
 
   const dropEvents = ["dragenter", "dragover", "dragleave", "drop"];
 

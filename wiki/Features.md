@@ -183,6 +183,8 @@ The **Share** feature encodes your Markdown content into the page URL hash, allo
 
 Recipients open the link and see your document pre-loaded in the editor. No server or sign-in required.
 
+When a shared `#share=` URL is open, the app also shows lightweight local **presence avatars** (animal icons) for people currently using that same share link in their browser on the same device profile. Each user gets a generated name in the `<Adjective> <Noun>` format, active users are highlighted with a green shared-session frame, and if more than 4 users are present, extras are grouped under a hover dropdown (`+N`).
+
 ---
 
 ## Content Statistics
