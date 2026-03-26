@@ -302,10 +302,25 @@ body {
   font-size: 16px;
 }
 
+.tool-button.icon-only {
+  padding: 6px 8px;
+  width: 36px;
+  justify-content: center;
+  gap: 0;
+}
+
+.tool-button.icon-only.dropdown-toggle::after {
+  display: none;
+}
+
 .share-presence {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 4px 8px;
 }
 
 .share-presence-toggle {
@@ -322,17 +337,17 @@ body {
 }
 
 .share-presence-avatar {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 2px solid var(--bg-color);
-  margin-left: -8px;
+  border: 2px solid #ffffff;
+  margin-left: -10px;
   background: linear-gradient(135deg, #58a6ff, #1f6feb);
   color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1;
   position: relative;
 }

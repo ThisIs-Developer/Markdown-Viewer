@@ -1442,12 +1442,16 @@ This is a fully client-side application. Your content never leaves your browser 
   function toggleSyncScrolling() {
     syncScrollingEnabled = !syncScrollingEnabled;
     if (syncScrollingEnabled) {
-      toggleSyncButton.innerHTML = '<i class="bi bi-link-45deg"></i> Sync Off';
+      toggleSyncButton.innerHTML = '<i class="bi bi-link-45deg"></i>';
+      toggleSyncButton.title = 'Sync Off';
+      toggleSyncButton.setAttribute('aria-label', 'Sync Off');
       toggleSyncButton.classList.add("sync-disabled");
       toggleSyncButton.classList.remove("sync-enabled");
       toggleSyncButton.classList.add("border-primary");
     } else {
-      toggleSyncButton.innerHTML = '<i class="bi bi-link"></i> Sync On';
+      toggleSyncButton.innerHTML = '<i class="bi bi-link"></i>';
+      toggleSyncButton.title = 'Sync On';
+      toggleSyncButton.setAttribute('aria-label', 'Sync On');
       toggleSyncButton.classList.add("sync-enabled");
       toggleSyncButton.classList.remove("sync-disabled");
       toggleSyncButton.classList.remove("border-primary");
@@ -2589,10 +2593,14 @@ This is a fully client-side application. Your content never leaves your browser 
 
   function showCopiedMessage() {
     const originalText = copyMarkdownButton.innerHTML;
-    copyMarkdownButton.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';
+    copyMarkdownButton.innerHTML = '<i class="bi bi-check-lg"></i>';
+    copyMarkdownButton.title = 'Copied!';
+    copyMarkdownButton.setAttribute('aria-label', 'Copied!');
 
     setTimeout(() => {
       copyMarkdownButton.innerHTML = originalText;
+      copyMarkdownButton.title = 'Copy';
+      copyMarkdownButton.setAttribute('aria-label', 'Copy');
     }, 2000);
   }
 
@@ -2828,14 +2836,28 @@ This is a fully client-side application. Your content never leaves your browser 
     const tooLarge = shareUrl.length > MAX_SHARE_URL_LENGTH;
 
     const originalHTML = btn.innerHTML;
-    const copiedHTML = '<i class="bi bi-check-lg"></i> Copied!';
+    const copiedHTML = '<i class="bi bi-check-lg"></i>';
 
     function onCopied() {
       if (!tooLarge) {
         window.location.hash = 'share=' + encoded;
       }
       btn.innerHTML = copiedHTML;
+      btn.title = 'Copied!';
+      btn.setAttribute('aria-label', 'Copied!');
       setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+      setTimeout(() => {
+        if (btn === shareButton) {
+          btn.title = 'Share';
+          btn.setAttribute('aria-label', 'Share');
+        } else if (btn === mobileShareButton) {
+          btn.title = 'Share via URL';
+          btn.setAttribute('aria-label', 'Share via URL');
+        } else {
+          btn.title = 'Share';
+          btn.setAttribute('aria-label', 'Share');
+        }
+      }, 2000);
     }
 
     if (navigator.clipboard && window.isSecureContext) {

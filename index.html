@@ -96,12 +96,12 @@
 
                 <!-- Right section: Toolbar -->
                 <div class="toolbar d-none d-md-flex header-right">
-                    <button id="toggle-sync" class="tool-button sync-enabled border-primary" title="Toggle Sync Scrolling">
-                        <i class="bi bi-link"></i> Sync Off
+                    <button id="toggle-sync" class="tool-button icon-only sync-enabled border-primary" title="Sync Off" aria-label="Sync Off">
+                        <i class="bi bi-link"></i>
                     </button>
                     <div class="dropdown">
-                        <button class="tool-button dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Import Markdown">
-                            <i class="bi bi-upload"></i> Import
+                        <button class="tool-button icon-only dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Import" aria-label="Import">
+                            <i class="bi bi-upload"></i>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item" href="#" id="import-from-file">From files</a></li>
@@ -111,8 +111,8 @@
                     <input type="file" id="file-input" class="file-input" accept=".md,.markdown,text/markdown">
                     
                     <div class="dropdown">
-                        <button class="tool-button dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-download"></i> Export
+                        <button class="tool-button icon-only dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Export" aria-label="Export">
+                            <i class="bi bi-download"></i>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="exportDropdown">
                             <li><a class="dropdown-item" href="#" id="export-md">Markdown (.md)</a></li>
@@ -121,12 +121,12 @@
                         </ul>
                     </div>
                     
-                    <button id="copy-markdown-button" class="tool-button" title="Copy Markdown">
-                        <i class="bi bi-clipboard"></i> Copy
+                    <button id="copy-markdown-button" class="tool-button icon-only" title="Copy" aria-label="Copy">
+                        <i class="bi bi-clipboard"></i>
                     </button>
                     
-                    <button id="share-button" class="tool-button" title="Share via URL">
-                        <i class="bi bi-share"></i> Share
+                    <button id="share-button" class="tool-button icon-only" title="Share" aria-label="Share">
+                        <i class="bi bi-share"></i>
                     </button>
                     <div id="share-presence" class="share-presence" aria-label="Shared session participants" style="display:none;"></div>
                     
