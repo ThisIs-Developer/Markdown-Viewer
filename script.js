@@ -2853,9 +2853,6 @@ This is a fully client-side application. Your content never leaves your browser 
         } else if (btn === mobileShareButton) {
           btn.title = 'Share via URL';
           btn.setAttribute('aria-label', 'Share via URL');
-        } else {
-          btn.title = 'Share';
-          btn.setAttribute('aria-label', 'Share');
         }
       }, 2000);
     }
