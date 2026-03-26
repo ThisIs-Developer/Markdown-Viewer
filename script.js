@@ -2605,8 +2605,6 @@ This is a fully client-side application. Your content never leaves your browser 
   const SHARE_PRESENCE_HEARTBEAT_MS = 15000;
   const SHARE_PRESENCE_STALE_MS = SHARE_PRESENCE_HEARTBEAT_MS * 2;
   const clientId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  const clientName = generateClientName();
-  const clientIcon = animalEmojiForId(clientId);
   let sharePresenceHeartbeatTimer = null;
 
   const adjectives = [
@@ -2635,6 +2633,9 @@ This is a fully client-side application. Your content never leaves your browser 
     for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
     return animalIcons[Math.abs(hash) % animalIcons.length];
   }
+
+  const clientName = generateClientName();
+  const clientIcon = animalEmojiForId(clientId);
 
   function readPresenceState() {
     try {
