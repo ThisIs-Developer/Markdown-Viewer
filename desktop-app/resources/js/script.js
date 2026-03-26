@@ -61,16 +61,10 @@ document.addEventListener("DOMContentLoaded", function () {
   const mobileThemeToggle   = document.getElementById("mobile-theme-toggle");
   const shareButton         = document.getElementById("share-button");
   const mobileShareButton   = document.getElementById("mobile-share-button");
-  const sharePresence       = document.getElementById("share-presence");
-  const mobileSharePresence = document.getElementById("mobile-share-presence");
   const githubImportModal = document.getElementById("github-import-modal");
   const githubImportTitle = document.getElementById("github-import-title");
   const githubImportUrlInput = document.getElementById("github-import-url");
   const githubImportFileSelect = document.getElementById("github-import-file-select");
-  const githubImportSelectionToolbar = document.getElementById("github-import-selection-toolbar");
-  const githubImportSelectedCount = document.getElementById("github-import-selected-count");
-  const githubImportSelectAllBtn = document.getElementById("github-import-select-all");
-  const githubImportTree = document.getElementById("github-import-tree");
   const githubImportError = document.getElementById("github-import-error");
   const githubImportCancelBtn = document.getElementById("github-import-cancel");
   const githubImportSubmitBtn = document.getElementById("github-import-submit");
@@ -137,90 +131,6 @@ document.addEventListener("DOMContentLoaded", function () {
     ...markedOptions,
     renderer: renderer,
   });
-
-  const GITHUB_ALERT_META = {
-    note: {
-      label: "Note",
-      viewBox: "0 0 512 512",
-      path: "M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336l24 0 0-64-24 0c-13.3 0-24-10.7-24-24s10.7-24 24-24l48 0c13.3 0 24 10.7 24 24l0 88 8 0c13.3 0 24 10.7 24 24s-10.7 24-24 24l-80 0c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z",
-    },
-    tip: {
-      label: "Tip",
-      viewBox: "0 0 384 512",
-      path: "M297.2 248.9C311.6 228.3 320 203.2 320 176c0-70.7-57.3-128-128-128S64 105.3 64 176c0 27.2 8.4 52.3 22.8 72.9c3.7 5.3 8.1 11.3 12.8 17.7c0 0 0 0 0 0c12.9 17.7 28.3 38.9 39.8 59.8c10.4 19 15.7 38.8 18.3 57.5L109 384c-2.2-12-5.9-23.7-11.8-34.5c-9.9-18-22.2-34.9-34.5-51.8c0 0 0 0 0 0s0 0 0 0c-5.2-7.1-10.4-14.2-15.4-21.4C27.6 247.9 16 213.3 16 176C16 78.8 94.8 0 192 0s176 78.8 176 176c0 37.3-11.6 71.9-31.4 100.3c-5 7.2-10.2 14.3-15.4 21.4c0 0 0 0 0 0s0 0 0 0c-12.3 16.8-24.6 33.7-34.5 51.8c-5.9 10.8-9.6 22.5-11.8 34.5l-48.6 0c2.6-18.7 7.9-38.6 18.3-57.5c11.5-20.9 26.9-42.1 39.8-59.8c0 0 0 0 0 0s0 0 0 0s0 0 0 0c4.7-6.4 9-12.4 12.7-17.7zM192 128c-26.5 0-48 21.5-48 48c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-44.2 35.8-80 80-80c8.8 0 16 7.2 16 16s-7.2 16-16 16zm0 384c-44.2 0-80-35.8-80-80l0-16 160 0 0 16c0 44.2-35.8 80-80 80z",
-    },
-    important: {
-      label: "Important",
-      viewBox: "0 0 512 512",
-      path: "M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24l0 112c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-112c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z",
-    },
-    warning: {
-      label: "Warning",
-      viewBox: "0 0 512 512",
-      path: "M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480L40 480c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24l0 112c0 13.3 10.7 24 24 24s24-10.7 24-24l0-112c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z",
-    },
-    caution: {
-      label: "Caution",
-      viewBox: "0 0 512 512",
-      path: "M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z",
-    },
-  };
-  const GITHUB_ALERT_MARKER_REGEX = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+|$)/i;
-
-  function enhanceGitHubAlerts(container) {
-    if (!container) return;
-
-    const blockquotes = container.querySelectorAll("blockquote");
-    blockquotes.forEach((blockquote) => {
-      let firstParagraph = null;
-      for (const child of blockquote.children) {
-        if (child.tagName === "P") {
-          firstParagraph = child;
-          break;
-        }
-      }
-      if (!firstParagraph) return;
-
-      const firstParagraphHtml = firstParagraph.innerHTML.trim();
-      const markerMatch = firstParagraphHtml.match(GITHUB_ALERT_MARKER_REGEX);
-      if (!markerMatch) return;
-
-      const alertType = markerMatch[1].toLowerCase();
-      blockquote.classList.add("markdown-alert", `markdown-alert-${alertType}`);
-
-      const title = document.createElement("p");
-      title.className = "markdown-alert-title";
-      const alertMeta = GITHUB_ALERT_META[alertType] || { label: markerMatch[1], path: "" };
-      const icon = document.createElement("span");
-      icon.className = "markdown-alert-icon";
-      icon.setAttribute("aria-hidden", "true");
-
-      if (alertMeta.path) {
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("viewBox", alertMeta.viewBox || "0 0 512 512");
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", alertMeta.path);
-        svg.appendChild(path);
-        icon.appendChild(svg);
-      }
-
-      const label = document.createElement("span");
-      label.textContent = alertMeta.label;
-      title.appendChild(icon);
-      title.appendChild(label);
-
-      blockquote.insertBefore(title, blockquote.firstChild);
-
-      const remainingHtml = firstParagraphHtml
-        .replace(GITHUB_ALERT_MARKER_REGEX, "")
-        .trim();
-      if (remainingHtml) {
-        firstParagraph.innerHTML = remainingHtml;
-      } else {
-        firstParagraph.remove();
-      }
-    });
-  }
 
   const sampleMarkdown = `# Welcome to Markdown Viewer
 
@@ -862,7 +772,6 @@ This is a fully client-side application. Your content never leaves your browser 
         ADD_ATTR: ['id', 'class', 'style']
       });
       markdownPreview.innerHTML = sanitizedHtml;
-      enhanceGitHubAlerts(markdownPreview);
 
       processEmojis(markdownPreview);
       
@@ -916,10 +825,6 @@ This is a fully client-side application. Your content never leaves your browser 
     return /\.(md|markdown)$/i.test(path || "");
   }
   const MAX_GITHUB_FILES_SHOWN = 30;
-  const GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS = 800;
-  let lastGitHubImportRequestAt = 0;
-  const selectedGitHubImportPaths = new Set();
-  let availableGitHubImportPaths = [];
 
   function getFileName(path) {
     return (path || "").split("/").pop() || "document.md";
@@ -934,12 +839,6 @@ This is a fully client-side application. Your content never leaves your browser 
   }
 
   async function fetchGitHubJson(url) {
-    const now = Date.now();
-    const waitTime = GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS - (now - lastGitHubImportRequestAt);
-    if (waitTime > 0) {
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
-    }
-    lastGitHubImportRequestAt = Date.now();
     const response = await fetch(url, {
       headers: {
         Accept: "application/vnd.github+json"
@@ -1025,109 +924,6 @@ This is a fully client-side application. Your content never leaves your browser 
       .sort((a, b) => a.localeCompare(b));
   }
 
-  function buildMarkdownFileTree(paths) {
-    const root = { folders: {}, files: [] };
-    (paths || []).forEach((path) => {
-      const segments = (path || "").split("/").filter(Boolean);
-      if (!segments.length) return;
-      const fileName = segments.pop();
-      let node = root;
-      segments.forEach((segment) => {
-        if (!node.folders[segment]) {
-          node.folders[segment] = { folders: {}, files: [] };
-        }
-        node = node.folders[segment];
-      });
-      node.files.push({ name: fileName, path });
-    });
-    return root;
-  }
-
-  function updateGitHubImportSelectedCount() {
-    if (!githubImportSelectedCount) return;
-    const count = selectedGitHubImportPaths.size;
-    githubImportSelectedCount.textContent = `${count} selected`;
-  }
-
-  function updateGitHubSelectAllButtonLabel() {
-    if (!githubImportSelectAllBtn) return;
-    const total = availableGitHubImportPaths.length;
-    const allSelected = total > 0 && selectedGitHubImportPaths.size === total;
-    githubImportSelectAllBtn.textContent = allSelected ? "Clear All" : "Select All";
-  }
-
-  function syncGitHubSelectionToButtons() {
-    if (!githubImportTree) return;
-    Array.from(githubImportTree.querySelectorAll(".github-tree-file-btn")).forEach((btn) => {
-      const isSelected = selectedGitHubImportPaths.has(btn.dataset.path);
-      btn.classList.toggle("is-selected", isSelected);
-      btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
-    });
-  }
-
-  function setGitHubSelectedPaths(paths) {
-    selectedGitHubImportPaths.clear();
-    (paths || []).forEach((path) => selectedGitHubImportPaths.add(path));
-    updateGitHubImportSelectedCount();
-    syncGitHubSelectionToButtons();
-    updateGitHubSelectAllButtonLabel();
-  }
-
-  function toggleGitHubSelectedPath(path) {
-    if (!path) return;
-    if (selectedGitHubImportPaths.has(path)) {
-      selectedGitHubImportPaths.delete(path);
-    } else {
-      selectedGitHubImportPaths.add(path);
-    }
-    updateGitHubImportSelectedCount();
-    syncGitHubSelectionToButtons();
-    updateGitHubSelectAllButtonLabel();
-  }
-
-  function renderGitHubImportTree(paths) {
-    if (!githubImportTree || !githubImportFileSelect) return;
-    githubImportTree.innerHTML = "";
-    const tree = buildMarkdownFileTree(paths);
-
-    const createTreeBranch = function(node, parentPath) {
-      const list = document.createElement("ul");
-      const folderNames = Object.keys(node.folders).sort((a, b) => a.localeCompare(b));
-      folderNames.forEach((folderName) => {
-        const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
-        const item = document.createElement("li");
-        const folderLabel = document.createElement("span");
-        folderLabel.className = "github-tree-folder-label";
-        folderLabel.textContent = `📁 ${folderName}`;
-        item.appendChild(folderLabel);
-        item.appendChild(createTreeBranch(node.folders[folderName], folderPath));
-        list.appendChild(item);
-      });
-
-      node.files
-        .sort((a, b) => a.path.localeCompare(b.path))
-        .forEach((file) => {
-          const fileItem = document.createElement("li");
-          const fileButton = document.createElement("button");
-          fileButton.type = "button";
-          fileButton.className = "github-tree-file-btn";
-          fileButton.dataset.path = file.path;
-          fileButton.setAttribute("aria-pressed", "false");
-          fileButton.textContent = `📄 ${file.name}`;
-          fileButton.addEventListener("click", function() {
-            toggleGitHubSelectedPath(file.path);
-          });
-          fileItem.appendChild(fileButton);
-          list.appendChild(fileItem);
-        });
-
-      return list;
-    };
-
-    githubImportTree.appendChild(createTreeBranch(tree, ""));
-    syncGitHubSelectionToButtons();
-  }
-
   function setGitHubImportLoading(isLoading) {
     if (!githubImportSubmitBtn) return;
     if (isLoading) {
@@ -1163,15 +959,6 @@ This is a fully client-side application. Your content never leaves your browser 
     githubImportFileSelect.innerHTML = "";
     githubImportFileSelect.style.display = "none";
     githubImportFileSelect.disabled = false;
-    if (githubImportSelectionToolbar) {
-      githubImportSelectionToolbar.style.display = "none";
-    }
-    availableGitHubImportPaths = [];
-    setGitHubSelectedPaths([]);
-    if (githubImportTree) {
-      githubImportTree.innerHTML = "";
-      githubImportTree.style.display = "none";
-    }
     githubImportSubmitBtn.dataset.step = "url";
     delete githubImportSubmitBtn.dataset.owner;
     delete githubImportSubmitBtn.dataset.repo;
@@ -1200,27 +987,22 @@ This is a fully client-side application. Your content never leaves your browser 
       if (githubImportCancelBtn) {
         githubImportCancelBtn.disabled = disabled;
       }
-      if (githubImportSelectAllBtn) {
-        githubImportSelectAllBtn.disabled = disabled;
-      }
     };
     const step = githubImportSubmitBtn.dataset.step || "url";
     if (step === "select") {
-      const selectedPaths = Array.from(selectedGitHubImportPaths);
+      const selectedPath = githubImportFileSelect.value;
       const owner = githubImportSubmitBtn.dataset.owner;
       const repo = githubImportSubmitBtn.dataset.repo;
       const ref = githubImportSubmitBtn.dataset.ref;
-      if (!owner || !repo || !ref || !selectedPaths.length) {
-        setGitHubImportMessage("Please select at least one file to import.");
+      if (!owner || !repo || !ref || !selectedPath) {
+        setGitHubImportMessage("Please select a file to import.");
         return;
       }
       setGitHubImportLoading(true);
       setGitHubImportDialogDisabled(true);
       try {
-        for (const selectedPath of selectedPaths) {
-          const markdown = await fetchTextContent(buildRawGitHubUrl(owner, repo, ref, selectedPath));
-          newTab(markdown, getFileName(selectedPath).replace(/\.(md|markdown)$/i, ""));
-        }
+        const markdown = await fetchTextContent(buildRawGitHubUrl(owner, repo, ref, selectedPath));
+        newTab(markdown, getFileName(selectedPath).replace(/\.(md|markdown)$/i, ""));
         closeGitHubImportModal();
       } catch (error) {
         console.error("GitHub import failed:", error);
@@ -1275,31 +1057,22 @@ This is a fully client-side application. Your content never leaves your browser 
         return;
       }
 
-      githubImportFileSelect.innerHTML = "";
       githubImportUrlInput.style.display = "none";
-      githubImportFileSelect.style.display = "none";
-      if (githubImportSelectionToolbar) {
-        githubImportSelectionToolbar.style.display = "flex";
-      }
-      if (githubImportTree) {
-        githubImportTree.style.display = "block";
-      }
+      githubImportFileSelect.style.display = "block";
+      githubImportFileSelect.innerHTML = "";
       shownFiles.forEach((filePath) => {
         const option = document.createElement("option");
         option.value = filePath;
         option.textContent = filePath;
         githubImportFileSelect.appendChild(option);
       });
-      availableGitHubImportPaths = shownFiles.slice();
-      setGitHubSelectedPaths(shownFiles[0] ? [shownFiles[0]] : []);
-      renderGitHubImportTree(shownFiles);
       if (files.length > MAX_GITHUB_FILES_SHOWN) {
         setGitHubImportMessage(`Showing first ${MAX_GITHUB_FILES_SHOWN} of ${files.length} Markdown files.`, { isError: false });
       } else {
         setGitHubImportMessage("");
       }
       if (githubImportTitle) {
-        githubImportTitle.textContent = "Select Markdown file(s) to import";
+        githubImportTitle.textContent = "Select a Markdown file to import";
       }
       githubImportSubmitBtn.dataset.step = "select";
       githubImportSubmitBtn.dataset.owner = parsed.owner;
@@ -1780,13 +1553,6 @@ This is a fully client-side application. Your content never leaves your browser 
   if (githubImportFileSelect) {
     githubImportFileSelect.addEventListener("keydown", handleGitHubImportInputKeydown);
   }
-  if (githubImportSelectAllBtn) {
-    githubImportSelectAllBtn.addEventListener("click", function() {
-      const allPaths = availableGitHubImportPaths.slice();
-      const shouldSelectAll = selectedGitHubImportPaths.size !== allPaths.length;
-      setGitHubSelectedPaths(shouldSelectAll ? allPaths : []);
-    });
-  }
 
   fileInput.addEventListener("change", function (e) {
     const file = e.target.files[0];
@@ -1816,10 +1582,6 @@ This is a fully client-side application. Your content never leaves your browser 
         ADD_TAGS: ['mjx-container'], 
         ADD_ATTR: ['id', 'class', 'style']
       });
-      const tempContainer = document.createElement("div");
-      tempContainer.innerHTML = sanitizedHtml;
-      enhanceGitHubAlerts(tempContainer);
-      const enhancedHtml = tempContainer.innerHTML;
       const isDarkTheme =
         document.documentElement.getAttribute("data-theme") === "dark";
       const cssTheme = isDarkTheme
@@ -1863,40 +1625,6 @@ This is a fully client-side application. Your content never leaves your browser 
       .hljs-addition { color: ${isDarkTheme ? "#aff5b4" : "#22863a"}; background-color: ${isDarkTheme ? "#033a16" : "#f0fff4"}; }
       .hljs-deletion { color: ${isDarkTheme ? "#ffdcd7" : "#b31d28"}; background-color: ${isDarkTheme ? "#67060c" : "#ffeef0"}; }
 
-      .markdown-alert {
-          padding: 0.5rem 1rem;
-          margin-bottom: 16px;
-          border-left: 0.25em solid;
-          border-radius: 0.375rem;
-      }
-      .markdown-alert > :last-child {
-          margin-bottom: 0;
-      }
-      .markdown-alert-title {
-          margin: 0 0 8px;
-          font-weight: 600;
-          line-height: 1.25;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-      }
-      .markdown-alert-icon {
-          display: inline-flex;
-          width: 16px;
-          height: 16px;
-      }
-      .markdown-alert-icon svg {
-          width: 16px;
-          height: 16px;
-          fill: currentColor;
-      }
-      .markdown-alert-note { color: ${isDarkTheme ? "#4493f8" : "#0969da"}; border-left-color: ${isDarkTheme ? "#4493f8" : "#0969da"}; background-color: ${isDarkTheme ? "rgba(31, 111, 235, 0.15)" : "#ddf4ff"}; }
-      .markdown-alert-tip { color: ${isDarkTheme ? "#3fb950" : "#1a7f37"}; border-left-color: ${isDarkTheme ? "#3fb950" : "#1a7f37"}; background-color: ${isDarkTheme ? "rgba(35, 134, 54, 0.15)" : "#dafbe1"}; }
-      .markdown-alert-important { color: ${isDarkTheme ? "#ab7df8" : "#8250df"}; border-left-color: ${isDarkTheme ? "#ab7df8" : "#8250df"}; background-color: ${isDarkTheme ? "rgba(137, 87, 229, 0.15)" : "#fbefff"}; }
-      .markdown-alert-warning { color: ${isDarkTheme ? "#d29922" : "#9a6700"}; border-left-color: ${isDarkTheme ? "#d29922" : "#9a6700"}; background-color: ${isDarkTheme ? "rgba(210, 153, 34, 0.18)" : "#fff8c5"}; }
-      .markdown-alert-caution { color: ${isDarkTheme ? "#f85149" : "#cf222e"}; border-left-color: ${isDarkTheme ? "#f85149" : "#cf222e"}; background-color: ${isDarkTheme ? "rgba(248, 81, 73, 0.18)" : "#ffebe9"}; }
-      .markdown-alert > *:not(.markdown-alert-title) { color: ${isDarkTheme ? "#c9d1d9" : "#24292e"}; }
-
       @media (max-width: 767px) {
           .markdown-body {
               padding: 15px;
@@ -1906,7 +1634,7 @@ This is a fully client-side application. Your content never leaves your browser 
 </head>
 <body>
   <article class="markdown-body">
-      ${enhancedHtml}
+      ${sanitizedHtml}
   </article>
 </body>
 </html>`;
@@ -2419,7 +2147,6 @@ This is a fully client-side application. Your content never leaves your browser 
       const tempElement = document.createElement("div");
       tempElement.className = "markdown-body pdf-export";
       tempElement.innerHTML = sanitizedHtml;
-      enhanceGitHubAlerts(tempElement);
       tempElement.style.padding = "20px";
       tempElement.style.width = "210mm";
       tempElement.style.margin = "0 auto";
@@ -2601,200 +2328,6 @@ This is a fully client-side application. Your content never leaves your browser 
   // ============================================
 
   const MAX_SHARE_URL_LENGTH = 32000;
-  const SHARE_PRESENCE_KEY = "mdv:share-presence";
-  const SHARE_PRESENCE_HEARTBEAT_MS = 15000;
-  const SHARE_PRESENCE_STALE_MS = SHARE_PRESENCE_HEARTBEAT_MS * 2;
-  const clientId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  let sharePresenceHeartbeatTimer = null;
-
-  const adjectives = [
-    'Acidic','Awesome','Bitter','Burnt','Buttery','Creamy','Fantastic','Fresh','Fried',
-    'Good','Juicy','Moist','Raw','Roasted','Salty','Seasoned','Sharp','Sour','Sugary',
-    'Sweet','Stale',
-  ];
-
-  const nouns = [
-    'Bamboo','Cabbage','Cactus','Fern','Garlic','Lemon','Lily','Melon','Onion',
-    'Palm','Plum','Tofu','Tomato','Watermelon',
-  ];
-
-  const animalIcons = ['🐶', '🐱', '🦊', '🐼', '🐨', '🐯', '🦁', '🐸', '🐵', '🐧', '🦉', '🦄'];
-
-  function arrayRandom(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  }
-
-  function generateClientName() {
-    return `${arrayRandom(adjectives)} ${arrayRandom(nouns)}`;
-  }
-
-  function animalEmojiForId(id) {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i);
-    return animalIcons[Math.abs(hash) % animalIcons.length];
-  }
-
-  const clientName = generateClientName();
-  const clientIcon = animalEmojiForId(clientId);
-
-  function readPresenceState() {
-    try {
-      return JSON.parse(localStorage.getItem(SHARE_PRESENCE_KEY)) || {};
-    } catch (_) {
-      return {};
-    }
-  }
-
-  function writePresenceState(state) {
-    try {
-      localStorage.setItem(SHARE_PRESENCE_KEY, JSON.stringify(state));
-    } catch (_) {
-      // ignore storage write failures
-    }
-  }
-
-  function cleanPresenceState(state) {
-    const now = Date.now();
-    const cleaned = {};
-    Object.keys(state).forEach((id) => {
-      const user = state[id];
-      if (!user || typeof user.lastSeen !== 'number') return;
-      if (now - user.lastSeen <= SHARE_PRESENCE_STALE_MS) {
-        cleaned[id] = user;
-      }
-    });
-    return cleaned;
-  }
-
-  function updatePresence(shareId) {
-    if (!shareId) return;
-    const state = cleanPresenceState(readPresenceState());
-    state[clientId] = {
-      id: clientId,
-      shareId,
-      name: clientName,
-      icon: clientIcon,
-      lastSeen: Date.now(),
-    };
-    writePresenceState(state);
-  }
-
-  function leavePresence() {
-    const state = readPresenceState();
-    if (state[clientId]) {
-      delete state[clientId];
-      writePresenceState(state);
-    }
-  }
-
-  function getShareIdFromHash() {
-    const hash = window.location.hash;
-    if (!hash.startsWith('#share=')) return null;
-    return hash.slice('#share='.length) || null;
-  }
-
-  function renderPresence() {
-    const shareId = getShareIdFromHash();
-    const isSharedSession = Boolean(shareId);
-    contentContainer.classList.toggle('shared-active', isSharedSession);
-
-    [sharePresence, mobileSharePresence].forEach((container) => {
-      if (!container) return;
-      container.innerHTML = '';
-      if (!isSharedSession) {
-        container.style.display = 'none';
-        return;
-      }
-
-      const state = cleanPresenceState(readPresenceState());
-      const users = Object.values(state)
-        .filter((u) => u && u.shareId === shareId)
-        .sort((a, b) => b.lastSeen - a.lastSeen);
-
-      if (!users.length) {
-        container.style.display = 'none';
-        return;
-      }
-
-      container.style.display = '';
-      const visibleUsers = users.slice(0, 4);
-      const extraUsers = users.slice(4);
-
-      visibleUsers.forEach((user) => {
-        const avatar = document.createElement('span');
-        avatar.className = `share-presence-avatar${user.id === clientId ? ' self' : ''}`;
-        avatar.textContent = user.icon || '🐾';
-        avatar.title = user.name || 'Shared user';
-        avatar.setAttribute('aria-label', user.name || 'Shared user');
-        container.appendChild(avatar);
-      });
-
-      if (extraUsers.length) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'dropdown';
-        const button = document.createElement('button');
-        button.className = 'btn btn-sm dropdown-toggle share-presence-toggle';
-        button.type = 'button';
-        button.setAttribute('data-bs-toggle', 'dropdown');
-        button.setAttribute('aria-expanded', 'false');
-        button.textContent = `+${extraUsers.length}`;
-
-        const menu = document.createElement('ul');
-        menu.className = 'dropdown-menu dropdown-menu-end share-presence-more-list';
-
-        extraUsers.forEach((user) => {
-          const item = document.createElement('li');
-          const label = document.createElement('span');
-          label.className = 'dropdown-item share-presence-item';
-          const avatarInline = document.createElement('span');
-          avatarInline.className = 'avatar-inline';
-          avatarInline.textContent = user.icon || '🐾';
-          avatarInline.style.background = 'linear-gradient(135deg, #58a6ff, #1f6feb)';
-          const nameText = document.createElement('span');
-          nameText.textContent = user.name || 'Shared user';
-          label.appendChild(avatarInline);
-          label.appendChild(nameText);
-          item.appendChild(label);
-          menu.appendChild(item);
-        });
-
-        wrapper.appendChild(button);
-        wrapper.appendChild(menu);
-        container.appendChild(wrapper);
-      }
-    });
-  }
-
-  function syncPresenceLoop() {
-    const shareId = getShareIdFromHash();
-    if (!shareId) {
-      if (sharePresenceHeartbeatTimer) {
-        clearInterval(sharePresenceHeartbeatTimer);
-        sharePresenceHeartbeatTimer = null;
-      }
-      leavePresence();
-      renderPresence();
-      return;
-    }
-
-    updatePresence(shareId);
-    renderPresence();
-
-    if (!sharePresenceHeartbeatTimer) {
-      sharePresenceHeartbeatTimer = setInterval(() => {
-        const activeShareId = getShareIdFromHash();
-        if (!activeShareId) {
-          clearInterval(sharePresenceHeartbeatTimer);
-          sharePresenceHeartbeatTimer = null;
-          leavePresence();
-          renderPresence();
-          return;
-        }
-        updatePresence(activeShareId);
-        renderPresence();
-      }, SHARE_PRESENCE_HEARTBEAT_MS);
-    }
-  }
 
   function encodeMarkdownForShare(text) {
     const compressed = pako.deflate(new TextEncoder().encode(text));
@@ -2878,12 +2411,6 @@ This is a fully client-side application. Your content never leaves your browser 
   }
 
   loadFromShareHash();
-  syncPresenceLoop();
-  window.addEventListener('hashchange', syncPresenceLoop);
-  window.addEventListener('storage', (e) => {
-    if (e.key === SHARE_PRESENCE_KEY) renderPresence();
-  });
-  window.addEventListener('beforeunload', leavePresence);
 
   const dropEvents = ["dragenter", "dragover", "dragleave", "drop"];
 
