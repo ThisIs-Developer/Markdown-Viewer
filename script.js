@@ -2599,14 +2599,10 @@ This is a fully client-side application. Your content never leaves your browser 
       const renderHeight = Math.max(tempElement.scrollHeight || 0, 1);
       const desiredScale = PAGE_CONFIG.scale;
       const dimensionLimitedScale = Math.min(
-        desiredScale,
         MAX_PDF_CANVAS_DIMENSION / renderWidth,
         MAX_PDF_CANVAS_DIMENSION / renderHeight
       );
-      const areaLimitedScale = Math.min(
-        desiredScale,
-        Math.sqrt(MAX_PDF_CANVAS_AREA / (renderWidth * renderHeight))
-      );
+      const areaLimitedScale = Math.sqrt(MAX_PDF_CANVAS_AREA / (renderWidth * renderHeight));
       const safeScale = Math.max(
         MIN_READABLE_PDF_SCALE,
         Math.min(desiredScale, dimensionLimitedScale, areaLimitedScale)
