@@ -2023,6 +2023,14 @@ This is a fully client-side application. Your content never leaves your browser 
     windowWidth: 1000,      // html2canvas config
     scale: 2                // html2canvas scale factor
   };
+  // Browser canvas implementations commonly fail/blank around 32,767 px in either dimension.
+  // Keep a margin under that practical limit for cross-browser stability.
+  const MAX_PDF_CANVAS_DIMENSION = 32000;
+  // Very large total pixel areas can also fail on some engines even below dimension limits.
+  // 250M px is a conservative cap to avoid blank exports on large markdown documents.
+  const MAX_PDF_CANVAS_AREA = 250000000;
+  // Keep readability by not scaling below 50% for PDF capture.
+  const MIN_READABLE_PDF_SCALE = 0.5;
 
   /**
    * Task 1: Identifies all graphic elements that may need page-break handling
@@ -2590,25 +2598,19 @@ This is a fully client-side application. Your content never leaves your browser 
       const renderWidth = Math.max(tempElement.offsetWidth || 0, 1);
       const renderHeight = Math.max(tempElement.scrollHeight || 0, 1);
       const desiredScale = PAGE_CONFIG.scale;
-      // Browser canvas implementations commonly fail/blank around 32,767 px in either dimension.
-      // Keep a margin under that practical limit for cross-browser stability.
-      const MAX_CANVAS_DIMENSION = 32000;
-      // Very large total pixel areas can also fail on some engines even below dimension limits.
-      // 250M px is a conservative cap to avoid blank exports on large markdown documents.
-      const MAX_CANVAS_AREA = 250000000;
-
       const dimensionLimitedScale = Math.min(
         desiredScale,
-        MAX_CANVAS_DIMENSION / renderWidth,
-        MAX_CANVAS_DIMENSION / renderHeight
+        MAX_PDF_CANVAS_DIMENSION / renderWidth,
+        MAX_PDF_CANVAS_DIMENSION / renderHeight
       );
       const areaLimitedScale = Math.min(
         desiredScale,
-        Math.sqrt(MAX_CANVAS_AREA / (renderWidth * renderHeight))
+        Math.sqrt(MAX_PDF_CANVAS_AREA / (renderWidth * renderHeight))
       );
-      // Keep readability by not scaling below 50%; this preserves text legibility
-      // while still preventing empty exports caused by oversized canvas allocations.
-      const safeScale = Math.max(0.5, Math.min(desiredScale, dimensionLimitedScale, areaLimitedScale));
+      const safeScale = Math.max(
+        MIN_READABLE_PDF_SCALE,
+        Math.min(desiredScale, dimensionLimitedScale, areaLimitedScale)
+      );
 
       if (safeScale < desiredScale) {
         console.warn(
