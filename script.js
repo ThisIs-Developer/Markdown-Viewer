@@ -2595,14 +2595,17 @@ This is a fully client-side application. Your content never leaves your browser 
       const contentWidth = pageWidth - (margin * 2);
 
       // Prevent oversized canvases for very large documents (can produce empty PDF output)
-      const renderWidth = Math.max(tempElement.offsetWidth || 0, 1);
-      const renderHeight = Math.max(tempElement.scrollHeight || 0, 1);
+      const elementWidth = Math.max(tempElement.offsetWidth || 0, 1);
+      const elementHeight = Math.max(tempElement.scrollHeight || 0, 1);
       const desiredScale = PAGE_CONFIG.scale;
       const dimensionLimitedScale = Math.min(
-        MAX_PDF_CANVAS_DIMENSION / renderWidth,
-        MAX_PDF_CANVAS_DIMENSION / renderHeight
+        MAX_PDF_CANVAS_DIMENSION / elementWidth,
+        MAX_PDF_CANVAS_DIMENSION / elementHeight
       );
-      const areaLimitedScale = Math.sqrt(MAX_PDF_CANVAS_AREA / (renderWidth * renderHeight));
+      const elementArea = elementWidth * elementHeight;
+      const areaLimitedScale = Number.isFinite(elementArea) && elementArea > 0
+        ? Math.sqrt(MAX_PDF_CANVAS_AREA / elementArea)
+        : 1;
       const safeScale = Math.max(
         MIN_READABLE_PDF_SCALE,
         Math.min(desiredScale, dimensionLimitedScale, areaLimitedScale)
@@ -2620,8 +2623,8 @@ This is a fully client-side application. Your content never leaves your browser 
         useCORS: true,
         allowTaint: true,
         logging: false,
-        windowWidth: Math.ceil(renderWidth),
-        windowHeight: Math.ceil(renderHeight)
+        windowWidth: Math.ceil(elementWidth),
+        windowHeight: Math.ceil(elementHeight)
       });
 
       const scaleFactor = canvas.width / contentWidth;
