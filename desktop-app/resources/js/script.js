@@ -2586,13 +2586,38 @@ This is a fully client-side application. Your content never leaves your browser 
       const margin = 15;
       const contentWidth = pageWidth - (margin * 2);
 
+      // Prevent oversized canvases for very large documents (can produce empty PDF output)
+      const renderWidth = Math.max(tempElement.offsetWidth || 0, 1);
+      const renderHeight = Math.max(tempElement.scrollHeight || 0, 1);
+      const desiredScale = PAGE_CONFIG.scale;
+      const MAX_CANVAS_DIMENSION = 32000;
+      const MAX_CANVAS_AREA = 250000000; // conservative browser-safe area
+
+      const dimensionLimitedScale = Math.min(
+        desiredScale,
+        MAX_CANVAS_DIMENSION / renderWidth,
+        MAX_CANVAS_DIMENSION / renderHeight
+      );
+      const areaLimitedScale = Math.min(
+        desiredScale,
+        Math.sqrt(MAX_CANVAS_AREA / (renderWidth * renderHeight))
+      );
+      const safeScale = Math.max(0.5, Math.min(desiredScale, dimensionLimitedScale, areaLimitedScale));
+
+      if (safeScale < desiredScale) {
+        console.warn(
+          `Reducing PDF render scale from ${desiredScale} to ${safeScale.toFixed(2)} ` +
+          `to avoid browser canvas limits for large content.`
+        );
+      }
+
       const canvas = await html2canvas(tempElement, {
-        scale: 2,
+        scale: safeScale,
         useCORS: true,
         allowTaint: true,
         logging: false,
-        windowWidth: 1000,
-        windowHeight: tempElement.scrollHeight
+        windowWidth: Math.ceil(renderWidth),
+        windowHeight: Math.ceil(renderHeight)
       });
 
       const scaleFactor = canvas.width / contentWidth;
