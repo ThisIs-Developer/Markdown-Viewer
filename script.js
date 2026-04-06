@@ -61,6 +61,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const mobileThemeToggle   = document.getElementById("mobile-theme-toggle");
   const shareButton         = document.getElementById("share-button");
   const mobileShareButton   = document.getElementById("mobile-share-button");
+  const rtlToggleButton     = document.getElementById("rtl-toggle");
+  const mobileRtlToggle     = document.getElementById("mobile-rtl-toggle");
   const githubImportModal = document.getElementById("github-import-modal");
   const githubImportTitle = document.getElementById("github-import-title");
   const githubImportUrlInput = document.getElementById("github-import-url");
@@ -1524,6 +1526,18 @@ This is a fully client-side application. Your content never leaves your browser 
     saveGlobalState({ syncScrollingEnabled });
   }
 
+  // RTL Preview Toggle
+  let rtlEnabled = false;
+
+  function toggleRTL() {
+    rtlEnabled = !rtlEnabled;
+    markdownPreview.setAttribute("dir", rtlEnabled ? "rtl" : "ltr");
+    [rtlToggleButton, mobileRtlToggle].forEach(btn => {
+      if (btn) btn.classList.toggle("rtl-active", rtlEnabled);
+    });
+    saveGlobalState({ rtlEnabled });
+  }
+
   // View Mode Functions - Story 1.1 & 1.2
   function setViewMode(mode) {
     if (mode === currentViewMode) return;
@@ -1745,6 +1759,7 @@ This is a fully client-side application. Your content never leaves your browser 
   
   initTabs();
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();
+  if (loadGlobalState().rtlEnabled === true) toggleRTL();
   updateMobileStats();
 
   // Initialize resizer - Story 1.3
@@ -1801,6 +1816,8 @@ This is a fully client-side application. Your content never leaves your browser 
   editorPane.addEventListener("scroll", syncEditorToPreview);
   previewPane.addEventListener("scroll", syncPreviewToEditor);
   toggleSyncButton.addEventListener("click", toggleSyncScrolling);
+  rtlToggleButton.addEventListener("click", toggleRTL);
+  mobileRtlToggle.addEventListener("click", () => { toggleRTL(); closeMobileMenu(); });
   themeToggle.addEventListener("click", function () {
     const theme =
       document.documentElement.getAttribute("data-theme") === "dark"
