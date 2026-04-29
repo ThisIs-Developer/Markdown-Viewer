@@ -2621,9 +2621,13 @@ This is a fully client-side application. Your content never leaves your browser 
       }
 
       const totalPages = Math.max(1, Math.ceil(actualElementHeight / pageContentHeightPx));
-      const shouldRenderInSlices = safeScale < desiredScale && totalPages > 1;
+      const shouldRenderInSlices = totalPages > 1;
+      const yieldToBrowser = () => new Promise(resolve => requestAnimationFrame(resolve));
 
       if (shouldRenderInSlices) {
+        statusText.textContent = `Rendering ${totalPages} pages...`;
+        await yieldToBrowser();
+
         const sliceHeight = Math.max(1, Math.min(pageContentHeightPx, actualElementHeight));
         const sliceDimensionLimitedScale = Math.min(
           MAX_PDF_CANVAS_DIMENSION / actualElementWidth,
@@ -2647,6 +2651,9 @@ This is a fully client-side application. Your content never leaves your browser 
         }
 
         for (let page = 0; page < totalPages; page++) {
+          statusText.textContent = `Rendering page ${page + 1} of ${totalPages}...`;
+          await yieldToBrowser();
+
           if (page > 0) pdf.addPage();
 
           const sliceY = page * pageContentHeightPx;
@@ -2669,6 +2676,9 @@ This is a fully client-side application. Your content never leaves your browser 
           pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
         }
       } else {
+        statusText.textContent = 'Rendering PDF...';
+        await yieldToBrowser();
+
         const canvas = await html2canvas(tempElement, {
           scale: safeScale,
           useCORS: true,
@@ -2683,6 +2693,9 @@ This is a fully client-side application. Your content never leaves your browser 
         const pagesCount = Math.ceil(imgHeight / (pageHeight - margin * 2));
 
         for (let page = 0; page < pagesCount; page++) {
+          statusText.textContent = `Composing page ${page + 1} of ${pagesCount}...`;
+          await yieldToBrowser();
+
           if (page > 0) pdf.addPage();
 
           const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
