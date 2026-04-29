@@ -2597,6 +2597,7 @@ This is a fully client-side application. Your content never leaves your browser 
       // Prevent oversized canvases for very large documents (can produce empty PDF output)
       const actualElementWidth = Math.max(tempElement.offsetWidth || 0, 1);
       const actualElementHeight = Math.max(tempElement.scrollHeight || 0, 1);
+      const pageContentHeightPx = actualElementWidth * (PAGE_CONFIG.contentHeight / PAGE_CONFIG.contentWidth);
       const desiredScale = PAGE_CONFIG.scale;
       const dimensionLimitedScale = Math.min(
         MAX_PDF_CANVAS_DIMENSION / actualElementWidth,
@@ -2619,35 +2620,85 @@ This is a fully client-side application. Your content never leaves your browser 
         );
       }
 
-      const canvas = await html2canvas(tempElement, {
-        scale: safeScale,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        windowWidth: Math.ceil(actualElementWidth),
-        windowHeight: Math.ceil(actualElementHeight)
-      });
+      const totalPages = Math.max(1, Math.ceil(actualElementHeight / pageContentHeightPx));
+      const shouldRenderInSlices = safeScale < desiredScale && totalPages > 1;
 
-      const scaleFactor = canvas.width / contentWidth;
-      const imgHeight = canvas.height / scaleFactor;
-      const pagesCount = Math.ceil(imgHeight / (pageHeight - margin * 2));
+      if (shouldRenderInSlices) {
+        const sliceHeight = Math.max(1, Math.min(pageContentHeightPx, actualElementHeight));
+        const sliceDimensionLimitedScale = Math.min(
+          MAX_PDF_CANVAS_DIMENSION / actualElementWidth,
+          MAX_PDF_CANVAS_DIMENSION / sliceHeight
+        );
+        const sliceArea = actualElementWidth * sliceHeight;
+        const sliceAreaLimitedScale = Number.isFinite(sliceArea) && sliceArea > 0
+          ? Math.sqrt(MAX_PDF_CANVAS_AREA / sliceArea)
+          // Fallback to 1 (no extra area-based reduction) when area is invalid.
+          : 1;
+        const sliceScale = Math.max(
+          MIN_READABLE_PDF_SCALE,
+          Math.min(desiredScale, sliceDimensionLimitedScale, sliceAreaLimitedScale)
+        );
 
-      for (let page = 0; page < pagesCount; page++) {
-        if (page > 0) pdf.addPage();
+        if (sliceScale < desiredScale) {
+          console.warn(
+            `Reducing PDF slice scale from ${desiredScale} to ${sliceScale.toFixed(2)} ` +
+            `to stay within browser canvas limits.`
+          );
+        }
 
-        const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
-        const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
-        const destHeight = sourceHeight / scaleFactor;
+        for (let page = 0; page < totalPages; page++) {
+          if (page > 0) pdf.addPage();
 
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
+          const sliceY = page * pageContentHeightPx;
+          const sliceHeightForPage = Math.min(actualElementHeight - sliceY, pageContentHeightPx);
 
-        const ctx = pageCanvas.getContext('2d');
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          const sliceCanvas = await html2canvas(tempElement, {
+            scale: sliceScale,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            windowWidth: Math.ceil(actualElementWidth),
+            windowHeight: Math.ceil(sliceHeightForPage),
+            y: Math.floor(sliceY),
+            height: Math.ceil(sliceHeightForPage)
+          });
 
-        const imgData = pageCanvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
+          const sliceScaleFactor = sliceCanvas.width / contentWidth;
+          const destHeight = sliceCanvas.height / sliceScaleFactor;
+          const imgData = sliceCanvas.toDataURL('image/png');
+          pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
+        }
+      } else {
+        const canvas = await html2canvas(tempElement, {
+          scale: safeScale,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          windowWidth: Math.ceil(actualElementWidth),
+          windowHeight: Math.ceil(actualElementHeight)
+        });
+
+        const scaleFactor = canvas.width / contentWidth;
+        const imgHeight = canvas.height / scaleFactor;
+        const pagesCount = Math.ceil(imgHeight / (pageHeight - margin * 2));
+
+        for (let page = 0; page < pagesCount; page++) {
+          if (page > 0) pdf.addPage();
+
+          const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
+          const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
+          const destHeight = sourceHeight / scaleFactor;
+
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+
+          const ctx = pageCanvas.getContext('2d');
+          ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+
+          const imgData = pageCanvas.toDataURL('image/png');
+          pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
+        }
       }
 
       pdf.save("document.pdf");
