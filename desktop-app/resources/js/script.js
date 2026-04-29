@@ -2622,7 +2622,11 @@ This is a fully client-side application. Your content never leaves your browser 
 
       const totalPages = Math.max(1, Math.ceil(actualElementHeight / pageContentHeightPx));
       const shouldRenderInSlices = totalPages > 1;
-      const yieldToBrowser = () => new Promise(resolve => requestAnimationFrame(resolve));
+      const yieldToBrowser = () => new Promise(resolve => {
+        requestAnimationFrame(() => {
+          setTimeout(resolve, 0);
+        });
+      });
 
       if (shouldRenderInSlices) {
         statusText.textContent = `Rendering ${totalPages} pages...`;
