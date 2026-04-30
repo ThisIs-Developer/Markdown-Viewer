@@ -986,12 +986,11 @@ a:focus {
   background-color: var(--button-bg);
   border-color: var(--accent-color);
   color: var(--accent-color);
-  border-width: 2px;
-  padding: 5px 11px; /* Adjust for thicker border */
+  box-shadow: 0 0 0 1px var(--accent-color);
 }
 
 .view-mode-btn.active:not(:last-child) {
-  border-right: 2px solid var(--accent-color);
+  border-right: 1px solid var(--accent-color);
 }
 
 .view-mode-btn i {
@@ -1039,10 +1038,6 @@ a:focus {
   .view-mode-btn {
     padding: 6px 10px;
     font-size: 13px;
-  }
-
-  .view-mode-btn.active {
-    padding: 5px 9px;
   }
 
   .github-link {
