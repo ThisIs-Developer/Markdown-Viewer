@@ -1022,7 +1022,7 @@ a:focus {
 }
 
 /* Responsive adjustments for view mode buttons */
-@media (min-width: 1080px) and (max-width: 1200px) {
+@media (max-width: 1200px) {
   .header-container {
     column-gap: 8px;
   }
@@ -1066,44 +1066,6 @@ a:focus {
   .view-mode-group {
     width: 100%;
     justify-content: center;
-  }
-
-  .header-container {
-    column-gap: 8px;
-  }
-
-  .toolbar {
-    gap: 6px;
-  }
-
-  .tool-button {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
-  .view-mode-btn {
-    padding: 6px 10px;
-    font-size: 13px;
-  }
-
-  .view-mode-btn.active {
-    padding: 5px 9px;
-  }
-
-  .github-link {
-    margin-right: 1rem;
-  }
-
-  .stats-container {
-    font-size: 0.85rem;
-  }
-
-  .stats-container .stat-item {
-    margin-right: 0.75rem;
-  }
-
-  .stats-container .stat-item:last-child {
-    margin-right: 0;
   }
 }
 
