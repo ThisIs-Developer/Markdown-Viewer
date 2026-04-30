@@ -934,15 +934,11 @@ a:focus {
 }
 
 .header-left {
-  flex: 0 1 auto;
-  justify-content: flex-start;
   min-width: 0;
   justify-self: start;
 }
 
 .header-right {
-  flex: 0 1 auto;
-  justify-content: flex-end;
   min-width: 0;
   justify-self: end;
 }
