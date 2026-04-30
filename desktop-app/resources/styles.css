@@ -274,6 +274,8 @@ body {
 .toolbar {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .tool-button {
@@ -924,25 +926,29 @@ a:focus {
 /* Header layout for three sections */
 .header-container {
   position: relative;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .header-left {
-  flex: 1;
+  flex: 0 1 auto;
   justify-content: flex-start;
+  min-width: 0;
 }
 
 .header-right {
-  flex: 1;
+  flex: 0 1 auto;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 /* View Mode Button Group */
 .view-mode-group {
   display: flex;
   gap: 0;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static;
+  transform: none;
+  margin: 0 auto;
 }
 
 .view-mode-btn {
@@ -1016,8 +1022,8 @@ a:focus {
 /* Responsive adjustments for view mode buttons */
 @media (max-width: 1079px) {
   .view-mode-group {
-    position: static;
-    transform: none;
+    width: 100%;
+    justify-content: center;
   }
 }
 
