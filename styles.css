@@ -1057,13 +1057,6 @@ a:focus {
   }
 }
 
-@media (max-width: 1079px) {
-  .view-mode-group {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
 @media (max-width: 767px) {
   .view-mode-group {
     display: none;
