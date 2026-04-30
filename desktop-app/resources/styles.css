@@ -274,8 +274,9 @@ body {
 .toolbar {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  white-space: nowrap;
 }
 
 .tool-button {
@@ -926,20 +927,24 @@ a:focus {
 /* Header layout for three sections */
 .header-container {
   position: relative;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
 }
 
 .header-left {
   flex: 0 1 auto;
   justify-content: flex-start;
   min-width: 0;
+  justify-self: start;
 }
 
 .header-right {
   flex: 0 1 auto;
   justify-content: flex-end;
   min-width: 0;
+  justify-self: end;
 }
 
 /* View Mode Button Group */
@@ -948,7 +953,8 @@ a:focus {
   gap: 0;
   position: static;
   transform: none;
-  margin: 0 auto;
+  margin: 0;
+  justify-self: center;
 }
 
 .view-mode-btn {
@@ -1024,6 +1030,46 @@ a:focus {
   .view-mode-group {
     width: 100%;
     justify-content: center;
+  }
+}
+
+@media (max-width: 1200px) {
+  .header-container {
+    column-gap: 8px;
+  }
+
+  .toolbar {
+    gap: 6px;
+  }
+
+  .tool-button {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .view-mode-btn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .view-mode-btn.active {
+    padding: 5px 9px;
+  }
+
+  .github-link {
+    margin-right: 1rem;
+  }
+
+  .stats-container {
+    font-size: 0.85rem;
+  }
+
+  .stats-container .stat-item {
+    margin-right: 0.75rem;
+  }
+
+  .stats-container .stat-item:last-child {
+    margin-right: 0;
   }
 }
 
