@@ -907,6 +907,22 @@ a:focus {
   }
 }
 
+/* Compact stats layout for md breakpoint (768px–991px) */
+@media (max-width: 991px) {
+  .header-left {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .stats-container {
+    font-size: 0.8rem;
+  }
+
+  .github-link {
+    margin-right: 0.5rem;
+  }
+}
+
 .github-link {
   color: var(--text-color);
   text-decoration: none;
