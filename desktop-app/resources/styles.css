@@ -274,6 +274,7 @@ body {
 .toolbar {
   display: flex;
   gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .tool-button {
@@ -368,12 +369,6 @@ body {
   
   .editor-pane {
       border-bottom: 1px solid var(--border-color);
-  }
-  
-  .toolbar {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 1rem;
   }
 }
 
@@ -598,12 +593,17 @@ a:focus {
 }
 
 .stats-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   font-size: 0.9rem;
   color: var(--text-color);
 }
 
 .stat-item {
+  display: flex;
   align-items: center;
+  gap: 0.25rem;
 }
 
 .stat-item i {
@@ -900,26 +900,67 @@ a:focus {
 }
 
 /* hide desktop-only stats and toolbar on mobile */
-@media (max-width: 767px) {
-  .stats-container.d-none.d-md-flex,
-  .toolbar.d-none.d-md-flex {
-    display: none !important;
+
+/* =====================================================
+   NAVBAR RESPONSIVE BREAKPOINTS
+   ===================================================== */
+
+/* ≥ 1280px: Show toolbar button text labels */
+@media (min-width: 1280px) {
+  .btn-text {
+    display: inline;
   }
 }
 
-/* Compact stats layout for md breakpoint (768px–991px) */
+/* ≤ 1279px: Icon-only view mode buttons, compact toolbar gap */
+@media (max-width: 1279px) {
+  .view-mode-btn span {
+    display: none;
+  }
+
+  .view-mode-btn {
+    padding: 5px 10px;
+  }
+
+  .view-mode-btn.active {
+    padding: 4px 9px;
+  }
+
+  .toolbar {
+    gap: 4px;
+  }
+}
+
+/* ≤ 991px (md): Hide stat text labels, compact spacing and buttons */
 @media (max-width: 991px) {
-  .header-left {
-    flex-shrink: 1;
-    min-width: 0;
+  .stat-label {
+    display: none;
   }
 
   .stats-container {
+    gap: 0.4rem;
     font-size: 0.8rem;
   }
 
   .github-link {
     margin-right: 0.5rem;
+  }
+
+  .tool-button {
+    padding: 5px 7px;
+  }
+
+  .toolbar {
+    gap: 2px;
+  }
+}
+
+/* ≤ 767px: Mobile hamburger only — hide all desktop nav elements */
+@media (max-width: 767px) {
+  .stats-container,
+  .toolbar,
+  .view-mode-group {
+    display: none !important;
   }
 }
 
@@ -949,16 +990,25 @@ a:focus {
 /* Header layout for three sections */
 .header-container {
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .header-left {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .header-right {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
   white-space: nowrap;
 }
@@ -1037,33 +1087,6 @@ a:focus {
 .content-container.view-split .editor-pane,
 .content-container.view-split .preview-pane {
   flex: 1;
-}
-
-/* Responsive adjustments for view mode buttons and toolbar */
-@media (max-width: 1280px) {
-  /* Icon-only view mode buttons at medium widths */
-  .view-mode-btn span {
-    display: none;
-  }
-
-  .view-mode-btn {
-    padding: 5px 10px;
-  }
-
-  .view-mode-btn.active {
-    padding: 4px 9px;
-  }
-
-  /* Compact toolbar at medium widths */
-  .toolbar {
-    gap: 4px;
-  }
-}
-
-@media (max-width: 767px) {
-  .view-mode-group {
-    display: none;
-  }
 }
 
 /* ========================================
