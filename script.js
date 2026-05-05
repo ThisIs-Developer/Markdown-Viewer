@@ -582,7 +582,8 @@ This is a fully client-side application. Your content never leaves your browser 
       item.appendChild(titleSpan);
       item.appendChild(menuBtn);
 
-      item.addEventListener('click', function() {
+      item.addEventListener('click', function(e) {
+        if (e.target.closest('.tab-menu-btn')) return;
         switchTab(tab.id);
       });
 
@@ -706,7 +707,8 @@ This is a fully client-side application. Your content never leaves your browser 
       item.appendChild(titleSpan);
       item.appendChild(menuBtn);
 
-      item.addEventListener('click', function() {
+      item.addEventListener('click', function(e) {
+        if (e.target.closest('.tab-menu-btn')) return;
         switchTab(tab.id);
         closeMobileMenu();
       });
