@@ -11,6 +11,7 @@ This page covers all Docker-based deployment options for **Markdown Viewer**.
 - [Docker Compose](#docker-compose)
 - [Building the Image Locally](#building-the-image-locally)
 - [Nginx Configuration](#nginx-configuration)
+- [Transparency & Security](#transparency--security)
 - [Environment & Customization](#environment--customization)
 - [Automated Image Publishing](#automated-image-publishing)
 - [Reverse Proxy Setup](#reverse-proxy-setup)
@@ -156,6 +157,17 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin";
 }
 ```
+
+---
+
+## Transparency & Security
+
+The Docker image is intentionally minimal:
+
+- **Static assets only**: HTML, CSS, JavaScript, and images served by Nginx.
+- **No background services**: No analytics, telemetry, or server-side processing.
+- **External dependencies**: The app references CDN-hosted libraries unless you bundle them locally.
+- **Security headers**: Nginx applies `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy`.
 
 ---
 

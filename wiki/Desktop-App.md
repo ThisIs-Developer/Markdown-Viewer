@@ -23,9 +23,21 @@ This page covers the **Neutralinojs desktop application** port of Markdown Viewe
 
 The desktop application wraps the same HTML/CSS/JavaScript that powers the web app inside a native [Neutralinojs](https://neutralino.js.org/) window. It:
 
-- Runs **without a browser or internet connection** — fully offline.
+- Runs **without a browser**; by default it loads CDN libraries, so an internet connection is required on first run unless you bundle assets locally.
 - Produces a **single self-contained binary** that can be distributed without installers.
 - Shares **100% of the core code** (`script.js`, `styles.css`, `assets/`) with the web app — no duplication.
+
+---
+
+## Network Dependencies & Offline Mode
+
+By default, the desktop app uses the same CDN-hosted libraries referenced in `index.html` (cdnjs, jsDelivr). To run fully offline:
+
+1. Download the CDN assets locally and update the `<script>`/`<link>` tags in `index.html`.
+2. Run `node prepare.js` to copy the updated file into `desktop-app/resources/`.
+3. Rebuild the app with `npm run build` or `npm run build:portable`.
+
+Once the assets are local, the desktop app runs without network access.
 
 ---
 

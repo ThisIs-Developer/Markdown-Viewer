@@ -15,6 +15,7 @@ This page explains how to use every feature of **Markdown Viewer** once it is ru
 - [Synchronized Scrolling](#synchronized-scrolling)
 - [Content Statistics](#content-statistics)
 - [Sharing via URL](#sharing-via-url)
+- [Data Storage & Privacy](#data-storage--privacy)
 - [Copy to Clipboard](#copy-to-clipboard)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 
@@ -165,6 +166,18 @@ Click the **🔗 Share** button to generate a shareable URL that encodes your en
 Share the resulting URL with anyone. When they open it, the editor is automatically populated with your content.
 
 > **Warning**: Very large documents produce very long URLs. Some browsers and link-shorteners may have URL length limits.
+
+---
+
+## Data Storage & Privacy
+
+Markdown Viewer is transparent about where your data lives:
+
+- **Autosave**: Your content and tab state are stored in your browser’s `localStorage`.
+- **Preferences**: Theme, view mode, and sync scroll settings are saved locally.
+- **Clearing data**: Use your browser’s site data controls to remove saved content.
+- **GitHub import**: Imports access public GitHub URLs via `api.github.com` and `raw.githubusercontent.com`.
+- **Share links**: Shared URLs embed content in the hash portion of the URL; avoid sharing sensitive content.
 
 ---
 

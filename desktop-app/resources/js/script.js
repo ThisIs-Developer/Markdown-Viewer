@@ -9,9 +9,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // View Mode State - Story 1.1
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
+  const APP_VERSION = '1.0.0';
+  let activeModal = null;
+  let lastFocusedElement = null;
+  let isFindModalOpen = false;
+  let findMatches = [];
+  let activeFindIndex = -1;
+  let lastFindQuery = '';
 
   const markdownEditor = document.getElementById("markdown-editor");
   const markdownPreview = document.getElementById("markdown-preview");
+  const markdownFormatToolbar = document.getElementById("markdown-format-toolbar");
   const themeToggle = document.getElementById("theme-toggle");
   const importFromFileButton = document.getElementById("import-from-file");
   const importFromGithubButton = document.getElementById("import-from-github");
@@ -20,8 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const exportHtml = document.getElementById("export-html");
   const exportPdf = document.getElementById("export-pdf");
   const copyMarkdownButton = document.getElementById("copy-markdown-button");
-  const dropzone = document.getElementById("dropzone");
-  const closeDropzoneBtn = document.getElementById("close-dropzone");
+  const dragOverlay = document.getElementById("drag-overlay");
   const toggleSyncButton = document.getElementById("toggle-sync");
   const editorPane = document.getElementById("markdown-editor");
   const previewPane = document.querySelector(".preview-pane");
@@ -31,7 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // View Mode Elements - Story 1.1
   const contentContainer = document.querySelector(".content-container");
-  const viewModeButtons = document.querySelectorAll(".view-mode-btn");
+  const viewModeButtons = document.querySelectorAll(".view-toggle-btn");
 
   // Mobile View Mode Elements - Story 1.4
   const mobileViewModeButtons = document.querySelectorAll(".mobile-view-mode-btn");
@@ -72,11 +79,113 @@ document.addEventListener("DOMContentLoaded", function () {
   const githubImportError = document.getElementById("github-import-error");
   const githubImportCancelBtn = document.getElementById("github-import-cancel");
   const githubImportSubmitBtn = document.getElementById("github-import-submit");
+  const editorHighlightLayer = document.getElementById("editor-highlight-layer");
+  const lineNumbers = document.getElementById("line-numbers");
+  const clearFormattingModal = document.getElementById("clear-formatting-modal");
+  const clearFormattingConfirm = document.getElementById("clear-formatting-confirm");
+  const clearFormattingCancel = document.getElementById("clear-formatting-cancel");
+  const clearFormattingClose = document.getElementById("clear-formatting-close");
+  const findReplaceModal = document.getElementById("find-replace-modal");
+  const findReplaceInput = document.getElementById("find-replace-input");
+  const findReplaceWith = document.getElementById("find-replace-with");
+  const findReplaceCount = document.getElementById("find-replace-count");
+  const findReplacePrev = document.getElementById("find-prev");
+  const findReplaceNext = document.getElementById("find-next");
+  const findReplaceCurrent = document.getElementById("find-replace-current");
+  const findReplaceAll = document.getElementById("find-replace-all");
+  const findReplaceClose = document.getElementById("find-replace-close");
+  const findReplaceCloseIcon = document.getElementById("find-replace-close-icon");
+  const helpModal = document.getElementById("help-modal");
+  const helpModalClose = document.getElementById("help-modal-close");
+  const helpModalCloseIcon = document.getElementById("help-modal-close-icon");
+  const aboutModal = document.getElementById("about-modal");
+  const aboutModalClose = document.getElementById("about-modal-close");
+  const aboutModalCloseIcon = document.getElementById("about-modal-close-icon");
+  const aboutVersion = document.getElementById("about-version");
+  if (aboutVersion) {
+    aboutVersion.textContent = APP_VERSION;
+  }
 
   // ========================================
   // GLOBAL STATE (persisted across reloads)
   // ========================================
   const GLOBAL_STATE_KEY = 'markdownViewerGlobalState';
+  let referenceCounter = 1;
+  const imageObjectUrls = new Set();
+  const EMOJI_API_URL = 'https://api.github.com/emojis';
+  let emojiLoadPromise = null;
+  let emojiEntries = [];
+  let emojiUrlMap = new Map();
+  let emojiLookupLoaded = false;
+  let emojiRenderScheduled = false;
+  let emojiItems = [];
+  const emojiSelection = new Set();
+  let symbolItems = [];
+  const symbolSelection = new Set();
+  const SYMBOL_SECTIONS = [
+    {
+      title: 'Common symbols',
+      items: [
+        { symbol: '©', entity: '&copy;', name: 'copyright' },
+        { symbol: '®', entity: '&reg;', name: 'registered' },
+        { symbol: '™', entity: '&trade;', name: 'trademark' },
+        { symbol: '✓', entity: '&check;', name: 'check' },
+        { symbol: '★', entity: '&star;', name: 'star' },
+        { symbol: '•', entity: '&bull;', name: 'bullet' },
+        { symbol: '…', entity: '&hellip;', name: 'ellipsis' },
+        { symbol: '—', entity: '&mdash;', name: 'em dash' },
+        { symbol: '–', entity: '&ndash;', name: 'en dash' },
+        { symbol: '→', entity: '&rarr;', name: 'right arrow' },
+        { symbol: '←', entity: '&larr;', name: 'left arrow' },
+        { symbol: '↑', entity: '&uarr;', name: 'up arrow' },
+        { symbol: '↓', entity: '&darr;', name: 'down arrow' },
+      ],
+    },
+    {
+      title: 'HTML entities',
+      items: [
+        { symbol: '€', entity: '&euro;', name: 'euro' },
+        { symbol: '£', entity: '&pound;', name: 'pound' },
+        { symbol: '¥', entity: '&yen;', name: 'yen' },
+        { symbol: '§', entity: '&sect;', name: 'section' },
+        { symbol: '°', entity: '&deg;', name: 'degree' },
+        { symbol: '±', entity: '&plusmn;', name: 'plus minus' },
+        { symbol: '×', entity: '&times;', name: 'times' },
+        { symbol: '÷', entity: '&divide;', name: 'divide' },
+        { symbol: '≠', entity: '&ne;', name: 'not equal' },
+        { symbol: '≤', entity: '&le;', name: 'less equal' },
+        { symbol: '≥', entity: '&ge;', name: 'greater equal' },
+        { symbol: '∞', entity: '&infin;', name: 'infinity' },
+        { symbol: 'µ', entity: '&micro;', name: 'micro' },
+        { symbol: '¼', entity: '&frac14;', name: 'quarter' },
+        { symbol: '½', entity: '&frac12;', name: 'half' },
+        { symbol: '¾', entity: '&frac34;', name: 'three quarters' },
+        { symbol: '«', entity: '&laquo;', name: 'left quote' },
+        { symbol: '»', entity: '&raquo;', name: 'right quote' },
+      ],
+    },
+    {
+      title: 'Markdown-safe characters',
+      items: [
+        { symbol: '&', entity: '&amp;', name: 'ampersand' },
+        { symbol: '<', entity: '&lt;', name: 'less than' },
+        { symbol: '>', entity: '&gt;', name: 'greater than' },
+        { symbol: '"', entity: '&quot;', name: 'double quote' },
+        { symbol: "'", entity: '&#39;', name: 'apostrophe' },
+        { symbol: '|', entity: '&#124;', name: 'pipe' },
+        { symbol: '\\', entity: '&#92;', name: 'backslash' },
+        { symbol: '`', entity: '&#96;', name: 'backtick' },
+        { symbol: '*', entity: '&#42;', name: 'asterisk' },
+        { symbol: '_', entity: '&#95;', name: 'underscore' },
+        { symbol: '{', entity: '&#123;', name: 'left brace' },
+        { symbol: '}', entity: '&#125;', name: 'right brace' },
+        { symbol: '[', entity: '&#91;', name: 'left bracket' },
+        { symbol: ']', entity: '&#93;', name: 'right bracket' },
+        { symbol: '(', entity: '&#40;', name: 'left parenthesis' },
+        { symbol: ')', entity: '&#41;', name: 'right parenthesis' },
+      ],
+    },
+  ];
 
   function loadGlobalState() {
     try { return JSON.parse(localStorage.getItem(GLOBAL_STATE_KEY)) || {}; }
@@ -121,7 +230,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const markedOptions = {
     gfm: true,
-    breaks: false,
+    breaks: true,
     pedantic: false,
     sanitize: false,
     smartypants: false,
@@ -129,6 +238,11 @@ document.addEventListener("DOMContentLoaded", function () {
     headerIds: true,
     mangle: false,
   };
+  const LINE_NUMBER_GUTTER_MIN_CH = 3;
+  const LINE_NUMBER_GUTTER_PADDING_CH = 1;
+  const LINE_NUMBER_EMPTY_PLACEHOLDER = '\u200b';
+  let lineNumberMeasure = null;
+  let lineNumberUpdateFrame = null;
 
   const renderer = new marked.Renderer();
   renderer.code = function (code, language) {
@@ -176,7 +290,7 @@ document.addEventListener("DOMContentLoaded", function () {
       path: "M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z",
     },
   };
-  const GITHUB_ALERT_MARKER_REGEX = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+|$)/i;
+  const GITHUB_ALERT_MARKER_REGEX = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:(?:\s|&nbsp;|<br\s*\/?>)+|$)/i;
 
   function enhanceGitHubAlerts(container) {
     if (!container) return;
@@ -192,8 +306,8 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       if (!firstParagraph) return;
 
-      const firstParagraphHtml = firstParagraph.innerHTML.trim();
-      const markerMatch = firstParagraphHtml.match(GITHUB_ALERT_MARKER_REGEX);
+    const firstParagraphHtml = firstParagraph.innerHTML.trim();
+    const markerMatch = firstParagraphHtml.match(GITHUB_ALERT_MARKER_REGEX);
       if (!markerMatch) return;
 
       const alertType = markerMatch[1].toLowerCase();
@@ -222,9 +336,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
       blockquote.insertBefore(title, blockquote.firstChild);
 
-      const remainingHtml = firstParagraphHtml
-        .replace(GITHUB_ALERT_MARKER_REGEX, "")
-        .trim();
+    const remainingHtml = firstParagraphHtml
+      .replace(GITHUB_ALERT_MARKER_REGEX, "")
+      .trim();
       if (remainingHtml) {
         firstParagraph.innerHTML = remainingHtml;
       } else {
@@ -518,9 +632,124 @@ This is a fully client-side application. Your content never leaves your browser 
     };
   }
 
+  function closeTabMenus() {
+    document.querySelectorAll('.tab-menu-btn.open').forEach(function(btn) {
+      btn.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+    document.querySelectorAll('.tab-menu-dropdown.open').forEach(function(dropdown) {
+      dropdown.classList.remove('open');
+    });
+  }
+
+  function removeTabMenuDropdowns() {
+    document.querySelectorAll('.tab-menu-dropdown[data-tab-menu-dropdown="true"]').forEach(function(dropdown) {
+      dropdown.remove();
+    });
+  }
+
+  function positionTabMenu(menuBtn, dropdown) {
+    const rect = menuBtn.getBoundingClientRect();
+    const margin = 8;
+    const dropdownWidth = dropdown.offsetWidth || 130;
+    const dropdownHeight = dropdown.offsetHeight || 110;
+    let left = rect.right - dropdownWidth;
+    let top = rect.bottom + 4;
+
+    left = Math.max(margin, Math.min(left, window.innerWidth - dropdownWidth - margin));
+    if (top + dropdownHeight > window.innerHeight - margin) {
+      top = Math.max(margin, rect.top - dropdownHeight - 4);
+    }
+
+    dropdown.style.top = top + 'px';
+    dropdown.style.left = left + 'px';
+    dropdown.style.right = 'auto';
+  }
+
+  function runTabMenuAction(tabId, action, isMobileMenu) {
+    if (action === 'rename') {
+      if (isMobileMenu) closeMobileMenu();
+      renameTab(tabId);
+    } else if (action === 'duplicate') {
+      duplicateTab(tabId);
+      if (isMobileMenu) closeMobileMenu();
+    } else if (action === 'delete') {
+      deleteTab(tabId);
+    }
+  }
+
+  function createTabActionMenu(tab, options) {
+    const isMobileMenu = options && options.isMobileMenu;
+    const menuIdPrefix = options && options.menuIdPrefix ? options.menuIdPrefix : 'tab-menu';
+    const menuId = menuIdPrefix + '-' + tab.id;
+
+    const menuBtn = document.createElement('button');
+    menuBtn.type = 'button';
+    menuBtn.className = 'tab-menu-btn';
+    menuBtn.setAttribute('aria-label', 'File options for ' + (tab.title || 'Untitled'));
+    menuBtn.setAttribute('aria-haspopup', 'menu');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    menuBtn.setAttribute('aria-controls', menuId);
+    menuBtn.setAttribute('draggable', 'false');
+    menuBtn.title = 'File options';
+    menuBtn.innerHTML = '&#8943;';
+
+    const dropdown = document.createElement('div');
+    dropdown.id = menuId;
+    dropdown.className = 'tab-menu-dropdown';
+    dropdown.setAttribute('data-tab-menu-dropdown', 'true');
+    dropdown.setAttribute('role', 'menu');
+    dropdown.innerHTML =
+      '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="bi bi-pencil"></i> Rename</button>' +
+      '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="bi bi-files"></i> Duplicate</button>' +
+      '<button type="button" class="tab-menu-item tab-menu-item-danger" role="menuitem" data-action="delete"><i class="bi bi-trash"></i> Delete</button>';
+
+    menuBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const shouldOpen = !menuBtn.classList.contains('open');
+      closeTabMenus();
+      if (shouldOpen) {
+        menuBtn.classList.add('open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+        dropdown.classList.add('open');
+        positionTabMenu(menuBtn, dropdown);
+      }
+    });
+
+    menuBtn.addEventListener('mousedown', function(e) {
+      e.stopPropagation();
+    });
+
+    menuBtn.addEventListener('dragstart', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    dropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
+    dropdown.querySelectorAll('.tab-menu-item').forEach(function(actionBtn) {
+      actionBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = actionBtn.getAttribute('data-action');
+        closeTabMenus();
+        runTabMenuAction(tab.id, action, isMobileMenu);
+      });
+    });
+
+    document.body.appendChild(dropdown);
+
+    return { button: menuBtn, dropdown: dropdown };
+  }
+
   function renderTabBar(tabsArr, currentActiveTabId) {
     const tabList = document.getElementById('tab-list');
     if (!tabList) return;
+    closeTabMenus();
+    removeTabMenuDropdowns();
     tabList.innerHTML = '';
     tabsArr.forEach(function(tab) {
       const item = document.createElement('div');
@@ -535,53 +764,10 @@ This is a fully client-side application. Your content never leaves your browser 
       titleSpan.textContent = tab.title || 'Untitled';
       titleSpan.title = tab.title || 'Untitled';
 
-      // Three-dot menu button
-      const menuBtn = document.createElement('button');
-      menuBtn.className = 'tab-menu-btn';
-      menuBtn.setAttribute('aria-label', 'File options');
-      menuBtn.title = 'File options';
-      menuBtn.innerHTML = '&#8943;';
-
-      // Dropdown
-      const dropdown = document.createElement('div');
-      dropdown.className = 'tab-menu-dropdown';
-      dropdown.innerHTML =
-        '<button class="tab-menu-item" data-action="rename"><i class="bi bi-pencil"></i> Rename</button>' +
-        '<button class="tab-menu-item" data-action="duplicate"><i class="bi bi-files"></i> Duplicate</button>' +
-        '<button class="tab-menu-item tab-menu-item-danger" data-action="delete"><i class="bi bi-trash"></i> Delete</button>';
-
-      menuBtn.appendChild(dropdown);
-
-      menuBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        // Close all other open dropdowns first
-        document.querySelectorAll('.tab-menu-btn.open').forEach(function(btn) {
-          if (btn !== menuBtn) btn.classList.remove('open');
-        });
-        menuBtn.classList.toggle('open');
-        // Position the dropdown relative to the viewport so it escapes the
-        // overflow scroll container on .tab-list
-        if (menuBtn.classList.contains('open')) {
-          var rect = menuBtn.getBoundingClientRect();
-          dropdown.style.top = (rect.bottom + 4) + 'px';
-          dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-          dropdown.style.left = 'auto';
-        }
-      });
-
-      dropdown.querySelectorAll('.tab-menu-item').forEach(function(actionBtn) {
-        actionBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          menuBtn.classList.remove('open');
-          const action = actionBtn.getAttribute('data-action');
-          if (action === 'rename') renameTab(tab.id);
-          else if (action === 'duplicate') duplicateTab(tab.id);
-          else if (action === 'delete') deleteTab(tab.id);
-        });
-      });
+      const tabMenu = createTabActionMenu(tab, { menuIdPrefix: 'desktop-tab-menu' });
 
       item.appendChild(titleSpan);
-      item.appendChild(menuBtn);
+      item.appendChild(tabMenu.button);
 
       item.addEventListener('click', function() {
         switchTab(tab.id);
@@ -656,56 +842,13 @@ This is a fully client-side application. Your content never leaves your browser 
       titleSpan.textContent = tab.title || 'Untitled';
       titleSpan.title = tab.title || 'Untitled';
 
-      // Three-dot menu button (same as desktop)
-      const menuBtn = document.createElement('button');
-      menuBtn.className = 'tab-menu-btn';
-      menuBtn.setAttribute('aria-label', 'File options');
-      menuBtn.title = 'File options';
-      menuBtn.innerHTML = '&#8943;';
-
-      // Dropdown (same as desktop)
-      const dropdown = document.createElement('div');
-      dropdown.className = 'tab-menu-dropdown';
-      dropdown.innerHTML =
-        '<button class="tab-menu-item" data-action="rename"><i class="bi bi-pencil"></i> Rename</button>' +
-        '<button class="tab-menu-item" data-action="duplicate"><i class="bi bi-files"></i> Duplicate</button>' +
-        '<button class="tab-menu-item tab-menu-item-danger" data-action="delete"><i class="bi bi-trash"></i> Delete</button>';
-
-      menuBtn.appendChild(dropdown);
-
-      menuBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        document.querySelectorAll('.tab-menu-btn.open').forEach(function(btn) {
-          if (btn !== menuBtn) btn.classList.remove('open');
-        });
-        menuBtn.classList.toggle('open');
-        if (menuBtn.classList.contains('open')) {
-          const rect = menuBtn.getBoundingClientRect();
-          dropdown.style.top = (rect.bottom + 4) + 'px';
-          dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-          dropdown.style.left = 'auto';
-        }
-      });
-
-      dropdown.querySelectorAll('.tab-menu-item').forEach(function(actionBtn) {
-        actionBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          menuBtn.classList.remove('open');
-          const action = actionBtn.getAttribute('data-action');
-          if (action === 'rename') {
-            closeMobileMenu();
-            renameTab(tab.id);
-          } else if (action === 'duplicate') {
-            duplicateTab(tab.id);
-            closeMobileMenu();
-          } else if (action === 'delete') {
-            deleteTab(tab.id);
-          }
-        });
+      const tabMenu = createTabActionMenu(tab, {
+        isMobileMenu: true,
+        menuIdPrefix: 'mobile-tab-menu'
       });
 
       item.appendChild(titleSpan);
-      item.appendChild(menuBtn);
+      item.appendChild(tabMenu.button);
 
       item.addEventListener('click', function() {
         switchTab(tab.id);
@@ -718,9 +861,7 @@ This is a fully client-side application. Your content never leaves your browser 
 
   // Close any open tab dropdown when clicking elsewhere in the document
   document.addEventListener('click', function() {
-    document.querySelectorAll('.tab-menu-btn.open').forEach(function(btn) {
-      btn.classList.remove('open');
-    });
+    closeTabMenus();
   });
 
   function saveCurrentTabState() {
@@ -851,12 +992,18 @@ This is a fully client-side application. Your content never leaves your browser 
       alert('Maximum of 20 tabs reached. Please close an existing tab to open a new one.');
       return;
     }
+    const shouldSwitchToDuplicate = tabId === activeTabId;
     saveCurrentTabState();
     const dupTitle = tab.title + ' (copy)';
     const dup = createTab(tab.content, dupTitle, tab.viewMode);
     const idx = tabs.findIndex(function(t) { return t.id === tabId; });
     tabs.splice(idx + 1, 0, dup);
-    switchTab(dup.id);
+    if (shouldSwitchToDuplicate) {
+      switchTab(dup.id);
+    } else {
+      saveTabsToStorage(tabs);
+      renderTabBar(tabs, activeTabId);
+    }
   }
 
   function resetAllTabs() {
@@ -925,12 +1072,15 @@ This is a fully client-side application. Your content never leaves your browser 
     try {
       const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
       const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
-      const html = tableHtml + marked.parse(body);
+      const referenceData = extractReferenceDefinitions(body);
+      const html = tableHtml + marked.parse(referenceData.cleanedMarkdown);
       const sanitizedHtml = DOMPurify.sanitize(html, {
         ADD_TAGS: ['mjx-container'],
-        ADD_ATTR: ['id', 'class', 'style']
+        ADD_ATTR: ['id', 'class', 'style', 'align'],
+        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel|blob):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
       });
       markdownPreview.innerHTML = sanitizedHtml;
+      applyReferencePreviewLinks(markdownPreview, referenceData.definitions);
       enhanceGitHubAlerts(markdownPreview);
 
       processEmojis(markdownPreview);
@@ -963,12 +1113,17 @@ This is a fully client-side application. Your content never leaves your browser 
       }
 
       updateDocumentStats();
+      updateFindHighlights();
+      cleanupImageObjectUrls();
+      scheduleLineNumberUpdate();
     } catch (e) {
       console.error("Markdown rendering failed:", e);
+      const safeMessage = escapeHtml(e && e.message ? e.message : 'Unknown error');
+      const safeMarkdown = escapeHtml(markdownEditor.value);
       markdownPreview.innerHTML = `<div class="alert alert-danger">
-              <strong>Error rendering markdown:</strong> ${e.message}
+              <strong>Error rendering markdown:</strong> ${safeMessage}
           </div>
-          <pre>${markdownEditor.value}</pre>`;
+          <pre>${safeMarkdown}</pre>`;
     }
   }
 
@@ -976,7 +1131,6 @@ This is a fully client-side application. Your content never leaves your browser 
     const reader = new FileReader();
     reader.onload = function(e) {
       newTab(e.target.result, file.name.replace(/\.md$/i, ''));
-      dropzone.style.display = "none";
     };
     reader.readAsText(file);
   }
@@ -1384,6 +1538,20 @@ This is a fully client-side application. Your content never leaves your browser 
     }
   }
 
+  function scheduleEmojiLookupRefresh() {
+    if (emojiLookupLoaded || emojiRenderScheduled) return;
+    emojiRenderScheduled = true;
+    loadEmojiEntries()
+      .then(() => {
+        if (emojiUrlMap.size) {
+          renderMarkdown();
+        }
+      })
+      .finally(() => {
+        emojiRenderScheduled = false;
+      });
+  }
+
   function processEmojis(element) {
     const walker = document.createTreeWalker(
       element,
@@ -1410,14 +1578,15 @@ This is a fully client-side application. Your content never leaves your browser 
       }
     }
     
+    let needsEmojiLookup = false;
     textNodes.forEach(textNode => {
       const text = textNode.nodeValue;
       const emojiRegex = /:([\w+-]+):/g;
       
       let match;
       let lastIndex = 0;
-      let result = '';
       let hasEmoji = false;
+      const fragment = document.createDocumentFragment();
       
       while ((match = emojiRegex.exec(text)) !== null) {
         const shortcode = match[1];
@@ -1425,21 +1594,43 @@ This is a fully client-side application. Your content never leaves your browser 
         
         if (emoji !== `:${shortcode}:`) { // If conversion was successful
           hasEmoji = true;
-          result += text.substring(lastIndex, match.index) + emoji;
+          if (match.index > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+          }
+          fragment.appendChild(document.createTextNode(emoji));
           lastIndex = emojiRegex.lastIndex;
         } else {
-          result += text.substring(lastIndex, emojiRegex.lastIndex);
-          lastIndex = emojiRegex.lastIndex;
+          const emojiUrl = emojiUrlMap.get(shortcode);
+          if (emojiUrl) {
+            hasEmoji = true;
+            if (match.index > lastIndex) {
+              fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+            }
+            const image = document.createElement('img');
+            image.className = 'emoji-inline';
+            image.src = emojiUrl;
+            image.alt = `:${shortcode}:`;
+            image.loading = 'lazy';
+            image.setAttribute('aria-label', `:${shortcode}:`);
+            fragment.appendChild(image);
+            lastIndex = emojiRegex.lastIndex;
+          } else if (!emojiLookupLoaded) {
+            needsEmojiLookup = true;
+          }
         }
       }
       
       if (hasEmoji) {
-        result += text.substring(lastIndex);
-        const span = document.createElement('span');
-        span.innerHTML = result;
-        textNode.parentNode.replaceChild(span, textNode);
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+        }
+        textNode.parentNode.replaceChild(fragment, textNode);
       }
     });
+
+    if (needsEmojiLookup) {
+      scheduleEmojiLookupRefresh();
+    }
   }
 
   function debouncedRender() {
@@ -1511,15 +1702,15 @@ This is a fully client-side application. Your content never leaves your browser 
   function toggleSyncScrolling() {
     syncScrollingEnabled = !syncScrollingEnabled;
     if (syncScrollingEnabled) {
-      toggleSyncButton.innerHTML = '<i class="bi bi-link-45deg"></i> Sync Off';
+      toggleSyncButton.innerHTML = '<i class="bi bi-link-45deg"></i> <span class="btn-text">Sync Off</span>';
       toggleSyncButton.classList.add("sync-disabled");
       toggleSyncButton.classList.remove("sync-enabled");
-      toggleSyncButton.classList.add("border-primary");
+      toggleSyncButton.classList.add("sync-active");
     } else {
-      toggleSyncButton.innerHTML = '<i class="bi bi-link"></i> Sync On';
+      toggleSyncButton.innerHTML = '<i class="bi bi-link"></i> <span class="btn-text">Sync On</span>';
       toggleSyncButton.classList.add("sync-enabled");
       toggleSyncButton.classList.remove("sync-disabled");
-      toggleSyncButton.classList.remove("border-primary");
+      toggleSyncButton.classList.remove("sync-active");
     }
     saveGlobalState({ syncScrollingEnabled });
   }
@@ -1537,12 +1728,12 @@ This is a fully client-side application. Your content never leaves your browser 
 
     // Update button active states (desktop)
     viewModeButtons.forEach(btn => {
-      const btnMode = btn.getAttribute('data-mode');
+      const btnMode = btn.getAttribute('data-view-mode');
       if (btnMode === mode) {
-        btn.classList.add('active');
+        btn.classList.add('is-active');
         btn.setAttribute('aria-pressed', 'true');
       } else {
-        btn.classList.remove('active');
+        btn.classList.remove('is-active');
         btn.setAttribute('aria-pressed', 'false');
       }
     });
@@ -1566,8 +1757,8 @@ This is a fully client-side application. Your content never leaves your browser 
     if (mode === 'split') {
       // Restore preserved pane widths when entering split mode
       applyPaneWidths();
-    } else if (previousMode === 'split') {
-      // Reset pane widths when leaving split mode
+    } else {
+      // Reset inline pane widths when not in split mode
       resetPaneWidths();
     }
 
@@ -1577,21 +1768,1664 @@ This is a fully client-side application. Your content never leaves your browser 
     }
   }
 
+  function resolveViewToggleMode(mode) {
+    if ((mode === 'editor' || mode === 'preview') && currentViewMode === mode) {
+      return 'split';
+    }
+    return mode;
+  }
+
   // Story 1.2: Update sync toggle visibility
   function updateSyncToggleVisibility(mode) {
     const isSplitView = mode === 'split';
 
     // Desktop sync toggle
     if (toggleSyncButton) {
-      toggleSyncButton.style.display = isSplitView ? '' : 'none';
-      toggleSyncButton.setAttribute('aria-hidden', !isSplitView);
+      toggleSyncButton.style.display = '';
+      toggleSyncButton.disabled = !isSplitView;
+      toggleSyncButton.setAttribute('aria-disabled', String(!isSplitView));
+      toggleSyncButton.removeAttribute('aria-hidden');
     }
 
     // Mobile sync toggle
     if (mobileToggleSync) {
-      mobileToggleSync.style.display = isSplitView ? '' : 'none';
-      mobileToggleSync.setAttribute('aria-hidden', !isSplitView);
+      mobileToggleSync.style.display = '';
+      mobileToggleSync.disabled = !isSplitView;
+      mobileToggleSync.setAttribute('aria-disabled', String(!isSplitView));
+      mobileToggleSync.removeAttribute('aria-hidden');
     }
+  }
+
+  function replaceEditorRange(start, end, replacement, selectStart, selectEnd) {
+    markdownEditor.focus();
+    markdownEditor.setRangeText(replacement, start, end, 'end');
+    const nextStart = typeof selectStart === 'number' ? selectStart : start + replacement.length;
+    const nextEnd = typeof selectEnd === 'number' ? selectEnd : nextStart;
+    markdownEditor.setSelectionRange(nextStart, nextEnd);
+    markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function wrapEditorSelection(prefix, suffix, placeholder) {
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const selected = markdownEditor.value.slice(start, end) || placeholder;
+    const replacement = prefix + selected + suffix;
+    const selectionStart = start + prefix.length;
+    const selectionEnd = selectionStart + selected.length;
+    replaceEditorRange(start, end, replacement, selectionStart, selectionEnd);
+  }
+
+  function getCurrentLineRange() {
+    const value = markdownEditor.value;
+    const start = markdownEditor.selectionStart;
+    const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+    let lineEnd = value.indexOf('\n', start);
+    if (lineEnd === -1) lineEnd = value.length;
+    return { start: lineStart, end: lineEnd, text: value.slice(lineStart, lineEnd) };
+  }
+
+  function getSelectedLineRange() {
+    const value = markdownEditor.value;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+    let lineEnd = value.indexOf('\n', end);
+    if (lineEnd === -1) lineEnd = value.length;
+    return { start: lineStart, end: lineEnd, text: value.slice(lineStart, lineEnd) };
+  }
+
+  function transformEditorLines(transformer) {
+    const range = getSelectedLineRange();
+    const replacement = range.text.split('\n').map(transformer).join('\n');
+    replaceEditorRange(range.start, range.end, replacement, range.start, range.start + replacement.length);
+  }
+
+  function getListLineRange() {
+    const value = markdownEditor.value;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const effectiveEnd = end > start && value[end - 1] === '\n' ? end - 1 : end;
+    const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+    let lineEnd = value.indexOf('\n', effectiveEnd);
+    if (lineEnd === -1) lineEnd = value.length;
+    return { start: lineStart, end: lineEnd, text: value.slice(lineStart, lineEnd) };
+  }
+
+  function parseMarkdownListItem(line) {
+    const match = line.match(/^(\s*)((\d+)\.|[-*+])(?:\s+|$)(.*)$/);
+    if (!match) return null;
+    const isOrdered = typeof match[3] !== 'undefined';
+    return {
+      type: isOrdered ? 'ordered' : 'unordered',
+      indent: match[1],
+      marker: match[2],
+      number: isOrdered ? parseInt(match[3], 10) : null,
+      bullet: isOrdered ? null : match[2],
+      body: match[4] || '',
+      prefix: match[1] + match[2] + ' '
+    };
+  }
+
+  function stripListMarkerForApply(line) {
+    const parsed = parseMarkdownListItem(line);
+    if (parsed) {
+      return { indent: parsed.indent, body: parsed.body };
+    }
+    const match = line.match(/^(\s*)(.*)$/);
+    return { indent: match ? match[1] : '', body: match ? match[2] : line };
+  }
+
+  function getPreviousLineInfo(lineStart) {
+    if (lineStart <= 0) return null;
+    const value = markdownEditor.value;
+    const previousEnd = lineStart - 1;
+    const previousStart = previousEnd > 0 ? value.lastIndexOf('\n', previousEnd - 1) + 1 : 0;
+    return { start: previousStart, text: value.slice(previousStart, previousEnd) };
+  }
+
+  function getOrderedListStartNumber(lineStart) {
+    const previousLine = getPreviousLineInfo(lineStart);
+    if (!previousLine || !previousLine.text.trim()) return 1;
+    const parsed = parseMarkdownListItem(previousLine.text);
+    return parsed && parsed.type === 'ordered' ? parsed.number + 1 : 1;
+  }
+
+  function applyMarkdownList(type) {
+    const range = getListLineRange();
+    const hadSelection = markdownEditor.selectionStart !== markdownEditor.selectionEnd;
+    const lines = range.text.split('\n');
+    let nextNumber = type === 'ordered' ? getOrderedListStartNumber(range.start) : 1;
+    let firstPrefixLength = null;
+
+    const replacement = lines.map(function(line) {
+      const stripped = stripListMarkerForApply(line);
+      const prefix = type === 'ordered'
+        ? stripped.indent + (nextNumber++) + '. '
+        : stripped.indent + '- ';
+      if (firstPrefixLength === null) firstPrefixLength = prefix.length;
+      return prefix + stripped.body;
+    }).join('\n');
+
+    const isSingleLine = lines.length === 1;
+    const caret = (!hadSelection || isSingleLine)
+      ? range.start + (firstPrefixLength || 0)
+      : range.start + replacement.length;
+
+    replaceEditorRange(range.start, range.end, replacement, caret, caret);
+  }
+
+  function renumberOrderedListAfterPosition(position, nextNumber) {
+    let value = markdownEditor.value;
+    let lineStart = value.indexOf('\n', position);
+    if (lineStart === -1) return;
+    lineStart += 1;
+
+    let changed = false;
+    while (lineStart < value.length) {
+      let lineEnd = value.indexOf('\n', lineStart);
+      const hasNewline = lineEnd !== -1;
+      if (!hasNewline) lineEnd = value.length;
+
+      const line = value.slice(lineStart, lineEnd);
+      if (!line.trim()) break;
+
+      const parsed = parseMarkdownListItem(line);
+      if (!parsed || parsed.type !== 'ordered') break;
+
+      const replacement = parsed.indent + nextNumber + '. ' + parsed.body;
+      if (replacement !== line) {
+        value = value.slice(0, lineStart) + replacement + value.slice(lineEnd);
+        changed = true;
+      }
+
+      lineStart += replacement.length + (hasNewline ? 1 : 0);
+      nextNumber += 1;
+    }
+
+    if (changed) {
+      const selectionStart = markdownEditor.selectionStart;
+      const selectionEnd = markdownEditor.selectionEnd;
+      markdownEditor.value = value;
+      markdownEditor.setSelectionRange(selectionStart, selectionEnd);
+      markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  function handleListEnter(e) {
+    if (e.key !== 'Enter' || e.shiftKey || markdownEditor.selectionStart !== markdownEditor.selectionEnd) {
+      return false;
+    }
+
+    const range = getCurrentLineRange();
+    const parsed = parseMarkdownListItem(range.text);
+    if (!parsed) return false;
+
+    e.preventDefault();
+    if (!parsed.body.trim()) {
+      const caret = range.start + parsed.indent.length;
+      replaceEditorRange(range.start, range.end, parsed.indent, caret, caret);
+      return true;
+    }
+
+    const nextPrefix = parsed.type === 'ordered'
+      ? parsed.indent + (parsed.number + 1) + '. '
+      : parsed.indent + parsed.bullet + ' ';
+    const insertAt = markdownEditor.selectionStart;
+    const caret = insertAt + 1 + nextPrefix.length;
+    replaceEditorRange(insertAt, insertAt, '\n' + nextPrefix, caret, caret);
+
+    if (parsed.type === 'ordered') {
+      renumberOrderedListAfterPosition(caret, parsed.number + 2);
+    }
+
+    return true;
+  }
+
+  function transformSelectionOrCurrentLine(transformer) {
+    let start = markdownEditor.selectionStart;
+    let end = markdownEditor.selectionEnd;
+    if (start === end) {
+      const range = getCurrentLineRange();
+      start = range.start;
+      end = range.end;
+    }
+    const replacement = transformer(markdownEditor.value.slice(start, end));
+    replaceEditorRange(start, end, replacement, start, start + replacement.length);
+  }
+
+  function stripBasicMarkdown(text) {
+    return text
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^>\s?/gm, '')
+      .replace(/^(\s*)([-*+]|\d+\.)\s+/gm, '$1')
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/(\*\*|__)(.*?)\1/g, '$2')
+      .replace(/(\*|_)(.*?)\1/g, '$2')
+      .replace(/~~(.*?)~~/g, '$1')
+      .replace(/`([^`]+)`/g, '$1');
+  }
+
+  function toTitleCase(text) {
+    return text.toLowerCase().replace(/\b\w/g, function(letter) {
+      return letter.toUpperCase();
+    });
+  }
+
+  function toSlug(text) {
+    const slug = text.toLowerCase().trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+    return slug || 'section';
+  }
+
+  function getUsedReferenceNumbers(text) {
+    const used = new Set();
+    const regex = /^\[(\d+)\]:/gm;
+    let match = regex.exec(text);
+    while (match) {
+      const num = parseInt(match[1], 10);
+      if (!Number.isNaN(num)) used.add(num);
+      match = regex.exec(text);
+    }
+    return used;
+  }
+
+  function extractReferenceDefinitions(markdown) {
+    const definitions = new Map();
+    // Matches reference definitions: [1]: <url> "title", [1]: url 'title', or [1]: url (title)
+    const definitionRegex = /^\[(\d+)\]:\s*(?:<([^>\s]+)>|(\S+))(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]+)\)))?\s*$/gm;
+    const cleanedMarkdown = markdown.replace(
+      definitionRegex,
+      function(match, numberText, angleUrl, plainUrl, titleDouble, titleSingle, titleParen) {
+        const number = parseInt(numberText, 10);
+        if (Number.isNaN(number)) return match;
+        const url = (angleUrl || plainUrl || '').trim();
+        if (!url) return match;
+        const title = titleDouble || titleSingle || titleParen || '';
+        definitions.set(number, { url: url, title: title });
+        return '';
+      }
+    );
+    return { definitions, cleanedMarkdown };
+  }
+
+  function getNextAvailableReferenceNumber(used, startNumber) {
+    let next = Math.max(1, startNumber || 1);
+    while (used.has(next)) next += 1;
+    return next;
+  }
+
+  function sanitizeMarkdownTitle(title) {
+    return title
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"');
+  }
+
+  function isSafeReferenceUrl(url) {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, window.location.href);
+      return ['http:', 'https:', 'mailto:', 'tel:', 'blob:'].includes(parsed.protocol);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function applyReferencePreviewLinks(container, referenceDefinitions) {
+    if (!container || !referenceDefinitions || referenceDefinitions.size === 0) return;
+
+    function applyReferenceStyle(link, number) {
+      const definition = referenceDefinitions.get(number);
+      if (definition && definition.url && isSafeReferenceUrl(definition.url)) {
+        link.setAttribute('href', definition.url);
+        if (definition.title) {
+          link.setAttribute('title', definition.title);
+        } else {
+          link.removeAttribute('title');
+        }
+      } else {
+        link.removeAttribute('href');
+      }
+      link.textContent = '[' + number + ']';
+      link.classList.add('reference-link');
+    }
+
+    const links = container.querySelectorAll('a');
+    links.forEach(function(link) {
+      const text = link.textContent.trim();
+      let number = null;
+      if (/^\d+$/.test(text)) {
+        number = parseInt(text, 10);
+      } else {
+        const match = text.match(/^\[(\d+)\]$/);
+        if (match) number = parseInt(match[1], 10);
+      }
+      if (number && referenceDefinitions.has(number)) {
+        applyReferenceStyle(link, number);
+      }
+    });
+
+    const referenceRegex = /\[(\d+)\](?!\s*:)/g;
+    const nodesToProcess = [];
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const parent = node.parentElement;
+      if (!parent || !node.nodeValue) continue;
+      if (parent.closest('a, code, pre, script, style, mjx-container')) continue;
+      referenceRegex.lastIndex = 0;
+      if (referenceRegex.test(node.nodeValue)) {
+        nodesToProcess.push(node);
+      }
+    }
+    nodesToProcess.forEach(function(node) {
+      const text = node.nodeValue;
+      referenceRegex.lastIndex = 0;
+      let match;
+      let lastIndex = 0;
+      const fragment = document.createDocumentFragment();
+      while ((match = referenceRegex.exec(text)) !== null) {
+        const before = text.slice(lastIndex, match.index);
+        if (before) fragment.appendChild(document.createTextNode(before));
+        const number = parseInt(match[1], 10);
+        const definition = referenceDefinitions.get(number);
+        if (definition && definition.url && isSafeReferenceUrl(definition.url)) {
+          const link = document.createElement('a');
+          link.href = definition.url;
+          if (definition.title) link.title = definition.title;
+          link.textContent = '[' + number + ']';
+          link.classList.add('reference-link');
+          fragment.appendChild(link);
+        } else {
+          fragment.appendChild(document.createTextNode(match[0]));
+        }
+        lastIndex = match.index + match[0].length;
+      }
+      const after = text.slice(lastIndex);
+      if (after) fragment.appendChild(document.createTextNode(after));
+      node.parentNode.replaceChild(fragment, node);
+    });
+  }
+
+  function cleanupImageObjectUrls() {
+    if (imageObjectUrls.size === 0) return;
+    const contents = [markdownEditor.value];
+    if (Array.isArray(tabs)) {
+      tabs.forEach(function(tab) {
+        if (tab && typeof tab.content === 'string' && tab.content) {
+          contents.push(tab.content);
+        }
+      });
+    }
+    const snapshot = contents.join('\n');
+    Array.from(imageObjectUrls).forEach(function(url) {
+      if (!snapshot.includes(url)) {
+        URL.revokeObjectURL(url);
+        imageObjectUrls.delete(url);
+      }
+    });
+  }
+
+  function insertAlignmentBlock(align) {
+    const allowedAlignments = new Set(['left', 'center', 'right']);
+    const isAllowed = allowedAlignments.has(align);
+    if (!isAllowed) {
+      console.warn('Unsupported alignment:', align);
+      return;
+    }
+    const safeAlign = align;
+    const value = markdownEditor.value;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const selected = value.slice(start, end);
+    const hasSelection = start !== end;
+    const blockStart = `<div align="${safeAlign}">\n`;
+    const blockEnd = `\n</div>`;
+    const block = `${blockStart}${hasSelection ? selected : ''}${blockEnd}`;
+    const needsLeadingBreak = start > 0 && value[start - 1] !== '\n';
+    const needsTrailingBreak = end < value.length && value[end] !== '\n';
+    const replacement = (needsLeadingBreak ? '\n' : '') + block + (needsTrailingBreak ? '\n' : '');
+    const contentStart = start + (needsLeadingBreak ? 1 : 0) + blockStart.length;
+    const contentEnd = contentStart + (hasSelection ? selected.length : 0);
+    replaceEditorRange(start, end, replacement, contentStart, hasSelection ? contentEnd : contentStart);
+  }
+
+  function insertMarkdownBlock(block, startOverride, endOverride) {
+    const value = markdownEditor.value;
+    const start = typeof startOverride === 'number' ? startOverride : markdownEditor.selectionStart;
+    const end = typeof endOverride === 'number' ? endOverride : markdownEditor.selectionEnd;
+    const needsLeadingBreak = start > 0 && value[start - 1] !== '\n';
+    const needsTrailingBreak = end < value.length && value[end] !== '\n';
+    const replacement = (needsLeadingBreak ? '\n' : '') + block + (needsTrailingBreak ? '\n' : '');
+    const caret = start + replacement.length;
+    replaceEditorRange(start, end, replacement, caret, caret);
+  }
+
+  function clampNumber(value, min, max, fallback) {
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed)) return fallback;
+    return Math.max(min, Math.min(max, parsed));
+  }
+
+  function buildMarkdownTable(columns, rows) {
+    const header = Array.from({ length: columns }, (_, index) => `Column ${index + 1}`).join(' | ');
+    const divider = Array.from({ length: columns }, () => '---').join(' | ');
+    const bodyRows = Array.from({ length: rows }, () => `| ${Array.from({ length: columns }, () => 'Value').join(' | ')} |`);
+    return `| ${header} |\n| ${divider} |\n${bodyRows.join('\n')}\n`;
+  }
+
+  function loadEmojiEntries() {
+    if (emojiLoadPromise) return emojiLoadPromise;
+    emojiLoadPromise = fetch(EMOJI_API_URL)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Emoji request failed (${response.status})`);
+        return response.json();
+      })
+      .then((data) => {
+        emojiEntries = Object.keys(data)
+          .sort((a, b) => a.localeCompare(b))
+          .map((name) => ({
+            name,
+            url: data[name],
+            shortcode: `:${name}:`,
+            search: `${name} :${name}:`.toLowerCase(),
+          }));
+        emojiUrlMap = new Map(emojiEntries.map((entry) => [entry.name, entry.url]));
+        emojiLookupLoaded = true;
+        return emojiEntries;
+      })
+      .catch((error) => {
+        console.error('Failed to load GitHub emojis:', error);
+        emojiEntries = [];
+        emojiUrlMap = new Map();
+        emojiLookupLoaded = true;
+        return emojiEntries;
+      });
+    return emojiLoadPromise;
+  }
+
+  function createAlertPreview(type, meta) {
+    const wrapper = document.createElement('div');
+    wrapper.className = `markdown-alert markdown-alert-${type}`;
+    const title = document.createElement('p');
+    title.className = 'markdown-alert-title';
+    const icon = document.createElement('span');
+    icon.className = 'markdown-alert-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    if (meta.path) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', meta.viewBox || '0 0 512 512');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', meta.path);
+      svg.appendChild(path);
+      icon.appendChild(svg);
+    }
+    const label = document.createElement('span');
+    label.textContent = meta.label;
+    title.appendChild(icon);
+    title.appendChild(label);
+    const body = document.createElement('p');
+    body.textContent = `${meta.label} details go here.`;
+    wrapper.appendChild(title);
+    wrapper.appendChild(body);
+    return wrapper;
+  }
+
+  function flashCopyButton(button) {
+    const icon = button.querySelector('i');
+    if (!icon) return;
+    icon.className = 'bi bi-check-lg';
+    button.classList.add('is-copied');
+    clearTimeout(button.copyTimeout);
+    button.copyTimeout = setTimeout(() => {
+      icon.className = 'bi bi-clipboard';
+      button.classList.remove('is-copied');
+    }, 1200);
+  }
+
+  function openTableModal() {
+    const modal = document.getElementById('table-modal');
+    const columnInput = document.getElementById('table-modal-columns');
+    const rowInput = document.getElementById('table-modal-rows');
+    const confirmBtn = document.getElementById('table-modal-insert');
+    const cancelBtn = document.getElementById('table-modal-cancel');
+    if (!modal || !columnInput || !rowInput || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    columnInput.value = '3';
+    rowInput.value = '1';
+    modal.style.display = 'flex';
+
+    function insertTable() {
+      const columns = clampNumber(columnInput.value, 1, 20, 3);
+      const rows = clampNumber(rowInput.value, 1, 20, 1);
+      const table = buildMarkdownTable(columns, rows);
+      modal.style.display = 'none';
+      cleanup();
+      insertMarkdownBlock(table, start, end);
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        insertTable();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', insertTable);
+      cancelBtn.removeEventListener('click', closeModal);
+      columnInput.removeEventListener('keydown', onKey);
+      rowInput.removeEventListener('keydown', onKey);
+    }
+
+    confirmBtn.addEventListener('click', insertTable);
+    cancelBtn.addEventListener('click', closeModal);
+    columnInput.addEventListener('keydown', onKey);
+    rowInput.addEventListener('keydown', onKey);
+
+    requestAnimationFrame(() => {
+      columnInput.focus();
+      columnInput.select();
+    });
+  }
+
+  function openEmojiModal() {
+    const modal = document.getElementById('emoji-modal');
+    const grid = document.getElementById('emoji-modal-grid');
+    const emptyMessage = document.getElementById('emoji-modal-empty');
+    const searchInput = document.getElementById('emoji-modal-search');
+    const confirmBtn = document.getElementById('emoji-modal-insert');
+    const cancelBtn = document.getElementById('emoji-modal-cancel');
+    if (!modal || !grid || !emptyMessage || !searchInput || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    modal.style.display = 'flex';
+    confirmBtn.disabled = true;
+    emptyMessage.textContent = 'Loading emojis...';
+    emptyMessage.style.display = 'block';
+    searchInput.value = '';
+    emojiSelection.clear();
+    grid.innerHTML = '';
+    emojiItems = [];
+
+    function updateInsertState() {
+      confirmBtn.disabled = emojiSelection.size === 0;
+    }
+
+    function toggleSelection(shortcode, element) {
+      if (emojiSelection.has(shortcode)) {
+        emojiSelection.delete(shortcode);
+        element.classList.remove('is-selected');
+      } else {
+        emojiSelection.add(shortcode);
+        element.classList.add('is-selected');
+      }
+      element.setAttribute('aria-pressed', emojiSelection.has(shortcode).toString());
+      updateInsertState();
+    }
+
+    function renderEmojiGrid() {
+      grid.innerHTML = '';
+      const fragment = document.createDocumentFragment();
+      emojiItems = emojiEntries.map((entry) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'emoji-item';
+        item.setAttribute('aria-pressed', 'false');
+        item.dataset.search = entry.search;
+        item.dataset.shortcode = entry.shortcode;
+
+        const preview = document.createElement('span');
+        preview.className = 'emoji-preview';
+        const image = document.createElement('img');
+        image.src = entry.url;
+        image.alt = entry.shortcode;
+        image.loading = 'lazy';
+        preview.appendChild(image);
+
+        const shortcodeRow = document.createElement('div');
+        shortcodeRow.className = 'emoji-shortcode';
+        const code = document.createElement('span');
+        code.textContent = entry.shortcode;
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'emoji-copy-btn';
+        copyBtn.setAttribute('aria-label', `Copy ${entry.shortcode}`);
+        copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+        copyBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          copyTextToClipboard(entry.shortcode)
+            .then(() => flashCopyButton(copyBtn))
+            .catch((error) => console.error('Copy failed:', error));
+        });
+        shortcodeRow.appendChild(code);
+        shortcodeRow.appendChild(copyBtn);
+
+        item.appendChild(preview);
+        item.appendChild(shortcodeRow);
+        item.addEventListener('click', () => toggleSelection(entry.shortcode, item));
+        fragment.appendChild(item);
+        return { element: item, search: entry.search, shortcode: entry.shortcode };
+      });
+      grid.appendChild(fragment);
+    }
+
+    function applyFilter() {
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+      emojiItems.forEach((item) => {
+        const match = !query || item.search.includes(query);
+        item.element.style.display = match ? '' : 'none';
+        if (match) visibleCount += 1;
+      });
+      emptyMessage.style.display = visibleCount ? 'none' : 'block';
+    }
+
+    function insertEmojis() {
+      if (!emojiSelection.size) return;
+      const ordered = emojiItems
+        .filter((item) => emojiSelection.has(item.shortcode))
+        .map((item) => item.shortcode);
+      const insertion = ordered.join(' ');
+      modal.style.display = 'none';
+      cleanup();
+      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', insertEmojis);
+      cancelBtn.removeEventListener('click', closeModal);
+      searchInput.removeEventListener('input', applyFilter);
+      searchInput.removeEventListener('keydown', onKey);
+    }
+
+    loadEmojiEntries().then((entries) => {
+      if (!entries.length) {
+        emptyMessage.textContent = 'Unable to load emojis.';
+        emptyMessage.style.display = 'block';
+        grid.innerHTML = '';
+        emojiItems = [];
+        return;
+      }
+      renderEmojiGrid();
+      emptyMessage.textContent = 'No emojis found.';
+      applyFilter();
+      updateInsertState();
+    });
+
+    confirmBtn.addEventListener('click', insertEmojis);
+    cancelBtn.addEventListener('click', closeModal);
+    searchInput.addEventListener('input', applyFilter);
+    searchInput.addEventListener('keydown', onKey);
+
+    requestAnimationFrame(() => searchInput.focus());
+  }
+
+  function openSymbolsModal() {
+    const modal = document.getElementById('symbols-modal');
+    const grid = document.getElementById('symbols-modal-grid');
+    const emptyMessage = document.getElementById('symbols-modal-empty');
+    const searchInput = document.getElementById('symbols-modal-search');
+    const confirmBtn = document.getElementById('symbols-modal-insert');
+    const cancelBtn = document.getElementById('symbols-modal-cancel');
+    if (!modal || !grid || !emptyMessage || !searchInput || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    modal.style.display = 'flex';
+    confirmBtn.disabled = true;
+    searchInput.value = '';
+    symbolSelection.clear();
+    grid.innerHTML = '';
+
+    const sectionEntries = [];
+    SYMBOL_SECTIONS.forEach((section) => {
+      const sectionWrapper = document.createElement('div');
+      sectionWrapper.className = 'symbol-section';
+      const title = document.createElement('p');
+      title.className = 'symbol-section-title';
+      title.textContent = section.title;
+      const sectionGrid = document.createElement('div');
+      sectionGrid.className = 'symbol-section-grid';
+      const sectionItems = section.items.map((entry) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'symbol-item';
+        item.setAttribute('aria-pressed', 'false');
+        const preview = document.createElement('span');
+        preview.className = 'symbol-preview';
+        preview.textContent = entry.symbol;
+        const codeRow = document.createElement('div');
+        codeRow.className = 'symbol-code';
+        const code = document.createElement('span');
+        code.textContent = entry.entity;
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'symbol-copy-btn';
+        copyBtn.setAttribute('aria-label', `Copy ${entry.entity}`);
+        copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+        copyBtn.addEventListener('click', (event) => {
+          event.stopPropagation();
+          copyTextToClipboard(entry.entity)
+            .then(() => flashCopyButton(copyBtn))
+            .catch((error) => console.error('Copy failed:', error));
+        });
+        codeRow.appendChild(code);
+        codeRow.appendChild(copyBtn);
+        item.appendChild(preview);
+        item.appendChild(codeRow);
+
+        item.dataset.search = `${entry.symbol} ${entry.entity} ${entry.name}`.toLowerCase();
+        item.dataset.entity = entry.entity;
+        item.addEventListener('click', () => {
+          if (symbolSelection.has(entry.entity)) {
+            symbolSelection.delete(entry.entity);
+            item.classList.remove('is-selected');
+          } else {
+            symbolSelection.add(entry.entity);
+            item.classList.add('is-selected');
+          }
+          item.setAttribute('aria-pressed', symbolSelection.has(entry.entity).toString());
+          confirmBtn.disabled = symbolSelection.size === 0;
+        });
+
+        sectionGrid.appendChild(item);
+        return { element: item, search: item.dataset.search, entity: entry.entity };
+      });
+      sectionWrapper.appendChild(title);
+      sectionWrapper.appendChild(sectionGrid);
+      grid.appendChild(sectionWrapper);
+      sectionEntries.push({ wrapper: sectionWrapper, items: sectionItems });
+    });
+
+    symbolItems = sectionEntries.flatMap((section) => section.items);
+
+    function applyFilter() {
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+      sectionEntries.forEach((section) => {
+        let sectionVisible = 0;
+        section.items.forEach((item) => {
+          const match = !query || item.search.includes(query);
+          item.element.style.display = match ? '' : 'none';
+          if (match) {
+            visibleCount += 1;
+            sectionVisible += 1;
+          }
+        });
+        section.wrapper.style.display = sectionVisible ? '' : 'none';
+      });
+      emptyMessage.style.display = visibleCount ? 'none' : 'block';
+    }
+
+    function insertSymbols() {
+      if (!symbolSelection.size) return;
+      const ordered = symbolItems
+        .filter((item) => symbolSelection.has(item.entity))
+        .map((item) => item.entity);
+      const insertion = ordered.join(' ');
+      modal.style.display = 'none';
+      cleanup();
+      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', insertSymbols);
+      cancelBtn.removeEventListener('click', closeModal);
+      searchInput.removeEventListener('input', applyFilter);
+      searchInput.removeEventListener('keydown', onKey);
+    }
+
+    emptyMessage.textContent = 'No symbols found.';
+    applyFilter();
+    confirmBtn.addEventListener('click', insertSymbols);
+    cancelBtn.addEventListener('click', closeModal);
+    searchInput.addEventListener('input', applyFilter);
+    searchInput.addEventListener('keydown', onKey);
+    requestAnimationFrame(() => searchInput.focus());
+  }
+
+  function openAlertModal() {
+    const modal = document.getElementById('alert-modal');
+    const grid = document.getElementById('alert-modal-grid');
+    const confirmBtn = document.getElementById('alert-modal-insert');
+    const cancelBtn = document.getElementById('alert-modal-cancel');
+    if (!modal || !grid || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    modal.style.display = 'flex';
+    grid.innerHTML = '';
+
+    const alertTypes = ['note', 'tip', 'important', 'warning', 'caution'];
+    let selectedType = alertTypes[0];
+    const options = [];
+    alertTypes.forEach((type) => {
+      const meta = GITHUB_ALERT_META[type] || { label: type };
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'alert-option';
+      option.dataset.alertType = type;
+      option.setAttribute('aria-pressed', (type === selectedType).toString());
+      const preview = document.createElement('div');
+      preview.className = 'alert-preview';
+      preview.appendChild(createAlertPreview(type, meta));
+      option.appendChild(preview);
+      if (type === selectedType) option.classList.add('is-selected');
+      option.addEventListener('click', () => {
+        selectedType = type;
+        options.forEach((item) => {
+          const isSelected = item === option;
+          item.classList.toggle('is-selected', isSelected);
+          item.setAttribute('aria-pressed', isSelected.toString());
+        });
+      });
+      options.push(option);
+      grid.appendChild(option);
+    });
+
+    function insertAlert() {
+      const type = selectedType.toUpperCase();
+      const meta = GITHUB_ALERT_META[selectedType] || { label: selectedType };
+      const body = `${meta.label} details go here.`;
+      const block = `> [!${type}]\n> ${body}\n`;
+      modal.style.display = 'none';
+      cleanup();
+      insertMarkdownBlock(block, start, end);
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', insertAlert);
+      cancelBtn.removeEventListener('click', closeModal);
+      modal.removeEventListener('keydown', onKey);
+    }
+
+    confirmBtn.addEventListener('click', insertAlert);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('keydown', onKey);
+  }
+
+  function insertMarkdownLink() {
+    const modal = document.getElementById('link-modal');
+    const urlInput = document.getElementById('link-modal-url');
+    const textInput = document.getElementById('link-modal-text');
+    const confirmBtn = document.getElementById('link-modal-apply');
+    const cancelBtn = document.getElementById('link-modal-cancel');
+    if (!modal || !urlInput || !textInput || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const selected = markdownEditor.value.slice(start, end);
+    urlInput.value = 'https://';
+    textInput.value = selected || '';
+    modal.style.display = 'flex';
+
+    function applyLink() {
+      const url = urlInput.value.trim() || 'https://';
+      const linkText = textInput.value.trim() || selected || 'link text';
+      const replacement = '[' + linkText + '](' + url + ')';
+      modal.style.display = 'none';
+      cleanup();
+      replaceEditorRange(start, end, replacement, start + replacement.length, start + replacement.length);
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyLink();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', applyLink);
+      cancelBtn.removeEventListener('click', closeModal);
+      urlInput.removeEventListener('keydown', onKey);
+      textInput.removeEventListener('keydown', onKey);
+    }
+
+    confirmBtn.addEventListener('click', applyLink);
+    cancelBtn.addEventListener('click', closeModal);
+    urlInput.addEventListener('keydown', onKey);
+    textInput.addEventListener('keydown', onKey);
+
+    requestAnimationFrame(function() {
+      urlInput.focus();
+      urlInput.select();
+    });
+  }
+
+  function insertMarkdownImage() {
+    const modal = document.getElementById('image-modal');
+    const uploadOption = document.getElementById('image-source-upload');
+    const urlOption = document.getElementById('image-source-url');
+    const uploadFields = document.getElementById('image-upload-fields');
+    const urlFields = document.getElementById('image-url-fields');
+    const fileInput = document.getElementById('image-modal-file');
+    const urlInput = document.getElementById('image-modal-url');
+    const altInput = document.getElementById('image-modal-alt');
+    const confirmBtn = document.getElementById('image-modal-insert');
+    const cancelBtn = document.getElementById('image-modal-cancel');
+    if (!modal || !uploadOption || !urlOption || !uploadFields || !urlFields || !fileInput || !urlInput || !altInput || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const selected = markdownEditor.value.slice(start, end);
+    urlInput.value = 'https://';
+    altInput.value = selected || '';
+    fileInput.value = '';
+    urlOption.checked = true;
+    uploadOption.checked = false;
+    modal.style.display = 'flex';
+
+    function buildImageMarkdown(url) {
+      const titleText = altInput.value.trim();
+      const altText = titleText || 'alt text';
+      const safeTitle = sanitizeMarkdownTitle(titleText);
+      const titlePart = safeTitle ? ' "' + safeTitle + '"' : '';
+      return '![' + altText + '](' + url + titlePart + ')';
+    }
+
+    function insertImage(url) {
+      const safeUrl = url.trim() || 'https://';
+      const replacement = buildImageMarkdown(safeUrl);
+      modal.style.display = 'none';
+      cleanup();
+      replaceEditorRange(start, end, replacement, start + replacement.length, start + replacement.length);
+    }
+
+    function insertFromFile(file) {
+      const objectUrl = URL.createObjectURL(file);
+      imageObjectUrls.add(objectUrl);
+      insertImage(objectUrl);
+    }
+
+    function updateMode(shouldFocus) {
+      const isUpload = uploadOption.checked;
+      uploadFields.style.display = isUpload ? 'flex' : 'none';
+      urlFields.style.display = isUpload ? 'none' : 'flex';
+      if (shouldFocus) {
+        requestAnimationFrame(function() {
+          if (isUpload) {
+            fileInput.focus();
+          } else {
+            urlInput.focus();
+            urlInput.select();
+          }
+        });
+      }
+    }
+
+    function onModeChange() {
+      updateMode(true);
+    }
+
+    function onFileChange() {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) {
+        insertFromFile(file);
+      }
+    }
+
+    function onKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (uploadOption.checked) {
+          const file = fileInput.files && fileInput.files[0];
+          if (file) insertFromFile(file);
+          else fileInput.click();
+        } else {
+          insertImage(urlInput.value);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', onConfirm);
+      cancelBtn.removeEventListener('click', closeModal);
+      uploadOption.removeEventListener('change', onModeChange);
+      urlOption.removeEventListener('change', onModeChange);
+      fileInput.removeEventListener('change', onFileChange);
+      fileInput.removeEventListener('keydown', onKey);
+      urlInput.removeEventListener('keydown', onKey);
+      altInput.removeEventListener('keydown', onKey);
+    }
+
+    function onConfirm() {
+      if (uploadOption.checked) {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) insertFromFile(file);
+        else fileInput.click();
+      } else {
+        insertImage(urlInput.value);
+      }
+    }
+
+    confirmBtn.addEventListener('click', onConfirm);
+    cancelBtn.addEventListener('click', closeModal);
+    uploadOption.addEventListener('change', onModeChange);
+    urlOption.addEventListener('change', onModeChange);
+    fileInput.addEventListener('change', onFileChange);
+    fileInput.addEventListener('keydown', onKey);
+    urlInput.addEventListener('keydown', onKey);
+    altInput.addEventListener('keydown', onKey);
+    updateMode(true);
+  }
+
+  function insertMarkdownReference() {
+    const modal = document.getElementById('reference-modal');
+    const numberInput = document.getElementById('reference-modal-number');
+    const urlInput = document.getElementById('reference-modal-url');
+    const titleInput = document.getElementById('reference-modal-title-input');
+    const confirmBtn = document.getElementById('reference-modal-apply');
+    const cancelBtn = document.getElementById('reference-modal-cancel');
+    if (!modal || !numberInput || !urlInput || !titleInput || !confirmBtn || !cancelBtn) return;
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const currentValue = markdownEditor.value;
+    const used = getUsedReferenceNumbers(currentValue);
+    const maxUsed = used.size ? Math.max(...used) : 0;
+    referenceCounter = Math.max(1, maxUsed + 1);
+    const suggestedNumber = getNextAvailableReferenceNumber(used, referenceCounter);
+    numberInput.value = '[' + suggestedNumber + ']';
+    urlInput.value = 'https://';
+    titleInput.value = '';
+    modal.style.display = 'flex';
+
+    function insertReference() {
+      const latestValue = markdownEditor.value;
+      const usedNumbers = getUsedReferenceNumbers(latestValue);
+      const parsed = parseInt(numberInput.value.replace(/[^\d]/g, ''), 10);
+      const baseNumber = Number.isNaN(parsed) ? suggestedNumber : parsed;
+      const finalNumber = getNextAvailableReferenceNumber(usedNumbers, baseNumber);
+      const url = urlInput.value.trim() || 'https://';
+      const title = titleInput.value.trim();
+      const safeTitle = sanitizeMarkdownTitle(title);
+      const definition = '[' + finalNumber + ']: ' + url + (safeTitle ? ' "' + safeTitle + '"' : '');
+      const selected = latestValue.slice(start, end);
+      const inlineReference = selected + '[' + finalNumber + ']';
+      const baseValue = latestValue.slice(0, start) + inlineReference + latestValue.slice(end);
+      let separator = '';
+      if (baseValue.length && !baseValue.endsWith('\n')) {
+        separator = '\n';
+      }
+      const updatedValue = baseValue + separator + definition;
+      markdownEditor.value = updatedValue;
+      markdownEditor.focus();
+      const caret = start + inlineReference.length;
+      markdownEditor.setSelectionRange(caret, caret);
+      markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+      referenceCounter = Math.max(referenceCounter, finalNumber + 1);
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      cleanup();
+    }
+
+    function onKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        insertReference();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeModal();
+      }
+    }
+
+    function cleanup() {
+      confirmBtn.removeEventListener('click', insertReference);
+      cancelBtn.removeEventListener('click', closeModal);
+      numberInput.removeEventListener('keydown', onKey);
+      urlInput.removeEventListener('keydown', onKey);
+      titleInput.removeEventListener('keydown', onKey);
+    }
+
+    confirmBtn.addEventListener('click', insertReference);
+    cancelBtn.addEventListener('click', closeModal);
+    numberInput.addEventListener('keydown', onKey);
+    urlInput.addEventListener('keydown', onKey);
+    titleInput.addEventListener('keydown', onKey);
+
+    requestAnimationFrame(function() {
+      numberInput.focus();
+      numberInput.select();
+    });
+  }
+
+  function escapeRegExp(text) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function getFocusableElements(container) {
+    return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter(element => !element.disabled && element.offsetParent !== null);
+  }
+
+  function trapFocusInModal(modal, event) {
+    const focusable = getFocusableElements(modal);
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function openAppModal(modal, options = {}) {
+    if (!modal) return;
+    if (activeModal && activeModal !== modal) {
+      closeAppModal(activeModal);
+    }
+    lastFocusedElement = document.activeElement;
+    modal.style.display = 'flex';
+    requestAnimationFrame(function() {
+      modal.classList.add('is-visible');
+    });
+    modal.setAttribute('aria-hidden', 'false');
+    activeModal = modal;
+    const focusTarget = options.focusTarget || getFocusableElements(modal)[0];
+    if (focusTarget) {
+      focusTarget.focus();
+    }
+    const handleKeydown = function(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (options.onClose) {
+          options.onClose();
+        } else {
+          closeAppModal(modal);
+        }
+      } else if (event.key === 'Tab') {
+        trapFocusInModal(modal, event);
+      }
+    };
+    const handlePointerDown = function(event) {
+      if (event.target === modal) {
+        if (options.onClose) {
+          options.onClose();
+        } else {
+          closeAppModal(modal);
+        }
+      }
+    };
+    modal.addEventListener('keydown', handleKeydown);
+    modal.addEventListener('mousedown', handlePointerDown);
+    modal._modalHandlers = { handleKeydown, handlePointerDown };
+  }
+
+  function closeAppModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('is-visible');
+    modal.setAttribute('aria-hidden', 'true');
+    const handlers = modal._modalHandlers || {};
+    if (handlers.handleKeydown) modal.removeEventListener('keydown', handlers.handleKeydown);
+    if (handlers.handlePointerDown) modal.removeEventListener('mousedown', handlers.handlePointerDown);
+    if (activeModal === modal) activeModal = null;
+    window.setTimeout(function() {
+      if (!modal.classList.contains('is-visible')) {
+        modal.style.display = 'none';
+      }
+    }, 200);
+    if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+      lastFocusedElement.focus();
+    }
+  }
+
+  function updateFindHighlights() {
+    if (!editorHighlightLayer) return;
+    const text = markdownEditor.value || '';
+    const scrollTop = markdownEditor.scrollTop;
+    const scrollLeft = markdownEditor.scrollLeft;
+    if (!isFindModalOpen || !findReplaceInput || !findReplaceInput.value || !findMatches.length) {
+      editorHighlightLayer.textContent = text;
+      editorHighlightLayer.scrollTop = scrollTop;
+      editorHighlightLayer.scrollLeft = scrollLeft;
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    findMatches.forEach(function(match, index) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.start)));
+      const mark = document.createElement('mark');
+      mark.className = 'find-highlight' + (index === activeFindIndex ? ' active' : '');
+      mark.textContent = text.slice(match.start, match.end);
+      fragment.appendChild(mark);
+      lastIndex = match.end;
+    });
+    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    editorHighlightLayer.textContent = '';
+    editorHighlightLayer.appendChild(fragment);
+    editorHighlightLayer.scrollTop = scrollTop;
+    editorHighlightLayer.scrollLeft = scrollLeft;
+  }
+
+  function syncHighlightScroll() {
+    if (!editorHighlightLayer) return;
+    editorHighlightLayer.scrollTop = markdownEditor.scrollTop;
+    editorHighlightLayer.scrollLeft = markdownEditor.scrollLeft;
+  }
+
+  function updateLineNumberGutter(lineCount) {
+    if (!editorPaneElement) return;
+    const digits = String(Math.max(1, lineCount)).length;
+    const gutterSize = `${Math.max(LINE_NUMBER_GUTTER_MIN_CH, digits + LINE_NUMBER_GUTTER_PADDING_CH)}ch`;
+    editorPaneElement.style.setProperty('--line-number-gutter', gutterSize);
+  }
+
+  function ensureLineNumberMeasure() {
+    if (!lineNumbers) return;
+    if (!lineNumberMeasure) {
+      lineNumberMeasure = document.createElement('div');
+      lineNumberMeasure.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(lineNumberMeasure);
+    }
+    const styles = window.getComputedStyle(markdownEditor);
+    lineNumberMeasure.style.position = 'absolute';
+    lineNumberMeasure.style.visibility = 'hidden';
+    lineNumberMeasure.style.whiteSpace = 'pre-wrap';
+    lineNumberMeasure.style.wordWrap = 'break-word';
+    lineNumberMeasure.style.boxSizing = 'border-box';
+    lineNumberMeasure.style.padding = styles.padding;
+    lineNumberMeasure.style.fontFamily = styles.fontFamily;
+    lineNumberMeasure.style.fontSize = styles.fontSize;
+    lineNumberMeasure.style.lineHeight = styles.lineHeight;
+    lineNumberMeasure.style.letterSpacing = styles.letterSpacing;
+    lineNumberMeasure.style.width = `${markdownEditor.clientWidth}px`;
+    lineNumberMeasure.style.top = '-9999px';
+    lineNumberMeasure.style.left = '-9999px';
+  }
+
+  function getLineHeight(styles) {
+    const computed = parseFloat(styles.lineHeight);
+    if (!Number.isNaN(computed)) return computed;
+    const fontSize = parseFloat(styles.fontSize) || 14;
+    return fontSize * 1.5;
+  }
+
+  function getWrappedLineCount(line, lineHeight, paddingSum) {
+    if (!lineNumberMeasure) return 1;
+    lineNumberMeasure.textContent = line.length ? line : LINE_NUMBER_EMPTY_PLACEHOLDER;
+    const contentHeight = lineNumberMeasure.scrollHeight - paddingSum;
+    return Math.max(1, Math.round(contentHeight / lineHeight));
+  }
+
+  function updateLineNumbers() {
+    if (!lineNumbers || !markdownEditor) return;
+    const lines = (markdownEditor.value || '').split('\n');
+    const lineCount = Math.max(1, lines.length);
+    updateLineNumberGutter(lineCount);
+    ensureLineNumberMeasure();
+    const styles = window.getComputedStyle(markdownEditor);
+    const lineHeight = getLineHeight(styles);
+    const paddingSum =
+      (parseFloat(styles.paddingTop) || 0) +
+      (parseFloat(styles.paddingBottom) || 0);
+    const existingItems = lineNumbers.children;
+    if (existingItems.length !== lineCount) {
+      const fragment = document.createDocumentFragment();
+      lines.forEach(function(line, index) {
+        const lineNumber = document.createElement('div');
+        lineNumber.className = 'line-number';
+        lineNumber.textContent = index + 1;
+        const wrapCount = getWrappedLineCount(line, lineHeight, paddingSum);
+        lineNumber.style.height = `${wrapCount * lineHeight}px`;
+        fragment.appendChild(lineNumber);
+      });
+      lineNumbers.textContent = '';
+      lineNumbers.appendChild(fragment);
+    } else {
+      for (let i = 0; i < lineCount; i += 1) {
+        const wrapCount = getWrappedLineCount(lines[i], lineHeight, paddingSum);
+        existingItems[i].style.height = `${wrapCount * lineHeight}px`;
+      }
+    }
+    syncLineNumberScroll();
+  }
+
+  function scheduleLineNumberUpdate() {
+    if (!lineNumbers) return;
+    if (lineNumberUpdateFrame) return;
+    lineNumberUpdateFrame = window.requestAnimationFrame(function() {
+      lineNumberUpdateFrame = null;
+      updateLineNumbers();
+    });
+  }
+
+  function syncLineNumberScroll() {
+    if (!lineNumbers) return;
+    lineNumbers.scrollTop = markdownEditor.scrollTop;
+  }
+
+  function computeFindMatches(value, query) {
+    if (!query) return [];
+    const haystack = value.toLowerCase();
+    const needle = query.toLowerCase();
+    const matches = [];
+    let index = haystack.indexOf(needle);
+    while (index !== -1) {
+      matches.push({ start: index, end: index + needle.length });
+      index = haystack.indexOf(needle, index + needle.length);
+    }
+    return matches;
+  }
+
+  function updateFindControls() {
+    if (!findReplaceCount) return;
+    const total = findMatches.length;
+    const current = total && activeFindIndex >= 0 ? activeFindIndex + 1 : 0;
+    findReplaceCount.textContent = current + ' of ' + total + ' matches';
+    const hasMatches = total > 0;
+    const hasQuery = !!(findReplaceInput && findReplaceInput.value);
+    if (findReplacePrev) findReplacePrev.disabled = !hasMatches;
+    if (findReplaceNext) findReplaceNext.disabled = !hasMatches;
+    if (findReplaceCurrent) findReplaceCurrent.disabled = !hasMatches;
+    if (findReplaceAll) findReplaceAll.disabled = !hasQuery || !hasMatches;
+  }
+
+  function refreshFindMatches(options) {
+    const opts = options || {};
+    const query = findReplaceInput ? findReplaceInput.value : '';
+    if (!isFindModalOpen || !query) {
+      findMatches = [];
+      activeFindIndex = -1;
+      updateFindControls();
+      updateFindHighlights();
+      return;
+    }
+    findMatches = computeFindMatches(markdownEditor.value, query);
+    if (opts.resetIndex || query !== lastFindQuery) {
+      activeFindIndex = findMatches.length ? 0 : -1;
+    } else if (activeFindIndex >= findMatches.length) {
+      activeFindIndex = findMatches.length - 1;
+    }
+    lastFindQuery = query;
+    updateFindControls();
+    updateFindHighlights();
+  }
+
+  function selectActiveMatch() {
+    if (!findMatches.length || activeFindIndex < 0) return;
+    const match = findMatches[activeFindIndex];
+    markdownEditor.focus();
+    markdownEditor.setSelectionRange(match.start, match.end);
+  }
+
+  function cycleFindMatch(direction) {
+    const totalMatches = findMatches.length;
+    if (!totalMatches) return;
+    activeFindIndex = (activeFindIndex + direction + totalMatches) % totalMatches;
+    updateFindControls();
+    updateFindHighlights();
+    selectActiveMatch();
+  }
+
+  function openFindReplaceModal() {
+    if (!findReplaceModal || !findReplaceInput) return;
+    isFindModalOpen = true;
+    const selected = markdownEditor.value.slice(markdownEditor.selectionStart, markdownEditor.selectionEnd);
+    if (selected) {
+      findReplaceInput.value = selected;
+    }
+    openAppModal(findReplaceModal, { focusTarget: findReplaceInput, onClose: closeFindReplaceModal });
+    requestAnimationFrame(function() {
+      findReplaceInput.focus();
+      findReplaceInput.select();
+    });
+    refreshFindMatches({ resetIndex: true });
+    if (findMatches.length) {
+      selectActiveMatch();
+    }
+  }
+
+  function closeFindReplaceModal() {
+    isFindModalOpen = false;
+    closeAppModal(findReplaceModal);
+    findMatches = [];
+    activeFindIndex = -1;
+    updateFindControls();
+    updateFindHighlights();
+  }
+
+  function replaceCurrentMatch() {
+    if (!findMatches.length) return;
+    const replacement = findReplaceWith ? findReplaceWith.value : '';
+    const match = findMatches[activeFindIndex];
+    replaceEditorRange(match.start, match.end, replacement, match.start, match.start + replacement.length);
+    refreshFindMatches();
+    if (findMatches.length) {
+      activeFindIndex = Math.min(activeFindIndex, findMatches.length - 1);
+      selectActiveMatch();
+    }
+  }
+
+  function replaceAllMatches() {
+    const query = findReplaceInput ? findReplaceInput.value : '';
+    if (!query) return;
+    const replacement = findReplaceWith ? findReplaceWith.value : '';
+    const regex = new RegExp(escapeRegExp(query), 'gi');
+    markdownEditor.value = markdownEditor.value.replace(regex, replacement);
+    markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+    refreshFindMatches({ resetIndex: true });
+    if (findMatches.length) {
+      selectActiveMatch();
+    }
+  }
+
+  function openClearFormattingModal() {
+    if (!clearFormattingModal) return;
+    openAppModal(clearFormattingModal, { focusTarget: clearFormattingConfirm || clearFormattingCancel });
+  }
+
+  function applyClearFormatting() {
+    const stripped = stripBasicMarkdown(markdownEditor.value);
+    replaceEditorRange(0, markdownEditor.value.length, stripped, 0, 0);
+  }
+
+  function openHelpModal() {
+    if (!helpModal) return;
+    openAppModal(helpModal, { focusTarget: helpModalClose || helpModalCloseIcon });
+  }
+
+  function openAboutModal() {
+    if (!aboutModal) return;
+    openAppModal(aboutModal, { focusTarget: aboutModalClose || aboutModalCloseIcon });
+  }
+
+  function initFindReplaceModal() {
+    if (!findReplaceModal || !findReplaceInput) return;
+    findReplaceInput.addEventListener('input', function() {
+      refreshFindMatches({ resetIndex: true });
+    });
+    findReplaceInput.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        cycleFindMatch(event.shiftKey ? -1 : 1);
+      }
+    });
+    if (findReplaceWith) {
+      findReplaceWith.addEventListener('input', updateFindControls);
+    }
+    if (findReplacePrev) {
+      findReplacePrev.addEventListener('click', function() { cycleFindMatch(-1); });
+    }
+    if (findReplaceNext) {
+      findReplaceNext.addEventListener('click', function() { cycleFindMatch(1); });
+    }
+    if (findReplaceCurrent) {
+      findReplaceCurrent.addEventListener('click', replaceCurrentMatch);
+    }
+    if (findReplaceAll) {
+      findReplaceAll.addEventListener('click', replaceAllMatches);
+    }
+    if (findReplaceClose) {
+      findReplaceClose.addEventListener('click', closeFindReplaceModal);
+    }
+    if (findReplaceCloseIcon) {
+      findReplaceCloseIcon.addEventListener('click', closeFindReplaceModal);
+    }
+  }
+
+  function initAppModals() {
+    if (clearFormattingConfirm) {
+      clearFormattingConfirm.addEventListener('click', function() {
+        applyClearFormatting();
+        closeAppModal(clearFormattingModal);
+      });
+    }
+    if (clearFormattingCancel) {
+      clearFormattingCancel.addEventListener('click', function() { closeAppModal(clearFormattingModal); });
+    }
+    if (clearFormattingClose) {
+      clearFormattingClose.addEventListener('click', function() { closeAppModal(clearFormattingModal); });
+    }
+    if (helpModalClose) {
+      helpModalClose.addEventListener('click', function() { closeAppModal(helpModal); });
+    }
+    if (helpModalCloseIcon) {
+      helpModalCloseIcon.addEventListener('click', function() { closeAppModal(helpModal); });
+    }
+    if (aboutModalClose) {
+      aboutModalClose.addEventListener('click', function() { closeAppModal(aboutModal); });
+    }
+    if (aboutModalCloseIcon) {
+      aboutModalCloseIcon.addEventListener('click', function() { closeAppModal(aboutModal); });
+    }
+  }
+
+  function runMarkdownTool(action, button) {
+    if (action === 'undo' || action === 'redo') {
+      markdownEditor.focus();
+      document.execCommand(action);
+      markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+
+    if (action === 'bold') wrapEditorSelection('**', '**', 'bold text');
+    else if (action === 'strike') wrapEditorSelection('~~', '~~', 'struck text');
+    else if (action === 'italic') wrapEditorSelection('*', '*', 'italic text');
+    else if (action === 'quote') transformEditorLines(function(line) { return line ? '> ' + line.replace(/^>\s?/, '') : '>'; });
+    else if (action === 'align-left') insertAlignmentBlock('left');
+    else if (action === 'align-center') insertAlignmentBlock('center');
+    else if (action === 'align-right') insertAlignmentBlock('right');
+    else if (action === 'title-case') transformSelectionOrCurrentLine(toTitleCase);
+    else if (action === 'uppercase') transformSelectionOrCurrentLine(function(text) { return text.toUpperCase(); });
+    else if (action === 'lowercase') transformSelectionOrCurrentLine(function(text) { return text.toLowerCase(); });
+    else if (action === 'heading') {
+      const level = parseInt(button.getAttribute('data-md-level') || '1', 10);
+      const marker = '#'.repeat(Math.max(1, Math.min(6, level))) + ' ';
+      transformEditorLines(function(line) { return marker + line.replace(/^#{1,6}\s+/, ''); });
+    } else if (action === 'unordered-list') {
+      applyMarkdownList('unordered');
+    } else if (action === 'ordered-list') {
+      applyMarkdownList('ordered');
+    } else if (action === 'horizontal-rule') insertMarkdownBlock('---\n');
+    else if (action === 'link') insertMarkdownLink();
+    else if (action === 'reference') insertMarkdownReference();
+    else if (action === 'image') insertMarkdownImage();
+    else if (action === 'inline-code') wrapEditorSelection('`', '`', 'code');
+    else if (action === 'code-block') insertMarkdownBlock('```js\n' + (markdownEditor.value.slice(markdownEditor.selectionStart, markdownEditor.selectionEnd) || 'console.log("Hello, Markdown!");') + '\n```\n');
+    else if (action === 'table') openTableModal();
+    else if (action === 'date-time') {
+      const now = new Date();
+      const datePart = now.toLocaleDateString('en-CA');
+      const timePart = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+      const timestamp = `${datePart} ${timePart} ${dayName}`;
+      replaceEditorRange(markdownEditor.selectionStart, markdownEditor.selectionEnd, timestamp, markdownEditor.selectionStart + timestamp.length, markdownEditor.selectionStart + timestamp.length);
+    } else if (action === 'emoji') {
+      openEmojiModal();
+    }
+    else if (action === 'symbols') openSymbolsModal();
+    else if (action === 'alert') openAlertModal();
+    else if (action === 'terminal-block') insertMarkdownBlock('```bash\nnpm run dev\n```\n');
+    else if (action === 'fullscreen') {
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    } else if (action === 'clear-formatting') openClearFormattingModal();
+    else if (action === 'find') openFindReplaceModal();
+    else if (action === 'help') openHelpModal();
+    else if (action === 'info') openAboutModal();
+  }
+
+  function initMarkdownFormatToolbar() {
+    if (!markdownFormatToolbar) return;
+    markdownFormatToolbar.addEventListener('mousedown', function(e) {
+      if (e.target.closest('[data-md-action]')) e.preventDefault();
+    });
+    markdownFormatToolbar.addEventListener('click', function(e) {
+      const button = e.target.closest('[data-md-action]');
+      if (!button) return;
+      e.preventDefault();
+      runMarkdownTool(button.getAttribute('data-md-action'), button);
+    });
   }
 
   // Story 1.3: Resize Divider Functions
@@ -1668,6 +3502,7 @@ This is a fully client-side application. Your content never leaves your browser 
     const previewPercent = 100 - editorWidthPercent;
     editorPaneElement.style.flex = `0 0 calc(${editorWidthPercent}% - 4px)`;
     previewPaneElement.style.flex = `0 0 calc(${previewPercent}% - 4px)`;
+    scheduleLineNumberUpdate();
   }
 
   function resetPaneWidths() {
@@ -1705,12 +3540,12 @@ This is a fully client-side application. Your content never leaves your browser 
       mobileToggleSync.innerHTML = '<i class="bi bi-link-45deg me-2"></i> Sync Off';
       mobileToggleSync.classList.add("sync-disabled");
       mobileToggleSync.classList.remove("sync-enabled");
-      mobileToggleSync.classList.add("border-primary");
+      mobileToggleSync.classList.add("sync-active");
     } else {
       mobileToggleSync.innerHTML = '<i class="bi bi-link me-2"></i> Sync On';
       mobileToggleSync.classList.add("sync-enabled");
       mobileToggleSync.classList.remove("sync-disabled");
-      mobileToggleSync.classList.remove("border-primary");
+      mobileToggleSync.classList.remove("sync-active");
     }
   });
   mobileImportBtn.addEventListener("click", () => fileInput.click());
@@ -1746,15 +3581,18 @@ This is a fully client-side application. Your content never leaves your browser 
   initTabs();
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();
   updateMobileStats();
+  updateFindHighlights();
+  syncHighlightScroll();
 
   // Initialize resizer - Story 1.3
   initResizer();
+  window.addEventListener('resize', scheduleLineNumberUpdate);
 
   // View Mode Button Event Listeners - Story 1.1
   viewModeButtons.forEach(btn => {
     btn.addEventListener('click', function() {
-      const mode = this.getAttribute('data-mode');
-      setViewMode(mode);
+      const mode = this.getAttribute('data-view-mode');
+      setViewMode(resolveViewToggleMode(mode));
       saveCurrentTabState();
     });
   });
@@ -1773,10 +3611,29 @@ This is a fully client-side application. Your content never leaves your browser 
     debouncedRender();
     clearTimeout(saveTabStateTimeout);
     saveTabStateTimeout = setTimeout(saveCurrentTabState, 500);
+    if (isFindModalOpen) {
+      refreshFindMatches();
+    } else {
+      updateFindHighlights();
+    }
+    scheduleLineNumberUpdate();
   });
+
+  initMarkdownFormatToolbar();
+  initFindReplaceModal();
+  initAppModals();
   
-  // Tab key handler to insert indentation instead of moving focus
+  // Editor key handlers for list continuation and indentation
   markdownEditor.addEventListener("keydown", function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      openFindReplaceModal();
+      return;
+    }
+    if (handleListEnter(e)) {
+      return;
+    }
+
     if (e.key === 'Tab') {
       e.preventDefault();
       
@@ -1798,7 +3655,11 @@ This is a fully client-side application. Your content never leaves your browser 
     }
   });
   
-  editorPane.addEventListener("scroll", syncEditorToPreview);
+  editorPane.addEventListener("scroll", function() {
+    syncEditorToPreview();
+    syncHighlightScroll();
+    syncLineNumberScroll();
+  });
   previewPane.addEventListener("scroll", syncPreviewToEditor);
   toggleSyncButton.addEventListener("click", toggleSyncScrolling);
   themeToggle.addEventListener("click", function () {
@@ -1886,7 +3747,7 @@ This is a fully client-side application. Your content never leaves your browser 
       const html = marked.parse(markdown);
       const sanitizedHtml = DOMPurify.sanitize(html, {
         ADD_TAGS: ['mjx-container'], 
-        ADD_ATTR: ['id', 'class', 'style']
+        ADD_ATTR: ['id', 'class', 'style', 'align']
       });
       const tempContainer = document.createElement("div");
       tempContainer.innerHTML = sanitizedHtml;
@@ -2504,7 +4365,7 @@ This is a fully client-side application. Your content never leaves your browser 
       const html = marked.parse(markdown);
       const sanitizedHtml = DOMPurify.sanitize(html, {
         ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath'],
-        ADD_ATTR: ['id', 'class', 'style', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start']
+        ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start']
       });
 
       const tempElement = document.createElement("div");
@@ -2651,27 +4512,29 @@ This is a fully client-side application. Your content never leaves your browser 
     }
   });
 
+  async function copyTextToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textArea);
+    if (!successful) {
+      throw new Error("Copy command was unsuccessful");
+    }
+  }
+
   async function copyToClipboard(text) {
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        showCopiedMessage();
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.opacity = "0";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand("copy");
-        document.body.removeChild(textArea);
-        if (successful) {
-          showCopiedMessage();
-        } else {
-          throw new Error("Copy command was unsuccessful");
-        }
-      }
+      await copyTextToClipboard(text);
+      showCopiedMessage();
     } catch (err) {
       console.error("Copy failed:", err);
       alert("Failed to copy HTML: " + err.message);
@@ -2776,44 +4639,42 @@ This is a fully client-side application. Your content never leaves your browser 
 
   loadFromShareHash();
 
-  const dropEvents = ["dragenter", "dragover", "dragleave", "drop"];
+  // Full-window drag-and-drop: track nesting level for reliable enter/leave detection
+  let dragDepth = 0;
 
-  dropEvents.forEach((eventName) => {
-    dropzone.addEventListener(eventName, preventDefaults, false);
-    document.body.addEventListener(eventName, preventDefaults, false);
-  });
-
-  function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  ["dragenter", "dragover"].forEach((eventName) => {
-    dropzone.addEventListener(eventName, highlight, false);
-  });
-
-  ["dragleave", "drop"].forEach((eventName) => {
-    dropzone.addEventListener(eventName, unhighlight, false);
-  });
-
-  function highlight() {
-    dropzone.classList.add("active");
-  }
-
-  function unhighlight() {
-    dropzone.classList.remove("active");
-  }
-
-  dropzone.addEventListener("drop", handleDrop, false);
-  dropzone.addEventListener("click", function (e) {
-    if (e.target !== closeDropzoneBtn && !closeDropzoneBtn.contains(e.target)) {
-      fileInput.click();
+  document.addEventListener("dragenter", function(e) {
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      dragDepth++;
+      dragOverlay.classList.add("active");
+      dragOverlay.setAttribute("aria-hidden", "false");
     }
-  });
-  closeDropzoneBtn.addEventListener("click", function(e) {
-    e.stopPropagation(); 
-    dropzone.style.display = "none";
-  });
+  }, false);
+
+  document.addEventListener("dragover", function(e) {
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+    }
+  }, false);
+
+  document.addEventListener("dragleave", function(e) {
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
+      dragDepth--;
+      if (dragDepth <= 0) {
+        dragDepth = 0;
+        dragOverlay.classList.remove("active");
+        dragOverlay.setAttribute("aria-hidden", "true");
+      }
+    }
+  }, false);
+
+  document.addEventListener("drop", function(e) {
+    e.preventDefault();
+    dragDepth = 0;
+    dragOverlay.classList.remove("active");
+    dragOverlay.setAttribute("aria-hidden", "true");
+    handleDrop(e);
+  }, false);
 
   function handleDrop(e) {
     const dt = e.dataTransfer;
@@ -2841,7 +4702,8 @@ This is a fully client-side application. Your content never leaves your browser 
       const activeEl = document.activeElement;
       const isTextControl = activeEl && (activeEl.tagName === "TEXTAREA" || activeEl.tagName === "INPUT");
       const hasSelection = window.getSelection && window.getSelection().toString().trim().length > 0;
-      if (!isTextControl && !hasSelection) {
+      const editorHasSelection = markdownEditor.selectionStart !== markdownEditor.selectionEnd;
+      if (!isTextControl && !hasSelection && !editorHasSelection) {
         e.preventDefault();
         copyMarkdownButton.click();
       }
@@ -2865,6 +4727,7 @@ This is a fully client-side application. Your content never leaves your browser 
     }
     // Close Mermaid zoom modal with Escape
     if (e.key === "Escape") {
+      closeTabMenus();
       closeMermaidModal();
     }
   });

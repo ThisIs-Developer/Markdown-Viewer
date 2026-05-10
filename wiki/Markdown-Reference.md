@@ -24,6 +24,7 @@ A complete reference for all Markdown syntax supported by **Markdown Viewer**, i
 - [Emoji](#emoji)
 - [Strikethrough](#strikethrough)
 - [Escaping Characters](#escaping-characters)
+- [Security Notes](#security-notes)
 
 ---
 
@@ -441,3 +442,11 @@ Use a backslash to escape Markdown special characters:
 ```
 
 Escapable characters: `\ ` ` * _ { } [ ] ( ) # + - . ! |`
+
+---
+
+## Security Notes
+
+- **Sanitized HTML**: Raw HTML is sanitized with DOMPurify to remove unsafe tags and attributes.
+- **No script execution**: `<script>` tags and inline event handlers are stripped for safety.
+- **Local processing**: Markdown rendering happens entirely in the browser with no server-side processing.

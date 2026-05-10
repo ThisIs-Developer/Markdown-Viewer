@@ -22,6 +22,22 @@ No. The application requires no sign-up, registration, or login.
 
 No. All processing is done **entirely in your browser**. No text you type is ever transmitted to any server. Your content stays on your device.
 
+### Do you collect analytics or telemetry?
+
+No. The application does not include analytics scripts, advertising pixels, or tracking beacons.
+
+### What data is stored locally?
+
+Markdown Viewer stores editor content, tab state, and preferences (theme, view mode, sync scroll) in your browser’s `localStorage` for autosave and restore.
+
+### How do I clear my local data?
+
+Use your browser’s **Site Data** or **Clear Storage** controls for the site. This removes autosaved content and preferences.
+
+### What external network requests are made?
+
+By default, the app loads libraries from public CDNs (cdnjs, jsDelivr). GitHub Import uses `api.github.com` and `raw.githubusercontent.com` to fetch public files. Self-host the libraries and avoid GitHub import to eliminate these requests.
+
 ### Which browsers are supported?
 
 Markdown Viewer works in all modern browsers:
@@ -94,9 +110,9 @@ Yes. The web app is pure HTML/CSS/JavaScript with no build step. Clone the repos
 
 ### Can I use it offline?
 
-- **Web app**: The application itself loads from CDNs, so you need an internet connection for the initial load. Once loaded, it works without a network connection.
-- **Desktop app**: The desktop application is fully self-contained and works completely offline.
-- **Self-hosted Docker**: If you bundle the CDN libraries locally, you can make the web app fully offline. By default, the Docker image fetches libraries from CDNs at runtime.
+- **Web app**: The application loads libraries from CDNs, so you need an internet connection for the initial load. Once assets are cached, it works offline until the cache is cleared.
+- **Desktop app**: The desktop application uses the same CDN libraries by default. It can run offline after caching or if you replace CDN links with local copies and rebuild.
+- **Self-hosted Docker**: Bundling CDN libraries locally makes the web app fully offline. By default, the Docker image still loads CDN libraries.
 
 ### Is there a desktop version?
 

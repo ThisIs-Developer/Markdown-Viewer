@@ -114,6 +114,8 @@ Open the project folder in VS Code and click **Go Live** in the status bar.
 
 Markdown Viewer is also available as a cross-platform native desktop application powered by [Neutralinojs](https://neutralino.js.org/).
 
+> **Transparency note**: The desktop app uses the same `index.html` and CDN-hosted libraries as the web app. It can run offline after assets are cached, or if you replace CDN links with local copies and run `node prepare.js`.
+
 ### Download a Pre-Built Binary
 
 Go to the [Releases page](https://github.com/ThisIs-Developer/Markdown-Viewer/releases) and download the appropriate binary for your platform:
@@ -128,6 +130,14 @@ Go to the [Releases page](https://github.com/ThisIs-Developer/Markdown-Viewer/re
 ### Build from Source
 
 See the [Desktop App](Desktop-App) wiki page for full build instructions.
+
+---
+
+## Transparency & Network Dependencies
+
+Markdown Viewer is a static client-side application, so there is no server-side processing or telemetry. However, the web build loads third-party libraries from public CDNs (cdnjs and jsDelivr) and GitHub imports use public GitHub APIs. If you require a fully offline or isolated environment, self-host the CDN assets and avoid GitHub import.
+
+The Docker image contains only static assets and an Nginx server. There are no background services, analytics scripts, or external callbacks beyond the CDN libraries referenced by the app.
 
 ---
 

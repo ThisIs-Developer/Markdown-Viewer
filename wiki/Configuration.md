@@ -12,6 +12,7 @@ This page documents all configuration files and customizable settings in **Markd
 - [Desktop App — neutralino.config.json](#desktop-app--neutralinoconfigjson)
 - [Desktop App — package.json Scripts](#desktop-app--packagejson-scripts)
 - [GitHub Actions Workflows](#github-actions-workflows)
+- [Transparency & Data Flow](#transparency--data-flow)
 
 ---
 
@@ -38,6 +39,19 @@ Library versions are defined inline in `index.html`. To pin or upgrade a library
 ```
 
 Current library versions are documented in the [Home](Home) page technology table.
+
+---
+
+## Transparency & Data Flow
+
+Markdown Viewer is a static client-side app. Key data flows to be aware of:
+
+- **Local storage**: Editor content and preferences are stored in `localStorage`.
+- **CDN assets**: Libraries are loaded from public CDNs (cdnjs, jsDelivr).
+- **GitHub import**: Public file imports use `api.github.com` and `raw.githubusercontent.com`.
+- **Share links**: Shared documents are encoded into the URL hash and never uploaded.
+
+To eliminate external network requests, replace CDN links in `index.html` with locally hosted files and rebuild the desktop resources with `node prepare.js`.
 
 ---
 

@@ -31,6 +31,7 @@ Then open **http://localhost:8080** in your browser.
 | [Usage Guide](Usage-Guide) | Learn how to write, preview, import, and export |
 | [Features](Features) | Explore all supported features in detail |
 | [Markdown Reference](Markdown-Reference) | Complete syntax reference for all supported elements |
+| [Development Journey](Development-Journey) | Evolution of the project from the original prototype to today |
 | [Desktop App](Desktop-App) | Build and run the native desktop application |
 | [Docker Deployment](Docker-Deployment) | Deploy with Docker and Docker Compose |
 | [Configuration](Configuration) | Configure the application and its build tools |
@@ -54,6 +55,25 @@ Then open **http://localhost:8080** in your browser.
 - 😀 **Emoji Support** — Full emoji set via JoyPixels
 - 📱 **Responsive Design** — Works on desktop, tablet, and mobile
 - 🔒 **Privacy Focused** — 100% client-side, no server required
+
+---
+
+## 📈 Development Journey
+
+Markdown Viewer has grown from a lightweight Markdown parser into a production-ready writing tool. Visit the [Development Journey](Development-Journey) page for a concise comparison between the original prototype and the current release.
+
+---
+
+## Transparency & Data Handling
+
+Markdown Viewer is designed to be transparent about how your data is handled:
+
+- **Local-only processing**: Markdown rendering happens entirely in your browser.
+- **Local storage**: Content and preferences are saved in your browser's `localStorage` for autosave and session restore.
+- **Share links**: The Share feature encodes content into the URL hash; nothing is uploaded to a server.
+- **GitHub import**: Importing from GitHub uses public GitHub APIs (`api.github.com`) and raw content (`raw.githubusercontent.com`).
+- **CDN dependencies**: Third-party libraries load from public CDNs (cdnjs, jsDelivr). Self-hosting those assets eliminates external requests.
+- **No analytics**: The app does not include tracking scripts, analytics beacons, or advertising pixels.
 
 ---
 

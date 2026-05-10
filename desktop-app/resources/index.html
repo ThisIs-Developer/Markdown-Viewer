@@ -78,7 +78,7 @@
                     <a href="https://github.com/ThisIs-Developer/Markdown-Viewer/" class="github-link" title="View on GitHub" target="_blank" rel="noopener noreferrer">
                         <i class="bi bi-github"></i>
                     </a>
-                    <div id="stats-container" class="stats-container d-flex align-items-center d-none d-lg-flex">
+                    <div id="stats-container" class="stats-container d-flex align-items-center d-none d-md-flex">
                         <div class="stat-item me-3">
                             <i class="bi bi-clock me-1"></i> <span id="reading-time">0</span> Min Read
                         </div>
@@ -91,55 +91,51 @@
                     </div>
                 </div>
 
-                <!-- Center section: View Mode Buttons -->
-                <div class="view-mode-group d-none d-md-flex" role="group" aria-label="View mode">
-                    <button class="view-mode-btn" data-mode="editor" aria-pressed="false" title="Editor only">
-                        <i class="bi bi-file-text"></i>
-                        <span>Editor</span>
-                    </button>
-                    <button class="view-mode-btn active" data-mode="split" aria-pressed="true" title="Split view">
-                        <i class="bi bi-layout-split"></i>
-                        <span>Split</span>
-                    </button>
-                    <button class="view-mode-btn" data-mode="preview" aria-pressed="false" title="Preview only">
-                        <i class="bi bi-eye"></i>
-                        <span>Preview</span>
-                    </button>
-                </div>
-
                 <!-- Right section: Toolbar -->
                 <div class="toolbar d-none d-md-flex header-right">
-                    <button id="toggle-sync" class="tool-button sync-enabled border-primary" title="Toggle Sync Scrolling">
-                        <i class="bi bi-link"></i> Sync Off
+                    <div class="toolbar-group view-toolbar" role="group" aria-label="View mode">
+                        <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Editor only" aria-label="Editor only">
+                            <i class="bi bi-file-text"></i>
+                        </button>
+                        <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split view" aria-label="Split view">
+                            <i class="bi bi-layout-split"></i>
+                        </button>
+                        <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview only" aria-label="Preview only">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                    <span class="toolbar-divider" aria-hidden="true"></span>
+                    <button id="toggle-sync" class="tool-button sync-enabled sync-active" title="Toggle Sync Scrolling">
+                        <i class="bi bi-link"></i> <span class="btn-text">Sync Off</span>
                     </button>
                     <div class="dropdown">
                         <button class="tool-button dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Import Markdown">
-                            <i class="bi bi-upload"></i> Import
+                            <i class="bi bi-upload"></i> <span class="btn-text">Import</span>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="importDropdown">
-                            <li><a class="dropdown-item" href="#" id="import-from-file">From files</a></li>
-                            <li><a class="dropdown-item" href="#" id="import-from-github">From GitHub</a></li>
+                            <li><a class="dropdown-item" href="#" id="import-from-file"><i class="bi bi-upload me-2"></i>From files</a></li>
+                            <li><a class="dropdown-item" href="#" id="import-from-github"><i class="bi bi-github me-2"></i>From GitHub</a></li>
                         </ul>
                     </div>
                     <input type="file" id="file-input" class="file-input" accept=".md,.markdown,text/markdown">
                     
                     <div class="dropdown">
-                        <button class="tool-button dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-download"></i> Export
+                        <button class="tool-button dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Export Markdown">
+                            <i class="bi bi-download"></i> <span class="btn-text">Export</span>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                            <li><a class="dropdown-item" href="#" id="export-md">Markdown (.md)</a></li>
-                            <li><a class="dropdown-item" href="#" id="export-html">HTML</a></li>
-                            <li><a class="dropdown-item" href="#" id="export-pdf">PDF</a></li>
+                            <li><a class="dropdown-item" href="#" id="export-md"><i class="bi bi-file-earmark-text me-2"></i>Markdown (.md)</a></li>
+                            <li><a class="dropdown-item" href="#" id="export-html"><i class="bi bi-file-earmark-code me-2"></i>HTML</a></li>
+                            <li><a class="dropdown-item" href="#" id="export-pdf"><i class="bi bi-file-earmark-pdf me-2"></i>PDF</a></li>
                         </ul>
                     </div>
                     
                     <button id="copy-markdown-button" class="tool-button" title="Copy Markdown">
-                        <i class="bi bi-clipboard"></i> Copy
+                        <i class="bi bi-clipboard"></i> <span class="btn-text">Copy</span>
                     </button>
                     
                     <button id="share-button" class="tool-button" title="Share via URL">
-                        <i class="bi bi-share"></i> Share
+                        <i class="bi bi-share"></i> <span class="btn-text">Share</span>
                     </button>
                     
                     <button id="theme-toggle" class="tool-button" title="Toggle Dark Mode">
@@ -206,7 +202,7 @@
                         </div>
 
                         <div class="mobile-menu-items">
-                            <button id="mobile-toggle-sync" class="mobile-menu-item tool-button sync-enabled border-primary" title="Toggle Sync Scrolling">
+                            <button id="mobile-toggle-sync" class="mobile-menu-item tool-button sync-enabled sync-active" title="Toggle Sync Scrolling">
                                 <i class="bi bi-link"></i> Sync Off
                             </button>
                             
@@ -257,9 +253,64 @@
           </button>
         </div>
 
+        <!-- Markdown Formatting Toolbar -->
+        <div class="markdown-format-toolbar" id="markdown-format-toolbar" role="toolbar" aria-label="Markdown formatting toolbar">
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo" aria-label="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo" aria-label="Redo"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="clear-formatting" title="Clear Markdown formatting" aria-label="Clear Markdown formatting"><i class="bi bi-eraser"></i></button>
+          </div>
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="bold" title="Bold" aria-label="Bold"><i class="bi bi-type-bold"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="strike" title="Strikethrough" aria-label="Strikethrough"><i class="bi bi-type-strikethrough"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="italic" title="Italic" aria-label="Italic"><i class="bi bi-type-italic"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="quote" title="Blockquote" aria-label="Blockquote"><i class="bi bi-quote"></i></button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="title-case" title="Title case" aria-label="Title case">Aa</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="uppercase" title="Uppercase" aria-label="Uppercase">A</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="lowercase" title="Lowercase" aria-label="Lowercase">a</button>
+          </div>
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="align-left" title="Align left" aria-label="Align left"><i class="bi bi-text-left"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="align-center" title="Align center" aria-label="Align center"><i class="bi bi-text-center"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="align-right" title="Align right" aria-label="Align right"><i class="bi bi-text-right"></i></button>
+          </div>
+          <div class="markdown-toolbar-group heading-group">
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="1" title="Heading 1" aria-label="Heading 1">H1</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="2" title="Heading 2" aria-label="Heading 2">H2</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="3" title="Heading 3" aria-label="Heading 3">H3</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="4" title="Heading 4" aria-label="Heading 4">H4</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="5" title="Heading 5" aria-label="Heading 5">H5</button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="6" title="Heading 6" aria-label="Heading 6">H6</button>
+          </div>
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list" aria-label="Bulleted list"><i class="bi bi-list-ul"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list" aria-label="Numbered list"><i class="bi bi-list-ol"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="horizontal-rule" title="Horizontal rule" aria-label="Horizontal rule"><i class="bi bi-dash-lg"></i></button>
+          </div>
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link" aria-label="Link"><i class="bi bi-link-45deg"></i></button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="reference" title="Reference" aria-label="Reference"><i></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="image" title="Image" aria-label="Image"><i class="bi bi-card-image"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="inline-code" title="Inline code" aria-label="Inline code"><i class="bi bi-code-slash"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="code-block" title="Code block" aria-label="Code block"><i class="bi bi-file-code"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="terminal-block" title="Terminal block" aria-label="Terminal block"><i class="bi bi-terminal"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="table" title="Table" aria-label="Table"><i class="bi bi-table"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="date-time" title="Date and time" aria-label="Date and time"><i class="bi bi-clock"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="emoji" title="Emoji shortcode" aria-label="Emoji shortcode"><i class="bi bi-emoji-smile"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="symbols" title="Symbols &amp; HTML entities" aria-label="Symbols &amp; HTML entities"><i class="bi bi-c-circle"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="alert" title="Markdown alert" aria-label="Markdown alert"><i class="bi bi-newspaper"></i></button>
+          </div>
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen" aria-label="Fullscreen"><i class="bi bi-arrows-fullscreen"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find &amp; Replace" aria-label="Find &amp; Replace"><i class="bi bi-search"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="help" title="Help" aria-label="Help"><i class="bi bi-question-circle"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="info" title="About Markdown" aria-label="About Markdown"><i class="bi bi-info-circle"></i></button>
+          </div>
+        </div>
+
         <!-- Reset Confirmation Modal -->
         <div id="reset-confirm-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title" style="display:none;">
-          <div class="reset-modal-box">
+          <div class="reset-modal-box reset-modal-box--wide">
             <p id="reset-modal-title" class="reset-modal-message">Are you sure you want to delete all files?</p>
             <div class="reset-modal-actions">
               <button class="reset-modal-btn reset-modal-cancel" id="reset-modal-cancel">Cancel</button>
@@ -268,14 +319,314 @@
           </div>
         </div>
 
+        <!-- Clear Markdown Formatting Modal -->
+        <div id="clear-formatting-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="clear-formatting-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide modal-box">
+            <div class="modal-header">
+              <p id="clear-formatting-title" class="reset-modal-message">Clear Markdown formatting?</p>
+              <button type="button" class="modal-close-btn" id="clear-formatting-close" aria-label="Close clear formatting dialog">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <p class="modal-subtext">Only the Markdown formatting in this document content is cleared. The file itself is not deleted.</p>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="clear-formatting-cancel">Cancel</button>
+              <button class="reset-modal-btn reset-modal-confirm" id="clear-formatting-confirm">Clear Markdown</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Find & Replace Modal -->
+        <div id="find-replace-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="find-replace-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide reset-modal-box--xl modal-box">
+            <div class="modal-header">
+              <p id="find-replace-title" class="reset-modal-message">Find &amp; Replace</p>
+              <button type="button" class="modal-close-btn" id="find-replace-close-icon" aria-label="Close find and replace dialog">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="find-replace-input">Find</label>
+                <input type="text" id="find-replace-input" class="rename-modal-input" placeholder="Find word or phrase" />
+              </div>
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="find-replace-with">Replace</label>
+                <input type="text" id="find-replace-with" class="rename-modal-input" placeholder="Replace with" />
+              </div>
+              <div class="find-replace-meta">
+                <span id="find-replace-count" class="find-match-count">0 of 0 matches</span>
+                <div class="find-replace-nav">
+                  <button type="button" class="tool-button find-nav-btn" id="find-prev" title="Previous match" aria-label="Previous match">
+                    <i class="bi bi-chevron-up"></i>
+                  </button>
+                  <button type="button" class="tool-button find-nav-btn" id="find-next" title="Next match" aria-label="Next match">
+                    <i class="bi bi-chevron-down"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="find-replace-close">Close</button>
+              <button class="reset-modal-btn" id="find-replace-current">Replace</button>
+              <button class="reset-modal-btn" id="find-replace-all">Replace All</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Help Modal -->
+        <div id="help-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="help-modal-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--xl modal-box">
+            <div class="modal-header">
+              <p id="help-modal-title" class="reset-modal-message">Markdown Viewer Help</p>
+              <button type="button" class="modal-close-btn" id="help-modal-close-icon" aria-label="Close help dialog">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="modal-section">
+                <h3 class="modal-section-title">Application shortcuts</h3>
+                <ul class="modal-list">
+                  <li>Use the view buttons in the toolbar to switch between Editor, Split, and Preview modes.</li>
+                  <li>Sync scrolling is available in Split view to keep the editor and preview aligned.</li>
+                  <li>Import, Export, Copy, Share, and Theme toggle actions are always available in the header toolbar.</li>
+                </ul>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Toolbar descriptions</h3>
+                <ul class="modal-list">
+                  <li>Undo/Redo and Clear Formatting help you manage editing changes quickly.</li>
+                  <li>Text styling tools cover bold, italic, strikethrough, quotes, headings, and list formatting.</li>
+                  <li>Insert helpers add links, images, code blocks, tables, emojis, symbols, and alerts.</li>
+                  <li>Use Fullscreen, Find &amp; Replace, Help, and About Markdown for focused editing.</li>
+                </ul>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Markdown tips</h3>
+                <ul class="modal-list">
+                  <li>Create headings with <code>#</code>, <code>##</code>, and <code>###</code> prefixes.</li>
+                  <li>Emphasize text with <code>**bold**</code>, <code>*italic*</code>, or <code>~~strikethrough~~</code>.</li>
+                  <li>Use <code>-</code> or <code>1.</code> to build lists, and triple backticks for code blocks.</li>
+                </ul>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Keyboard shortcuts</h3>
+                <ul class="modal-list">
+                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Z</kbd> &mdash; Undo</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> &mdash; Redo</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>F</kbd> &mdash; Open Find &amp; Replace</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>C</kbd>/<kbd>V</kbd> &mdash; Copy/Paste</li>
+                </ul>
+              </div>
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="help-modal-close">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- About Markdown Modal -->
+        <div id="about-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="about-modal-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--xl modal-box">
+            <div class="modal-header">
+              <p id="about-modal-title" class="reset-modal-message">About Markdown</p>
+              <button type="button" class="modal-close-btn" id="about-modal-close-icon" aria-label="Close about dialog">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="about-header">
+                <img src="assets/icon.jpg" alt="Markdown Viewer logo" class="about-logo" />
+                <div class="about-details">
+                  <h3 class="about-title">Markdown Viewer</h3>
+                  <p class="about-description">A GitHub-style Markdown editor with live preview, diagrams, math, syntax highlighting, and export tools.</p>
+                  <p class="about-meta">Version <span id="about-version"></span> &bull; Apache License 2.0 &bull; Open source</p>
+                </div>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Open-source links</h3>
+                <ul class="modal-list">
+                  <li><a href="https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache License 2.0</a></li>
+                  <li><a href="https://github.com/ThisIs-Developer/Markdown-Viewer" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
+                  <li><a href="https://github.com/ThisIs-Developer/Markdown-Viewer/wiki/Contributing" target="_blank" rel="noopener noreferrer">Contribution Guide</a></li>
+                  <li><a href="https://github.com/ThisIs-Developer/Markdown-Viewer/issues/new/choose" target="_blank" rel="noopener noreferrer">Report an Issue</a></li>
+                  <li><a href="https://github.com/ThisIs-Developer/Markdown-Viewer/discussions" target="_blank" rel="noopener noreferrer">Community &amp; Support</a></li>
+                </ul>
+                <p class="modal-subtext">For feature requests, open a GitHub issue or start a discussion so the community can weigh in.</p>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Markdown resources</h3>
+                <ul class="modal-list">
+                  <li><a href="https://github.com/ThisIs-Developer/Markdown-Viewer/wiki/Markdown-Reference" target="_blank" rel="noopener noreferrer">Markdown syntax reference</a></li>
+                </ul>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Technology stack</h3>
+                <ul class="modal-list">
+                  <li>HTML, CSS, and JavaScript with Bootstrap 5 for layout and styling.</li>
+                  <li>Marked, DOMPurify, Highlight.js, Mermaid, MathJax, and Emoji Toolkit for rendering.</li>
+                </ul>
+              </div>
+              <div class="modal-section">
+                <h3 class="modal-section-title">Open-source credits</h3>
+                <p class="modal-subtext">Markdown Viewer is built on top of open-source libraries maintained by the community. Thank you to every contributor and maintainer.</p>
+              </div>
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="about-modal-close">Close</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Rename Modal -->
         <div id="rename-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title" style="display:none;">
-          <div class="reset-modal-box">
+          <div class="reset-modal-box reset-modal-box--wide">
             <p id="rename-modal-title" class="reset-modal-message">Rename file</p>
             <input type="text" id="rename-modal-input" class="rename-modal-input" placeholder="File name" />
             <div class="reset-modal-actions">
               <button class="reset-modal-btn reset-modal-cancel" id="rename-modal-cancel">Cancel</button>
               <button class="reset-modal-btn reset-modal-confirm" id="rename-modal-confirm">Rename</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Link Modal -->
+        <div id="link-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="link-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide">
+            <p id="link-modal-title" class="reset-modal-message">Insert link</p>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="link-modal-url">Address / URL</label>
+              <input type="url" id="link-modal-url" class="rename-modal-input" value="https://" />
+            </div>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="link-modal-text">Link Text</label>
+              <input type="text" id="link-modal-text" class="rename-modal-input" placeholder="Link title" />
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="link-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="link-modal-apply">Apply</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reference Modal -->
+        <div id="reference-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reference-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide">
+            <p id="reference-modal-title" class="reset-modal-message">Insert reference</p>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="reference-modal-number">Reference Number</label>
+              <input type="text" id="reference-modal-number" class="rename-modal-input" value="[1]" />
+            </div>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="reference-modal-url">Address / Link</label>
+              <input type="url" id="reference-modal-url" class="rename-modal-input" value="https://" />
+            </div>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="reference-modal-title-input">Title</label>
+              <input type="text" id="reference-modal-title-input" class="rename-modal-input" placeholder="Reference title" />
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="reference-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="reference-modal-apply">Insert</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Modal -->
+        <div id="image-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="image-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide">
+            <p id="image-modal-title" class="reset-modal-message">Insert image</p>
+            <div class="reset-modal-toggle-group">
+              <label class="reset-modal-option">
+                <input type="radio" name="image-source" id="image-source-upload" value="upload">
+                Upload from Device
+              </label>
+              <label class="reset-modal-option">
+                <input type="radio" name="image-source" id="image-source-url" value="url" checked>
+                External Image (URL)
+              </label>
+            </div>
+            <div id="image-upload-fields" class="reset-modal-field-group" style="display:none;">
+              <input type="file" id="image-modal-file" class="rename-modal-input" accept="image/*" />
+            </div>
+            <div id="image-url-fields" class="reset-modal-field-group">
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="image-modal-url">Image URL</label>
+                <input type="url" id="image-modal-url" class="rename-modal-input" value="https://" />
+              </div>
+            </div>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="image-modal-alt">Alt Text (used for title)</label>
+              <input type="text" id="image-modal-alt" class="rename-modal-input" placeholder="Image description" />
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="image-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="image-modal-insert">Insert</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Modal -->
+        <div id="table-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="table-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide">
+            <p id="table-modal-title" class="reset-modal-message">Insert table</p>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="table-modal-columns">Column count</label>
+              <input type="number" id="table-modal-columns" class="rename-modal-input" min="1" max="20" value="3" />
+            </div>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="table-modal-rows">Row count</label>
+              <input type="number" id="table-modal-rows" class="rename-modal-input" min="1" max="20" value="1" />
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="table-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="table-modal-insert">Insert</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emoji Modal -->
+        <div id="emoji-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="emoji-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide reset-modal-box--xl">
+            <p id="emoji-modal-title" class="reset-modal-message">GitHub Emojis</p>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="emoji-modal-search">Search</label>
+              <input type="text" id="emoji-modal-search" class="rename-modal-input" placeholder="Search emojis" />
+            </div>
+            <div id="emoji-modal-grid" class="emoji-grid" role="listbox" aria-label="Emoji list"></div>
+            <p id="emoji-modal-empty" class="modal-empty" style="display:none;">No emojis found.</p>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="emoji-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="emoji-modal-insert">Insert</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Symbols Modal -->
+        <div id="symbols-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="symbols-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide reset-modal-box--xl">
+            <p id="symbols-modal-title" class="reset-modal-message">Symbols &amp; HTML Entities</p>
+            <div class="reset-modal-field">
+              <label class="reset-modal-label" for="symbols-modal-search">Search</label>
+              <input type="text" id="symbols-modal-search" class="rename-modal-input" placeholder="Search symbols" />
+            </div>
+            <div id="symbols-modal-grid" class="symbol-grid" role="listbox" aria-label="Symbol list"></div>
+            <p id="symbols-modal-empty" class="modal-empty" style="display:none;">No symbols found.</p>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="symbols-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="symbols-modal-insert">Insert</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Markdown Alert Modal -->
+        <div id="alert-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide">
+            <p id="alert-modal-title" class="reset-modal-message">Markdown alerts</p>
+            <div id="alert-modal-grid" class="alert-grid" role="listbox" aria-label="Markdown alert types"></div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="alert-modal-cancel">Cancel</button>
+              <button class="reset-modal-btn" id="alert-modal-insert">Insert</button>
             </div>
           </div>
         </div>
@@ -299,16 +650,23 @@
           </div>
         </div>
 
-        <div id="dropzone" class="dropzone container-fluid mt-2">
-            <button id="close-dropzone" class="close-btn" title="Close dropzone">
-                <i class="bi bi-x-lg"></i>
-            </button>
-            <p class="mb-0"><i class="bi bi-cloud-arrow-up me-2"></i>Drop your Markdown file here or click to browse</p>
+        <!-- Full-screen drag overlay (shown when a file is dragged over the window) -->
+        <div id="drag-overlay" class="drag-overlay" aria-hidden="true">
+            <div class="drag-overlay-inner">
+                <i class="bi bi-cloud-arrow-up drag-overlay-icon"></i>
+                <p class="drag-overlay-text">Drop your Markdown file anywhere</p>
+                <p class="drag-overlay-sub">.md or .markdown files supported</p>
+            </div>
         </div>
 
         <div class="content-container">
             <div class="editor-pane">
+                <div id="line-numbers" class="line-numbers" aria-hidden="true"></div>
+                <div id="editor-highlight-layer" class="editor-highlight-layer" aria-hidden="true"></div>
                 <textarea id="markdown-editor" placeholder="Type or paste your Markdown here..."></textarea>
+                <div class="drop-hint" aria-hidden="true">
+                    <i class="bi bi-cloud-arrow-up me-1"></i>Drop a .md file anywhere to open it
+                </div>
             </div>
             <!-- Resize Divider - Story 1.3 -->
             <div class="resize-divider" role="separator" aria-orientation="vertical" aria-label="Resize panes" tabindex="0">

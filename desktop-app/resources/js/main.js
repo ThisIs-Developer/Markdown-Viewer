@@ -109,11 +109,9 @@ if (NL_OS != "Darwin") {
 
     function applyContent() {
       const editor = document.getElementById('markdown-editor');
-      const dropzone = document.getElementById('dropzone');
       if (!editor) return;
       editor.value = content;
       editor.dispatchEvent(new Event('input'));
-      if (dropzone) dropzone.style.display = 'none';
     }
 
     if (document.readyState === 'loading') {

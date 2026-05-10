@@ -63,6 +63,7 @@ jobs:
             --exclude='desktop-app/bin' \
             --exclude='desktop-app/node_modules' \
             --exclude='desktop-app/output' \
+            --exclude="desktop-app/$STAGING" \
             --exclude='.git' \
             desktop-app/
           cd desktop-app

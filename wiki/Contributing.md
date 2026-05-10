@@ -8,6 +8,7 @@ Thank you for your interest in contributing to **Markdown Viewer**! All contribu
 
 - [Code of Conduct](#code-of-conduct)
 - [Reporting Bugs](#reporting-bugs)
+- [Security Reporting](#security-reporting)
 - [Suggesting Features](#suggesting-features)
 - [Development Setup](#development-setup)
 - [Making Changes](#making-changes)
@@ -34,6 +35,16 @@ By participating in this project, you agree to maintain a respectful and inclusi
    - Actual behavior
    - Browser/OS version (for web bugs) or platform (for desktop bugs)
    - Screenshots or screen recordings if applicable
+
+---
+
+## Security Reporting
+
+If you discover a security issue, please report it responsibly:
+
+1. Avoid posting sensitive details in public issues.
+2. If GitHub Security Advisories are enabled for the repo, open a private advisory.
+3. Otherwise, contact the maintainer via GitHub and provide a clear, minimal reproduction.
 
 ---
 
