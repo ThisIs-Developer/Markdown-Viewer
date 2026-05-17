@@ -321,7 +321,7 @@ document.addEventListener("DOMContentLoaded", function () {
   function renderDefinitionContent(content, options = {}) {
     const { appendHtml = "" } = options;
     const paragraphs = String(content || "")
-      .split(/\n(?:[ \t]*\n)+/)
+      .split(/\r?\n(?:[ \t]*\r?\n)+/)
       .map((paragraph) => paragraph.trim())
       .filter(Boolean);
 
@@ -344,6 +344,23 @@ document.addEventListener("DOMContentLoaded", function () {
       .join("");
   }
 
+  function isFootnoteContinuationLine(line, baseIndent) {
+    if (!line.startsWith(baseIndent)) {
+      return false;
+    }
+
+    const lineAfterBase = line.slice(baseIndent.length);
+    return /^(?: {4}|\t)/.test(lineAfterBase);
+  }
+
+  function stripFootnoteContinuationIndent(line, baseIndent) {
+    const lineAfterBase = line.slice(baseIndent.length);
+    if (lineAfterBase.startsWith("\t")) {
+      return lineAfterBase.slice(1);
+    }
+    return lineAfterBase.replace(/^ {4}/, "");
+  }
+
   function extractFootnoteDefinitions(markdown) {
     const lines = markdown.split("\n");
     const preservedLines = [];
@@ -364,24 +381,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
       while (index < lines.length) {
         const line = lines[index];
-        if (!line.startsWith(baseIndent)) {
-          break;
-        }
-
-        const lineAfterBase = line.slice(baseIndent.length);
-        const indentedMatch = /^(?: {2,}|\t)(.*)$/.exec(lineAfterBase);
-        if (indentedMatch) {
-          definitionLines.push(indentedMatch[1]);
+        if (isFootnoteContinuationLine(line, baseIndent)) {
+          definitionLines.push(stripFootnoteContinuationIndent(line, baseIndent));
           index += 1;
           continue;
         }
 
-        if (lineAfterBase.trim() === "") {
+        if (line.startsWith(baseIndent) && line.slice(baseIndent.length).trim() === "") {
           const nextLine = lines[index + 1] || "";
-          const nextAfterBase = nextLine.startsWith(baseIndent)
-            ? nextLine.slice(baseIndent.length)
-            : "";
-          if (/^(?: {2,}|\t)/.test(nextAfterBase)) {
+          if (isFootnoteContinuationLine(nextLine, baseIndent)) {
             definitionLines.push("");
             index += 1;
             continue;
@@ -391,7 +399,10 @@ document.addEventListener("DOMContentLoaded", function () {
         break;
       }
 
-      footnoteDefinitions.set(id, definitionLines.join("\n").trim());
+      const definitionContent = definitionLines.join("\n").replace(/\n+$/, "").trim();
+      if (definitionContent) {
+        footnoteDefinitions.set(id, definitionContent);
+      }
     }
 
     return preservedLines.join("\n");
