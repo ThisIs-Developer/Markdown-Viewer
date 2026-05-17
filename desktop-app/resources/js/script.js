@@ -358,7 +358,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (lineAfterBase.startsWith("\t")) {
       return lineAfterBase.slice(1);
     }
-    return lineAfterBase.replace(/^ {2,}/, "");
+    return lineAfterBase.replace(/^ {2}/, "");
   }
 
   function extractFootnoteDefinitions(markdown) {
