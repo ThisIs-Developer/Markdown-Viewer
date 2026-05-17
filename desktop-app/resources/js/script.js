@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const lineAfterBase = line.slice(baseIndent.length);
-    return /^(?: {4}|\t)/.test(lineAfterBase);
+    return /^(?: {4,}|\t)/.test(lineAfterBase);
   }
 
   function stripFootnoteContinuationIndent(line, baseIndent) {
@@ -399,7 +399,7 @@ document.addEventListener("DOMContentLoaded", function () {
         break;
       }
 
-      const definitionContent = definitionLines.join("\n").replace(/\n+$/, "").trim();
+      const definitionContent = definitionLines.join("\n").trim();
       if (definitionContent) {
         footnoteDefinitions.set(id, definitionContent);
       }
