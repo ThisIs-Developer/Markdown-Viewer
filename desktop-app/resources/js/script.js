@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const lineAfterBase = line.slice(baseIndent.length);
-    return /^(?: {4,}|\t)/.test(lineAfterBase);
+    return /^(?: {2,}|\t)/.test(lineAfterBase);
   }
 
   function stripFootnoteContinuationIndent(line, baseIndent) {
@@ -358,7 +358,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (lineAfterBase.startsWith("\t")) {
       return lineAfterBase.slice(1);
     }
-    return lineAfterBase.replace(/^ {4,}/, "");
+    return lineAfterBase.replace(/^ {2,}/, "");
   }
 
   function extractFootnoteDefinitions(markdown) {
