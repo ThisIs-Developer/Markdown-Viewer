@@ -192,6 +192,79 @@ body {
   vertical-align: -0.1em;
 }
 
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+  margin: 0.4em 0;
+}
+
+.markdown-body ul ul,
+.markdown-body ul ol,
+.markdown-body ol ul,
+.markdown-body ol ol {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+.markdown-body ul.contains-task-list,
+.markdown-body li.task-list-item {
+  list-style: none;
+}
+
+.markdown-body ul.contains-task-list {
+  padding-left: 2em;
+}
+
+.markdown-body li.task-list-item input[type="checkbox"] {
+  margin: 0 0.5em 0.2em 0;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.markdown-body li.task-list-item::marker {
+  content: "";
+}
+
+.markdown-body li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+
+.markdown-body li:has(> input[type="checkbox"])::marker {
+  content: "";
+}
+
+.markdown-body ul:has(> li > input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 2em;
+}
+
+.markdown-body .footnotes {
+  margin-top: 1.5rem;
+  font-size: 0.9em;
+}
+
+.markdown-body .footnotes ol {
+  padding-left: 1.5em;
+}
+
+.markdown-body .footnotes ol > li::marker {
+  content: "[" counter(list-item) "] ";
+  font-weight: 600;
+}
+
+.markdown-body .footnotes li > p {
+  margin: 0.2em 0;
+}
+
+.markdown-body .footnote-ref a,
+.markdown-body .footnote-backref {
+  text-decoration: none;
+}
+
+.markdown-body .footnote-backref {
+  margin-left: 0.4em;
+}
+
 .markdown-body .markdown-alert {
   padding: 0.5rem 1rem;
   margin-bottom: 16px;

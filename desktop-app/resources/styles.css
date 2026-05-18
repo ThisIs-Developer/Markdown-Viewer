@@ -192,6 +192,79 @@ body {
   vertical-align: -0.1em;
 }
 
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 2em;
+  margin: 0.4em 0;
+}
+
+.markdown-body ul ul,
+.markdown-body ul ol,
+.markdown-body ol ul,
+.markdown-body ol ol {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+.markdown-body ul.contains-task-list,
+.markdown-body li.task-list-item {
+  list-style: none;
+}
+
+.markdown-body ul.contains-task-list {
+  padding-left: 2em;
+}
+
+.markdown-body li.task-list-item input[type="checkbox"] {
+  margin: 0 0.5em 0.2em 0;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+.markdown-body li.task-list-item::marker {
+  content: "";
+}
+
+.markdown-body li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+
+.markdown-body li:has(> input[type="checkbox"])::marker {
+  content: "";
+}
+
+.markdown-body ul:has(> li > input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 2em;
+}
+
+.markdown-body .footnotes {
+  margin-top: 1.5rem;
+  font-size: 0.9em;
+}
+
+.markdown-body .footnotes ol {
+  padding-left: 1.5em;
+}
+
+.markdown-body .footnotes ol > li::marker {
+  content: "[" counter(list-item) "] ";
+  font-weight: 600;
+}
+
+.markdown-body .footnotes li > p {
+  margin: 0.2em 0;
+}
+
+.markdown-body .footnote-ref a,
+.markdown-body .footnote-backref {
+  text-decoration: none;
+}
+
+.markdown-body .footnote-backref {
+  margin-left: 0.4em;
+}
+
 .markdown-body .markdown-alert {
   padding: 0.5rem 1rem;
   margin-bottom: 16px;
@@ -2546,4 +2619,70 @@ a:focus {
   color: var(--accent-color);
   background-color: var(--button-bg);
   white-space: nowrap;
+}
+
+/* ========================================
+   RTL SUPPORT
+   ======================================== */
+
+[dir="rtl"] body {
+  direction: rtl;
+}
+
+[dir="rtl"] #markdown-editor,
+[dir="rtl"] .markdown-body {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .markdown-body pre,
+[dir="rtl"] .markdown-body code,
+[dir="rtl"] .fm-complex {
+  direction: ltr;
+  text-align: left;
+}
+
+[dir="rtl"] .line-numbers {
+  left: auto;
+  right: 20px;
+  padding: 10px 0 10px 8px;
+  text-align: left;
+  border-right: none;
+  border-left: 1px solid var(--border-color);
+}
+
+[dir="rtl"] #markdown-editor {
+  padding-left: 10px;
+  padding-right: calc(10px + var(--line-number-gutter));
+}
+
+[dir="rtl"] .editor-highlight-layer {
+  inset: 20px calc(20px + var(--line-number-gutter)) 20px 0;
+}
+
+[dir="rtl"] .mobile-menu-item,
+[dir="rtl"] .tab-menu-item,
+[dir="rtl"] .modal-header .reset-modal-message,
+[dir="rtl"] .reset-modal-field,
+[dir="rtl"] .alert-option,
+[dir="rtl"] .github-import-error,
+[dir="rtl"] #github-import-modal .reset-modal-message,
+[dir="rtl"] .github-tree-file-btn,
+[dir="rtl"] .frontmatter-table td {
+  text-align: right;
+}
+
+[dir="rtl"] .github-import-tree ul {
+  padding-left: 0;
+  padding-right: 18px;
+}
+
+[dir="rtl"] .github-import-tree > ul {
+  padding-right: 4px;
+}
+
+[dir="rtl"] .markdown-body .markdown-alert,
+[dir="rtl"] .alert-preview .markdown-alert {
+  border-left: 0;
+  border-right: 0.25em solid currentColor;
 }
