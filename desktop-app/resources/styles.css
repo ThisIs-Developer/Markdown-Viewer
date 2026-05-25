@@ -957,7 +957,6 @@ a:focus {
 
 /* translucent overlay behind panel */
 .mobile-menu-overlay {
-  display: none;
   position: fixed;
   top: 0;
   left: 0;
@@ -966,14 +965,15 @@ a:focus {
   background-color: rgba(0, 0, 0, 0.5);
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.3s ease, visibility 0.3s ease;
   z-index: 1000;
 }
 
 .mobile-menu-overlay.active {
-  display: block;
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 /* header inside mobile menu */
@@ -1667,7 +1667,7 @@ a:focus {
   max-width: 180px;
   background-color: var(--button-bg);
   border: 1px solid var(--border-color);
-  border-bottom: none;
+  border-bottom: 1px solid transparent;
   border-radius: 6px 6px 0 0;
   cursor: pointer;
   font-size: 13px;

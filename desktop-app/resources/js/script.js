@@ -3769,7 +3769,7 @@ This is a fully client-side application. Your content never leaves your browser 
     if (!query) return;
     const replacement = findReplaceWith ? findReplaceWith.value : '';
     const regex = new RegExp(escapeRegExp(query), 'gi');
-    markdownEditor.value = markdownEditor.value.replace(regex, replacement);
+    markdownEditor.value = markdownEditor.value.replace(regex, () => replacement);
     markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
     refreshFindMatches({ resetIndex: true });
     if (findMatches.length) {
@@ -4330,7 +4330,7 @@ This is a fully client-side application. Your content never leaves your browser 
       };
   </script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
   <style>
       body {
           background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"};
@@ -4397,21 +4397,59 @@ This is a fully client-side application. Your content never leaves your browser 
       .markdown-alert > *:not(.markdown-alert-title) { color: ${isDarkTheme ? "#c9d1d9" : "#24292e"}; }
 
       .frontmatter-table {
-          width: 100%;
           border-collapse: collapse;
           margin-bottom: 24px;
           font-size: 14px;
+          width: auto;
+          max-width: 100%;
       }
       .frontmatter-table th,
       .frontmatter-table td {
           border: 1px solid ${isDarkTheme ? "#30363d" : "#e1e4e8"};
-          padding: 8px 12px;
-          text-align: left;
+          padding: 6px 13px;
+          vertical-align: top;
+          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"};
+      }
+      .frontmatter-table tr:nth-child(odd) th,
+      .frontmatter-table tr:nth-child(odd) td {
+          background-color: ${isDarkTheme ? "#161b22" : "#f6f8fa"};
+      }
+      .frontmatter-table tr:nth-child(even) th,
+      .frontmatter-table tr:nth-child(even) td {
+          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"};
       }
       .frontmatter-table th {
           font-weight: 600;
-          background-color: ${isDarkTheme ? "#161b22" : "#f6f8fa"};
+          text-align: right;
+          white-space: nowrap;
+          vertical-align: middle;
           width: 150px;
+      }
+      .frontmatter-table td {
+          text-align: left;
+      }
+      .fm-complex {
+          margin: 0;
+          padding: 4px 6px;
+          font-size: 0.8em;
+          font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+          white-space: pre-wrap;
+          word-break: break-word;
+          background: transparent;
+          border: none;
+          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"};
+      }
+      .fm-tag {
+          display: inline-block;
+          padding: 2px 8px;
+          margin: 2px 3px 2px 0;
+          border: 1px solid ${isDarkTheme ? "#30363d" : "#e1e4e8"};
+          border-radius: 2em;
+          font-size: 0.8em;
+          font-weight: 500;
+          color: ${isDarkTheme ? "#58a6ff" : "#0969da"};
+          background-color: ${isDarkTheme ? "#21262d" : "#f6f8fa"};
+          white-space: nowrap;
       }
 
       @media (max-width: 767px) {
@@ -4933,8 +4971,9 @@ This is a fully client-side application. Your content never leaves your browser 
       progressContainer.appendChild(statusText);
       document.body.appendChild(progressContainer);
 
-      const markdown = markdownEditor.value;
-      const html = marked.parse(markdown);
+      const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
+      const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
+      const html = tableHtml + marked.parse(body);
       const sanitizedHtml = DOMPurify.sanitize(html, {
         ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input'],
         ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled']
