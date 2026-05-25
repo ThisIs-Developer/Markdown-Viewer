@@ -767,15 +767,31 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function parseFrontmatter(markdown) {
-    const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
-    if (!match) return { frontmatter: null, body: markdown };
-    try {
-      const data = jsyaml.load(match[1]) || {};
-      return { frontmatter: data, body: markdown.slice(match[0].length) };
-    } catch (e) {
-      console.warn('Frontmatter YAML parse error:', e);
-      return { frontmatter: null, body: markdown };
+    if (markdown.startsWith('\ufeff')) {
+      markdown = markdown.slice(1);
     }
+    const regex = /(?:^|\r?\n)[ \t]*---[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*---[ \t]*(?:\r?\n|$)/g;
+    let match;
+    while ((match = regex.exec(markdown)) !== null) {
+      try {
+        const data = jsyaml.load(match[1]);
+        if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
+          let prefixLength = 0;
+          if (match[0].startsWith('\r\n')) {
+            prefixLength = 2;
+          } else if (match[0].startsWith('\n')) {
+            prefixLength = 1;
+          }
+          const startIdx = match.index + prefixLength;
+          const endIdx = match.index + match[0].length;
+          const body = markdown.slice(0, startIdx) + markdown.slice(endIdx);
+          return { frontmatter: data, body: body };
+        }
+      } catch (e) {
+        console.warn('Frontmatter YAML parse error:', e);
+      }
+    }
+    return { frontmatter: null, body: markdown };
   }
 
   function renderFrontmatterValue(value) {
