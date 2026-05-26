@@ -71,16 +71,19 @@ function downloadFile(url, destPath) {
 async function prepareOfflineDependencies() {
   console.log("\nStarting Offline Assets Preparation...");
   let html = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf-8");
+  const scriptJS = fs.readFileSync(path.join(ROOT_DIR, "script.js"), "utf-8");
   
-  // Find all CDN script and link tags
+  // Find all CDN script and link tags in HTML
   const cdnRegex = /(href|src)="(https:\/\/(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\/[^"]+)"/g;
   let match;
   const downloads = [];
   const replacements = [];
+  const foundUrls = new Set();
 
   while ((match = cdnRegex.exec(html)) !== null) {
     const attr = match[1];
     const url = match[2];
+    foundUrls.add(url);
     
     // Determine local filename - sanitize package version tags or query strings
     const urlPath = new URL(url).pathname;
@@ -97,6 +100,19 @@ async function prepareOfflineDependencies() {
       original: `${attr}="${url}"`,
       replaced: `${attr}="/libs/${filename}"`
     });
+  }
+
+  // Also find all CDN URLs inside script.js and download them for offline use
+  const urlRegex = /https:\/\/(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)\/[^'\s`"]+/g;
+  while ((match = urlRegex.exec(scriptJS)) !== null) {
+    const url = match[0];
+    if (foundUrls.has(url)) continue;
+    foundUrls.add(url);
+
+    const urlPath = new URL(url).pathname;
+    const filename = path.basename(urlPath);
+    const localDest = path.join(LIBS_DIR, filename);
+    downloads.push(downloadFile(url, localDest));
   }
 
   // Also download the relative fonts loaded by bootstrap-icons

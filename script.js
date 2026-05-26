@@ -209,10 +209,17 @@ document.addEventListener("DOMContentLoaded", function () {
       return Promise.resolve(window[dep.global]);
     }
 
+    let url = dep.url;
+    if (typeof Neutralino !== 'undefined') {
+      const urlPath = new URL(url).pathname;
+      const filename = urlPath.substring(urlPath.lastIndexOf('/') + 1);
+      url = `/libs/${filename}`;
+    }
+
     const promise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = dep.url;
-      if (dep.integrity) {
+      script.src = url;
+      if (dep.integrity && typeof Neutralino === 'undefined') {
         script.integrity = dep.integrity;
         script.crossOrigin = 'anonymous';
       }
@@ -238,12 +245,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function loadStylesheet(id, url, integrity) {
     if (document.getElementById(id)) return Promise.resolve();
+    let finalUrl = url;
+    if (typeof Neutralino !== 'undefined') {
+      const urlPath = new URL(url).pathname;
+      const filename = urlPath.substring(urlPath.lastIndexOf('/') + 1);
+      finalUrl = `/libs/${filename}`;
+    }
     return new Promise((resolve, reject) => {
       const link = document.createElement('link');
       link.id = id;
       link.rel = 'stylesheet';
-      link.href = url;
-      if (integrity) {
+      link.href = finalUrl;
+      if (integrity && typeof Neutralino === 'undefined') {
         link.integrity = integrity;
         link.crossOrigin = 'anonymous';
       }
@@ -266,6 +279,7 @@ document.addEventListener("DOMContentLoaded", function () {
       loadDependency('DOMPurify'),
       loadDependency('hljs')
     ]).then(() => {
+      initializeMarked();
       coreLibrariesLoaded = true;
       return true;
     });
@@ -446,7 +460,7 @@ document.addEventListener("DOMContentLoaded", function () {
   let lineNumberMeasure = null;
   let lineNumberUpdateFrame = null;
 
-  const renderer = new marked.Renderer();
+  let renderer;
   const BLOCK_MATH_MARKER_PATTERN = /^\$\$/m;
   const BLOCK_MATH_PATTERN = /^\$\$[ \t]*\n?([\s\S]*?)\n?\$\$[ \t]*(?:\n|$)/;
   const DEFINITION_LIST_ITEM_PATTERN = /^:[ \t]+(.*)$/;
@@ -812,49 +826,58 @@ document.addEventListener("DOMContentLoaded", function () {
     },
   };
 
-  renderer.code = function (code, language) {
-    if (language === 'mermaid') {
-      const uniqueId = 'mermaid-diagram-' + Math.random().toString(36).substr(2, 9);
-      const escapedCode = code
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      return `<div class="mermaid-container"><div class="mermaid" id="${uniqueId}">${escapedCode}</div></div>`;
-    }
-    
-    const validLanguage = hljs.getLanguage(language) ? language : "plaintext";
-    const highlightedCode = hljs.highlight(code, {
-      language: validLanguage,
-    }).value;
-    return `<pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>`;
-  };
+  let markedInitialized = false;
+  function initializeMarked() {
+    if (markedInitialized) return;
 
-  marked.use({
-    extensions: [
-      blockMathExtension,
-      definitionListExtension,
-      superscriptExtension,
-      subscriptExtension,
-      highlightExtension,
-    ],
-    hooks: {
-      preprocess(markdown) {
-        if (suppressFootnotePreprocess) {
-          return markdown;
-        }
-        resetExtendedMarkdownState();
-        // ✅ Replace escaped dollar signs before marked.js strips the backslash.
-        // This prevents MathJax from treating lone $ as a math delimiter.
-        const protectedMarkdown = markdown.replace(/\\\$/g, '&#36;');
-        return applyFootnotes(extractFootnoteDefinitions(protectedMarkdown));
+    renderer = new marked.Renderer();
+
+    renderer.code = function (code, language) {
+      if (language === 'mermaid') {
+        const uniqueId = 'mermaid-diagram-' + Math.random().toString(36).substr(2, 9);
+        const escapedCode = code
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        return `<div class="mermaid-container"><div class="mermaid" id="${uniqueId}">${escapedCode}</div></div>`;
+      }
+      
+      const validLanguage = hljs.getLanguage(language) ? language : "plaintext";
+      const highlightedCode = hljs.highlight(code, {
+        language: validLanguage,
+      }).value;
+      return `<pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>`;
+    };
+
+    marked.use({
+      extensions: [
+        blockMathExtension,
+        definitionListExtension,
+        superscriptExtension,
+        subscriptExtension,
+        highlightExtension,
+      ],
+      hooks: {
+        preprocess(markdown) {
+          if (suppressFootnotePreprocess) {
+            return markdown;
+          }
+          resetExtendedMarkdownState();
+          // ✅ Replace escaped dollar signs before marked.js strips the backslash.
+          // This prevents MathJax from treating lone $ as a math delimiter.
+          const protectedMarkdown = markdown.replace(/\\\$/g, '&#36;');
+          return applyFootnotes(extractFootnoteDefinitions(protectedMarkdown));
+        },
       },
-    },
-  });
+    });
 
-  marked.setOptions({
-    ...markedOptions,
-    renderer: renderer,
-  });
+    marked.setOptions({
+      ...markedOptions,
+      renderer: renderer,
+    });
+
+    markedInitialized = true;
+  }
 
   const GITHUB_ALERT_META = {
     note: {
@@ -1820,16 +1843,15 @@ This is a fully client-side application. Your content never leaves your browser 
             const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
             m.initialize({ theme: mermaidTheme });
             
-            try {
-              Promise.resolve(m.init(undefined, mermaidNodes))
-                .then(() => addMermaidToolbars())
-                .catch((e) => {
-                  console.warn("Mermaid rendering failed:", e);
-                  addMermaidToolbars();
-                });
-            } catch (e) {
+            m.run({
+              nodes: mermaidNodes,
+              suppressErrors: true
+            })
+            .then(() => addMermaidToolbars())
+            .catch((e) => {
               console.warn("Mermaid rendering failed:", e);
-            }
+              addMermaidToolbars();
+            });
           }).catch(err => {
             console.warn("Failed to load Mermaid:", err);
           });
@@ -2314,7 +2336,11 @@ This is a fully client-side application. Your content never leaves your browser 
     emojiLoadingPromise = Promise.all([
       loadDependency('joypixels'),
       loadStylesheet('joypixels-css', 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css', 'sha384-4ok+tBQQdy5hcPT56tzcE11yQ2BkN0Py1uDE8ZOiXYstHOpUB61pJafm+NidByp4')
-    ]).then(() => window.joypixels);
+    ]).then(() => window.joypixels)
+      .catch(err => {
+        emojiLoadingPromise = null;
+        throw err;
+      });
     return emojiLoadingPromise;
   }
 
@@ -5368,13 +5394,13 @@ This is a fully client-side application. Your content never leaves your browser 
 
     loadingPdfExportDependenciesPromise = Promise.all([
       loadDependency('jspdf'),
-      loadDependency('html2canvas'),
-      loadDependency('pdfmake'),
-      loadDependency('vfs_fonts'),
-      loadDependency('html2pdf')
+      loadDependency('html2canvas')
     ]).then(() => {
       pdfExportDependenciesLoaded = true;
       return true;
+    }).catch(err => {
+      loadingPdfExportDependenciesPromise = null;
+      throw err;
     });
 
     return loadingPdfExportDependenciesPromise;
@@ -5677,7 +5703,10 @@ This is a fully client-side application. Your content never leaves your browser 
   function ensurePako() {
     if (window.pako) return Promise.resolve(window.pako);
     if (pakoLoadingPromise) return pakoLoadingPromise;
-    pakoLoadingPromise = loadDependency('pako');
+    pakoLoadingPromise = loadDependency('pako').catch(err => {
+      pakoLoadingPromise = null;
+      throw err;
+    });
     return pakoLoadingPromise;
   }
 
