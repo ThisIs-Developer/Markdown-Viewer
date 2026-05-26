@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
   let markdownRenderTimeout = null;
-  const RENDER_DELAY = 100;
+  const RENDER_DELAY = 300;
   let syncScrollingEnabled = true;
   let isEditorScrolling = false;
   let isPreviewScrolling = false;
@@ -109,6 +109,171 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ========================================
+  // DYNAMIC RESOURCE LOADER UTILITIES
+  // ========================================
+  const DEPENDENCIES = {
+    marked: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js',
+      integrity: 'sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7',
+      global: 'marked'
+    },
+    hljs: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js',
+      integrity: 'sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp',
+      global: 'hljs'
+    },
+    DOMPurify: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js',
+      integrity: 'sha384-3HPB1XT51W3gGRxAmZ+qbZwRpRlFQL632y8x+adAqCr4Wp3TaWwCLSTAJJKbyWEK',
+      global: 'DOMPurify'
+    },
+    FileSaver: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
+      integrity: 'sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy',
+      global: 'saveAs'
+    },
+    html2pdf: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
+      integrity: 'sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc',
+      global: 'html2pdf'
+    },
+    mathjax: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
+      integrity: 'sha384-M5jmNxKC9EVnuqeMwRHvFuYUE8Hhp0TgBruj/GZRkYtiMrCRgH7yvv5KY+Owi7TW',
+      global: 'MathJax'
+    },
+    mermaid: {
+      url: 'https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js',
+      integrity: 'sha384-zkWMJO4sgpPUzyuOgDx8HB/K55glbAwajEpk1Go2NWRuPkPA/wIhoEJTuSkmOYrV',
+      global: 'mermaid'
+    },
+    joypixels: {
+      url: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js',
+      integrity: 'sha384-1+n1eMmP5I08CibRJ6JmycJ0hP3G6C0fuUtTb4bEuQgl9uFdS9pnPePfpmrXl9ll',
+      global: 'joypixels'
+    },
+    jspdf: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+      integrity: 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
+      global: 'jspdf'
+    },
+    html2canvas: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+      integrity: 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
+      global: 'html2canvas'
+    },
+    pdfmake: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js',
+      integrity: 'sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7',
+      global: 'pdfMake'
+    },
+    vfs_fonts: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js',
+      integrity: 'sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n',
+      global: 'pdfMake.vfs'
+    },
+    pako: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
+      integrity: 'sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j',
+      global: 'pako'
+    },
+    jsyaml: {
+      url: 'https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js',
+      integrity: 'sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du',
+      global: 'jsyaml'
+    }
+  };
+
+  const loadedDependencies = new Map();
+
+  function loadDependency(name) {
+    if (loadedDependencies.has(name)) {
+      return loadedDependencies.get(name);
+    }
+
+    const dep = DEPENDENCIES[name];
+    if (!dep) {
+      return Promise.reject(new Error(`Dependency ${name} is not defined.`));
+    }
+
+    // Check if the global variable already exists on the window
+    if (name === 'vfs_fonts') {
+      if (window.pdfMake && window.pdfMake.vfs) {
+        return Promise.resolve();
+      }
+    } else if (name === 'jspdf') {
+      if (window.jspdf) {
+        return Promise.resolve(window.jspdf);
+      }
+    } else if (window[dep.global]) {
+      return Promise.resolve(window[dep.global]);
+    }
+
+    const promise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = dep.url;
+      if (dep.integrity) {
+        script.integrity = dep.integrity;
+        script.crossOrigin = 'anonymous';
+      }
+      script.onload = () => {
+        if (name === 'vfs_fonts') {
+          resolve();
+        } else if (name === 'jspdf') {
+          resolve(window.jspdf);
+        } else {
+          resolve(window[dep.global]);
+        }
+      };
+      script.onerror = () => {
+        loadedDependencies.delete(name);
+        reject(new Error(`Failed to load dependency script: ${name}`));
+      };
+      document.head.appendChild(script);
+    });
+
+    loadedDependencies.set(name, promise);
+    return promise;
+  }
+
+  function loadStylesheet(id, url, integrity) {
+    if (document.getElementById(id)) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = url;
+      if (integrity) {
+        link.integrity = integrity;
+        link.crossOrigin = 'anonymous';
+      }
+      link.onload = () => resolve();
+      link.onerror = () => reject(new Error(`Failed to load stylesheet: ${url}`));
+      document.head.appendChild(link);
+    });
+  }
+
+  // Pre-load core preview libraries in the background to ensure fast interactive speed
+  let coreLibrariesLoaded = false;
+  let loadingCoreLibrariesPromise = null;
+
+  function ensureCoreLibraries() {
+    if (coreLibrariesLoaded) return Promise.resolve();
+    if (loadingCoreLibrariesPromise) return loadingCoreLibrariesPromise;
+
+    loadingCoreLibrariesPromise = Promise.all([
+      loadDependency('marked'),
+      loadDependency('DOMPurify'),
+      loadDependency('hljs')
+    ]).then(() => {
+      coreLibrariesLoaded = true;
+      return true;
+    });
+
+    return loadingCoreLibrariesPromise;
+  }
+
+  // ========================================
   // GLOBAL STATE (persisted across reloads)
   // ========================================
   const GLOBAL_STATE_KEY = 'markdownViewerGlobalState';
@@ -195,7 +360,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function saveGlobalState(patch) {
-    localStorage.setItem(GLOBAL_STATE_KEY, JSON.stringify({ ...loadGlobalState(), ...patch }));
+    try {
+      localStorage.setItem(GLOBAL_STATE_KEY, JSON.stringify({ ...loadGlobalState(), ...patch }));
+    } catch (e) {
+      console.warn("Failed to save global state to localStorage:", e);
+    }
   }
 
   // Check dark mode preference first for proper initialization
@@ -237,23 +406,28 @@ document.addEventListener("DOMContentLoaded", function () {
   applyDirectionToContent(initialDirection);
   updateDirectionToggleUI(initialDirection);
 
-  const initMermaid = () => {
-    const currentTheme = document.documentElement.getAttribute("data-theme");
-    const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
-    
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: mermaidTheme,
-      securityLevel: 'strict',
-      flowchart: { useMaxWidth: true, htmlLabels: true },
-      fontSize: 16
-    });
-  };
+  let mermaidLoadingPromise = null;
+  function ensureMermaid() {
+    if (window.mermaid) return Promise.resolve(window.mermaid);
+    if (mermaidLoadingPromise) return mermaidLoadingPromise;
 
-  try {
-    initMermaid();
-  } catch (e) {
-    console.warn("Mermaid initialization failed:", e);
+    mermaidLoadingPromise = loadDependency('mermaid').then((m) => {
+      try {
+        const currentTheme = document.documentElement.getAttribute("data-theme");
+        const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
+        m.initialize({
+          startOnLoad: false,
+          theme: mermaidTheme,
+          securityLevel: 'strict',
+          flowchart: { useMaxWidth: true, htmlLabels: true },
+          fontSize: 16
+        });
+      } catch (e) {
+        console.warn("Mermaid init failed:", e);
+      }
+      return m;
+    });
+    return mermaidLoadingPromise;
   }
 
   const markedOptions = {
@@ -766,9 +940,25 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  let jsyamlLoadingPromise = null;
+  function ensureJsyaml() {
+    if (window.jsyaml) return Promise.resolve(window.jsyaml);
+    if (jsyamlLoadingPromise) return jsyamlLoadingPromise;
+    jsyamlLoadingPromise = loadDependency('jsyaml');
+    return jsyamlLoadingPromise;
+  }
+
   function parseFrontmatter(markdown) {
     const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
     if (!match) return { frontmatter: null, body: markdown };
+    
+    if (typeof jsyaml === 'undefined') {
+      ensureJsyaml().then(() => {
+        renderMarkdown();
+      }).catch(err => console.warn("Failed to load js-yaml:", err));
+      return { frontmatter: null, body: markdown };
+    }
+
     try {
       const data = jsyaml.load(match[1]) || {};
       return { frontmatter: data, body: markdown.slice(match[0].length) };
@@ -1020,7 +1210,11 @@ This is a fully client-side application. Your content never leaves your browser 
   }
 
   function saveActiveTabId(id) {
-    localStorage.setItem(ACTIVE_TAB_KEY, id);
+    try {
+      localStorage.setItem(ACTIVE_TAB_KEY, id);
+    } catch (e) {
+      console.warn('Failed to save active tab ID to localStorage:', e);
+    }
   }
 
   function loadUntitledCounter() {
@@ -1028,7 +1222,11 @@ This is a fully client-side application. Your content never leaves your browser 
   }
 
   function saveUntitledCounter(val) {
-    localStorage.setItem(UNTITLED_COUNTER_KEY, String(val));
+    try {
+      localStorage.setItem(UNTITLED_COUNTER_KEY, String(val));
+    } catch (e) {
+      console.warn('Failed to save untitled counter to localStorage:', e);
+    }
   }
 
   function nextUntitledTitle() {
@@ -1561,7 +1759,43 @@ This is a fully client-side application. Your content never leaves your browser 
     newTab(content, name);
   };
 
+  let mathjaxLoadingPromise = null;
+  function ensureMathJax() {
+    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+      return Promise.resolve(window.MathJax);
+    }
+    if (mathjaxLoadingPromise) return mathjaxLoadingPromise;
+    mathjaxLoadingPromise = loadDependency('mathjax');
+    return mathjaxLoadingPromise;
+  }
+
+  function loadMathJaxAndTypeset(elementToTypeset) {
+    ensureMathJax().then((mj) => {
+      try {
+        mj.typesetPromise([elementToTypeset]).catch((err) => {
+          console.warn('MathJax typesetting failed:', err);
+        });
+      } catch (e) {
+        console.warn("MathJax rendering failed:", e);
+      }
+    }).catch(err => {
+      console.warn("Failed to load MathJax:", err);
+    });
+  }
+
   function renderMarkdown() {
+    if (markdownPreview) markdownPreview.setAttribute('aria-busy', 'true');
+    if (!coreLibrariesLoaded) {
+      markdownPreview.innerHTML = '<div class="render-loading-placeholder"><i class="bi bi-hourglass-split"></i> Rendering preview...</div>';
+      ensureCoreLibraries().then(() => {
+        renderMarkdown();
+      }).catch(err => {
+        if (markdownPreview) markdownPreview.setAttribute('aria-busy', 'false');
+        markdownPreview.innerHTML = `<div class="alert alert-danger">Failed to load core rendering engines: ${err.message}</div>`;
+      });
+      return;
+    }
+
     try {
       const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
       const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
@@ -1578,38 +1812,44 @@ This is a fully client-side application. Your content never leaves your browser 
 
       processEmojis(markdownPreview);
       
-      // Reinitialize mermaid with current theme before rendering diagrams
-      initMermaid();
-      
       try {
         const mermaidNodes = markdownPreview.querySelectorAll('.mermaid');
         if (mermaidNodes.length > 0) {
-          Promise.resolve(mermaid.init(undefined, mermaidNodes))
-            .then(() => addMermaidToolbars())
-            .catch((e) => {
+          ensureMermaid().then((m) => {
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
+            m.initialize({ theme: mermaidTheme });
+            
+            try {
+              Promise.resolve(m.init(undefined, mermaidNodes))
+                .then(() => addMermaidToolbars())
+                .catch((e) => {
+                  console.warn("Mermaid rendering failed:", e);
+                  addMermaidToolbars();
+                });
+            } catch (e) {
               console.warn("Mermaid rendering failed:", e);
-              addMermaidToolbars();
-            });
+            }
+          }).catch(err => {
+            console.warn("Failed to load Mermaid:", err);
+          });
         }
       } catch (e) {
         console.warn("Mermaid rendering failed:", e);
       }
       
-      if (window.MathJax) {
-        try {
-          MathJax.typesetPromise([markdownPreview]).catch((err) => {
-            console.warn('MathJax typesetting failed:', err);
-          });
-        } catch (e) {
-          console.warn("MathJax rendering failed:", e);
-        }
+      const hasMath = markdownEditor.value.includes('$');
+      if (hasMath) {
+        loadMathJaxAndTypeset(markdownPreview);
       }
 
+      if (markdownPreview) markdownPreview.setAttribute('aria-busy', 'false');
       updateDocumentStats();
       updateFindHighlights();
       cleanupImageObjectUrls();
       scheduleLineNumberUpdate();
     } catch (e) {
+      if (markdownPreview) markdownPreview.setAttribute('aria-busy', 'false');
       console.error("Markdown rendering failed:", e);
       const safeMessage = escapeHtml(e && e.message ? e.message : 'Unknown error');
       const safeMarkdown = escapeHtml(markdownEditor.value);
@@ -2066,7 +2306,31 @@ This is a fully client-side application. Your content never leaves your browser 
       });
   }
 
+  let emojiLoadingPromise = null;
+  function ensureEmoji() {
+    if (window.joypixels) return Promise.resolve(window.joypixels);
+    if (emojiLoadingPromise) return emojiLoadingPromise;
+
+    emojiLoadingPromise = Promise.all([
+      loadDependency('joypixels'),
+      loadStylesheet('joypixels-css', 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css', 'sha384-4ok+tBQQdy5hcPT56tzcE11yQ2BkN0Py1uDE8ZOiXYstHOpUB61pJafm+NidByp4')
+    ]).then(() => window.joypixels);
+    return emojiLoadingPromise;
+  }
+
   function processEmojis(element) {
+    if (!window.joypixels) {
+      const text = element.textContent || '';
+      if (/:[\w+-]+:/.test(text)) {
+        ensureEmoji().then(() => {
+          renderMarkdown();
+        }).catch(err => {
+          console.warn("Failed to load joypixels emoji library:", err);
+        });
+      }
+      return;
+    }
+
     const walker = document.createTreeWalker(
       element,
       NodeFilter.SHOW_TEXT,
@@ -3968,17 +4232,21 @@ This is a fully client-side application. Your content never leaves your browser 
     function handleResizerKeydown(e) {
       if (currentViewMode !== 'split') return;
       
-      let delta = 0;
+      let nextPercent = editorWidthPercent;
       if (e.key === 'ArrowLeft') {
-        delta = -5; // Shift left by 5%
+        nextPercent = editorWidthPercent - 5;
       } else if (e.key === 'ArrowRight') {
-        delta = 5; // Shift right by 5%
+        nextPercent = editorWidthPercent + 5;
+      } else if (e.key === 'Home') {
+        nextPercent = MIN_PANE_PERCENT;
+      } else if (e.key === 'End') {
+        nextPercent = 100 - MIN_PANE_PERCENT;
       } else {
         return;
       }
       
       e.preventDefault();
-      editorWidthPercent = Math.max(MIN_PANE_PERCENT, Math.min(100 - MIN_PANE_PERCENT, editorWidthPercent + delta));
+      editorWidthPercent = Math.max(MIN_PANE_PERCENT, Math.min(100 - MIN_PANE_PERCENT, nextPercent));
       applyPaneWidths();
       updateResizerAria();
     }
@@ -4188,8 +4456,27 @@ This is a fully client-side application. Your content never leaves your browser 
   initFindReplaceModal();
   initAppModals();
   
+  let suspendTabIntercept = false;
+  let accessibilityAnnouncementTimeout = null;
+
   // Editor key handlers for list continuation and indentation
   markdownEditor.addEventListener("keydown", function(e) {
+    if (e.key === 'Escape') {
+      suspendTabIntercept = true;
+      const statusDiv = document.getElementById('editor-accessibility-status');
+      if (statusDiv) {
+        statusDiv.textContent = 'Tab navigation active. Press Tab to leave the editor pane.';
+      }
+      clearTimeout(accessibilityAnnouncementTimeout);
+      accessibilityAnnouncementTimeout = setTimeout(() => {
+        suspendTabIntercept = false;
+        if (statusDiv) {
+          statusDiv.textContent = 'Keyboard navigation active: Press Escape inside the editor, then press Tab to leave the editor pane.';
+        }
+      }, 5000);
+      return;
+    }
+
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
       e.preventDefault();
       openFindReplaceModal();
@@ -4200,6 +4487,14 @@ This is a fully client-side application. Your content never leaves your browser 
     }
 
     if (e.key === 'Tab') {
+      if (suspendTabIntercept) {
+        suspendTabIntercept = false;
+        const statusDiv = document.getElementById('editor-accessibility-status');
+        if (statusDiv) {
+          statusDiv.textContent = 'Keyboard navigation active: Press Escape inside the editor, then press Tab to leave the editor pane.';
+        }
+        return; // Proceed with browser default focus shift
+      }
       e.preventDefault();
       
       const start = this.selectionStart;
@@ -4371,12 +4666,21 @@ This is a fully client-side application. Your content never leaves your browser 
     this.value = "";
   });
 
-  exportMd.addEventListener("click", function () {
+  let fileSaverLoadingPromise = null;
+  function ensureFileSaver() {
+    if (window.saveAs) return Promise.resolve(window.saveAs);
+    if (fileSaverLoadingPromise) return fileSaverLoadingPromise;
+    fileSaverLoadingPromise = loadDependency('FileSaver');
+    return fileSaverLoadingPromise;
+  }
+
+  exportMd.addEventListener("click", async function () {
     if (typeof Neutralino !== 'undefined') {
       nativeSaveMarkdown();
       return;
     }
     try {
+      await ensureFileSaver();
       const blob = new Blob([markdownEditor.value], {
         type: "text/markdown;charset=utf-8",
       });
@@ -4387,7 +4691,7 @@ This is a fully client-side application. Your content never leaves your browser 
     }
   });
 
-  exportHtml.addEventListener("click", function () {
+  exportHtml.addEventListener("click", async function () {
     try {
       const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
       const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
@@ -4587,6 +4891,7 @@ This is a fully client-side application. Your content never leaves your browser 
       if (typeof Neutralino !== 'undefined') {
         nativeSaveHtml(fullHtml);
       } else {
+        await ensureFileSaver();
         saveAs(blob, "document.html");
       }
     } catch (e) {
@@ -5054,11 +5359,37 @@ This is a fully client-side application. Your content never leaves your browser 
   // End Oversized Graphics Scaling Functions
   // ============================================
 
+  let pdfExportDependenciesLoaded = false;
+  let loadingPdfExportDependenciesPromise = null;
+
+  function ensurePdfExportDependencies() {
+    if (pdfExportDependenciesLoaded) return Promise.resolve();
+    if (loadingPdfExportDependenciesPromise) return loadingPdfExportDependenciesPromise;
+
+    loadingPdfExportDependenciesPromise = Promise.all([
+      loadDependency('jspdf'),
+      loadDependency('html2canvas'),
+      loadDependency('pdfmake'),
+      loadDependency('vfs_fonts'),
+      loadDependency('html2pdf')
+    ]).then(() => {
+      pdfExportDependenciesLoaded = true;
+      return true;
+    });
+
+    return loadingPdfExportDependenciesPromise;
+  }
+
   exportPdf.addEventListener("click", async function () {
     try {
       const originalText = exportPdf.innerHTML;
-      exportPdf.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
+      exportPdf.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading modules...';
       exportPdf.disabled = true;
+
+      // Ensure all PDF dependencies are loaded asynchronously
+      await ensurePdfExportDependencies();
+
+      exportPdf.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
 
       const progressContainer = document.createElement('div');
       progressContainer.style.position = 'fixed';
@@ -5342,16 +5673,36 @@ This is a fully client-side application. Your content never leaves your browser 
     }
   }
 
-  function openShareModal() {
+  let pakoLoadingPromise = null;
+  function ensurePako() {
+    if (window.pako) return Promise.resolve(window.pako);
+    if (pakoLoadingPromise) return pakoLoadingPromise;
+    pakoLoadingPromise = loadDependency('pako');
+    return pakoLoadingPromise;
+  }
+
+  async function openShareModal() {
     // Reset to view-only by default each time
     shareModeView.checked = true;
     syncShareCardStyles();
-    updateShareUrlField();
+    
+    shareUrlInput.value = 'Generating link...';
+    shareCopyBtn.disabled = true;
+
     shareModal.style.display = '';
     requestAnimationFrame(() => {
       shareModal.classList.add('is-visible');
       shareModal.setAttribute('aria-hidden', 'false');
     });
+
+    try {
+      await ensurePako();
+      updateShareUrlField();
+    } catch (e) {
+      console.error('Failed to load sharing library:', e);
+      shareUrlInput.value = 'Failed to load sharing library.';
+      shareCopyBtn.disabled = true;
+    }
   }
 
   function closeShareModal() {
@@ -5419,21 +5770,20 @@ This is a fully client-side application. Your content never leaves your browser 
   shareButton.addEventListener('click', openShareModal);
   mobileShareButton.addEventListener('click', openShareModal);
 
-  function loadFromShareHash() {
-    if (typeof pako === 'undefined') return;
+  async function loadFromShareHash() {
     const hash = window.location.hash;
     if (!hash.startsWith('#share=')) return;
 
-    // Parse encoded content and optional &edit=1 flag.
-    // Hash format: #share=<encoded>  or  #share=<encoded>&edit=1
-    const rest = hash.slice('#share='.length);
-    const ampIdx = rest.indexOf('&');
-    const encoded = ampIdx === -1 ? rest : rest.slice(0, ampIdx);
-    const params = ampIdx === -1 ? '' : rest.slice(ampIdx + 1);
-    const isEdit = params.split('&').includes('edit=1');
-
-    if (!encoded) return;
     try {
+      await ensurePako();
+      
+      const rest = hash.slice('#share='.length);
+      const ampIdx = rest.indexOf('&');
+      const encoded = ampIdx === -1 ? rest : rest.slice(0, ampIdx);
+      const params = ampIdx === -1 ? '' : rest.slice(ampIdx + 1);
+      const isEdit = params.split('&').includes('edit=1');
+
+      if (!encoded) return;
       const decoded = decodeMarkdownFromShare(encoded);
       markdownEditor.value = decoded;
       renderMarkdown();

@@ -2856,3 +2856,54 @@ a:focus {
   align-items: center;
   gap: 5px;
 }
+
+/* ============================================
+   MOBILE RESPONSIVENESS AND ACCESSIBILITY TARGETS
+   ============================================ */
+@media (max-width: 767px) {
+  /* Prevent cramped viewport in split view by hiding preview by default */
+  .content-container.view-split .preview-pane {
+    display: none !important;
+  }
+  .content-container.view-split .editor-pane {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  .content-container.view-split .resize-divider {
+    display: none !important;
+  }
+
+  /* Expand touch target sizes to prevent mis-clicks (WCAG standard) */
+  .tool-button,
+  .markdown-tool-btn,
+  .mobile-view-mode-btn,
+  .tab-new-btn,
+  .tab-reset-btn {
+    min-width: 48px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px !important;
+  }
+
+  .mobile-menu-item {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+  }
+
+  .mobile-tab-item {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    padding: 12px 14px !important;
+  }
+  
+  .tab-item {
+    min-height: 44px;
+    padding: 8px 12px !important;
+  }
+}
