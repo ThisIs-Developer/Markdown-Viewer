@@ -77,20 +77,89 @@
 
     <title>Markdown Viewer</title>
     <link href="assets/icon.jpg" rel="icon" type="image/jpg">
-    <!-- Updated libraries to latest versions with Subresource Integrity (SRI) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css" integrity="sha384-hZuxRjC/Dsr4zEx1JlUhDQqkvqBPp2VLHsgXfnxPq1ULDy1eIdWCiux7nvO1RIZP" crossorigin="anonymous">
+
+    <!-- Preload core JS libraries for faster discoverability -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" as="script" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js" as="script" integrity="sha384-3HPB1XT51W3gGRxAmZ+qbZwRpRlFQL632y8x+adAqCr4Wp3TaWwCLSTAJJKbyWEK" crossorigin="anonymous">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" as="script" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous">
+
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem("markdown-viewer-theme") || 
+          (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      })();
+    </script>
+    <style id="critical-css">
+      :root {
+        --bg-color: #ffffff;
+        --editor-bg: #f6f8fa;
+        --preview-bg: #ffffff;
+        --text-color: #24292e;
+        --border-color: #e1e4e8;
+        --header-bg: #f6f8fa;
+        --skeleton-bg: #e2e8f0;
+        --skeleton-glow: rgba(255, 255, 255, 0.65);
+      }
+      [data-theme="dark"] {
+        --bg-color: #0d1117;
+        --editor-bg: #161b22;
+        --preview-bg: #0d1117;
+        --text-color: #c9d1d9;
+        --border-color: #30363d;
+        --header-bg: #161b22;
+        --skeleton-bg: #2d3139;
+        --skeleton-glow: rgba(255, 255, 255, 0.08);
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background-color: var(--bg-color); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; height: 100vh; overflow: hidden; }
+      .app-container { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+      .app-header { background-color: var(--header-bg); border-bottom: 1px solid var(--border-color); padding: 0.35rem 0.75rem; height: 45px; display: flex; align-items: center; z-index: 100; flex-shrink: 0; }
+      .content-container { display: flex; flex: 1; overflow: hidden; }
+      .editor-pane, .preview-pane { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+      .editor-pane { background-color: var(--editor-bg); border-right: 1px solid var(--border-color); }
+      .preview-pane { background-color: var(--preview-bg); }
+      .resize-divider { width: 8px; cursor: col-resize; background-color: var(--border-color); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      #markdown-editor { width: 100%; height: 100%; border: none; background: transparent; resize: none; outline: none; display: none; }
+      .editor-skeleton, .skeleton-preview-container { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+      .skeleton-placeholder { background-color: var(--skeleton-bg); position: relative; overflow: hidden; border-radius: 4px; }
+      .skeleton-placeholder::after { position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, var(--skeleton-glow), transparent); animation: skeleton-shimmer 1.6s infinite; content: ''; }
+      .skeleton-title { height: 28px; width: 40%; margin-bottom: 8px; }
+      .skeleton-subtitle { height: 20px; width: 25%; margin-top: 12px; margin-bottom: 4px; }
+      .skeleton-line { height: 16px; }
+      .skeleton-w90 { width: 90%; }
+      .skeleton-w92 { width: 92%; }
+      .skeleton-w88 { width: 88%; }
+      .skeleton-w85 { width: 85%; }
+      .skeleton-w60 { width: 60%; }
+      .skeleton-w45 { width: 45%; }
+      @keyframes skeleton-shimmer { 100% { transform: translateX(100%); } }
+      @media (prefers-color-scheme: dark) {
+        body:not([data-theme="light"]) {
+          background-color: #0d1117;
+          color: #c9d1d9;
+        }
+      }
+    </style>
+
+    <!-- Async CSS Loading (Preload + rel transition on load) -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" as="style" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css" as="style" integrity="sha384-hZuxRjC/Dsr4zEx1JlUhDQqkvqBPp2VLHsgXfnxPq1ULDy1eIdWCiux7nvO1RIZP" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'">
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" as="style" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous"></noscript>
-    <link rel="stylesheet" href="styles.css">
-    
-    <!-- Loading order optimized - ensure libraries are loaded asynchronously using defer -->
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+
+    <!-- Noscript fallbacks for crawlers/users without javascript -->
+    <noscript>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css" integrity="sha384-hZuxRjC/Dsr4zEx1JlUhDQqkvqBPp2VLHsgXfnxPq1ULDy1eIdWCiux7nvO1RIZP" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
+      <link rel="stylesheet" href="styles.css">
+    </noscript>
+
+    <!-- Essential parsing/sanitization scripts loaded asynchronously via defer -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js" integrity="sha384-3HPB1XT51W3gGRxAmZ+qbZwRpRlFQL632y8x+adAqCr4Wp3TaWwCLSTAJJKbyWEK" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy" crossorigin="anonymous" defer></script>
-    <!-- PERF-002: MathJax, Mermaid, JoyPixels, jsPDF, html2canvas, pako are now lazy-loaded by script.js on first use -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js" integrity="sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du" crossorigin="anonymous" defer></script>
 </head>
 <body>
     <div class="app-container">

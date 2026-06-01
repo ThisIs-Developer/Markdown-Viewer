@@ -33,7 +33,9 @@ document.addEventListener("DOMContentLoaded", function () {
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
     joypixels: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js',
-    joypixels_css: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css'
+    joypixels_css: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css',
+    filesaver: 'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js',
+    jsyaml: 'https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js'
   };
 
   let markdownRenderTimeout = null;
@@ -43,8 +45,24 @@ document.addEventListener("DOMContentLoaded", function () {
   let syncScrollingEnabled = true;
   let isEditorScrolling = false;
   let isPreviewScrolling = false;
-  let scrollSyncTimeout = null;
-  const SCROLL_SYNC_DELAY = 10;
+  // Performance caching variables to prevent forced reflows / layout thrashing
+  let cachedContainerLeft = 0;
+  let cachedContainerWidth = 0;
+  let cachedEditorPaneScrollHeight = 0;
+  let cachedEditorPaneClientHeight = 0;
+  let cachedPreviewPaneScrollHeight = 0;
+  let cachedPreviewPaneClientHeight = 0;
+
+  function updateCachedPaneHeights() {
+    if (editorPane) {
+      cachedEditorPaneScrollHeight = editorPane.scrollHeight;
+      cachedEditorPaneClientHeight = editorPane.clientHeight;
+    }
+    if (previewPane) {
+      cachedPreviewPaneScrollHeight = previewPane.scrollHeight;
+      cachedPreviewPaneClientHeight = previewPane.clientHeight;
+    }
+  }
 
   // View Mode State - Story 1.1
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
@@ -814,9 +832,26 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  let isJsYamlLoading = false;
   function parseFrontmatter(markdown) {
     const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
     if (!match) return { frontmatter: null, body: markdown };
+
+    if (typeof jsyaml === 'undefined') {
+      if (!isJsYamlLoading) {
+        isJsYamlLoading = true;
+        loadScript(CDN.jsyaml).then(function() {
+          isJsYamlLoading = false;
+          _lastRenderedContent = null;
+          renderMarkdown();
+        }).catch(function(e) {
+          isJsYamlLoading = false;
+          console.warn('Failed to load js-yaml:', e);
+        });
+      }
+      return { frontmatter: null, body: markdown.slice(match[0].length) };
+    }
+
     try {
       const data = jsyaml.load(match[1]) || {};
       return { frontmatter: data, body: markdown.slice(match[0].length) };
@@ -1567,6 +1602,7 @@ document.addEventListener("DOMContentLoaded", function () {
                   container.classList.remove('is-loading');
                 });
                 addMermaidToolbars();
+                updateCachedPaneHeights();
               })
               .catch((e) => {
                 console.warn("Mermaid rendering failed:", e);
@@ -1574,6 +1610,7 @@ document.addEventListener("DOMContentLoaded", function () {
                   container.classList.remove('is-loading');
                 });
                 addMermaidToolbars();
+                updateCachedPaneHeights();
               });
           };
           if (typeof mermaid === 'undefined') {
@@ -1599,6 +1636,7 @@ document.addEventListener("DOMContentLoaded", function () {
               markdownPreview.querySelectorAll('mjx-container[tabindex="0"]').forEach(function(mjx) {
                 mjx.removeAttribute('tabindex');
               });
+              updateCachedPaneHeights();
             }).catch(function(err) {
               console.warn('MathJax typesetting failed:', err);
             });
@@ -1625,6 +1663,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 markdownPreview.querySelectorAll('mjx-container[tabindex="0"]').forEach(function(mjx) {
                   mjx.removeAttribute('tabindex');
                 });
+                updateCachedPaneHeights();
               }).catch(function(err) {
                 console.warn('MathJax typesetting failed:', err);
               });
@@ -1639,6 +1678,7 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFindHighlights();
       cleanupImageObjectUrls();
       scheduleLineNumberUpdate();
+      updateCachedPaneHeights();
     } catch (e) {
       console.error("Markdown rendering failed:", e);
       const safeMessage = escapeHtml(e && e.message ? e.message : 'Unknown error');
@@ -2251,11 +2291,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
+      if (cachedEditorPaneScrollHeight === 0) {
+        updateCachedPaneHeights();
+      }
       const editorScrollRatio =
         editorPane.scrollTop /
-        (editorPane.scrollHeight - editorPane.clientHeight);
+        (cachedEditorPaneScrollHeight - cachedEditorPaneClientHeight);
       const previewScrollPosition =
-        (previewPane.scrollHeight - previewPane.clientHeight) *
+        (cachedPreviewPaneScrollHeight - cachedPreviewPaneClientHeight) *
         editorScrollRatio;
 
       if (!isNaN(previewScrollPosition) && isFinite(previewScrollPosition)) {
@@ -2274,11 +2317,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
+      if (cachedPreviewPaneScrollHeight === 0) {
+        updateCachedPaneHeights();
+      }
       const previewScrollRatio =
         previewPane.scrollTop /
-        (previewPane.scrollHeight - previewPane.clientHeight);
+        (cachedPreviewPaneScrollHeight - cachedPreviewPaneClientHeight);
       const editorScrollPosition =
-        (editorPane.scrollHeight - editorPane.clientHeight) *
+        (cachedEditorPaneScrollHeight - cachedEditorPaneClientHeight) *
         previewScrollRatio;
 
       if (!isNaN(editorScrollPosition) && isFinite(editorScrollPosition)) {
@@ -4915,6 +4961,13 @@ document.addEventListener("DOMContentLoaded", function () {
     isResizing = true;
     resizeDivider.classList.add('dragging');
     document.body.classList.add('resizing');
+
+    // Cache container coordinates on start to avoid getBoundingClientRect layout calls during drag
+    if (contentContainer) {
+      const containerRect = contentContainer.getBoundingClientRect();
+      cachedContainerLeft = containerRect.left;
+      cachedContainerWidth = containerRect.width;
+    }
   }
 
   function startResizeTouch(e) {
@@ -4924,17 +4977,22 @@ document.addEventListener("DOMContentLoaded", function () {
     isResizing = true;
     resizeDivider.classList.add('dragging');
     document.body.classList.add('resizing');
+
+    // Cache container coordinates on start to avoid getBoundingClientRect layout calls during drag
+    if (contentContainer) {
+      const containerRect = contentContainer.getBoundingClientRect();
+      cachedContainerLeft = containerRect.left;
+      cachedContainerWidth = containerRect.width;
+    }
   }
 
   function handleResize(e) {
     if (!isResizing) return;
 
-    const containerRect = contentContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
-    const mouseX = e.clientX - containerRect.left;
+    const mouseX = e.clientX - cachedContainerLeft;
 
-    // Calculate percentage
-    let newEditorPercent = (mouseX / containerWidth) * 100;
+    // Calculate percentage using cached container width
+    let newEditorPercent = (mouseX / cachedContainerWidth) * 100;
 
     // Enforce minimum pane widths
     newEditorPercent = Math.max(MIN_PANE_PERCENT, Math.min(100 - MIN_PANE_PERCENT, newEditorPercent));
@@ -4946,11 +5004,9 @@ document.addEventListener("DOMContentLoaded", function () {
   function handleResizeTouch(e) {
     if (!isResizing || !e.touches[0]) return;
 
-    const containerRect = contentContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
-    const touchX = e.touches[0].clientX - containerRect.left;
+    const touchX = e.touches[0].clientX - cachedContainerLeft;
 
-    let newEditorPercent = (touchX / containerWidth) * 100;
+    let newEditorPercent = (touchX / cachedContainerWidth) * 100;
     newEditorPercent = Math.max(MIN_PANE_PERCENT, Math.min(100 - MIN_PANE_PERCENT, newEditorPercent));
 
     editorWidthPercent = newEditorPercent;
@@ -4962,6 +5018,7 @@ document.addEventListener("DOMContentLoaded", function () {
     isResizing = false;
     resizeDivider.classList.remove('dragging');
     document.body.classList.remove('resizing');
+    updateCachedPaneHeights();
   }
 
   function applyPaneWidths() {
@@ -5121,6 +5178,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleFrDockMode(true);
       }
       constrainFloatingPanelPosition();
+      updateCachedPaneHeights();
     }, 100);
   });
 
@@ -5155,9 +5213,12 @@ document.addEventListener("DOMContentLoaded", function () {
     scheduleLineNumberUpdate();
   });
 
-  initMarkdownFormatToolbar();
-  initFindReplaceModal();
-  initAppModals();
+  // Defer non-critical startup initializations to reduce startup time and TBT
+  setTimeout(function() {
+    initMarkdownFormatToolbar();
+    initFindReplaceModal();
+    initAppModals();
+  }, 50);
   
   // Editor key handlers for list continuation and indentation
   markdownEditor.addEventListener("keydown", function(e) {
@@ -5371,6 +5432,33 @@ document.addEventListener("DOMContentLoaded", function () {
     this.value = "";
   });
 
+  function triggerSaveAs(blob, filename) {
+    if (typeof saveAs === 'undefined') {
+      const exportDropdownBtn = document.getElementById("exportDropdown");
+      const originalHtml = exportDropdownBtn ? exportDropdownBtn.innerHTML : null;
+      if (exportDropdownBtn) {
+        exportDropdownBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Loading...';
+        exportDropdownBtn.disabled = true;
+      }
+      loadScript(CDN.filesaver).then(function() {
+        if (exportDropdownBtn) {
+          exportDropdownBtn.innerHTML = originalHtml;
+          exportDropdownBtn.disabled = false;
+        }
+        saveAs(blob, filename);
+      }).catch(function(e) {
+        if (exportDropdownBtn) {
+          exportDropdownBtn.innerHTML = originalHtml;
+          exportDropdownBtn.disabled = false;
+        }
+        console.error('Failed to load FileSaver:', e);
+        alert('Failed to load export library. Please check your internet connection.');
+      });
+    } else {
+      saveAs(blob, filename);
+    }
+  }
+
   exportMd.addEventListener("click", function () {
     if (typeof Neutralino !== 'undefined') {
       nativeSaveMarkdown();
@@ -5380,7 +5468,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const blob = new Blob([markdownEditor.value], {
         type: "text/markdown;charset=utf-8",
       });
-      saveAs(blob, "document.md");
+      triggerSaveAs(blob, "document.md");
     } catch (e) {
       console.error("Export failed:", e);
       alert("Export failed: " + e.message);
@@ -5587,7 +5675,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (typeof Neutralino !== 'undefined') {
         nativeSaveHtml(fullHtml);
       } else {
-        saveAs(blob, "document.html");
+        triggerSaveAs(blob, "document.html");
       }
     } catch (e) {
       console.error("HTML export failed:", e);
