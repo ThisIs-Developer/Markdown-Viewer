@@ -304,55 +304,101 @@
 
         <!-- Markdown Formatting Toolbar -->
         <div class="markdown-format-toolbar" id="markdown-format-toolbar" role="toolbar" aria-label="Markdown formatting toolbar">
+          <!-- History Group -->
           <div class="markdown-toolbar-group">
-            <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo" aria-label="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo" aria-label="Redo"><i class="bi bi-arrow-clockwise"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="clear-formatting" title="Clear Markdown formatting" aria-label="Clear Markdown formatting"><i class="bi bi-eraser"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo (Ctrl+Z)" aria-label="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><i class="bi bi-arrow-clockwise"></i></button>
+            <div class="dropdown d-inline-block">
+              <button type="button" class="markdown-tool-btn text-tool dropdown-toggle" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Recent Actions" aria-label="Recent Actions"><i class="bi bi-clock-history"></i></button>
+              <ul class="dropdown-menu shadow" aria-labelledby="historyDropdown" id="history-dropdown-menu" style="font-size: 13px; max-height: 250px; overflow-y: auto;">
+                <li><span class="dropdown-item-text text-muted">No history yet</span></li>
+              </ul>
+            </div>
           </div>
+
+          <!-- Clipboard Group -->
           <div class="markdown-toolbar-group">
-            <button type="button" class="markdown-tool-btn" data-md-action="bold" title="Bold" aria-label="Bold"><i class="bi bi-type-bold"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="cut" title="Cut (Ctrl+X)" aria-label="Cut"><i class="bi bi-scissors"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="copy" title="Copy (Ctrl+C)" aria-label="Copy"><i class="bi bi-copy"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="paste" title="Paste (Ctrl+V)" aria-label="Paste"><i class="bi bi-clipboard"></i></button>
+          </div>
+
+          <!-- Typography / Headings Group -->
+          <div class="markdown-toolbar-group">
+            <div class="dropdown d-inline-block">
+              <button type="button" class="markdown-tool-btn text-tool dropdown-toggle" id="headingsDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Headings" aria-label="Headings">H <i class="bi bi-chevron-down ms-1" style="font-size: 9px;"></i></button>
+              <ul class="dropdown-menu shadow" aria-labelledby="headingsDropdown" style="font-size: 13px;">
+                <li><a class="dropdown-item heading-select-item" href="#" data-md-level="1">Heading 1</a></li>
+                <li><a class="dropdown-item heading-select-item" href="#" data-md-level="2">Heading 2</a></li>
+                <li><a class="dropdown-item heading-select-item" href="#" data-md-level="3">Heading 3</a></li>
+                <li><a class="dropdown-item heading-select-item" href="#" data-md-level="4">Heading 4</a></li>
+                <li><a class="dropdown-item heading-select-item" href="#" data-md-level="5">Heading 5</a></li>
+                <li><a class="dropdown-item heading-select-item" href="#" data-md-level="6">Heading 6</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Inline Formatting Group -->
+          <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="bold" title="Bold (Ctrl+B)" aria-label="Bold"><i class="bi bi-type-bold"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="strike" title="Strikethrough" aria-label="Strikethrough"><i class="bi bi-type-strikethrough"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="italic" title="Italic" aria-label="Italic"><i class="bi bi-type-italic"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i class="bi bi-type-italic"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="quote" title="Blockquote" aria-label="Blockquote"><i class="bi bi-quote"></i></button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="title-case" title="Title case" aria-label="Title case">Aa</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="uppercase" title="Uppercase" aria-label="Uppercase">A</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="lowercase" title="Lowercase" aria-label="Lowercase">a</button>
+            <div class="dropdown d-inline-block">
+              <button type="button" class="markdown-tool-btn text-tool dropdown-toggle" id="caseDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Change Case" aria-label="Change Case">Aa</button>
+              <ul class="dropdown-menu shadow" aria-labelledby="caseDropdown" style="font-size: 13px;">
+                <li><a class="dropdown-item case-select-item" href="#" data-md-action="title-case">Aa Title Case</a></li>
+                <li><a class="dropdown-item case-select-item" href="#" data-md-action="uppercase">A UPPERCASE</a></li>
+                <li><a class="dropdown-item case-select-item" href="#" data-md-action="lowercase">a lowercase</a></li>
+              </ul>
+            </div>
           </div>
+
+          <!-- Lists & Alignment Group -->
           <div class="markdown-toolbar-group">
+            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list" aria-label="Bulleted list"><i class="bi bi-list-ul"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list" aria-label="Numbered list"><i class="bi bi-list-ol"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="horizontal-rule" title="Horizontal rule" aria-label="Horizontal rule"><i class="bi bi-dash-lg"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="align-left" title="Align left" aria-label="Align left"><i class="bi bi-text-left"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="align-center" title="Align center" aria-label="Align center"><i class="bi bi-text-center"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="align-right" title="Align right" aria-label="Align right"><i class="bi bi-text-right"></i></button>
             <button type="button" id="direction-toggle" class="markdown-tool-btn text-tool" title="Switch to RTL" aria-label="Toggle text direction" aria-pressed="false">L</button>
           </div>
-          <div class="markdown-toolbar-group heading-group">
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="1" title="Heading 1" aria-label="Heading 1">H1</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="2" title="Heading 2" aria-label="Heading 2">H2</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="3" title="Heading 3" aria-label="Heading 3">H3</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="4" title="Heading 4" aria-label="Heading 4">H4</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="5" title="Heading 5" aria-label="Heading 5">H5</button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="heading" data-md-level="6" title="Heading 6" aria-label="Heading 6">H6</button>
-          </div>
-          <div class="markdown-toolbar-group">
-            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list" aria-label="Bulleted list"><i class="bi bi-list-ul"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list" aria-label="Numbered list"><i class="bi bi-list-ol"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="horizontal-rule" title="Horizontal rule" aria-label="Horizontal rule"><i class="bi bi-dash-lg"></i></button>
-          </div>
+
+          <!-- Inserts & Media Group -->
           <div class="markdown-toolbar-group">
             <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link" aria-label="Link"><i class="bi bi-link-45deg"></i></button>
-            <button type="button" class="markdown-tool-btn text-tool" data-md-action="reference" title="Reference" aria-label="Reference"><i></i></button>
+            <button type="button" class="markdown-tool-btn text-tool" data-md-action="reference" title="Reference" aria-label="Reference">Ref</button>
             <button type="button" class="markdown-tool-btn" data-md-action="image" title="Image" aria-label="Image"><i class="bi bi-card-image"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="inline-code" title="Inline code" aria-label="Inline code"><i class="bi bi-code-slash"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="code-block" title="Code block" aria-label="Code block"><i class="bi bi-file-code"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="terminal-block" title="Terminal block" aria-label="Terminal block"><i class="bi bi-terminal"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="table" title="Table" aria-label="Table"><i class="bi bi-table"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="date-time" title="Date and time" aria-label="Date and time"><i class="bi bi-clock"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="emoji" title="Emoji shortcode" aria-label="Emoji shortcode"><i class="bi bi-emoji-smile"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="symbols" title="Symbols &amp; HTML entities" aria-label="Symbols &amp; HTML entities"><i class="bi bi-c-circle"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="alert" title="Markdown alert" aria-label="Markdown alert"><i class="bi bi-newspaper"></i></button>
+            <div class="dropdown d-inline-block">
+              <button type="button" class="markdown-tool-btn text-tool dropdown-toggle" id="insertDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="More Elements" aria-label="More Elements"><i class="bi bi-plus-circle"></i></button>
+              <ul class="dropdown-menu shadow" aria-labelledby="insertDropdown" style="font-size: 13px;">
+                <li><a class="dropdown-item insert-select-item" href="#" data-md-action="table"><i class="bi bi-table me-2"></i>Table</a></li>
+                <li><a class="dropdown-item insert-select-item" href="#" data-md-action="date-time"><i class="bi bi-clock me-2"></i>Date &amp; Time</a></li>
+                <li><a class="dropdown-item insert-select-item" href="#" data-md-action="emoji"><i class="bi bi-emoji-smile me-2"></i>Emoji shortcode</a></li>
+                <li><a class="dropdown-item insert-select-item" href="#" data-md-action="symbols"><i class="bi bi-c-circle me-2"></i>Symbols &amp; HTML entities</a></li>
+                <li><a class="dropdown-item insert-select-item" href="#" data-md-action="alert"><i class="bi bi-newspaper me-2"></i>Markdown alert</a></li>
+                <li><a class="dropdown-item insert-select-item" href="#" data-md-action="terminal-block"><i class="bi bi-terminal me-2"></i>Terminal block</a></li>
+              </ul>
+            </div>
           </div>
+
+          <!-- Cleanup & Workspace Group -->
           <div class="markdown-toolbar-group">
+            <div class="dropdown d-inline-block">
+              <button type="button" class="markdown-tool-btn text-tool dropdown-toggle" id="cleanupDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Clear Formatting" aria-label="Clear Formatting"><i class="bi bi-eraser"></i></button>
+              <ul class="dropdown-menu shadow dropdown-menu-end" aria-labelledby="cleanupDropdown" style="font-size: 13px;">
+                <li><a class="dropdown-item cleanup-select-item" href="#" data-cleanup-type="clear-formatting"><i class="bi bi-trash me-2"></i>Clear All Formatting</a></li>
+                <li><a class="dropdown-item cleanup-select-item" href="#" data-cleanup-type="selective-bold"><i class="bi bi-type-bold me-2"></i>Clear Bold/Italic</a></li>
+                <li><a class="dropdown-item cleanup-select-item" href="#" data-cleanup-type="selective-heading"><i class="bi bi-hash me-2"></i>Clear Headings</a></li>
+                <li><a class="dropdown-item cleanup-select-item" href="#" data-cleanup-type="selective-code"><i class="bi bi-code me-2"></i>Clear Code Blocks</a></li>
+              </ul>
+            </div>
             <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen" aria-label="Fullscreen"><i class="bi bi-arrows-fullscreen"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find &amp; Replace" aria-label="Find &amp; Replace"><i class="bi bi-search"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find &amp; Replace (Ctrl+F)" aria-label="Find &amp; Replace"><i class="bi bi-search"></i></button>
+            <button type="button" class="markdown-tool-btn" id="command-palette-btn" title="Command Palette (Ctrl+Shift+P)" aria-label="Command Palette"><i class="bi bi-terminal-fill"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="help" title="Help" aria-label="Help"><i class="bi bi-question-circle"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="info" title="About Markdown" aria-label="About Markdown"><i class="bi bi-info-circle"></i></button>
           </div>
@@ -382,6 +428,22 @@
             <div class="reset-modal-actions">
               <button class="reset-modal-btn reset-modal-cancel" id="clear-formatting-cancel">Cancel</button>
               <button class="reset-modal-btn reset-modal-confirm" id="clear-formatting-confirm">Clear Markdown</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Command Palette Modal -->
+        <div id="command-palette-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="palette-title" aria-hidden="true" style="display:none; z-index: 10000;">
+          <div class="reset-modal-box reset-modal-box--wide modal-box command-palette-box">
+            <div class="command-palette-search-row">
+              <i class="bi bi-search palette-search-icon"></i>
+              <input type="text" id="command-palette-input" class="command-palette-search-input" placeholder="Type a command to execute... (e.g. table, bold, help)" autocomplete="off" aria-label="Command query" />
+            </div>
+            <div id="command-palette-results" class="command-palette-results-list" role="listbox">
+              <!-- Populated dynamically -->
+            </div>
+            <div class="command-palette-footer">
+              <span>Use <kbd>↑</kbd> <kbd>↓</kbd> to navigate, <kbd>Enter</kbd> to select, <kbd>Esc</kbd> to dismiss.</span>
             </div>
           </div>
         </div>

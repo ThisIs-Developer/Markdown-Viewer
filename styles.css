@@ -3649,4 +3649,181 @@ html[lang="ko"] .markdown-body h1, html[lang="ko"] .markdown-body h2, html[lang=
     transition: none;
   }
 }
+
+/* ==========================================================================
+   ENTERPRISE REDESIGN STYLING (GLASSMORPHISM, ACCELERATION & PALETTE)
+   ========================================================================== */
+
+/* Design Tokens */
+:root {
+  --toolbar-glass-bg: rgba(246, 248, 250, 0.85);
+  --toolbar-glass-blur: 8px;
+  --toolbar-glass-border: rgba(225, 228, 232, 0.8);
+  --palette-bg: #ffffff;
+  --palette-hover: rgba(3, 102, 214, 0.05);
+  --palette-active: #0366d6;
+  --palette-border: rgba(36, 41, 46, 0.15);
+}
+
+[data-theme="dark"] {
+  --toolbar-glass-bg: rgba(22, 27, 34, 0.85);
+  --toolbar-glass-blur: 8px;
+  --toolbar-glass-border: rgba(48, 54, 61, 0.8);
+  --palette-bg: #161b22;
+  --palette-hover: rgba(56, 139, 253, 0.1);
+  --palette-active: #58a6ff;
+  --palette-border: rgba(240, 246, 252, 0.15);
+}
+
+/* Glassmorphism Refinement on Toolbar */
+.markdown-format-toolbar {
+  background-color: var(--toolbar-glass-bg) !important;
+  backdrop-filter: blur(var(--toolbar-glass-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--toolbar-glass-blur)) !important;
+  border-bottom: 1px solid var(--toolbar-glass-border) !important;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  position: relative;
+}
+
+/* Premium Toolbar Dividers */
+.markdown-toolbar-group {
+  border-right: 1px solid var(--toolbar-glass-border) !important;
+}
+
+/* Micro-Animations & Dynamic States for Toolbar Buttons */
+.markdown-tool-btn {
+  will-change: transform, background-color;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.markdown-tool-btn:hover {
+  transform: translateY(-1px);
+}
+
+.markdown-tool-btn:active {
+  transform: translateY(1px);
+}
+
+/* Dropdown Custom Styles to match editor aesthetics */
+.markdown-format-toolbar .dropdown-menu {
+  border: 1px solid var(--toolbar-glass-border) !important;
+  border-radius: 6px;
+  padding: 4px 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 160px;
+}
+
+.markdown-format-toolbar .dropdown-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  transition: background-color 0.15s ease;
+}
+
+/* Accessible High-Contrast Focus Ring */
+.markdown-tool-btn:focus-visible,
+.command-palette-search-input:focus-visible {
+  outline: 2px solid var(--accent-color) !important;
+  outline-offset: 1px;
+}
+
+/* Command Palette Modern Layout */
+.command-palette-box {
+  max-width: 600px;
+  width: 90% !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  background-color: var(--palette-bg) !important;
+  border: 1px solid var(--palette-border) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.command-palette-search-row {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--toolbar-glass-border);
+}
+
+.palette-search-icon {
+  font-size: 18px;
+  color: var(--text-color);
+  opacity: 0.6;
+  margin-right: 12px;
+}
+
+.command-palette-search-input {
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  width: 100%;
+  font-size: 16px;
+  outline: none;
+}
+
+.command-palette-results-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.command-palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-color);
+  transition: background-color 0.15s ease;
+}
+
+.command-palette-item:hover,
+.command-palette-item.focused {
+  background-color: var(--palette-hover);
+  color: var(--palette-active);
+}
+
+.command-palette-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.command-palette-item-left i {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.command-palette-shortcut {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--toolbar-glass-border);
+  opacity: 0.8;
+  font-family: inherit;
+}
+
+.command-palette-footer {
+  padding: 10px 18px;
+  font-size: 11px;
+  opacity: 0.6;
+  border-top: 1px solid var(--toolbar-glass-border);
+  background-color: var(--canvas-subtle);
+}
+
+.command-palette-footer kbd {
+  background-color: var(--toolbar-glass-border);
+  color: var(--text-color);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
 

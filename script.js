@@ -125,6 +125,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const clearFormattingConfirm = document.getElementById("clear-formatting-confirm");
   const clearFormattingCancel = document.getElementById("clear-formatting-cancel");
   const clearFormattingClose = document.getElementById("clear-formatting-close");
+  const commandPaletteModal = document.getElementById("command-palette-modal");
+  const commandPaletteInput = document.getElementById("command-palette-input");
+  const commandPaletteResults = document.getElementById("command-palette-results");
+  const commandPaletteBtn = document.getElementById("command-palette-btn");
+  const historyDropdownMenu = document.getElementById("history-dropdown-menu");
+  let vhe; // Virtual History Engine
   const findReplaceModal = document.getElementById("find-replace-modal");
   const findReplaceInput = document.getElementById("find-replace-input");
   const findReplaceWith = document.getElementById("find-replace-with");
@@ -1275,6 +1281,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
     markdownEditor.value = tab.content;
+    if (vhe) vhe.setActiveTab(tabId);
     restoreViewMode(tab.viewMode);
     renderMarkdown();
     requestAnimationFrame(function() {
@@ -1300,6 +1307,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const idx = tabs.findIndex(function(t) { return t.id === tabId; });
     if (idx === -1) return;
     tabs.splice(idx, 1);
+
+    if (vhe) {
+      delete vhe.stacksByTab[tabId];
+      localStorage.removeItem('vhe_history_' + tabId);
+    }
     if (tabs.length === 0) {
       // Auto-create new "Untitled" when last tab is deleted
       const newT = createTab('', nextUntitledTitle());
@@ -1465,6 +1477,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
     markdownEditor.value = activeTab.content;
+    if (vhe) vhe.setActiveTab(activeTabId);
     restoreViewMode(activeTab.viewMode);
     renderMarkdown();
     const editorPane = document.querySelector('.editor-pane');
@@ -2381,8 +2394,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function replaceEditorRange(start, end, replacement, selectStart, selectEnd) {
+  function replaceEditorRange(start, end, replacement, selectStart, selectEnd, actionType, description) {
     markdownEditor.focus();
+    if (vhe) {
+      vhe.flushBuffer();
+      vhe.tempAction = {
+        actionType: actionType || 'formatting',
+        description: description || 'Edit Element'
+      };
+    }
     markdownEditor.setRangeText(replacement, start, end, 'end');
     const nextStart = typeof selectStart === 'number' ? selectStart : start + replacement.length;
     const nextEnd = typeof selectEnd === 'number' ? selectEnd : nextStart;
@@ -4788,10 +4808,12 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function runMarkdownTool(action, button) {
-    if (action === 'undo' || action === 'redo') {
-      markdownEditor.focus();
-      document.execCommand(action);
-      markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+    if (action === 'undo') {
+      if (vhe) vhe.undo();
+      return;
+    }
+    if (action === 'redo') {
+      if (vhe) vhe.redo();
       return;
     }
 
@@ -5133,6 +5155,33 @@ document.addEventListener("DOMContentLoaded", function () {
       updateFindHighlights();
     }
     scheduleLineNumberUpdate();
+
+    // Custom VHE Delta tracking
+    if (vhe) {
+      const val = markdownEditor.value;
+      const start = markdownEditor.selectionStart;
+      const end = markdownEditor.selectionEnd;
+      if (val !== vhe.lastValue) {
+        const delta = computeDelta(vhe.lastValue, val, vhe.lastSelection, { start, end });
+        const act = vhe.tempAction || { actionType: 'typing', description: 'Typing' };
+        vhe.recordChange(act.actionType, act.description, delta.start, delta.oldText, delta.newText, vhe.lastSelection, { start, end });
+        vhe.tempAction = null;
+        vhe.lastValue = val;
+        vhe.lastSelection = { start, end };
+      }
+    }
+  });
+
+  markdownEditor.addEventListener("select", function() {
+    if (vhe) {
+      vhe.lastSelection = { start: markdownEditor.selectionStart, end: markdownEditor.selectionEnd };
+    }
+  });
+
+  markdownEditor.addEventListener("click", function() {
+    if (vhe) {
+      vhe.lastSelection = { start: markdownEditor.selectionStart, end: markdownEditor.selectionEnd };
+    }
   });
 
   initMarkdownFormatToolbar();
@@ -7420,6 +7469,675 @@ document.addEventListener("DOMContentLoaded", function () {
     wrapper.appendChild(list);
     githubImportTree.appendChild(wrapper);
   }
+
+  // ==========================================================================
+  // ENTERPRISE EDITOR MODERNIZATION: HISTORY ENGINE & AST CLEANUP PARSER
+  // ==========================================================================
+
+  // Utility to calculate minimal diff deltas between old and new strings
+  function computeDelta(oldStr, newStr, selBefore, selAfter) {
+    let start = 0;
+    while (start < oldStr.length && start < newStr.length && oldStr[start] === newStr[start]) {
+      start++;
+    }
+    let oldEnd = oldStr.length;
+    let newEnd = newStr.length;
+    while (oldEnd > start && newEnd > start && oldStr[oldEnd - 1] === newStr[newEnd - 1]) {
+      oldEnd--;
+      newEnd--;
+    }
+    const oldText = oldStr.slice(start, oldEnd);
+    const newText = newStr.slice(start, newEnd);
+    return { start, oldText, newText };
+  }
+
+  // AST-Safe Regex Markdown Formatting Stripper Engine
+  class MarkdownFormattingCleanup {
+    static clean(text) {
+      let cleanText = text;
+      // 1. Strip HTML tags (except code tags)
+      cleanText = cleanText.replace(/<(?!code|pre)[^>]*>/g, '');
+      // 2. Strip LaTeX math blocks
+      cleanText = cleanText.replace(/\$\$(.*?)\$\$/gs, '$1');
+      cleanText = cleanText.replace(/\$(.*?)\$/g, '$1');
+      // 3. Strip Code Blocks
+      cleanText = cleanText.replace(/^```[a-zA-Z0-9-]*\n([\s\S]*?)\n```/gm, '$1');
+      cleanText = cleanText.replace(/`([^`]+)`/g, '$1');
+      // 4. Strip Headings
+      cleanText = cleanText.replace(/^#{1,6}\s+(.*)$/gm, '$1');
+      // 5. Strip Bold, Italics, and Strikethrough
+      cleanText = cleanText.replace(/(\*\*|__)(.*?)\1/g, '$2');
+      cleanText = cleanText.replace(/(\*|_)(.*?)\1/g, '$2');
+      cleanText = cleanText.replace(/(~~)(.*?)\1/g, '$2');
+      // 6. Strip Blockquotes
+      cleanText = cleanText.replace(/^(\s*)>\s?(.*)$/gm, '$1$2');
+      // 7. Strip Lists
+      cleanText = cleanText.replace(/^(\s*)[-*+]\s+(.*)$/gm, '$1$2');
+      cleanText = cleanText.replace(/^(\s*)\d+\.\s+(.*)$/gm, '$1$2');
+      // 8. Strip Links & Images
+      cleanText = cleanText.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+      cleanText = cleanText.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
+      // 9. Strip Tables
+      cleanText = cleanText.replace(/^\|?([\s\S]+?)\|?$/gm, function(match) {
+        if (/^[|:\-\s]+$/.test(match)) return '';
+        return match.split('|').map(function(c) { return c.trim(); }).filter(function(c) { return c !== ''; }).join('\t');
+      });
+      cleanText = cleanText.replace(/\n{3,}/g, '\n\n');
+      return cleanText;
+    }
+
+    static cleanSelective(text, type) {
+      let cleanText = text;
+      if (type === 'bold') {
+        cleanText = cleanText.replace(/(\*\*|__)(.*?)\1/g, '$2');
+        cleanText = cleanText.replace(/(\*|_)(.*?)\1/g, '$2');
+        cleanText = cleanText.replace(/(~~)(.*?)\1/g, '$2');
+      } else if (type === 'heading') {
+        cleanText = cleanText.replace(/^#{1,6}\s+(.*)$/gm, '$1');
+      } else if (type === 'code') {
+        cleanText = cleanText.replace(/^```[a-zA-Z0-9-]*\n([\s\S]*?)\n```/gm, '$1');
+        cleanText = cleanText.replace(/`([^`]+)`/g, '$1');
+      }
+      return cleanText;
+    }
+  }
+
+  // Selective Clean formatting callback
+  function applyClearFormatting() {
+    const start = markdownEditor.selectionStart;
+    const end = markdownEditor.selectionEnd;
+    const hasSelection = start !== end;
+    const value = markdownEditor.value;
+
+    const targetText = hasSelection ? value.slice(start, end) : value;
+    const cleanedText = MarkdownFormattingCleanup.clean(targetText);
+
+    if (hasSelection) {
+      replaceEditorRange(start, end, cleanedText, start, start + cleanedText.length, 'cleanup', 'Clear All Formatting');
+    } else {
+      replaceEditorRange(0, value.length, cleanedText, 0, cleanedText.length, 'cleanup', 'Clear All Formatting');
+    }
+  }
+
+  // Custom Virtual History Engine
+  class VirtualHistoryEngine {
+    constructor(editor, onStackChange) {
+      this.editor = editor;
+      this.onStackChange = onStackChange;
+      this.stacksByTab = {}; // tabId -> { undoStack, redoStack, buffer }
+      this.activeTabId = null;
+      this.maxDepth = 200;
+      this.bufferTimer = null;
+      this.lastValue = editor.value;
+      this.lastSelection = { start: editor.selectionStart, end: editor.selectionEnd };
+      this.isUndoingRedoing = false;
+      this.tempAction = null;
+    }
+
+    setActiveTab(tabId) {
+      this.flushBuffer();
+      this.activeTabId = tabId;
+      if (!this.stacksByTab[tabId]) {
+        this.stacksByTab[tabId] = { undoStack: [], redoStack: [], buffer: null };
+        this.restoreHistory(tabId);
+      }
+      this.lastValue = this.editor.value;
+      this.lastSelection = { start: this.editor.selectionStart, end: this.editor.selectionEnd };
+      if (this.onStackChange) this.onStackChange();
+    }
+
+    get currentTabRecord() {
+      if (!this.activeTabId) return null;
+      if (!this.stacksByTab[this.activeTabId]) {
+        this.stacksByTab[this.activeTabId] = { undoStack: [], redoStack: [], buffer: null };
+      }
+      return this.stacksByTab[this.activeTabId];
+    }
+
+    recordChange(actionType, description, start, oldText, newText, selBefore, selAfter) {
+      if (this.isUndoingRedoing) return;
+
+      const record = this.currentTabRecord;
+      if (!record) return;
+
+      record.redoStack = [];
+
+      if (actionType === 'typing') {
+        if (record.buffer && this.canGroup(record.buffer, start, oldText, newText)) {
+          if (newText !== '') {
+            record.buffer.delta.newText += newText;
+          } else {
+            record.buffer.delta.oldText = oldText + record.buffer.delta.oldText;
+            record.buffer.delta.start = start;
+          }
+          record.buffer.selectionAfter = selAfter;
+          this.resetBufferTimer();
+          this.persistHistory(this.activeTabId);
+          if (this.onStackChange) this.onStackChange();
+          return;
+        } else {
+          this.flushBuffer();
+        }
+      } else {
+        this.flushBuffer();
+      }
+
+      const tx = {
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp: Date.now(),
+        actionType,
+        description,
+        delta: { start, oldText, newText },
+        selectionBefore: selBefore,
+        selectionAfter: selAfter
+      };
+
+      if (actionType === 'typing') {
+        record.buffer = tx;
+        this.resetBufferTimer();
+      } else {
+        record.undoStack.push(tx);
+        if (record.undoStack.length > this.maxDepth) {
+          record.undoStack.shift();
+        }
+      }
+
+      this.persistHistory(this.activeTabId);
+      if (this.onStackChange) this.onStackChange();
+    }
+
+    canGroup(buffer, start, oldText, newText) {
+      const isInsert = newText !== '' && oldText === '';
+      const isDelete = oldText !== '' && newText === '';
+      const prevIsInsert = buffer.delta.newText !== '' && buffer.delta.oldText === '';
+      const prevIsDelete = buffer.delta.oldText !== '' && buffer.delta.newText === '';
+
+      if (isInsert && prevIsInsert) {
+        const contiguous = start === (buffer.delta.start + buffer.delta.newText.length);
+        const hasWhitespace = /\s/.test(newText);
+        return contiguous && !hasWhitespace;
+      }
+
+      if (isDelete && prevIsDelete) {
+        const contiguous = start === buffer.delta.start - oldText.length;
+        const hasWhitespace = /\s/.test(oldText);
+        return contiguous && !hasWhitespace;
+      }
+
+      return false;
+    }
+
+    resetBufferTimer() {
+      clearTimeout(this.bufferTimer);
+      this.bufferTimer = setTimeout(() => this.flushBuffer(), 1500);
+    }
+
+    flushBuffer() {
+      const record = this.currentTabRecord;
+      if (!record || !record.buffer) return;
+      record.undoStack.push(record.buffer);
+      if (record.undoStack.length > this.maxDepth) {
+        record.undoStack.shift();
+      }
+      record.buffer = null;
+      clearTimeout(this.bufferTimer);
+      this.persistHistory(this.activeTabId);
+      if (this.onStackChange) this.onStackChange();
+    }
+
+    undo() {
+      this.flushBuffer();
+      const record = this.currentTabRecord;
+      if (!record || !record.undoStack.length) return;
+
+      const tx = record.undoStack.pop();
+      record.redoStack.push(tx);
+
+      this.isUndoingRedoing = true;
+      const val = this.editor.value;
+      const beforeVal = val.slice(0, tx.delta.start) + tx.delta.oldText + val.slice(tx.delta.start + tx.delta.newText.length);
+      this.editor.value = beforeVal;
+      this.editor.setSelectionRange(tx.selectionBefore.start, tx.selectionBefore.end);
+      
+      this.lastValue = beforeVal;
+      this.lastSelection = { start: tx.selectionBefore.start, end: tx.selectionBefore.end };
+      this.isUndoingRedoing = false;
+
+      this.editor.dispatchEvent(new Event('input', { bubbles: true }));
+
+      this.persistHistory(this.activeTabId);
+      if (this.onStackChange) this.onStackChange();
+    }
+
+    redo() {
+      const record = this.currentTabRecord;
+      if (!record || !record.redoStack.length) return;
+
+      const tx = record.redoStack.pop();
+      record.undoStack.push(tx);
+
+      this.isUndoingRedoing = true;
+      const val = this.editor.value;
+      const afterVal = val.slice(0, tx.delta.start) + tx.delta.newText + val.slice(tx.delta.start + tx.delta.oldText.length);
+      this.editor.value = afterVal;
+      this.editor.setSelectionRange(tx.selectionAfter.start, tx.selectionAfter.end);
+
+      this.lastValue = afterVal;
+      this.lastSelection = { start: tx.selectionAfter.start, end: tx.selectionAfter.end };
+      this.isUndoingRedoing = false;
+
+      this.editor.dispatchEvent(new Event('input', { bubbles: true }));
+
+      this.persistHistory(this.activeTabId);
+      if (this.onStackChange) this.onStackChange();
+    }
+
+    persistHistory(tabId) {
+      if (!tabId) return;
+      try {
+        const rec = this.stacksByTab[tabId];
+        if (!rec) return;
+        const payload = JSON.stringify({
+          undo: rec.undoStack,
+          redo: rec.redoStack
+        });
+        localStorage.setItem('vhe_history_' + tabId, payload);
+      } catch (e) {
+        console.warn("Storage limit exceeded, pruning history of tab " + tabId);
+        if (this.stacksByTab[tabId]) {
+          this.stacksByTab[tabId].undoStack.splice(0, 100);
+        }
+      }
+    }
+
+    restoreHistory(tabId) {
+      if (!tabId) return;
+      try {
+        const raw = localStorage.getItem('vhe_history_' + tabId);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (this.stacksByTab[tabId]) {
+          this.stacksByTab[tabId].undoStack = data.undo || [];
+          this.stacksByTab[tabId].redoStack = data.redo || [];
+        }
+      } catch (e) {
+        console.error("Failed to restore history", e);
+      }
+    }
+  }
+
+  // Update Undo/Redo button states and recent list dropdown menu
+  function updateHistoryUI() {
+    const undoBtns = document.querySelectorAll('[data-md-action="undo"]');
+    const redoBtns = document.querySelectorAll('[data-md-action="redo"]');
+    
+    const record = vhe ? vhe.currentTabRecord : null;
+    const hasUndo = record && record.undoStack.length > 0;
+    const hasRedo = record && record.redoStack.length > 0;
+
+    undoBtns.forEach(btn => {
+      btn.disabled = !hasUndo;
+      btn.classList.toggle('disabled', !hasUndo);
+    });
+    redoBtns.forEach(btn => {
+      btn.disabled = !hasRedo;
+      btn.classList.toggle('disabled', !hasRedo);
+    });
+
+    if (historyDropdownMenu) {
+      historyDropdownMenu.textContent = '';
+      if (!record || (!record.undoStack.length && !record.redoStack.length)) {
+        const item = document.createElement('li');
+        item.innerHTML = '<span class="dropdown-item-text text-muted">No history yet</span>';
+        historyDropdownMenu.appendChild(item);
+      } else {
+        const itemsList = [];
+        record.undoStack.slice(-15).forEach((tx, idx) => {
+          itemsList.push({ tx, index: record.undoStack.indexOf(tx) });
+        });
+        
+        itemsList.reverse(); // Newest first
+
+        itemsList.forEach(itemInfo => {
+          const li = document.createElement('li');
+          const a = document.createElement('a');
+          a.className = 'dropdown-item d-flex align-items-center justify-content-between';
+          a.href = '#';
+          
+          let iconClass = 'bi-pencil';
+          if (itemInfo.tx.actionType === 'formatting') iconClass = 'bi-type';
+          else if (itemInfo.tx.actionType === 'find-replace') iconClass = 'bi-search';
+          else if (itemInfo.tx.actionType === 'cleanup') iconClass = 'bi-eraser';
+          else if (itemInfo.tx.actionType === 'table-insert') iconClass = 'bi-table';
+
+          a.innerHTML = `<span><i class="bi ${iconClass} me-2 text-primary"></i>${escapeHtml(itemInfo.tx.description)}</span><span class="text-muted" style="font-size: 11px;">Undo</span>`;
+          
+          a.addEventListener('click', function(e) {
+            e.preventDefault();
+            vhe.flushBuffer();
+            while (record.undoStack.length > itemInfo.index + 1) {
+              vhe.undo();
+            }
+            vhe.undo();
+          });
+          li.appendChild(a);
+          historyDropdownMenu.appendChild(li);
+        });
+      }
+    }
+  }
+
+  // ==========================================================================
+  // COMMAND PALETTE ACTIONS & REGISTRIES
+  // ==========================================================================
+
+  const COMMANDS = [
+    { id: 'undo', name: 'Undo Last Edit', category: 'Edit', icon: 'bi-arrow-counterclockwise', shortcut: 'Ctrl+Z' },
+    { id: 'redo', name: 'Redo Last Edit', category: 'Edit', icon: 'bi-arrow-clockwise', shortcut: 'Ctrl+Shift+Z' },
+    { id: 'clear-formatting', name: 'Clear All Markdown Formatting', category: 'Cleanup', icon: 'bi-trash', shortcut: 'Ctrl+Shift+E' },
+    { id: 'selective-bold', name: 'Clear Bold / Italic Styles', category: 'Cleanup', icon: 'bi-type-bold' },
+    { id: 'selective-heading', name: 'Clear Heading Levels', category: 'Cleanup', icon: 'bi-hash' },
+    { id: 'selective-code', name: 'Clear Code Blocks', category: 'Cleanup', icon: 'bi-code' },
+    { id: 'bold', name: 'Format Bold Text', category: 'Styling', icon: 'bi-type-bold', shortcut: 'Ctrl+B' },
+    { id: 'italic', name: 'Format Italic Text', category: 'Styling', icon: 'bi-type-italic', shortcut: 'Ctrl+I' },
+    { id: 'strike', name: 'Format Strikethrough Text', category: 'Styling', icon: 'bi-type-strikethrough' },
+    { id: 'quote', name: 'Insert Blockquote', category: 'Layout', icon: 'bi-quote' },
+    { id: 'title-case', name: 'Change Case: Title Case', category: 'Text', icon: 'Aa' },
+    { id: 'uppercase', name: 'Change Case: UPPERCASE', category: 'Text', icon: 'A' },
+    { id: 'lowercase', name: 'Change Case: lowercase', category: 'Text', icon: 'a' },
+    { id: 'unordered-list', name: 'Insert Bulleted List', category: 'Lists', icon: 'bi-list-ul' },
+    { id: 'ordered-list', name: 'Insert Numbered List', category: 'Lists', icon: 'bi-list-ol' },
+    { id: 'table', name: 'Insert Markdown Table', category: 'Elements', icon: 'bi-table', shortcut: 'Ctrl+Shift+T' },
+    { id: 'link', name: 'Insert Markdown Link', category: 'Elements', icon: 'bi-link-45deg' },
+    { id: 'image', name: 'Insert Markdown Image', category: 'Elements', icon: 'bi-card-image' },
+    { id: 'code-block', name: 'Insert Code Block', category: 'Elements', icon: 'bi-file-code' },
+    { id: 'terminal-block', name: 'Insert Terminal bash block', category: 'Elements', icon: 'bi-terminal' },
+    { id: 'date-time', name: 'Insert Current Date & Time', category: 'Elements', icon: 'bi-clock' },
+    { id: 'alert', name: 'Insert Alert Block', category: 'Elements', icon: 'bi-newspaper' },
+    { id: 'fullscreen', name: 'Toggle Fullscreen Mode', category: 'Workspace', icon: 'bi-arrows-fullscreen' },
+    { id: 'find', name: 'Find & Replace Text', category: 'Workspace', icon: 'bi-search', shortcut: 'Ctrl+F' },
+    { id: 'help', name: 'Open Markdown Help Guidelines', category: 'Help', icon: 'bi-question-circle' },
+    { id: 'info', name: 'About Markdown Viewer', category: 'Help', icon: 'bi-info-circle' }
+  ];
+
+  let activePaletteIndex = 0;
+  let paletteFilteredCommands = [];
+
+  function openCommandPalette() {
+    if (!commandPaletteModal) return;
+    activePaletteIndex = 0;
+    commandPaletteInput.value = '';
+    commandPaletteModal.style.display = 'flex';
+    openAppModal(commandPaletteModal, {
+      focusTarget: commandPaletteInput,
+      onClose: closeCommandPalette
+    });
+    renderPaletteMatches('');
+  }
+
+  function closeCommandPalette() {
+    if (!commandPaletteModal) return;
+    closeAppModal(commandPaletteModal);
+    markdownEditor.focus();
+  }
+
+  function renderPaletteMatches(query) {
+    if (!commandPaletteResults) return;
+    commandPaletteResults.textContent = '';
+    
+    const q = query.toLowerCase().trim();
+    paletteFilteredCommands = COMMANDS.filter(function(cmd) {
+      return cmd.name.toLowerCase().indexOf(q) !== -1 || cmd.category.toLowerCase().indexOf(q) !== -1;
+    });
+
+    if (paletteFilteredCommands.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'p-3 text-center text-muted';
+      empty.style.fontSize = '14px';
+      empty.textContent = 'No matching commands found';
+      commandPaletteResults.appendChild(empty);
+      return;
+    }
+
+    activePaletteIndex = Math.max(0, Math.min(activePaletteIndex, paletteFilteredCommands.length - 1));
+
+    paletteFilteredCommands.forEach(function(cmd, idx) {
+      const item = document.createElement('div');
+      item.className = 'command-palette-item' + (idx === activePaletteIndex ? ' focused' : '');
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', idx === activePaletteIndex ? 'true' : 'false');
+      
+      const left = document.createElement('div');
+      left.className = 'command-palette-item-left';
+      
+      let iconHTML = '';
+      if (cmd.icon.indexOf('bi-') === 0) {
+        iconHTML = `<i class="bi ${cmd.icon}"></i>`;
+      } else {
+        iconHTML = `<span style="font-weight: 600; font-family: monospace; font-size: 14px; display: inline-block; width: 16px; text-align: center;">${cmd.icon}</span>`;
+      }
+      
+      left.innerHTML = `${iconHTML}<span>${escapeHtml(cmd.name)} <span class="text-muted" style="font-size: 11px; margin-left: 6px;">(${escapeHtml(cmd.category)})</span></span>`;
+      item.appendChild(left);
+
+      if (cmd.shortcut) {
+        const span = document.createElement('span');
+        span.className = 'command-palette-shortcut';
+        span.textContent = cmd.shortcut;
+        item.appendChild(span);
+      }
+
+      item.addEventListener('click', function() {
+        executePaletteCommand(cmd.id);
+      });
+
+      commandPaletteResults.appendChild(item);
+    });
+
+    const focused = commandPaletteResults.querySelector('.command-palette-item.focused');
+    if (focused) {
+      focused.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function executePaletteCommand(id) {
+    closeCommandPalette();
+    
+    if (id === 'undo') {
+      if (vhe) vhe.undo();
+    } else if (id === 'redo') {
+      if (vhe) vhe.redo();
+    } else if (id === 'clear-formatting') {
+      openClearFormattingModal();
+    } else if (id === 'selective-bold' || id === 'selective-heading' || id === 'selective-code') {
+      const start = markdownEditor.selectionStart;
+      const end = markdownEditor.selectionEnd;
+      const hasSel = start !== end;
+      const text = hasSel ? markdownEditor.value.slice(start, end) : markdownEditor.value;
+      let cleanType = '';
+      if (id === 'selective-bold') cleanType = 'bold';
+      else if (id === 'selective-heading') cleanType = 'heading';
+      else if (id === 'selective-code') cleanType = 'code';
+      
+      const cleaned = MarkdownFormattingCleanup.cleanSelective(text, cleanType);
+      
+      if (hasSel) {
+        replaceEditorRange(start, end, cleaned, start, start + cleaned.length, 'cleanup', 'Clear Selective Formatting');
+      } else {
+        replaceEditorRange(0, markdownEditor.value.length, cleaned, 0, cleaned.length, 'cleanup', 'Clear Selective Formatting');
+      }
+    } else {
+      const button = document.querySelector(`[data-md-action="${id}"]`);
+      runMarkdownTool(id, button);
+    }
+  }
+
+  // Keyboard navigation & accessibility roving tab index in the formatting toolbar
+  function initRovingTabindex() {
+    const btns = Array.from(document.querySelectorAll('.markdown-tool-btn, .markdown-format-toolbar .dropdown-toggle'));
+    if (btns.length === 0) return;
+    
+    btns.forEach(function(btn, idx) {
+      btn.setAttribute('tabindex', idx === 0 ? '0' : '-1');
+    });
+
+    btns.forEach(function(btn, idx) {
+      btn.addEventListener('keydown', function(e) {
+        let targetIdx = -1;
+        if (e.key === 'ArrowRight') {
+          targetIdx = (idx + 1) % btns.length;
+        } else if (e.key === 'ArrowLeft') {
+          targetIdx = (idx - 1 + btns.length) % btns.length;
+        } else {
+          return;
+        }
+        e.preventDefault();
+        btns.forEach(function(b) { b.setAttribute('tabindex', '-1'); });
+        btns[targetIdx].setAttribute('tabindex', '0');
+        btns[targetIdx].focus();
+      });
+    });
+  }
+
+  // Intercept keyboard shortcuts
+  window.addEventListener('keydown', function(e) {
+    // Intercept Ctrl+Shift+P / Cmd+Shift+P for Command Palette
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      openCommandPalette();
+      return;
+    }
+    // Intercept Ctrl+Z / Cmd+Z for VHE Undo
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (vhe) vhe.redo();
+      } else {
+        if (vhe) vhe.undo();
+      }
+      return;
+    }
+    // Intercept Ctrl+Y / Cmd+Y for VHE Redo
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      if (vhe) vhe.redo();
+      return;
+    }
+  });
+
+  // Wire up Command Palette Event Listeners
+  if (commandPaletteBtn) {
+    commandPaletteBtn.addEventListener('click', openCommandPalette);
+  }
+  if (commandPaletteInput) {
+    commandPaletteInput.addEventListener('input', function() {
+      renderPaletteMatches(commandPaletteInput.value);
+    });
+    commandPaletteInput.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activePaletteIndex = (activePaletteIndex + 1) % paletteFilteredCommands.length;
+        renderPaletteMatches(commandPaletteInput.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activePaletteIndex = (activePaletteIndex - 1 + paletteFilteredCommands.length) % paletteFilteredCommands.length;
+        renderPaletteMatches(commandPaletteInput.value);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (paletteFilteredCommands[activePaletteIndex]) {
+          executePaletteCommand(paletteFilteredCommands[activePaletteIndex].id);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCommandPalette();
+      }
+    });
+  }
+
+  // Wire up Delegated dropdown listeners
+  document.addEventListener('click', function(e) {
+    // Heading selector items
+    const headingItem = e.target.closest('.heading-select-item');
+    if (headingItem) {
+      e.preventDefault();
+      const level = parseInt(headingItem.getAttribute('data-md-level') || '1', 10);
+      const marker = '#'.repeat(Math.max(1, Math.min(6, level))) + ' ';
+      transformEditorLines(function(line) { 
+        return marker + line.replace(/^#{1,6}\s+/, ''); 
+      });
+      if (vhe) {
+        vhe.flushBuffer();
+        vhe.tempAction = { actionType: 'formatting', description: 'Heading ' + level };
+      }
+      return;
+    }
+
+    // Change case items
+    const caseItem = e.target.closest('.case-select-item');
+    if (caseItem) {
+      e.preventDefault();
+      const act = caseItem.getAttribute('data-md-action');
+      if (act === 'title-case') {
+        transformSelectionOrCurrentLine(toTitleCase);
+      } else if (act === 'uppercase') {
+        transformSelectionOrCurrentLine(function(text) { return text.toUpperCase(); });
+      } else if (act === 'lowercase') {
+        transformSelectionOrCurrentLine(function(text) { return text.toLowerCase(); });
+      }
+      return;
+    }
+
+    // More inserts items
+    const insertItem = e.target.closest('.insert-select-item');
+    if (insertItem) {
+      e.preventDefault();
+      const act = insertItem.getAttribute('data-md-action');
+      runMarkdownTool(act, null);
+      return;
+    }
+
+    // Cleanup items
+    const cleanupItem = e.target.closest('.cleanup-select-item');
+    if (cleanupItem) {
+      e.preventDefault();
+      const type = cleanupItem.getAttribute('data-cleanup-type');
+      if (type === 'clear-formatting') {
+        openClearFormattingModal();
+      } else {
+        const start = markdownEditor.selectionStart;
+        const end = markdownEditor.selectionEnd;
+        const hasSel = start !== end;
+        const text = hasSel ? markdownEditor.value.slice(start, end) : markdownEditor.value;
+        let cleanType = '';
+        let desc = 'Clear Selective Formatting';
+        if (type === 'selective-bold') {
+          cleanType = 'bold';
+          desc = 'Clear Bold/Italics';
+        } else if (type === 'selective-heading') {
+          cleanType = 'heading';
+          desc = 'Clear Headings';
+        } else if (type === 'selective-code') {
+          cleanType = 'code';
+          desc = 'Clear Code Blocks';
+        }
+        
+        const cleaned = MarkdownFormattingCleanup.cleanSelective(text, cleanType);
+        
+        if (hasSel) {
+          replaceEditorRange(start, end, cleaned, start, start + cleaned.length, 'cleanup', desc);
+        } else {
+          replaceEditorRange(0, markdownEditor.value.length, cleaned, 0, cleaned.length, 'cleanup', desc);
+        }
+      }
+      return;
+    }
+  });
+
+  // Instantiate the Virtual History Engine
+  vhe = new VirtualHistoryEngine(markdownEditor, updateHistoryUI);
+
+  // Initialize Roving Tabindex for formatting toolbar
+  initRovingTabindex();
 
   // Run detection
   detectAndInitLanguage();
