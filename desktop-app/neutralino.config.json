@@ -21,7 +21,14 @@
     "os.open",
     "os.setTray",
     "filesystem.readFile",
-    "filesystem.writeFile"
+    "filesystem.writeFile",
+    "extensions.*"
+  ],
+  "extensions": [
+    {
+      "id": "com.markdownviewer.pdfexporter",
+      "command": "node extensions/pdf-exporter/index.js"
+    }
   ],
   "globalVariables": {},
   "modes": {

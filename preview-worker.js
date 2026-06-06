@@ -343,7 +343,13 @@ function configureMarked() {
 
 function ensureLibraries(urls) {
   if (!librariesLoaded) {
-    importScripts(urls.marked, urls.highlight);
+    const scripts = [];
+    if (urls.marked) scripts.push(urls.marked);
+    if (urls.highlight) scripts.push(urls.highlight);
+    if (urls.purify) scripts.push(urls.purify);
+    if (scripts.length > 0) {
+      importScripts(...scripts);
+    }
     librariesLoaded = true;
   }
   configureMarked();
@@ -461,6 +467,34 @@ function renderSegmentedMarkdown(markdown, options) {
 
 self.onmessage = function(event) {
   const data = event.data || {};
+  if (data.type === "render-full") {
+    try {
+      const options = data.options || {};
+      ensureLibraries(options.libraryUrls || {});
+      mermaidIdCounter = 0;
+      const html = marked.parse(data.markdown || "");
+      let sanitized = html;
+      if (typeof DOMPurify !== "undefined") {
+        sanitized = DOMPurify.sanitize(html, {
+          ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input'],
+          ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code']
+        });
+      }
+      self.postMessage({
+        type: "render-full-result",
+        requestId: data.requestId,
+        html: sanitized
+      });
+    } catch (error) {
+      self.postMessage({
+        type: "render-full-error",
+        requestId: data.requestId,
+        error: error && error.message ? error.message : "Full worker render failed."
+      });
+    }
+    return;
+  }
+
   if (data.type !== "render") return;
 
   try {

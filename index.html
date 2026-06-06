@@ -809,6 +809,45 @@
           </div>
         </div>
 
+        <!-- PDF Export Modal -->
+        <div id="pdf-export-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="pdf-export-modal-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide modal-box">
+            <div class="modal-header">
+              <p id="pdf-export-modal-title" class="reset-modal-message">PDF Export Settings</p>
+              <button type="button" class="modal-close-btn" id="pdf-export-modal-close-icon" aria-label="Close export dialog">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="share-modal-description">Select your preferred PDF export engine:</p>
+              <div class="share-mode-cards">
+                <label class="share-mode-card is-selected" id="pdf-card-print" for="pdf-engine-print">
+                  <input type="radio" id="pdf-engine-print" name="pdf-engine" value="print" checked />
+                  <span class="share-card-icon"><i class="bi bi-printer"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Browser Print (Recommended)</span>
+                    <span class="share-card-desc">Searchable vector text, hyperlinks, vector SVGs, and browser-native pagination.</span>
+                  </span>
+                  <span class="share-card-check"><i class="bi bi-check-lg"></i></span>
+                </label>
+                <label class="share-mode-card" id="pdf-card-legacy" for="pdf-engine-legacy">
+                  <input type="radio" id="pdf-engine-legacy" name="pdf-engine" value="legacy" />
+                  <span class="share-card-icon"><i class="bi bi-image"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Legacy Raster PDF</span>
+                    <span class="share-card-desc">Slices screenshots of the rendered page. Recommended only for offline/compatibility fallback.</span>
+                  </span>
+                  <span class="share-card-check"><i class="bi bi-check-lg"></i></span>
+                </label>
+              </div>
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="pdf-export-modal-close">Cancel</button>
+              <button class="reset-modal-btn reset-modal-confirm" id="pdf-export-modal-confirm">Export</button>
+            </div>
+          </div>
+        </div>
+
         <!-- GitHub Import Modal -->
         <div id="github-import-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="github-import-title" aria-hidden="true" style="display:none;">
           <div class="reset-modal-box">
