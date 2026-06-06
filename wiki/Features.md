@@ -182,7 +182,7 @@ Saves the complete rendered HTML including all styles inline, producing a standa
 
 ### PDF (`.pdf`)
 
-Generates a PDF of the current preview using **jsPDF** + **html2canvas**. The export pipeline re-renders Mermaid diagrams and MathJax equations into the PDF output, applies smart page-break analysis, and scales oversized elements to fit the page. Complex layouts with wide code blocks or large diagrams may benefit from using the browser's built-in **Print → Save as PDF** instead.
+Builds an isolated export document, waits for images, fonts, Mermaid diagrams, and MathJax equations, then uses the browser's native paged-media engine. Output retains searchable text, links, vector-capable diagrams, and print-specific fragmentation rules for headings, graphics, code blocks, and tables.
 
 ---
 

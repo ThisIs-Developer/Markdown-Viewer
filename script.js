@@ -29,8 +29,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const CDN = {
     mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
     mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
-    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-    html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
     joypixels: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js',
     joypixels_css: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css'
@@ -6780,54 +6778,10 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // ============================================
-  // Page-Break Detection Functions (Story 1.1)
+  // Standards-based PDF print export
   // ============================================
 
-  // Page configuration constants for A4 PDF export
-  const PAGE_CONFIG = {
-    a4Width: 210,           // mm
-    a4Height: 297,          // mm
-    margin: 15,             // mm each side
-    contentWidth: 180,      // 210 - 30 (margins)
-    contentHeight: 267,     // 297 - 30 (margins)
-    windowWidth: 1000,      // html2canvas config
-    scale: 2                // html2canvas scale factor
-  };
-
-  const PDF_EXPORT_DEBUG = false;
   let activePdfExport = null;
-
-  class PdfExportCancelledError extends Error {
-    constructor() {
-      super("PDF generation cancelled.");
-      this.name = "PdfExportCancelledError";
-    }
-  }
-
-  function logPdfExportDebug(...args) {
-    if (PDF_EXPORT_DEBUG) console.log(...args);
-  }
-
-  function throwIfPdfExportAborted(signal) {
-    if (signal && signal.aborted) {
-      throw new PdfExportCancelledError();
-    }
-  }
-
-  function runPdfAbortable(state, promise) {
-    throwIfPdfExportAborted(state.signal);
-
-    return new Promise((resolve, reject) => {
-      const handleAbort = () => reject(new PdfExportCancelledError());
-      state.signal.addEventListener("abort", handleAbort, { once: true });
-
-      Promise.resolve(promise)
-        .then(resolve, reject)
-        .finally(() => {
-          state.signal.removeEventListener("abort", handleAbort);
-        });
-    });
-  }
 
   function formatPdfExportEta(ms) {
     if (!Number.isFinite(ms) || ms <= 0) return "Calculating...";
@@ -6845,34 +6799,23 @@ document.addEventListener("DOMContentLoaded", function () {
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-labelledby", "pdf-progress-title");
-
     overlay.innerHTML = `
       <div class="pdf-progress-modal">
         <div class="pdf-progress-header">
-          <p class="pdf-progress-title" id="pdf-progress-title">Generating PDF</p>
-          <button type="button" class="modal-close-btn pdf-progress-cancel-icon" aria-label="Cancel PDF generation" title="Cancel PDF generation">
+          <p class="pdf-progress-title" id="pdf-progress-title">Preparing PDF</p>
+          <button type="button" class="modal-close-btn pdf-progress-cancel-icon" aria-label="Cancel PDF export" title="Cancel PDF export">
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
         <div class="pdf-progress-percent">0%</div>
-        <div class="pdf-progress-track"
-             role="progressbar"
-             aria-label="PDF generation progress"
-             aria-valuemin="0"
-             aria-valuemax="100"
-             aria-valuenow="0">
+        <div class="pdf-progress-track" role="progressbar" aria-label="PDF export progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <div class="pdf-progress-fill"></div>
         </div>
         <div class="pdf-progress-details">
-          <div class="pdf-progress-detail">
-            <span>Current Step</span>
-            <strong class="pdf-progress-step">Preparing</strong>
-          </div>
-          <div class="pdf-progress-detail">
-            <span>Estimated remaining</span>
-            <strong class="pdf-progress-eta">Calculating...</strong>
-          </div>
+          <div class="pdf-progress-detail"><span>Current Step</span><strong class="pdf-progress-step">Preparing</strong></div>
+          <div class="pdf-progress-detail"><span>Estimated remaining</span><strong class="pdf-progress-eta">Calculating...</strong></div>
         </div>
+        <p class="pdf-progress-hint">The system print dialog will open. Choose “Save as PDF” to create the file.</p>
         <div class="pdf-progress-actions">
           <button type="button" class="reset-modal-btn reset-modal-cancel pdf-progress-cancel">Cancel</button>
         </div>
@@ -6893,11 +6836,7 @@ document.addEventListener("DOMContentLoaded", function () {
       tempElement: null,
       cleanedUp: false
     };
-
-    state.cancelButtons.forEach(button => {
-      button.addEventListener("click", () => cancelPdfExport(state));
-    });
-
+    state.cancelButtons.forEach(button => button.addEventListener("click", () => cancelPdfExport(state)));
     return state;
   }
 
@@ -6908,29 +6847,23 @@ document.addEventListener("DOMContentLoaded", function () {
     state.percentText.textContent = `${nextPercent}%`;
     state.progressBar.setAttribute("aria-valuenow", String(nextPercent));
     state.stepText.textContent = step;
-
     const elapsed = performance.now() - state.startedAt;
-    const eta = nextPercent > 5 && nextPercent < 100
-      ? (elapsed / nextPercent) * (100 - nextPercent)
-      : 0;
+    const eta = nextPercent > 5 && nextPercent < 100 ? (elapsed / nextPercent) * (100 - nextPercent) : 0;
     state.etaText.textContent = nextPercent >= 100 ? "Complete" : formatPdfExportEta(eta);
   }
 
   function setPdfExportTriggersBusy(state, busy) {
-    const triggers = [exportPdf, mobileExportPdf].filter(Boolean);
-    triggers.forEach((trigger, index) => {
+    [exportPdf, mobileExportPdf].filter(Boolean).forEach((trigger, index) => {
       if (busy) {
         state.triggerHtml.set(trigger, trigger.innerHTML);
         trigger.innerHTML = index === 0
-          ? '<i class="bi bi-hourglass-split"></i> Generating...'
-          : '<i class="bi bi-hourglass-split me-2"></i> Generating PDF...';
+          ? '<i class="bi bi-hourglass-split"></i> Preparing...'
+          : '<i class="bi bi-hourglass-split me-2"></i> Preparing PDF...';
         trigger.classList.add("pdf-export-loading");
         trigger.setAttribute("aria-disabled", "true");
         trigger.disabled = true;
       } else {
-        if (state.triggerHtml.has(trigger)) {
-          trigger.innerHTML = state.triggerHtml.get(trigger);
-        }
+        if (state.triggerHtml.has(trigger)) trigger.innerHTML = state.triggerHtml.get(trigger);
         trigger.classList.remove("pdf-export-loading");
         trigger.removeAttribute("aria-disabled");
         trigger.disabled = false;
@@ -6941,18 +6874,10 @@ document.addEventListener("DOMContentLoaded", function () {
   function cleanupPdfExport(state) {
     if (!state || state.cleanedUp) return;
     state.cleanedUp = true;
-
-    if (state.tempElement && state.tempElement.parentNode) {
-      state.tempElement.parentNode.removeChild(state.tempElement);
-    }
-    if (state.overlay && state.overlay.parentNode) {
-      state.overlay.parentNode.removeChild(state.overlay);
-    }
-
+    if (state.tempElement && state.tempElement.parentNode) state.tempElement.parentNode.removeChild(state.tempElement);
+    if (state.overlay && state.overlay.parentNode) state.overlay.parentNode.removeChild(state.overlay);
     setPdfExportTriggersBusy(state, false);
-    if (activePdfExport === state) {
-      activePdfExport = null;
-    }
+    if (activePdfExport === state) activePdfExport = null;
   }
 
   function cancelPdfExport(state) {
@@ -6961,506 +6886,67 @@ document.addEventListener("DOMContentLoaded", function () {
     cleanupPdfExport(state);
   }
 
-  async function waitForPdfFrame(state) {
+  function throwIfPdfExportAborted(signal) {
+    if (signal && signal.aborted) throw new PdfPrintEngine.PdfExportCancelledError();
+  }
+
+  async function runPdfAbortable(state, promise) {
     throwIfPdfExportAborted(state.signal);
-    await new Promise(resolve => requestAnimationFrame(resolve));
-    throwIfPdfExportAborted(state.signal);
+    return new Promise((resolve, reject) => {
+      const handleAbort = () => reject(new PdfPrintEngine.PdfExportCancelledError());
+      state.signal.addEventListener("abort", handleAbort, { once: true });
+      Promise.resolve(promise).then(resolve, reject).finally(() => state.signal.removeEventListener("abort", handleAbort));
+    });
   }
 
   function markdownLikelyContainsMath(markdown) {
     return /(^|[^\\])\$\$|\\\[|\\\(|(^|[^\\])\$[^$\n]+\$/.test(markdown);
   }
 
-  function choosePdfCanvasScale(element) {
-    const pixelArea = element.offsetWidth * element.scrollHeight;
-    if (pixelArea > 14000000) return 1.25;
-    if (pixelArea > 8000000) return 1.5;
-    return PAGE_CONFIG.scale;
-  }
-
-  function readPixelStyle(element, propertyName) {
-    const value = window.getComputedStyle(element).getPropertyValue(propertyName);
-    return parseFloat(value) || 0;
-  }
-
-  function fitExportElementToContent(element) {
-    if (!element) return false;
-
-    const overflow = element.scrollWidth - element.clientWidth;
-    if (overflow <= 1) return false;
-
-    const paddingLeft = readPixelStyle(element, 'padding-left');
-    const paddingRight = readPixelStyle(element, 'padding-right');
-    const borderLeft = readPixelStyle(element, 'border-left-width');
-    const borderRight = readPixelStyle(element, 'border-right-width');
-    const boxSizing = window.getComputedStyle(element).boxSizing;
-
-    const requiredWidth = boxSizing === 'border-box'
-      ? Math.ceil(element.scrollWidth + paddingRight + borderLeft + borderRight)
-      : Math.ceil(element.scrollWidth - paddingLeft + paddingRight);
-
-    element.style.width = `${requiredWidth}px`;
-    return true;
-  }
-
-  /**
-   * Task 1: Identifies all graphic elements that may need page-break handling
-   * @param {HTMLElement} container - The container element to search within
-   * @returns {Array} Array of {element, type} objects
-   */
-  function identifyGraphicElements(container) {
-    const graphics = [];
-
-    // Query all targeting elements in precise DOM layout flow order
-    container.querySelectorAll('img, svg, pre, table').forEach(el => {
-      let type = 'img';
-      const tag = el.tagName.toLowerCase();
-      if (tag === 'svg') type = 'svg';
-      else if (tag === 'pre') type = 'pre';
-      else if (tag === 'table') type = 'table';
-      
-      graphics.push({ element: el, type: type });
-    });
-
-    return graphics;
-  }
-
-  /**
-   * Task 2: Calculates element positions relative to the container
-   * @param {Array} elements - Array of {element, type} objects
-   * @param {HTMLElement} container - The container element
-   * @returns {Array} Array with position data added
-   */
-  function calculateElementPositions(elements, container) {
-    const containerRect = container.getBoundingClientRect();
-
-    return elements.map(item => {
-      const rect = item.element.getBoundingClientRect();
-      const top = rect.top - containerRect.top;
-      const height = rect.height;
-      const bottom = top + height;
-
-      return {
-        element: item.element,
-        type: item.type,
-        top: top,
-        height: height,
-        bottom: bottom
-      };
-    });
-  }
-
-  /**
-   * Task 3: Calculates page boundary positions
-   * @param {number} totalHeight - Total height of content in pixels
-   * @param {number} elementWidth - Actual width of the rendered element in pixels
-   * @param {Object} pageConfig - Page configuration object
-   * @returns {Array} Array of y-coordinates where pages end
-   */
-  function calculatePageBoundaries(totalHeight, elementWidth, pageConfig) {
-    // Calculate pixel height per page based on the element's actual width
-    // This must match how PDF pagination will split the canvas
-    // The aspect ratio of content area determines page height relative to width
-    const aspectRatio = pageConfig.contentHeight / pageConfig.contentWidth;
-    const pageHeightPx = elementWidth * aspectRatio;
-
-    const boundaries = [];
-    let y = pageHeightPx;
-
-    while (y < totalHeight) {
-      boundaries.push(y);
-      y += pageHeightPx;
-    }
-
-    return { boundaries, pageHeightPx };
-  }
-
-  /**
-   * Task 4: Detects which elements would be split across page boundaries
-   * @param {Array} elements - Array of elements with position data
-   * @param {Array} pageBoundaries - Array of page break y-coordinates
-   * @returns {Array} Array of split elements with additional split info
-   */
-  function detectSplitElements(elements, pageBoundaries) {
-    // Handle edge case: empty elements array
-    if (!elements || elements.length === 0) {
-      return [];
-    }
-
-    // Handle edge case: no page boundaries (single page)
-    if (!pageBoundaries || pageBoundaries.length === 0) {
-      return [];
-    }
-
-    const splitElements = [];
-
-    for (const item of elements) {
-      // Find which page the element starts on
-      let startPage = 0;
-      for (let i = 0; i < pageBoundaries.length; i++) {
-        if (item.top >= pageBoundaries[i]) {
-          startPage = i + 1;
-        } else {
-          break;
-        }
+  function configureMathJaxForPdf() {
+    if (window.MathJax) return;
+    window.MathJax = {
+      loader: { load: ['[tex]/ams', '[tex]/boldsymbol'] },
+      options: { a11y: { inTabOrder: false } },
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        packages: { '[+]': ['ams', 'boldsymbol'] }
       }
-
-      // Find which page the element ends on
-      let endPage = 0;
-      for (let i = 0; i < pageBoundaries.length; i++) {
-        if (item.bottom > pageBoundaries[i]) {
-          endPage = i + 1;
-        } else {
-          break;
-        }
-      }
-
-      // Element is split if it spans multiple pages
-      if (endPage > startPage) {
-        // Calculate overflow amount (how much crosses into next page)
-        const boundaryY = pageBoundaries[startPage] || pageBoundaries[0];
-        const overflowAmount = item.bottom - boundaryY;
-
-        splitElements.push({
-          element: item.element,
-          type: item.type,
-          top: item.top,
-          height: item.height,
-          splitPageIndex: startPage,
-          overflowAmount: overflowAmount
-        });
-      }
-    }
-
-    return splitElements;
+    };
   }
 
-  /**
-   * Task 5: Main entry point for analyzing graphics for page breaks
-   * @param {HTMLElement} tempElement - The rendered content container
-   * @returns {Object} Analysis result with totalElements, splitElements, pageCount
-   */
-  function analyzeGraphicsForPageBreaks(tempElement, signal) {
-    try {
-      throwIfPdfExportAborted(signal);
-
-      // Step 1: Identify all graphic elements
-      const graphics = identifyGraphicElements(tempElement);
-      logPdfExportDebug('Step 1 - Graphics found:', graphics.length, graphics.map(g => g.type));
-
-      // Step 2: Calculate positions for each element
-      const elementsWithPositions = calculateElementPositions(graphics, tempElement);
-      logPdfExportDebug('Step 2 - Element positions:', elementsWithPositions.map(e => ({
-        type: e.type,
-        top: Math.round(e.top),
-        height: Math.round(e.height),
-        bottom: Math.round(e.bottom)
-      })));
-
-      throwIfPdfExportAborted(signal);
-
-      // Step 3: Calculate page boundaries using the element's ACTUAL width
-      const totalHeight = tempElement.scrollHeight;
-      const elementWidth = tempElement.offsetWidth;
-      const { boundaries: pageBoundaries, pageHeightPx } = calculatePageBoundaries(
-        totalHeight,
-        elementWidth,
-        PAGE_CONFIG
-      );
-
-      logPdfExportDebug('Step 3 - Page boundaries:', {
-        elementWidth,
-        totalHeight,
-        pageHeightPx: Math.round(pageHeightPx),
-        boundaries: pageBoundaries.map(b => Math.round(b))
-      });
-
-      // Step 4: Detect split elements
-      const splitElements = detectSplitElements(elementsWithPositions, pageBoundaries);
-      logPdfExportDebug('Step 4 - Split elements detected:', splitElements.length);
-
-      // Calculate page count
-      const pageCount = pageBoundaries.length + 1;
-
-      return {
-        totalElements: graphics.length,
-        splitElements: splitElements,
-        pageCount: pageCount,
-        pageBoundaries: pageBoundaries,
-        pageHeightPx: pageHeightPx
-      };
-    } catch (error) {
-      if (error instanceof PdfExportCancelledError) throw error;
-      console.error('Page-break analysis failed:', error);
-      return {
-        totalElements: 0,
-        splitElements: [],
-        pageCount: 1,
-        pageBoundaries: [],
-        pageHeightPx: 0
-      };
+  async function renderPdfSpecialContent(state, element, markdown) {
+    const mermaidNodes = element.querySelectorAll('.mermaid');
+    if (mermaidNodes.length > 0) {
+      updatePdfProgress(state, 32, "Rendering diagrams");
+      if (typeof mermaid === 'undefined') await runPdfAbortable(state, loadScript(CDN.mermaid));
+      throwIfPdfExportAborted(state.signal);
+      initMermaid(true);
+      await runPdfAbortable(state, mermaid.init(undefined, mermaidNodes));
+      element.querySelectorAll('.mermaid-container.is-loading').forEach(container => container.classList.remove('is-loading'));
     }
-  }
 
-  // ============================================
-  // End Page-Break Detection Functions
-  // ============================================
-
-  // ============================================
-  // Page-Break Insertion Functions (Story 1.2)
-  // ============================================
-
-  // Threshold for whitespace optimization (30% of page height)
-  const PAGE_BREAK_THRESHOLD = 0.3;
-
-  /**
-   * Task 3: Categorizes split elements by whether they fit on a single page
-   * @param {Array} splitElements - Array of split elements from detection
-   * @param {number} pageHeightPx - Page height in pixels
-   * @returns {Object} { fittingElements, oversizedElements }
-   */
-  function categorizeBySize(splitElements, pageHeightPx) {
-    const fittingElements = [];
-    const oversizedElements = [];
-
-    for (const item of splitElements) {
-      if (item.height <= pageHeightPx) {
-        fittingElements.push(item);
-      } else {
-        oversizedElements.push(item);
+    if (markdownLikelyContainsMath(markdown)) {
+      updatePdfProgress(state, 43, "Rendering math");
+      if (!window.MathJax || typeof window.MathJax.typesetPromise !== 'function') {
+        configureMathJaxForPdf();
+        await runPdfAbortable(state, loadScript(CDN.mathjax));
       }
-    }
-
-    return { fittingElements, oversizedElements };
-  }
-
-  /**
-   * Task 1: Inserts page breaks by adjusting margins for fitting elements
-   * @param {Array} fittingElements - Elements that fit on a single page
-   * @param {number} pageHeightPx - Page height in pixels
-   */
-  function insertPageBreaks(fittingElements, pageHeightPx, signal) {
-    for (const item of fittingElements) {
-      throwIfPdfExportAborted(signal);
-
-      // Calculate where the current page ends
-      const currentPageBottom = (item.splitPageIndex + 1) * pageHeightPx;
-
-      // Calculate remaining space on current page
-      const remainingSpace = currentPageBottom - item.top;
-      const remainingRatio = remainingSpace / pageHeightPx;
-
-      logPdfExportDebug('Processing split element:', {
-        type: item.type,
-        top: Math.round(item.top),
-        height: Math.round(item.height),
-        splitPageIndex: item.splitPageIndex,
-        currentPageBottom: Math.round(currentPageBottom),
-        remainingSpace: Math.round(remainingSpace),
-        remainingRatio: remainingRatio.toFixed(2)
-      });
-
-      // Task 4: Whitespace optimization
-      // If remaining space is more than threshold and element almost fits, skip
-      // (Will be handled by Story 1.3 scaling instead)
-      if (remainingRatio > PAGE_BREAK_THRESHOLD) {
-        const scaledHeight = item.height * 0.9; // 90% scale
-        if (scaledHeight <= remainingSpace) {
-          logPdfExportDebug('  -> Skipping (can fit with 90% scaling)');
-          continue;
-        }
-      }
-
-      // Calculate margin needed to push element to next page
-      const marginNeeded = currentPageBottom - item.top + 5; // 5px buffer
-
-      logPdfExportDebug('  -> Applying marginTop:', marginNeeded, 'px');
-
-      // Determine which element to apply margin to
-      // For SVG elements (Mermaid diagrams), apply to parent container for proper layout
-      let targetElement = item.element;
-      if (item.type === 'svg' && item.element.parentElement) {
-        targetElement = item.element.parentElement;
-        logPdfExportDebug('  -> Using parent element:', targetElement.tagName, targetElement.className);
-      }
-
-      // Apply margin to push element to next page
-      const currentMargin = parseFloat(targetElement.style.marginTop) || 0;
-      targetElement.style.marginTop = `${currentMargin + marginNeeded}px`;
-
-      logPdfExportDebug('  -> Element after margin:', targetElement.tagName, 'marginTop =', targetElement.style.marginTop);
+      await runPdfAbortable(state, MathJax.typesetPromise([element]));
+      element.querySelectorAll('mjx-assistive-mml, script[type*="math"], script[type*="tex"]').forEach(node => node.remove());
+      element.querySelectorAll('mjx-container[tabindex="0"]').forEach(node => node.removeAttribute('tabindex'));
     }
   }
-
-  /**
-   * Task 2: Applies page breaks with cascading adjustment handling
-   * @param {HTMLElement} tempElement - The rendered content container
-   * @param {Object} pageConfig - Page configuration object (unused, kept for API compatibility)
-   * @param {number} maxIterations - Maximum iterations to prevent infinite loops
-   * @returns {Object} Final analysis result
-   */
-  function applyPageBreaksWithCascade(tempElement, pageConfig, maxIterations = 10, signal) {
-    let iteration = 0;
-    let analysis;
-    let previousSplitCount = -1;
-
-    do {
-      throwIfPdfExportAborted(signal);
-
-      // Re-analyze after each adjustment
-      analysis = analyzeGraphicsForPageBreaks(tempElement, signal);
-
-      // Use pageHeightPx from analysis (calculated from actual element width)
-      const pageHeightPx = analysis.pageHeightPx;
-
-      // Categorize elements by size
-      const { fittingElements, oversizedElements } = categorizeBySize(
-        analysis.splitElements,
-        pageHeightPx
-      );
-
-      // Store oversized elements for Story 1.3
-      analysis.oversizedElements = oversizedElements;
-
-      // If no fitting elements need adjustment, we're done
-      if (fittingElements.length === 0) {
-        break;
-      }
-
-      // Check if we're making progress (prevent infinite loops)
-      if (fittingElements.length === previousSplitCount) {
-        console.warn('Page-break adjustment not making progress, stopping');
-        break;
-      }
-      previousSplitCount = fittingElements.length;
-
-      // Apply page breaks to fitting elements
-      insertPageBreaks(fittingElements, pageHeightPx, signal);
-      iteration++;
-
-    } while (iteration < maxIterations);
-
-    if (iteration >= maxIterations) {
-      console.warn('Page-break stabilization reached max iterations:', maxIterations);
-    }
-
-    logPdfExportDebug('Page-break cascade complete:', {
-      iterations: iteration,
-      finalSplitCount: analysis.splitElements.length,
-      oversizedCount: analysis.oversizedElements ? analysis.oversizedElements.length : 0
-    });
-
-    return analysis;
-  }
-
-  // ============================================
-  // End Page-Break Insertion Functions
-  // ============================================
-
-  // ============================================
-  // Oversized Graphics Scaling Functions (Story 1.3)
-  // ============================================
-
-  // Minimum scale factor to maintain readability (50%)
-  const MIN_SCALE_FACTOR = 0.5;
-
-  /**
-   * Task 1 & 2: Calculates scale factor with minimum enforcement
-   * @param {number} elementHeight - Original height of element in pixels
-   * @param {number} availableHeight - Available page height in pixels
-   * @param {number} buffer - Small buffer to prevent edge overflow
-   * @returns {Object} { scaleFactor, wasClampedToMin }
-   */
-  function calculateScaleFactor(elementHeight, availableHeight, buffer = 5) {
-    const targetHeight = availableHeight - buffer;
-    let scaleFactor = targetHeight / elementHeight;
-    let wasClampedToMin = false;
-
-    // Enforce minimum scale for readability
-    if (scaleFactor < MIN_SCALE_FACTOR) {
-      console.warn(
-        `Warning: Large graphic requires ${(scaleFactor * 100).toFixed(0)}% scaling. ` +
-        `Clamping to minimum ${MIN_SCALE_FACTOR * 100}%. Content may be cut off.`
-      );
-      scaleFactor = MIN_SCALE_FACTOR;
-      wasClampedToMin = true;
-    }
-
-    return { scaleFactor, wasClampedToMin };
-  }
-
-  /**
-   * Task 3: Applies CSS transform scaling to an element
-   * @param {HTMLElement} element - The element to scale
-   * @param {number} scaleFactor - Scale factor (0.5 = 50%)
-   * @param {string} elementType - Type of element (svg, pre, img, table)
-   */
-  function applyGraphicScaling(element, scaleFactor, elementType) {
-    // Get original dimensions before transform
-    const originalHeight = element.offsetHeight;
-
-    // Task 4: Handle SVG elements (Mermaid diagrams)
-    if (elementType === 'svg') {
-      // Remove max-width constraint that may interfere
-      element.style.maxWidth = 'none';
-    }
-
-    // Apply CSS transform
-    element.style.transform = `scale(${scaleFactor})`;
-    element.style.transformOrigin = 'top left';
-
-    // Calculate margin adjustment to collapse visual space
-    const scaledHeight = originalHeight * scaleFactor;
-    const marginAdjustment = originalHeight - scaledHeight;
-
-    // Apply negative margin to pull subsequent content up
-    element.style.marginBottom = `-${marginAdjustment}px`;
-  }
-
-  /**
-   * Task 6: Handles all oversized elements by applying appropriate scaling
-   * @param {Array} oversizedElements - Array of oversized element data
-   * @param {number} pageHeightPx - Page height in pixels
-   */
-  function handleOversizedElements(oversizedElements, pageHeightPx, signal) {
-    if (!oversizedElements || oversizedElements.length === 0) {
-      return;
-    }
-
-    let scaledCount = 0;
-    let clampedCount = 0;
-
-    for (const item of oversizedElements) {
-      throwIfPdfExportAborted(signal);
-
-      // Calculate required scale factor
-      const { scaleFactor, wasClampedToMin } = calculateScaleFactor(
-        item.height,
-        pageHeightPx
-      );
-
-      // Apply scaling to the element
-      applyGraphicScaling(item.element, scaleFactor, item.type);
-
-      scaledCount++;
-      if (wasClampedToMin) {
-        clampedCount++;
-      }
-    }
-
-    logPdfExportDebug('Oversized graphics scaling complete:', {
-      totalScaled: scaledCount,
-      clampedToMinimum: clampedCount
-    });
-  }
-
-  // ============================================
-  // End Oversized Graphics Scaling Functions
-  // ============================================
 
   exportPdf.addEventListener("click", async function (event) {
     event.preventDefault();
     if (activePdfExport) return;
+    if (!window.PdfPrintEngine) {
+      alert("PDF export failed to initialize. Refresh the application and try again.");
+      return;
+    }
 
     const progressState = createPdfProgressState();
     activePdfExport = progressState;
@@ -7470,175 +6956,37 @@ document.addEventListener("DOMContentLoaded", function () {
     progressState.overlay.querySelector(".pdf-progress-cancel")?.focus();
 
     try {
-      // PERF-002: Lazy-load PDF libraries on first export
-      if (typeof jspdf === 'undefined' || typeof html2canvas === 'undefined') {
-        updatePdfProgress(progressState, 8, "Loading PDF libraries");
-        await runPdfAbortable(progressState, Promise.all([loadScript(CDN.jspdf), loadScript(CDN.html2canvas)]));
-        throwIfPdfExportAborted(progressState.signal);
-      }
-
-      updatePdfProgress(progressState, 15, "Parsing markdown");
-      await waitForPdfFrame(progressState);
+      updatePdfProgress(progressState, 12, "Parsing markdown");
       const markdown = markdownEditor.value;
-      const html = marked.parse(markdown);
-      const sanitizedHtml = DOMPurify.sanitize(html, {
-        ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input'],
-        ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code']
-      });
+      const sanitizedHtml = sanitizePreviewHtml(marked.parse(markdown));
       throwIfPdfExportAborted(progressState.signal);
 
-      updatePdfProgress(progressState, 24, "Preparing document");
-      await waitForPdfFrame(progressState);
+      updatePdfProgress(progressState, 22, "Building export document");
       const tempElement = document.createElement("div");
       progressState.tempElement = tempElement;
-      tempElement.className = "markdown-body pdf-export";
+      tempElement.className = "markdown-body pdf-export-source";
       tempElement.innerHTML = sanitizedHtml;
       enhanceGitHubAlerts(tempElement);
-      tempElement.style.padding = "20px";
-      tempElement.style.width = "210mm";
-      tempElement.style.margin = "0 auto";
-      tempElement.style.fontSize = "14px";
-      tempElement.style.position = "fixed";
-      tempElement.style.left = "-9999px";
-      tempElement.style.top = "0";
-
-      const currentTheme = document.documentElement.getAttribute("data-theme");
-      tempElement.style.backgroundColor = currentTheme === "dark" ? "#0d1117" : "#ffffff";
-      tempElement.style.color = currentTheme === "dark" ? "#c9d1d9" : "#24292e";
-
+      tempElement.style.cssText = "position:fixed;left:-100000px;top:0;width:180mm;padding:0;visibility:hidden;pointer-events:none;";
       document.body.appendChild(tempElement);
-      await waitForPdfFrame(progressState);
 
-      const mermaidNodes = tempElement.querySelectorAll('.mermaid');
-      if (mermaidNodes.length > 0) {
-        updatePdfProgress(progressState, 34, "Rendering diagrams");
-        try {
-          if (typeof mermaid === 'undefined') {
-            await runPdfAbortable(progressState, loadScript(CDN.mermaid));
-          }
-          throwIfPdfExportAborted(progressState.signal);
-          initMermaid(true);
-          await runPdfAbortable(progressState, mermaid.init(undefined, mermaidNodes));
-          tempElement.querySelectorAll('.mermaid-container.is-loading').forEach(container => {
-            container.classList.remove('is-loading');
-          });
-        } catch (mermaidError) {
-          if (mermaidError instanceof PdfExportCancelledError) throw mermaidError;
-          console.warn("Mermaid rendering issue:", mermaidError);
-          tempElement.querySelectorAll('.mermaid-container.is-loading').forEach(container => {
-            container.classList.remove('is-loading');
-          });
-        }
-        throwIfPdfExportAborted(progressState.signal);
-        await waitForPdfFrame(progressState);
-      }
-
-      if (window.MathJax && markdownLikelyContainsMath(markdown)) {
-        updatePdfProgress(progressState, 44, "Rendering math");
-        try {
-          await runPdfAbortable(progressState, MathJax.typesetPromise([tempElement]));
-        } catch (mathJaxError) {
-          if (mathJaxError instanceof PdfExportCancelledError) throw mathJaxError;
-          console.warn("MathJax rendering issue:", mathJaxError);
-        }
-        throwIfPdfExportAborted(progressState.signal);
-
-        // Hide MathJax assistive elements that cause duplicate text in PDF
-        // These are screen reader elements that html2canvas captures as visible
-        // Use multiple CSS properties to ensure html2canvas doesn't render them
-        const assistiveElements = tempElement.querySelectorAll('mjx-assistive-mml');
-        assistiveElements.forEach(el => {
-          el.style.display = 'none';
-          el.style.visibility = 'hidden';
-          el.style.position = 'absolute';
-          el.style.width = '0';
-          el.style.height = '0';
-          el.style.overflow = 'hidden';
-          el.remove(); // Remove entirely from DOM
-        });
-
-        // Also hide any MathJax script elements that might contain source
-        const mathScripts = tempElement.querySelectorAll('script[type*="math"], script[type*="tex"]');
-        mathScripts.forEach(el => el.remove());
-      }
-
-      await waitForPdfFrame(progressState);
-      fitExportElementToContent(tempElement);
-      await waitForPdfFrame(progressState);
-
-      // Analyze and apply page-breaks for graphics (Story 1.1 + 1.2)
-      updatePdfProgress(progressState, 55, "Optimizing page breaks");
-      const pageBreakAnalysis = applyPageBreaksWithCascade(tempElement, PAGE_CONFIG, 10, progressState.signal);
+      await renderPdfSpecialContent(progressState, tempElement, markdown);
       throwIfPdfExportAborted(progressState.signal);
 
-      // Scale oversized graphics that can't fit on a single page (Story 1.3)
-      if (pageBreakAnalysis.oversizedElements && pageBreakAnalysis.pageHeightPx) {
-        handleOversizedElements(pageBreakAnalysis.oversizedElements, pageBreakAnalysis.pageHeightPx, progressState.signal);
+      const result = await PdfPrintEngine.exportElement({
+        element: tempElement,
+        signal: progressState.signal,
+        title: "document",
+        theme: document.documentElement.getAttribute("data-theme"),
+        printableHeightPx: 934,
+        options: { pageSize: "A4", margin: "15mm" },
+        onProgress: (percent, step) => updatePdfProgress(progressState, percent, step)
+      });
+      if (result.imageFailures.length > 0) {
+        console.warn("PDF export completed with image load failures:", result.imageFailures);
       }
-      await waitForPdfFrame(progressState);
-
-      const pdfOptions = {
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-        hotfixes: ["px_scaling"]
-      };
-
-      const pdf = new jspdf.jsPDF(pdfOptions);
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15;
-      const contentWidth = pageWidth - (margin * 2);
-      const captureScale = choosePdfCanvasScale(tempElement);
-
-      updatePdfProgress(progressState, 65, "Capturing document");
-      const canvas = await runPdfAbortable(progressState, html2canvas(tempElement, {
-        scale: captureScale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        windowWidth: Math.max(PAGE_CONFIG.windowWidth, Math.ceil(tempElement.getBoundingClientRect().width)),
-        windowHeight: tempElement.scrollHeight
-      }));
-      await waitForPdfFrame(progressState);
-      throwIfPdfExportAborted(progressState.signal);
-
-      const scaleFactor = canvas.width / contentWidth;
-      const imgHeight = canvas.height / scaleFactor;
-      const pagesCount = Math.ceil(imgHeight / (pageHeight - margin * 2));
-
-      updatePdfProgress(progressState, 76, "Rendering pages");
-      for (let page = 0; page < pagesCount; page++) {
-        throwIfPdfExportAborted(progressState.signal);
-        const pageProgress = 76 + ((page + 1) / pagesCount) * 18;
-        updatePdfProgress(progressState, pageProgress, `Rendering page ${page + 1} of ${pagesCount}`);
-
-        if (page > 0) pdf.addPage();
-
-        const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
-        const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
-        const destHeight = sourceHeight / scaleFactor;
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
-
-        const ctx = pageCanvas.getContext('2d');
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-
-        const imgData = pageCanvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
-        await waitForPdfFrame(progressState);
-      }
-
-      throwIfPdfExportAborted(progressState.signal);
-      updatePdfProgress(progressState, 98, "Preparing download");
-      pdf.save("document.pdf");
-      updatePdfProgress(progressState, 100, "Complete");
-
     } catch (error) {
-      if (error instanceof PdfExportCancelledError || progressState.signal.aborted) {
+      if (error instanceof PdfPrintEngine.PdfExportCancelledError || progressState.signal.aborted) {
         console.info("PDF export cancelled");
       } else {
         console.error("PDF export failed:", error);

@@ -98,9 +98,7 @@ Saves the full rendered HTML, including the GitHub Markdown stylesheet, so the f
 
 ### Export as PDF (`.pdf`)
 
-Generates a PDF of the rendered preview using jsPDF and html2canvas. The PDF preserves styling, code highlighting, and diagrams.
-
-> **Note**: For best PDF quality, use the **Print** dialog (`Ctrl+P` / `Cmd+P`) in your browser and choose "Save as PDF". This provides higher-fidelity output than the built-in PDF export.
+Builds an isolated, print-optimized version of the document and opens the system print dialog. Choose **Save as PDF** to preserve searchable text, links, syntax highlighting, math, and diagrams with professional page-break handling.
 
 ---
 

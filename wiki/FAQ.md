@@ -70,9 +70,7 @@ See the [Features — Mermaid Diagrams](Features#mermaid-diagrams) section for d
 
 ### Can I export to PDF?
 
-Yes. Click the **Export → PDF** button in the toolbar. The PDF is generated client-side using jsPDF and html2canvas.
-
-For higher-quality PDF output (especially for wide code blocks or complex diagrams), use your browser's built-in **Print → Save as PDF** function (`Ctrl+P` / `Cmd+P`).
+Yes. Click **Export → PDF** in the toolbar. Markdown Viewer prepares an isolated, print-optimized document and opens the system print dialog. Choose **Save as PDF** to create a searchable, vector-capable PDF without uploading the document.
 
 ### Does the editor auto-save my content?
 
@@ -143,7 +141,7 @@ Check that:
 
 ### The PDF export looks different from the preview.
 
-This is a known limitation of the html2canvas approach. For better-quality PDF output, use **Print → Save as PDF** in your browser (`Ctrl+P` / `Cmd+P`).
+PDF export uses the browser's paged-media engine, which can differ slightly from the continuous on-screen preview. The export applies dedicated page-break rules for headings, images, diagrams, code blocks, and tables.
 
 ### The desktop app binary won't open on macOS.
 

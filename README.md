@@ -190,7 +190,7 @@ Explore the full documentation on the wiki:
 - <a href="https://mermaid.js.org/" target="_blank" rel="noopener noreferrer">Mermaid</a>
 - <a href="https://github.com/cure53/DOMPurify" target="_blank" rel="noopener noreferrer">DOMPurify</a>
 - <a href="https://github.com/eligrey/FileSaver.js" target="_blank" rel="noopener noreferrer">FileSaver.js</a>
-- <a href="https://github.com/niklasvh/html2canvas" target="_blank" rel="noopener noreferrer">html2canvas</a> + <a href="https://www.npmjs.com/package/jspdf" target="_blank" rel="noopener noreferrer">jsPDF</a>
+- Standards-based browser paged-media printing for vector, searchable PDF output
 - <a href="https://www.joypixels.com/" target="_blank" rel="noopener noreferrer">JoyPixels</a>
 
 ---

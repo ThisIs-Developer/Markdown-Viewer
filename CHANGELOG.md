@@ -3,6 +3,14 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## Unreleased
+
+- **PDF Export Engine:** Replaced full-document html2canvas/jsPDF rasterization with an isolated browser paged-media pipeline. Export now waits for fonts, images, Mermaid, and MathJax; preserves searchable text and vector content; applies semantic page-break rules; and avoids per-page PNG encoding and full-document canvas memory growth in web and desktop builds.
+- **Validation:** Added focused PDF engine unit coverage and synchronized the new export module into the Neutralino resource bundle.
+- **Date:** 2026-06-06
+
+---
+
 ## v3.7.3
 
 - **Description:** Delivered critical rendering, export, and editor reliability fixes across the application.

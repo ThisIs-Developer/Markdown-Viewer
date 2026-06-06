@@ -3,7 +3,7 @@
 /**
  * prepare.js — Build script for the Neutralinojs desktop app.
  *
- * Copies shared browser-version files (script.js, styles.css, assets/)
+ * Copies shared browser-version files (script.js, pdf-export.js, styles.css, assets/)
  * from the repo root into desktop-app/resources/, downloads all remote CDN
  * libraries locally for 100% offline capabilities, validates their cryptographic
  * integrity using SRI hashes (SHA-384), and generates a Neutralinojs-compatible index.html.
@@ -45,6 +45,8 @@ function copyDirSync(src, dest, excludePatterns) {
 // Copy shared assets
 fs.copyFileSync(path.join(ROOT_DIR, "script.js"), path.join(jsDest, "script.js"));
 console.log("✓ Copied script.js → resources/js/script.js");
+fs.copyFileSync(path.join(ROOT_DIR, "pdf-export.js"), path.join(jsDest, "pdf-export.js"));
+console.log("✓ Copied pdf-export.js → resources/js/pdf-export.js");
 
 fs.copyFileSync(path.join(ROOT_DIR, "preview-worker.js"), path.join(jsDest, "preview-worker.js"));
 console.log("Copied preview-worker.js to resources/js/preview-worker.js");
@@ -204,6 +206,7 @@ async function prepareOfflineDependencies() {
   // Fix relative assets
   html = html.replace(/href="assets\//g, 'href="/assets/');
   html = html.replace(/href="styles\.css"/g, 'href="/styles.css"');
+  html = html.replace(/src="pdf-export\.js"/g, 'src="/js/pdf-export.js"');
   
   // PERF-034: Strip web-specific SEO tags, canonical, hreflang, preconnect, manifest and JSON-LD structured data for desktop build
   html = html.replace(/<!-- DNS Prefetch & Preconnect CDN Origins to Warm Up Latency -->[\s\S]*?<!-- PERF-015:/i, '<!-- PERF-015:');
