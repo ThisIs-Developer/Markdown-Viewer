@@ -25,15 +25,20 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  const IS_DESKTOP_RUNTIME = typeof Neutralino !== 'undefined';
+  function resolveOptionalAssetUrl(localFilename, remoteUrl) {
+    return IS_DESKTOP_RUNTIME ? `/libs/${localFilename}` : remoteUrl;
+  }
+
   // CDN URLs for lazy-loaded libraries
   const CDN = {
-    mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
-    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
-    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-    html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-    pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
-    joypixels: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js',
-    joypixels_css: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css'
+    mermaid: resolveOptionalAssetUrl('mermaid.min.js', 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js'),
+    mathjax: resolveOptionalAssetUrl('tex-mml-chtml.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'),
+    jspdf: resolveOptionalAssetUrl('jspdf.umd.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'),
+    html2canvas: resolveOptionalAssetUrl('html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
+    pako: resolveOptionalAssetUrl('pako.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js'),
+    joypixels: resolveOptionalAssetUrl('joypixels.min.js', 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js'),
+    joypixels_css: resolveOptionalAssetUrl('joypixels.min.css', 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css')
   };
 
   let markdownRenderTimeout = null;
@@ -420,6 +425,21 @@ document.addEventListener("DOMContentLoaded", function () {
           return new URL(src, window.location.href).toString();
         } catch (e) {
           return src;
+        }
+      }
+    }
+    return fallbackUrl;
+  }
+
+  function getLoadedStylesheetUrl(needle, fallbackUrl) {
+    const links = document.querySelectorAll('link[rel="stylesheet"], link[rel="preload"][as="style"]');
+    for (let i = 0; i < links.length; i += 1) {
+      const href = links[i].getAttribute("href") || "";
+      if (href.includes(needle)) {
+        try {
+          return new URL(href, window.location.href).toString();
+        } catch (e) {
+          return href;
         }
       }
     }
@@ -6971,6 +6991,351 @@ document.addEventListener("DOMContentLoaded", function () {
     return /(^|[^\\])\$\$|\\\[|\\\(|(^|[^\\])\$[^$\n]+\$/.test(markdown);
   }
 
+  const PDF_EXPORT_SANITIZE_OPTIONS = {
+    ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input'],
+    ADD_ATTR: [
+      'id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform',
+      'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code',
+      'xmlns', 'role', 'aria-hidden'
+    ],
+    ALLOWED_URI_REGEXP: PREVIEW_SANITIZE_OPTIONS.ALLOWED_URI_REGEXP
+  };
+
+  function buildPdfExportContentElement(markdown) {
+    const { frontmatter, body } = parseFrontmatter(markdown);
+    const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
+    const referenceData = extractReferenceDefinitions(body);
+    const markdownWithPageBreaks = referenceData.cleanedMarkdown.replace(
+      /<!--\s*pagebreak\s*-->/gi,
+      '<div class="pdf-page-break" aria-hidden="true"></div>'
+    );
+    const html = tableHtml + marked.parse(markdownWithPageBreaks);
+    const sanitizedHtml = DOMPurify.sanitize(html, PDF_EXPORT_SANITIZE_OPTIONS);
+    const container = document.createElement("div");
+    container.innerHTML = sanitizedHtml;
+    applyReferencePreviewLinks(container, referenceData.definitions);
+    enhanceGitHubAlerts(container);
+    return container;
+  }
+
+  function configureMathJaxForPdfExport() {
+    if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+      return Promise.resolve();
+    }
+
+    if (!window.MathJax || typeof window.MathJax.typesetPromise !== 'function') {
+      window.MathJax = {
+        loader: { load: ['[tex]/ams', '[tex]/boldsymbol'] },
+        options: {
+          a11y: { inTabOrder: false }
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']],
+          processEscapes: true,
+          packages: { '[+]': ['ams', 'boldsymbol'] }
+        }
+      };
+    }
+
+    return loadScript(CDN.mathjax);
+  }
+
+  function removePdfMathAssistiveElements(container) {
+    container.querySelectorAll('mjx-assistive-mml, script[type*="math"], script[type*="tex"]').forEach(el => {
+      el.remove();
+    });
+    container.querySelectorAll('mjx-container[tabindex="0"]').forEach(mjx => {
+      mjx.removeAttribute('tabindex');
+    });
+  }
+
+  function waitForPdfImages(container, state, timeoutMs = 8000) {
+    const images = Array.from(container.querySelectorAll('img'));
+    const pending = images.filter(img => !img.complete || img.naturalWidth === 0);
+    if (pending.length === 0) return Promise.resolve();
+
+    const timeout = new Promise(resolve => setTimeout(resolve, timeoutMs));
+    const imageWork = Promise.all(pending.map(img => {
+      if (img.decode) {
+        return img.decode().catch(() => undefined);
+      }
+      return new Promise(resolve => {
+        const finish = () => resolve();
+        img.addEventListener('load', finish, { once: true });
+        img.addEventListener('error', finish, { once: true });
+      });
+    }));
+
+    return runPdfAbortable(state, Promise.race([imageWork, timeout]));
+  }
+
+  async function renderPdfDynamicContent(container, markdown, state) {
+    const mermaidNodes = container.querySelectorAll('.mermaid');
+    if (mermaidNodes.length > 0) {
+      updatePdfProgress(state, 30, "Rendering diagrams");
+      if (typeof mermaid === 'undefined') {
+        await runPdfAbortable(state, loadScript(CDN.mermaid));
+      }
+      throwIfPdfExportAborted(state.signal);
+      initMermaid(true);
+      await runPdfAbortable(state, Promise.resolve(mermaid.init(undefined, mermaidNodes)));
+      container.querySelectorAll('.mermaid-container.is-loading').forEach(el => {
+        el.classList.remove('is-loading');
+      });
+      await waitForPdfFrame(state);
+    }
+
+    if (markdownLikelyContainsMath(markdown)) {
+      updatePdfProgress(state, 42, "Rendering math");
+      await runPdfAbortable(state, configureMathJaxForPdfExport());
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        await runPdfAbortable(state, MathJax.typesetPromise([container]));
+      }
+      removePdfMathAssistiveElements(container);
+      await waitForPdfFrame(state);
+    }
+
+    updatePdfProgress(state, 52, "Loading images");
+    await waitForPdfImages(container, state);
+  }
+
+  function getPdfPrintStylesheetLinks() {
+    const githubCss = getLoadedStylesheetUrl(
+      'github-markdown',
+      'https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css'
+    );
+    const appCss = getLoadedStylesheetUrl('styles.css', new URL('styles.css', window.location.href).toString());
+    return [githubCss, appCss]
+      .filter(Boolean)
+      .map(href => `<link rel="stylesheet" href="${escapeHtmlAttribute(href)}">`)
+      .join('\n');
+  }
+
+  function buildPdfPrintCss(isDarkTheme) {
+    const pageBg = isDarkTheme ? '#0d1117' : '#ffffff';
+    const pageFg = isDarkTheme ? '#c9d1d9' : '#24292f';
+    return `
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+
+      html,
+      body {
+        background: ${pageBg};
+        color: ${pageFg};
+      }
+
+      body.pdf-print-document {
+        margin: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .pdf-print-document .markdown-body {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        background: ${pageBg};
+        color: ${pageFg};
+        font-size: 14px;
+      }
+
+      .pdf-print-document img,
+      .pdf-print-document svg,
+      .pdf-print-document pre,
+      .pdf-print-document table,
+      .pdf-print-document blockquote,
+      .pdf-print-document mjx-container,
+      .pdf-print-document .math-block,
+      .pdf-print-document .mermaid-container,
+      .pdf-print-document .markdown-alert,
+      .pdf-print-document .frontmatter-table {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .pdf-print-document h1,
+      .pdf-print-document h2,
+      .pdf-print-document h3,
+      .pdf-print-document h4,
+      .pdf-print-document h5,
+      .pdf-print-document h6 {
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+
+      .pdf-print-document table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .pdf-print-document thead {
+        display: table-header-group;
+      }
+
+      .pdf-print-document tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .pdf-print-document pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .pdf-print-document code {
+        white-space: pre-wrap;
+      }
+
+      .pdf-print-document img {
+        max-width: 100%;
+        height: auto;
+      }
+
+      .pdf-print-document .mermaid-container svg {
+        max-width: 100%;
+        height: auto;
+      }
+
+      .pdf-print-document .pdf-page-break {
+        break-before: page;
+        page-break-before: always;
+        height: 0;
+      }
+
+      @media print {
+        html,
+        body {
+          width: auto;
+          min-height: auto;
+        }
+      }
+    `;
+  }
+
+  function buildPdfPrintDocumentHtml(contentHtml) {
+    const isDarkTheme = document.documentElement.getAttribute("data-theme") === "dark";
+    const direction = markdownEditor ? (markdownEditor.getAttribute("dir") || document.documentElement.getAttribute("dir") || "ltr") : "ltr";
+    return `<!DOCTYPE html>
+<html lang="${escapeHtmlAttribute(document.documentElement.lang || 'en')}" dir="${escapeHtmlAttribute(direction)}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="${escapeHtmlAttribute(document.baseURI || window.location.href)}">
+  <title>Markdown PDF Export</title>
+  ${getPdfPrintStylesheetLinks()}
+  <style>${buildPdfPrintCss(isDarkTheme)}</style>
+</head>
+<body class="pdf-print-document" data-theme="${isDarkTheme ? 'dark' : 'light'}">
+  <article class="markdown-body">
+    ${contentHtml}
+  </article>
+</body>
+</html>`;
+  }
+
+  function waitForPrintDocumentReady(printDocument, state) {
+    const styleLinks = Array.from(printDocument.querySelectorAll('link[rel="stylesheet"]'));
+    const styleReady = Promise.all(styleLinks.map(link => {
+      if (link.sheet) return Promise.resolve();
+      return new Promise(resolve => {
+        const finish = () => resolve();
+        link.addEventListener('load', finish, { once: true });
+        link.addEventListener('error', finish, { once: true });
+        setTimeout(finish, 3000);
+      });
+    }));
+
+    const fontReady = printDocument.fonts && printDocument.fonts.ready
+      ? printDocument.fonts.ready.catch(() => undefined)
+      : Promise.resolve();
+
+    return runPdfAbortable(state, Promise.all([styleReady, fontReady, waitForPdfImages(printDocument.body, state, 5000)]));
+  }
+
+  function schedulePdfPrintFrameCleanup(frame) {
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      if (frame && frame.parentNode) {
+        frame.parentNode.removeChild(frame);
+      }
+    };
+
+    try {
+      frame.contentWindow.addEventListener('afterprint', cleanup, { once: true });
+    } catch (e) {
+      // Some embedded browsers do not expose afterprint on iframe windows.
+    }
+    setTimeout(cleanup, 30000);
+  }
+
+  async function openPdfPrintDocument(contentHtml, state) {
+    updatePdfProgress(state, 72, "Preparing print document");
+    const frame = document.createElement('iframe');
+    frame.setAttribute('title', 'PDF export print document');
+    frame.style.position = 'fixed';
+    frame.style.right = '0';
+    frame.style.bottom = '0';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.style.border = '0';
+    frame.style.opacity = '0';
+    frame.style.pointerEvents = 'none';
+    frame.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(frame);
+
+    const printDocument = frame.contentDocument || frame.contentWindow.document;
+    printDocument.open();
+    printDocument.write(buildPdfPrintDocumentHtml(contentHtml));
+    printDocument.close();
+
+    await waitForPrintDocumentReady(printDocument, state);
+    throwIfPdfExportAborted(state.signal);
+
+    if (!frame.contentWindow || typeof frame.contentWindow.print !== 'function') {
+      throw new Error("Browser print is unavailable.");
+    }
+
+    updatePdfProgress(state, 96, "Opening PDF dialog");
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+    schedulePdfPrintFrameCleanup(frame);
+  }
+
+  async function exportPdfViaPrint(progressState) {
+    updatePdfProgress(progressState, 12, "Preparing document");
+    await waitForPdfFrame(progressState);
+
+    const markdown = markdownEditor.value;
+    const contentElement = buildPdfExportContentElement(markdown);
+    contentElement.className = "markdown-body pdf-export pdf-print-source";
+    contentElement.style.padding = "20px";
+    contentElement.style.width = "210mm";
+    contentElement.style.margin = "0 auto";
+    contentElement.style.fontSize = "14px";
+    contentElement.style.position = "fixed";
+    contentElement.style.left = "-9999px";
+    contentElement.style.top = "0";
+    contentElement.style.backgroundColor = document.documentElement.getAttribute("data-theme") === "dark" ? "#0d1117" : "#ffffff";
+    contentElement.style.color = document.documentElement.getAttribute("data-theme") === "dark" ? "#c9d1d9" : "#24292e";
+    progressState.tempElement = contentElement;
+    document.body.appendChild(contentElement);
+
+    await waitForPdfFrame(progressState);
+    await renderPdfDynamicContent(contentElement, markdown, progressState);
+    await waitForPdfFrame(progressState);
+
+    updatePdfProgress(progressState, 64, "Paginating");
+    await openPdfPrintDocument(contentElement.innerHTML, progressState);
+  }
+
   function choosePdfCanvasScale(element) {
     const pixelArea = element.offsetWidth * element.scrollHeight;
     if (pixelArea > 14000000) return 1.25;
@@ -7470,6 +7835,24 @@ document.addEventListener("DOMContentLoaded", function () {
     progressState.overlay.querySelector(".pdf-progress-cancel")?.focus();
 
     try {
+      try {
+        await exportPdfViaPrint(progressState);
+        throwIfPdfExportAborted(progressState.signal);
+        updatePdfProgress(progressState, 100, "Complete");
+        return;
+      } catch (printExportError) {
+        if (printExportError instanceof PdfExportCancelledError || progressState.signal.aborted) {
+          throw printExportError;
+        }
+        console.warn("Fast PDF print export failed; using compatibility exporter:", printExportError);
+        if (progressState.tempElement && progressState.tempElement.parentNode) {
+          progressState.tempElement.parentNode.removeChild(progressState.tempElement);
+          progressState.tempElement = null;
+        }
+        updatePdfProgress(progressState, 8, "Using compatibility exporter");
+        await waitForPdfFrame(progressState);
+      }
+
       // PERF-002: Lazy-load PDF libraries on first export
       if (typeof jspdf === 'undefined' || typeof html2canvas === 'undefined') {
         updatePdfProgress(progressState, 8, "Loading PDF libraries");
@@ -7480,20 +7863,13 @@ document.addEventListener("DOMContentLoaded", function () {
       updatePdfProgress(progressState, 15, "Parsing markdown");
       await waitForPdfFrame(progressState);
       const markdown = markdownEditor.value;
-      const html = marked.parse(markdown);
-      const sanitizedHtml = DOMPurify.sanitize(html, {
-        ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input'],
-        ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code']
-      });
+      const tempElement = buildPdfExportContentElement(markdown);
       throwIfPdfExportAborted(progressState.signal);
 
       updatePdfProgress(progressState, 24, "Preparing document");
       await waitForPdfFrame(progressState);
-      const tempElement = document.createElement("div");
       progressState.tempElement = tempElement;
       tempElement.className = "markdown-body pdf-export";
-      tempElement.innerHTML = sanitizedHtml;
-      enhanceGitHubAlerts(tempElement);
       tempElement.style.padding = "20px";
       tempElement.style.width = "210mm";
       tempElement.style.margin = "0 auto";
@@ -7533,9 +7909,10 @@ document.addEventListener("DOMContentLoaded", function () {
         await waitForPdfFrame(progressState);
       }
 
-      if (window.MathJax && markdownLikelyContainsMath(markdown)) {
+      if (markdownLikelyContainsMath(markdown)) {
         updatePdfProgress(progressState, 44, "Rendering math");
         try {
+          await runPdfAbortable(progressState, configureMathJaxForPdfExport());
           await runPdfAbortable(progressState, MathJax.typesetPromise([tempElement]));
         } catch (mathJaxError) {
           if (mathJaxError instanceof PdfExportCancelledError) throw mathJaxError;
@@ -7543,25 +7920,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         throwIfPdfExportAborted(progressState.signal);
 
-        // Hide MathJax assistive elements that cause duplicate text in PDF
-        // These are screen reader elements that html2canvas captures as visible
-        // Use multiple CSS properties to ensure html2canvas doesn't render them
-        const assistiveElements = tempElement.querySelectorAll('mjx-assistive-mml');
-        assistiveElements.forEach(el => {
-          el.style.display = 'none';
-          el.style.visibility = 'hidden';
-          el.style.position = 'absolute';
-          el.style.width = '0';
-          el.style.height = '0';
-          el.style.overflow = 'hidden';
-          el.remove(); // Remove entirely from DOM
-        });
-
-        // Also hide any MathJax script elements that might contain source
-        const mathScripts = tempElement.querySelectorAll('script[type*="math"], script[type*="tex"]');
-        mathScripts.forEach(el => el.remove());
+        removePdfMathAssistiveElements(tempElement);
       }
 
+      updatePdfProgress(progressState, 50, "Loading images");
+      await waitForPdfImages(tempElement, progressState);
       await waitForPdfFrame(progressState);
       fitExportElementToContent(tempElement);
       await waitForPdfFrame(progressState);

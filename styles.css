@@ -1556,6 +1556,88 @@ a:focus {
 }
 
 /* ========================================
+   FAST PDF PRINT DOCUMENT
+   ======================================== */
+
+body.pdf-print-document {
+  margin: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body.pdf-print-document .markdown-body {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+body.pdf-print-document img,
+body.pdf-print-document svg,
+body.pdf-print-document pre,
+body.pdf-print-document table,
+body.pdf-print-document blockquote,
+body.pdf-print-document mjx-container,
+body.pdf-print-document .math-block,
+body.pdf-print-document .mermaid-container,
+body.pdf-print-document .markdown-alert,
+body.pdf-print-document .frontmatter-table {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+body.pdf-print-document h1,
+body.pdf-print-document h2,
+body.pdf-print-document h3,
+body.pdf-print-document h4,
+body.pdf-print-document h5,
+body.pdf-print-document h6 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+body.pdf-print-document thead {
+  display: table-header-group;
+}
+
+body.pdf-print-document tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+body.pdf-print-document pre,
+body.pdf-print-document code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+body.pdf-print-document img,
+body.pdf-print-document .mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+body.pdf-print-document .pdf-page-break {
+  break-before: page;
+  page-break-before: always;
+  height: 0;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+
+  body.pdf-print-document {
+    background: var(--preview-bg, #ffffff);
+    color: var(--preview-text-color, #24292e);
+  }
+}
+
+/* ========================================
    MERMAID DIAGRAM TOOLBAR
    ======================================== */
 
