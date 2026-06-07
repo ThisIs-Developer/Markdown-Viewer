@@ -1504,40 +1504,7 @@ a:focus {
 
 
 
-/* ========================================
-   PDF EXPORT TABLE FIX - Rowspan/Colspan
-   ======================================== */
 
-/* Fix for html2canvas not properly rendering rowspan/colspan cells.
-   Apply backgrounds to cells instead of rows to prevent row backgrounds
-   from painting over rowspan cells during canvas capture. */
-.pdf-export table tr {
-  background-color: transparent !important;
-}
-
-.pdf-export table th,
-.pdf-export table td {
-  background-color: var(--table-bg, #ffffff);
-  position: relative;
-}
-
-.pdf-export table tr:nth-child(2n) th,
-.pdf-export table tr:nth-child(2n) td {
-  background-color: var(--bg-color, #f6f8fa);
-}
-
-/* Ensure rowspan cells render correctly */
-.pdf-export table th[rowspan],
-.pdf-export table td[rowspan] {
-  vertical-align: middle;
-  background-color: var(--table-bg, #ffffff) !important;
-}
-
-/* Ensure colspan cells render correctly */
-.pdf-export table th[colspan],
-.pdf-export table td[colspan] {
-  text-align: center;
-}
 
 /* Ensure target elements are block-level so that layout margins function correctly during PDF export */
 .pdf-export-block {
@@ -1559,21 +1526,7 @@ a:focus {
   display: block !important;
 }
 
-/* Dark mode PDF export table fix */
-[data-theme="dark"] .pdf-export table th,
-[data-theme="dark"] .pdf-export table td {
-  background-color: var(--table-bg, #161b22);
-}
 
-[data-theme="dark"] .pdf-export table tr:nth-child(2n) th,
-[data-theme="dark"] .pdf-export table tr:nth-child(2n) td {
-  background-color: #1c2128;
-}
-
-[data-theme="dark"] .pdf-export table th[rowspan],
-[data-theme="dark"] .pdf-export table td[rowspan] {
-  background-color: var(--table-bg, #161b22) !important;
-}
 
 /* ========================================
    MERMAID DIAGRAM TOOLBAR
