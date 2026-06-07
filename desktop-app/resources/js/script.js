@@ -7548,6 +7548,16 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         });
 
+        let inlinedStyles = "";
+        for (const sheet of Array.from(document.styleSheets)) {
+          try {
+            const rules = Array.from(sheet.cssRules || sheet.rules);
+            inlinedStyles += rules.map(r => r.cssText).join("\n") + "\n";
+          } catch (e) {
+            // Fallback for CORS or cross-origin stylesheets
+          }
+        }
+
         const parentStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
           .map(el => el.outerHTML)
           .join("\n");
@@ -7557,6 +7567,9 @@ document.addEventListener("DOMContentLoaded", function () {
 <head>
   <meta charset="utf-8">
   <title>Export Document</title>
+  <style>
+    ${inlinedStyles}
+  </style>
   ${parentStyles}
 </head>
 <body class="${currentTheme === 'dark' ? 'dark-theme' : 'light-theme'}" data-theme="${currentTheme}">

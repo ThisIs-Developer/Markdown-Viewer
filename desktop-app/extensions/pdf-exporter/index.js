@@ -54,8 +54,23 @@ function generatePdf(html, outputPath, callback) {
 
   const tempHtmlPath = path.join(__dirname, `temp_export_${Date.now()}.html`);
   
+  // Resolve absolute path to resources folder
+  const resourcesDir = path.resolve(__dirname, "..", "..", "resources");
+  const resourcesUrl = "file:///" + resourcesDir.replace(/\\/g, "/");
+
+  // Rewrite relative/absolute root-relative resource paths to absolute file:/// URLs
+  const processedHtml = html
+    .replace(/(src|href)="\/assets\//g, `$1="${resourcesUrl}/assets/`)
+    .replace(/(src|href)="\/libs\//g, `$1="${resourcesUrl}/libs/`)
+    .replace(/(src|href)="\/js\//g, `$1="${resourcesUrl}/js/`)
+    .replace(/(src|href)="\/styles\.css"/g, `$1="${resourcesUrl}/styles.css"`)
+    .replace(/(src|href)="assets\//g, `$1="${resourcesUrl}/assets/`)
+    .replace(/(src|href)="libs\//g, `$1="${resourcesUrl}/libs/`)
+    .replace(/(src|href)="js\//g, `$1="${resourcesUrl}/js/`)
+    .replace(/(src|href)="styles\.css"/g, `$1="${resourcesUrl}/styles.css"`);
+
   // Write html content to temp file
-  fs.writeFile(tempHtmlPath, html, "utf8", (err) => {
+  fs.writeFile(tempHtmlPath, processedHtml, "utf8", (err) => {
     if (err) return callback(err);
 
     const args = [
