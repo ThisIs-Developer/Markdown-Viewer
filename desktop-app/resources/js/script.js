@@ -7065,12 +7065,13 @@ document.addEventListener("DOMContentLoaded", function () {
     const graphics = [];
 
     // Query all targeting elements in precise DOM layout flow order
-    container.querySelectorAll('img, svg, pre, table').forEach(el => {
+    container.querySelectorAll('img, svg, pre, table, mjx-container[display="true"]').forEach(el => {
       let type = 'img';
       const tag = el.tagName.toLowerCase();
       if (tag === 'svg') type = 'svg';
       else if (tag === 'pre') type = 'pre';
       else if (tag === 'table') type = 'table';
+      else if (tag === 'mjx-container') type = 'math';
       
       graphics.push({ element: el, type: type });
     });
@@ -7313,16 +7314,7 @@ document.addEventListener("DOMContentLoaded", function () {
         remainingRatio: remainingRatio.toFixed(2)
       });
 
-      // Task 4: Whitespace optimization
-      // If remaining space is more than threshold and element almost fits, skip
-      // (Will be handled by Story 1.3 scaling instead)
-      if (remainingRatio > PAGE_BREAK_THRESHOLD) {
-        const scaledHeight = item.height * 0.9; // 90% scale
-        if (scaledHeight <= remainingSpace) {
-          logPdfExportDebug('  -> Skipping (can fit with 90% scaling)');
-          continue;
-        }
-      }
+      // Element is pushed to the next page to prevent splitting across page boundaries.
 
       // Calculate margin needed to push element to next page
       const marginNeeded = currentPageBottom - item.top + 5; // 5px buffer

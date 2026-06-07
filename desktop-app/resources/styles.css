@@ -3855,6 +3855,12 @@ html[lang="ko"] .markdown-body h1, html[lang="ko"] .markdown-body h2, html[lang=
     margin: 15mm;
   }
 
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   body {
     background-color: #ffffff !important;
     color: #24292e !important;
