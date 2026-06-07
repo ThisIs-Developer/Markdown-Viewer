@@ -1539,6 +1539,15 @@ a:focus {
   text-align: center;
 }
 
+/* Ensure target elements are block-level so that layout margins function correctly during PDF export */
+.pdf-export img,
+.pdf-export svg,
+.pdf-export pre,
+.pdf-export table,
+.pdf-export mjx-container[display="true"] {
+  display: block !important;
+}
+
 /* Dark mode PDF export table fix */
 [data-theme="dark"] .pdf-export table th,
 [data-theme="dark"] .pdf-export table td {
