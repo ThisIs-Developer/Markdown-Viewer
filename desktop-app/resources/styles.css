@@ -1540,11 +1540,22 @@ a:focus {
 }
 
 /* Ensure target elements are block-level so that layout margins function correctly during PDF export */
+.pdf-export-block {
+  display: block !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
 .pdf-export img,
 .pdf-export svg,
 .pdf-export pre,
 .pdf-export table,
-.pdf-export mjx-container[display="true"] {
+.pdf-export mjx-container[display="true"],
+.pdf-export-block img,
+.pdf-export-block svg,
+.pdf-export-block pre,
+.pdf-export-block table,
+.pdf-export-block mjx-container[display="true"] {
   display: block !important;
 }
 
@@ -3858,12 +3869,13 @@ html[lang="ko"] .markdown-body h1, html[lang="ko"] .markdown-body h2, html[lang=
 /* ========================================
    ENTERPRISE PRINT & PDF LAYOUT
    ======================================== */
-@media print {
-  @page {
-    size: A4;
-    margin: 15mm;
-  }
+/* Define @page at top-level outside media query for universal print margin compatibility */
+@page {
+  size: A4;
+  margin: 15mm;
+}
 
+@media print {
   html,
   body {
     height: auto !important;

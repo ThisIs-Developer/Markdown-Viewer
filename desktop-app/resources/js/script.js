@@ -7065,13 +7065,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const graphics = [];
 
     // Query all targeting elements in precise DOM layout flow order
-    container.querySelectorAll('img, svg, pre, table, mjx-container[display="true"]').forEach(el => {
+    container.querySelectorAll('.pdf-export-block').forEach(el => {
+      const child = el.firstElementChild;
       let type = 'img';
-      const tag = el.tagName.toLowerCase();
-      if (tag === 'svg') type = 'svg';
-      else if (tag === 'pre') type = 'pre';
-      else if (tag === 'table') type = 'table';
-      else if (tag === 'mjx-container') type = 'math';
+      if (child) {
+        const tag = child.tagName.toLowerCase();
+        if (tag === 'svg') type = 'svg';
+        else if (tag === 'pre') type = 'pre';
+        else if (tag === 'table') type = 'table';
+        else if (tag === 'mjx-container') type = 'math';
+      }
       
       graphics.push({ element: el, type: type });
     });
@@ -7540,6 +7543,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
         await PdfExportEngine.AssetReadinessGate.awaitReady(tempElement, markdown, state);
         throwIfPdfExportAborted(state.signal);
+
+        // Wrap target elements in block-level wrappers to ensure layout shifts and page breaks render reliably
+        tempElement.querySelectorAll('img, svg, pre, table, mjx-container[display="true"]').forEach(el => {
+          if (el.closest('.pdf-export-block')) return;
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'pdf-export-block';
+          el.parentNode.insertBefore(wrapper, el);
+          wrapper.appendChild(el);
+        });
 
         const pageHeightPx = tempElement.offsetWidth * (PAGE_CONFIG.contentHeight / PAGE_CONFIG.contentWidth);
         tempElement.querySelectorAll("pre").forEach(pre => {

@@ -64,7 +64,7 @@ try {
   assert(scriptContent.includes("LegacyRasterBackend"), "script.js implements LegacyRasterBackend");
   assert(scriptContent.includes("pdf-export-modal"), "script.js integrates pdf-export-modal controller");
   assert(scriptContent.includes("parseMarkdownFull"), "script.js contains parseMarkdownFull helper");
-  assert(scriptContent.includes('mjx-container[display="true"]'), "script.js queries mjx-container[display=\"true\"] in identifyGraphicElements");
+  assert(scriptContent.includes("container.querySelectorAll('.pdf-export-block')"), "script.js queries .pdf-export-block in identifyGraphicElements");
   assert(scriptContent.includes("else if (tag === 'mjx-container') type = 'math';"), "script.js tags mjx-container as 'math'");
 } catch (e) {
   assert(false, `Could not read script.js: ${e.message}`);
