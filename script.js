@@ -7549,17 +7549,111 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         let inlinedStyles = "";
+        const inlinedHrefs = new Set();
+        const inlinedStyleChunks = [];
+        let totalRulesProcessed = 0;
+        let lastYieldTime = performance.now();
+        const yieldIntervalMs = 12; // Yield if a block of tasks takes longer than a ~60fps frame budget (12ms)
+
         for (const sheet of Array.from(document.styleSheets)) {
+          let sheetSuccess = false;
+          let rulesText = "";
+
           try {
-            const rules = Array.from(sheet.cssRules || sheet.rules);
-            inlinedStyles += rules.map(r => r.cssText).join("\n") + "\n";
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+              const ruleCount = rules.length;
+              const ruleChunks = [];
+              let currentChunk = [];
+
+              for (let i = 0; i < ruleCount; i++) {
+                currentChunk.push(rules[i].cssText);
+                totalRulesProcessed++;
+
+                // Yield to event loop to keep the UI responsive and let progress updates draw
+                if (totalRulesProcessed % 500 === 0) {
+                  const now = performance.now();
+                  if (now - lastYieldTime > yieldIntervalMs) {
+                    ruleChunks.push(currentChunk.join("\n"));
+                    currentChunk = [];
+                    updatePdfProgress(state, 26, `Inlining CSS rules (${totalRulesProcessed} rules)`);
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                    throwIfPdfExportAborted(state.signal);
+                    lastYieldTime = performance.now();
+                  }
+                }
+              }
+
+              if (currentChunk.length > 0) {
+                ruleChunks.push(currentChunk.join("\n"));
+              }
+              rulesText = ruleChunks.join("\n") + "\n";
+              sheetSuccess = true;
+            }
           } catch (e) {
-            // Fallback for CORS or cross-origin stylesheets
+            if (sheet.href) {
+              try {
+                const response = await fetch(sheet.href);
+                if (response.ok) {
+                  rulesText = await response.text() + "\n";
+                  sheetSuccess = true;
+                }
+              } catch (fetchErr) {
+                // Ignore and try Neutralino fallback
+              }
+
+              if (!sheetSuccess && typeof Neutralino !== 'undefined') {
+                try {
+                  let relativePath = sheet.href;
+                  if (relativePath.startsWith(window.location.origin)) {
+                    relativePath = relativePath.substring(window.location.origin.length);
+                  }
+                  if (relativePath.startsWith('file://')) {
+                    const url = new URL(relativePath);
+                    relativePath = url.pathname;
+                    if (relativePath.startsWith('/') && navigator.platform.startsWith('Win')) {
+                      relativePath = relativePath.substring(1);
+                    }
+                  } else if (relativePath.startsWith('/')) {
+                    relativePath = relativePath.substring(1);
+                  }
+                  rulesText = await Neutralino.filesystem.readFile(relativePath) + "\n";
+                  sheetSuccess = true;
+                } catch (neErr) {
+                  console.warn(`Neutralino filesystem fallback failed for stylesheet: ${sheet.href}`, neErr);
+                }
+              }
+            }
+          }
+
+          if (sheetSuccess) {
+            // Escape closing style tags inside the rules to prevent parser escape / XSS
+            rulesText = rulesText.replace(/<\/style/gi, '<\\/style');
+            inlinedStyleChunks.push(rulesText);
+            if (sheet.href) {
+              inlinedHrefs.add(sheet.href);
+            }
           }
         }
+        inlinedStyles = inlinedStyleChunks.join("\n");
 
         const parentStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-          .map(el => el.outerHTML)
+          .filter(el => {
+            if (el.tagName === 'LINK' && el.getAttribute('href')) {
+              // Exclude if it was successfully inlined to prevent duplicate styling & offline resource failures
+              return !inlinedHrefs.has(el.href);
+            }
+            // Exclude styles since they are already fully compiled into inlinedStyles
+            return false;
+          })
+          .map(el => {
+            if (el.tagName === 'LINK' && el.getAttribute('href')) {
+              const clone = el.cloneNode(true);
+              clone.setAttribute('href', el.href); // Resolve relative to absolute URL
+              return clone.outerHTML;
+            }
+            return el.outerHTML;
+          })
           .join("\n");
 
         const fullHtml = `<!DOCTYPE html>
@@ -7752,12 +7846,21 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         updatePdfProgress(state, 65, "Calculating legacy page breaks");
-        const pageBreakAnalysis = applyPageBreaksWithCascade(tempElement, PAGE_CONFIG, 10, state.signal);
+        // Pass 1: Scale oversized elements first to stabilize their heights
+        const initialAnalysis = analyzeGraphicsForPageBreaks(tempElement, state.signal);
         throwIfPdfExportAborted(state.signal);
 
-        if (pageBreakAnalysis.oversizedElements && pageBreakAnalysis.pageHeightPx) {
-          handleOversizedElements(pageBreakAnalysis.oversizedElements, pageBreakAnalysis.pageHeightPx, state.signal);
+        const pageHeightPx = initialAnalysis.pageHeightPx;
+        if (initialAnalysis.splitElements && pageHeightPx) {
+          const { oversizedElements } = categorizeBySize(initialAnalysis.splitElements, pageHeightPx);
+          if (oversizedElements.length > 0) {
+            handleOversizedElements(oversizedElements, pageHeightPx, state.signal);
+          }
         }
+
+        // Pass 2: Apply page breaks with cascade on the final scaled layout
+        const pageBreakAnalysis = applyPageBreaksWithCascade(tempElement, PAGE_CONFIG, 10, state.signal);
+        throwIfPdfExportAborted(state.signal);
         await waitForPdfFrame(state);
 
         const pdfOptions = {

@@ -64,6 +64,8 @@ try {
   assert(scriptContent.includes("LegacyRasterBackend"), "script.js implements LegacyRasterBackend");
   assert(scriptContent.includes("pdf-export-modal"), "script.js integrates pdf-export-modal controller");
   assert(scriptContent.includes("parseMarkdownFull"), "script.js contains parseMarkdownFull helper");
+  assert(scriptContent.includes('mjx-container[display="true"]'), "script.js queries mjx-container[display=\"true\"] in identifyGraphicElements");
+  assert(scriptContent.includes("else if (tag === 'mjx-container') type = 'math';"), "script.js tags mjx-container as 'math'");
 } catch (e) {
   assert(false, `Could not read script.js: ${e.message}`);
 }
@@ -80,6 +82,17 @@ try {
   assert(sidecarContent.includes("http.createServer"), "sidecar exposes an offline, zero-dependency HTTP server");
 } catch (e) {
   assert(false, `Could not verify desktop configs or sidecar: ${e.message}`);
+}
+
+// Test 5: Verify optimized cooperative CSS inlining in script.js
+try {
+  const scriptContent = fs.readFileSync(SCRIPT_PATH, "utf8");
+  assert(scriptContent.includes("yieldIntervalMs"), "script.js implements yield interval threshold for CSS rules processing");
+  assert(scriptContent.includes("totalRulesProcessed"), "script.js tracks rules processed count for batch yielding");
+  assert(scriptContent.includes("throwIfPdfExportAborted"), "script.js verifies cancellation state inside yielding loop");
+  assert(scriptContent.includes("currentChunk = []"), "script.js uses chunked style accumulation to optimize memory/GC");
+} catch (e) {
+  assert(false, `Could not verify optimized CSS inlining: ${e.message}`);
 }
 
 console.log("\n=========================================");

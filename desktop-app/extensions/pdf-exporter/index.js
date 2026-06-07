@@ -59,15 +59,13 @@ function generatePdf(html, outputPath, callback) {
   const resourcesUrl = "file:///" + resourcesDir.replace(/\\/g, "/");
 
   // Rewrite relative/absolute root-relative resource paths to absolute file:/// URLs
-  const processedHtml = html
-    .replace(/(src|href)="\/assets\//g, `$1="${resourcesUrl}/assets/`)
-    .replace(/(src|href)="\/libs\//g, `$1="${resourcesUrl}/libs/`)
-    .replace(/(src|href)="\/js\//g, `$1="${resourcesUrl}/js/`)
-    .replace(/(src|href)="\/styles\.css"/g, `$1="${resourcesUrl}/styles.css"`)
-    .replace(/(src|href)="assets\//g, `$1="${resourcesUrl}/assets/`)
-    .replace(/(src|href)="libs\//g, `$1="${resourcesUrl}/libs/`)
-    .replace(/(src|href)="js\//g, `$1="${resourcesUrl}/js/`)
-    .replace(/(src|href)="styles\.css"/g, `$1="${resourcesUrl}/styles.css"`);
+  const processedHtml = html.replace(
+    /\b(src|href)(\s*=\s*)(["'])(?:\/)?(assets|libs|js|styles\.css)(?:\/|(?=\3))/gi,
+    (match, attr, spacing, quote, dir) => {
+      const suffix = dir === "styles.css" ? "" : "/";
+      return `${attr}${spacing}${quote}${resourcesUrl}/${dir}${suffix}`;
+    }
+  );
 
   // Write html content to temp file
   fs.writeFile(tempHtmlPath, processedHtml, "utf8", (err) => {
