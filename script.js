@@ -8158,50 +8158,68 @@ document.addEventListener("DOMContentLoaded", function () {
       const contentWidth = pageWidth - (margin * 2);
       const captureScale = choosePdfCanvasScale(tempElement);
 
-      updatePdfProgress(progressState, 65, "Capturing document");
-      const canvas = await runPdfAbortable(progressState, html2canvas(tempElement, {
-        scale: captureScale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        windowWidth: Math.max(PAGE_CONFIG.windowWidth, Math.ceil(tempElement.getBoundingClientRect().width)),
-        windowHeight: Math.ceil(tempElement.getBoundingClientRect().height)
-      }));
-      await waitForPdfFrame(progressState);
-      throwIfPdfExportAborted(progressState.signal);
+      const pageCount = pageBreakAnalysis.pageCount;
+      const pageHeightPx = pageBreakAnalysis.pageHeightPx;
+      const totalHeight = Math.ceil(tempElement.getBoundingClientRect().height);
 
-      console.log(`[PDF DEBUG] canvas.width = ${canvas.width}, canvas.height = ${canvas.height}`);
-      console.log(`[PDF DEBUG] tempElement.offsetWidth = ${tempElement.offsetWidth}, rect.width = ${tempElement.getBoundingClientRect().width}`);
-      const scaleFactor = canvas.width / contentWidth;
-      console.log(`[PDF DEBUG] scaleFactor = ${scaleFactor}, PAGE_CONFIG.scale = ${PAGE_CONFIG.scale}, captureScale = ${captureScale}`);
-      const imgHeight = canvas.height / scaleFactor;
-      console.log(`[PDF DEBUG] imgHeight = ${imgHeight}, contentHeight = ${pageHeight - margin * 2}`);
-      // Introduce a 0.5mm tolerance to prevent rounding errors from creating a trailing blank page
-      const pagesCount = Math.ceil((imgHeight - 0.5) / (pageHeight - margin * 2));
-      console.log(`[PDF DEBUG] pagesCount = ${pagesCount}`);
+      const PAGES_PER_CHUNK = 8;
+      const chunkCount = Math.ceil(pageCount / PAGES_PER_CHUNK);
 
-      updatePdfProgress(progressState, 76, "Rendering pages");
-      for (let page = 0; page < pagesCount; page++) {
+      logPdfExportDebug("Starting hybrid chunked capture loop. Total pages:", pageCount, "Chunks:", chunkCount);
+      updatePdfProgress(progressState, 65, "Rendering pages");
+
+      for (let c = 0; c < chunkCount; c++) {
         throwIfPdfExportAborted(progressState.signal);
-        const pageProgress = 76 + ((page + 1) / pagesCount) * 18;
-        updatePdfProgress(progressState, pageProgress, `Rendering page ${page + 1} of ${pagesCount}`);
+        
+        const startPage = c * PAGES_PER_CHUNK;
+        const endPage = Math.min((c + 1) * PAGES_PER_CHUNK, pageCount);
+        
+        const yStart = startPage * pageHeightPx;
+        const chunkHeight = Math.min(totalHeight - yStart, (endPage - startPage) * pageHeightPx);
 
-        if (page > 0) pdf.addPage();
+        const progressPercent = 65 + ((c + 1) / chunkCount) * 33;
+        updatePdfProgress(progressState, progressPercent, `Rendering page ${startPage + 1} to ${endPage} of ${pageCount}`);
 
-        const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
-        const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
-        const destHeight = sourceHeight / scaleFactor;
+        console.log(`[PDF DEBUG] Rendering chunk ${c + 1}/${chunkCount}: yStart=${yStart}, chunkHeight=${chunkHeight}`);
+        
+        const chunkCanvas = await runPdfAbortable(progressState, html2canvas(tempElement, {
+          scale: captureScale,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+          x: 0,
+          y: yStart,
+          width: tempElement.offsetWidth,
+          height: chunkHeight,
+          windowWidth: Math.max(PAGE_CONFIG.windowWidth, Math.ceil(tempElement.getBoundingClientRect().width)),
+          windowHeight: totalHeight,
+          scrollX: 0,
+          scrollY: 0
+        }));
 
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
+        const chunkPagesCount = endPage - startPage;
+        for (let p = 0; p < chunkPagesCount; p++) {
+          throwIfPdfExportAborted(progressState.signal);
+          const pageIndex = startPage + p;
+          
+          if (pageIndex > 0) pdf.addPage();
 
-        const ctx = pageCanvas.getContext('2d');
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          const pageYInChunkCanvas = p * pageHeightPx * captureScale;
+          const pageHeightInChunkCanvas = Math.min(chunkCanvas.height - pageYInChunkCanvas, pageHeightPx * captureScale);
 
-        const imgData = pageCanvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
-        await waitForPdfFrame(progressState);
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = chunkCanvas.width;
+          pageCanvas.height = pageHeightInChunkCanvas;
+
+          const ctx = pageCanvas.getContext('2d');
+          ctx.drawImage(chunkCanvas, 0, pageYInChunkCanvas, chunkCanvas.width, pageHeightInChunkCanvas, 0, 0, chunkCanvas.width, pageHeightInChunkCanvas);
+
+          const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+          const destHeight = (pageHeightInChunkCanvas / captureScale) / (pageCanvas.width / contentWidth);
+          pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, destHeight);
+          
+          await waitForPdfFrame(progressState);
+        }
       }
 
       throwIfPdfExportAborted(progressState.signal);
