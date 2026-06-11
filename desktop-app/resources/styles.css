@@ -3870,4 +3870,49 @@ html[lang="ko"] .markdown-body h1, html[lang="ko"] .markdown-body h2, html[lang=
     transition: none;
   }
 }
-
+
+/* ========================================
+   BROWSER PRINT STYLES
+   ======================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #markdown-preview, #markdown-preview * {
+    visibility: visible;
+  }
+  #markdown-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  .preview-pane {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  .content-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  header, .tab-bar, .markdown-format-toolbar, .editor-pane, .resize-divider, #line-numbers, .pdf-progress-overlay {
+    display: none !important;
+  }
+}

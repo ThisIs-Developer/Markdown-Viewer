@@ -7964,18 +7964,51 @@ document.addEventListener("DOMContentLoaded", function () {
     return Promise.all(promises);
   }
 
-  // ============================================
-  // End Oversized Graphics Scaling Functions
-  // ============================================
+  function showLargePdfExportDialog(onChoosePrint, onChooseCanvas) {
+    const dialogOverlay = document.createElement("div");
+    dialogOverlay.className = "reset-modal-overlay";
+    dialogOverlay.style.display = "flex";
+    dialogOverlay.setAttribute("role", "dialog");
+    dialogOverlay.setAttribute("aria-modal", "true");
 
-  exportPdf.addEventListener("click", async function (event) {
-    event.preventDefault();
-    logPdfExportDebug("PDF export button clicked!");
-    if (activePdfExport) {
-      logPdfExportDebug("PDF export already active, ignoring click");
-      return;
-    }
+    dialogOverlay.innerHTML = `
+      <div class="reset-modal-box reset-modal-box--wide">
+        <p class="reset-modal-message" style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-color);">Large Document Detected</p>
+        <p style="font-size: 0.9rem; margin-bottom: 1.5rem; opacity: 0.85; line-height: 1.4; color: var(--text-color);">
+          This document is very large. Generating a canvas-based PDF can take a long time and might cause browser lagging. 
+          <br><br>
+          We recommend using the <strong>Browser Print Dialog</strong> (select 'Save as PDF' as the destination). It is instant, uses vector graphics for perfectly sharp text, and has zero document size limits.
+        </p>
+        <div class="reset-modal-actions" style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+          <button class="reset-modal-btn reset-modal-cancel" id="large-pdf-cancel" style="border: 1px solid var(--border-color); background: none; color: var(--text-color);">Cancel</button>
+          <button class="reset-modal-btn" id="large-pdf-canvas" style="background-color: var(--button-bg); border: 1px solid var(--border-color); color: var(--text-color);">Use Canvas (Slow)</button>
+          <button class="reset-modal-btn" id="large-pdf-print" style="background-color: var(--accent-color); border: none; color: #ffffff; font-weight: 600;">Browser Print (Recommended)</button>
+        </div>
+      </div>
+    `;
 
+    document.body.appendChild(dialogOverlay);
+
+    const cleanup = () => {
+      dialogOverlay.remove();
+    };
+
+    dialogOverlay.querySelector("#large-pdf-cancel").addEventListener("click", () => {
+      cleanup();
+    });
+
+    dialogOverlay.querySelector("#large-pdf-canvas").addEventListener("click", () => {
+      cleanup();
+      onChooseCanvas();
+    });
+
+    dialogOverlay.querySelector("#large-pdf-print").addEventListener("click", () => {
+      cleanup();
+      onChoosePrint();
+    });
+  }
+
+  async function startCanvasPdfExport() {
     const progressState = createPdfProgressState();
     activePdfExport = progressState;
     setPdfExportTriggersBusy(progressState, true);
@@ -8236,6 +8269,32 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     } finally {
       cleanupPdfExport(progressState);
+    }
+  }
+
+  exportPdf.addEventListener("click", async function (event) {
+    event.preventDefault();
+    logPdfExportDebug("PDF export button clicked!");
+    if (activePdfExport) {
+      logPdfExportDebug("PDF export already active, ignoring click");
+      return;
+    }
+
+    const markdown = markdownEditor.value;
+    // Set a threshold of 30,000 characters for large documents
+    if (markdown.length > 30000) {
+      showLargePdfExportDialog(
+        () => {
+          // Choice: Browser Print
+          window.print();
+        },
+        () => {
+          // Choice: Canvas rendering
+          startCanvasPdfExport();
+        }
+      );
+    } else {
+      startCanvasPdfExport();
     }
   });
 
