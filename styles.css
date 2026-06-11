@@ -3875,6 +3875,9 @@ html[lang="ko"] .markdown-body h1, html[lang="ko"] .markdown-body h2, html[lang=
    BROWSER PRINT STYLES
    ======================================== */
 @media print {
+  @page {
+    margin: 20mm 15mm !important;
+  }
   body * {
     visibility: hidden;
   }
