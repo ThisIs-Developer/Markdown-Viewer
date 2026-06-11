@@ -3876,46 +3876,39 @@ html[lang="ko"] .markdown-body h1, html[lang="ko"] .markdown-body h2, html[lang=
    ======================================== */
 @media print {
   @page {
-    margin: 20mm 15mm !important;
+    margin: 15mm 15mm 15mm 15mm;
   }
-  body * {
-    visibility: hidden;
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
   }
-  #markdown-preview, #markdown-preview * {
-    visibility: visible;
-  }
-  #markdown-preview {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100% !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
-  }
-  .preview-pane {
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    background: transparent !important;
-  }
-  .content-container {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-  header, .tab-bar, .markdown-format-toolbar, .editor-pane, .resize-divider, #line-numbers, .pdf-progress-overlay {
+  /* Hide all UI layout components */
+  header, 
+  .tab-bar, 
+  .markdown-format-toolbar, 
+  .editor-pane, 
+  .resize-divider, 
+  .pdf-progress-overlay,
+  .reset-modal-overlay,
+  .drag-overlay,
+  #mobile-menu-overlay,
+  .mermaid-toolbar,
+  #line-numbers {
     display: none !important;
+  }
+  /* Ensure preview container fills the page with correct margins */
+  .content-container,
+  .preview-pane,
+  #markdown-preview {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
   }
 }
