@@ -98,7 +98,7 @@
   <img src="https://github.com/user-attachments/assets/33df24e1-c1d8-4b8f-ac79-49813ab767c9" alt="交互式地图渲染器" width="90%" />
 </p>
 
-### 📦 STL 3D 模型渲染器 ([查看版本发布演示 v3.7.5](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.7.5))
+### 📦 STL 3D 模型渲染器 ([查看版本发布演示 v3.8.0](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.8.0))
 渲染并与 STL (ASCII/二进制) 文件进行交互，支持透视控制、平面着色 and 重置控制。
 <p align="center">
   <img src="https://github.com/user-attachments/assets/343b4d3d-5891-4aa9-bba5-1229e7a17fdd" alt="STL 3D 模型渲染器" width="90%" />

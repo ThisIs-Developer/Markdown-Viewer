@@ -1,6 +1,6 @@
 # Project Development Journey
 
-This page documents the development history, design decisions, and evolution of **Markdown Viewer** from its initial prototype to the current production release (v3.7.5).
+This page documents the development history, design decisions, and evolution of **Markdown Viewer** from its initial prototype to the current production release (v3.8.0).
 
 ---
 
@@ -32,7 +32,7 @@ Markdown Viewer was built to address a common need: a fast, privacy-focused Mark
                   |
                   v
 +------------------------------------+
-|  Phase 4: Release & Desktop (V3.7.5)|
+|  Phase 4: Release & Desktop (V3.8.0)|
 |  - Cascade PDF layout pagination   |
 |  - Neutralinojs desktop app wrap   |
 |  - Service Worker offline cache    |
@@ -45,7 +45,7 @@ Markdown Viewer was built to address a common need: a fast, privacy-focused Mark
 
 To see the differences in user interface design, rendering performance, and feature set, you can compare the original prototype with the current production build:
 
-| Target Area | Initial Prototype (Original V0.1) | Current Production Release (v3.7.5) |
+| Target Area | Initial Prototype (Original V0.1) | Current Production Release (v3.8.0) |
 | :--- | :--- | :--- |
 | **Hosting Link** | [a1b91221.markdownviewer.pages.dev](https://a1b91221.markdownviewer.pages.dev/) | [markdownviewer.pages.dev](https://markdownviewer.pages.dev/) |
 | **Parsing Thread** | Main UI Thread (blocked typing) | Dedicated Background Web Worker |

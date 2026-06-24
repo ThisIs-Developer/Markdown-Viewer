@@ -1,6 +1,6 @@
 # Markdown Syntax Reference
 
-This page provides a comprehensive guide to writing GitHub-Flavored Markdown (GFM), LaTeX math formulas, and Mermaid diagrams in **Markdown Viewer** (v3.7.5).
+This page provides a comprehensive guide to writing GitHub-Flavored Markdown (GFM), LaTeX math formulas, and Mermaid diagrams in **Markdown Viewer** (v3.8.0).
 
 ---
 

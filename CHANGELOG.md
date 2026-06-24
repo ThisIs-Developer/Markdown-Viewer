@@ -3,6 +3,22 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## v3.8.0
+
+- **Description:** Delivered substantial new feature expansions and reliability enhancements, including diagram insertion workflow with live card previews, client-side rendering engines (PlantUML, D2, Graphviz), interactive ABC notation playback sync, export quality boosts, desktop data persistence, and layout fixes for squished or overlapping diagrams.
+  - **Insert Diagram Modal:** Added an interactive "Insert Diagram" modal featuring high-fidelity static SVGs, actual live rendering of diagrams in split views, and a categorized search filter.
+  - **New Diagram Engines Support:** Integrated client-side rendering support for PlantUML, D2, and Graphviz (DOT) diagrams via Kroki API fallbacks for browser/offline environments.
+  - **Interactive Diagram Toolbars:** Built interactive toolbar options (zoom, pan, copy SVG/PNG, reset, fit-to-view) for newly introduced engines.
+  - **ABC Notation Enhancements:** Implemented synchronized playback cursor and note highlighting for synthesized audio playbacks and custom export actions.
+  - **High-Definition Image Export:** Increased PNG export resolution to 3x for crisp, high-definition diagrams, and added solid backgrounds to transparent SVG renders to preserve visibility.
+  - **Desktop App Persistence:** Integrated storage persistence using Neutralino storage to retain settings and workspaces across application restarts.
+  - **Mermaid Timeline Layout Fix:** Resolved timeline date labels overlap in Gantt diagrams by enforcing optimal horizontal boundaries.
+  - **Sankey Dark Mode Blending Fix:** Prevented links and flow gradients from blending invisibly in dark mode by isolating the rendering context.
+- **Date:** 2026-06-25
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/commit/7c5bf8ecb46355c75e40908eb5a18d7ec7d88f87
+
+---
+
 ## v3.7.5
 
 - **Description:** Delivered key interactive visualization engines, export improvements, notation support, and syntax/contrast adjustments.

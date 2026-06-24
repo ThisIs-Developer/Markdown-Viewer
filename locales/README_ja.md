@@ -98,7 +98,7 @@ GeoJSON および TopoJSON マップファイルをプレビューエリア内�
   <img src="https://github.com/user-attachments/assets/33df24e1-c1d8-4b8f-ac79-49813ab767c9" alt="対話型マップレンダラー" width="90%" />
 </p>
 
-### 📦 STL 3D モデルレンダラー ([リリースデモ v3.7.5 を表示](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.7.5))
+### 📦 STL 3D モデルレンダラー ([リリースデモ v3.8.0 を表示](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.8.0))
 パースペクティブコントロール、フラットシェーディング、リセットコントロールを備えた STL (ASCII/バイナリ) ファイルをレンダリングして操作します。
 <p align="center">
   <img src="https://github.com/user-attachments/assets/343b4d3d-5891-4aa9-bba5-1229e7a17fdd" alt="STL 3D モデルレンダラー" width="90%" />

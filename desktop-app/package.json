@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer-desktop",
-  "version": "3.7.5",
+  "version": "3.8.0",
   "private": true,
   "description": "A premium client-side GitHub-style Markdown editor and live preview tool for desktop, featuring math rendering, diagrams, syntax highlighting, and PDF/HTML exports.",
   "scripts": {

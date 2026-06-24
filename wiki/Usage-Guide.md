@@ -1,6 +1,6 @@
 # User Operations & Usage Guide
 
-This guide details how to work with the editing workspace, importing flows, exporting tools, and serverless sharing mechanisms in **Markdown Viewer** (v3.7.5).
+This guide details how to work with the editing workspace, importing flows, exporting tools, and serverless sharing mechanisms in **Markdown Viewer** (v3.8.0).
 
 ---
 

@@ -1,6 +1,6 @@
 # Localization & Internationalization (i18n)
 
-Markdown Viewer (v3.7.5) features a fully client-side translation engine that translates all user interface menus, modals, and tooltips dynamically.
+Markdown Viewer (v3.8.0) features a fully client-side translation engine that translates all user interface menus, modals, and tooltips dynamically.
 
 ---
 

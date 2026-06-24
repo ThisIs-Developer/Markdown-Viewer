@@ -1,6 +1,6 @@
 # Frequently Asked Questions (FAQ)
 
-This FAQ answers common questions about using, deploying, and troubleshooting **Markdown Viewer** (v3.7.5).
+This FAQ answers common questions about using, deploying, and troubleshooting **Markdown Viewer** (v3.8.0).
 
 ---
 

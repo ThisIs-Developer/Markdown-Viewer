@@ -99,7 +99,7 @@ Parse and visualize GeoJSON and TopoJSON map files directly inside your preview 
   <img src="https://github.com/user-attachments/assets/33df24e1-c1d8-4b8f-ac79-49813ab767c9" alt="Interactive Map Renderers" width="90%" />
 </p>
 
-### 📦 STL 3D Model Renderer ([View Release Demo v3.7.5](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.7.5))
+### 📦 STL 3D Model Renderer ([View Release Demo v3.8.0](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.8.0))
 Render and interact with STL (ASCII/Binary) files featuring perspective controls, flat shading, and reset controls.
 <p align="center">
   <img src="https://github.com/user-attachments/assets/343b4d3d-5891-4aa9-bba5-1229e7a17fdd" alt="STL 3D Model Renderer" width="90%" />

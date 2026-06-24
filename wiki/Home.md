@@ -1,6 +1,6 @@
 # Welcome to the Markdown Viewer Wiki
 
-Welcome to the official technical documentation and user wiki for the **Markdown Viewer** application (v3.7.5). This repository contains detailed configuration guides, architecture documents, installation instructions, and user manuals to help you customize, deploy, and contribute to this client-side Markdown editing suite.
+Welcome to the official technical documentation and user wiki for the **Markdown Viewer** application (v3.8.0). This repository contains detailed configuration guides, architecture documents, installation instructions, and user manuals to help you customize, deploy, and contribute to this client-side Markdown editing suite.
 
 ---
 
@@ -30,7 +30,7 @@ Use the navigation map below to explore the technical documentation sections of 
 | **[Configuration](Configuration)** | Analysis of localStorage schemas, CDN assets links, Docker Nginx blocks, and Neutralino desktop runtime settings. |
 | **[Docker Deployment](Docker-Deployment)** | Production Docker customization guide containing security headers, custom context paths, and reverse proxy files. |
 | **[Desktop App](Desktop-App)** | Build workflow documentation for packaging native desktop executable wrappers on Windows, Linux, and macOS. |
-| **[Development Journey](Development-Journey)** | Evolution milestones of the project, comparison matrices between early prototype and v3.7.5, and design history. |
+| **[Development Journey](Development-Journey)** | Evolution milestones of the project, comparison matrices between early prototype and v3.8.0, and design history. |
 | **[Markdown Reference](Markdown-Reference)** | Exhaustive writing template guide for GFM extensions, MathJax LaTeX equations, and Mermaid charts. |
 | **[FAQ](FAQ)** | Frequently Asked Questions on local privacy, memory utilization, export troubleshooting, and desktop security warnings. |
 | **[Contributing](Contributing)** | Development environment configuration guides, 2-space styling parameters, conventional commits, and PR reviews. |

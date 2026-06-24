@@ -98,7 +98,7 @@ PlantUML 다이어그램을 깨끗하고 테마에 맞춘 인터페이스와 함
   <img src="https://github.com/user-attachments/assets/33df24e1-c1d8-4b8f-ac79-49813ab767c9" alt="대화형 맵 렌더러" width="90%" />
 </p>
 
-### 📦 STL 3D 모델 렌더러 ([릴리스 데모 v3.7.5 보기](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.7.5))
+### 📦 STL 3D 모델 렌더러 ([릴리스 데모 v3.8.0 보기](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.8.0))
 원근 제어, 플랫 셰이딩 및 재설정 제어 기능이 있는 STL (ASCII/바이너리) 파일을 렌더링하고 상호 작용합니다.
 <p align="center">
   <img src="https://github.com/user-attachments/assets/343b4d3d-5891-4aa9-bba5-1229e7a17fdd" alt="STL 3D 모델 렌더러" width="90%" />

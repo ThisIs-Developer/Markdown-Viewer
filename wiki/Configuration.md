@@ -1,6 +1,6 @@
 # System & Build Configuration
 
-This page details the configuration variables, local storage structures, container files, and desktop configuration parameters for **Markdown Viewer** (v3.7.5).
+This page details the configuration variables, local storage structures, container files, and desktop configuration parameters for **Markdown Viewer** (v3.8.0).
 
 ---
 
