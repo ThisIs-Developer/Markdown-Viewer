@@ -432,7 +432,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       theme: mermaidTheme,
       securityLevel: 'strict',
       flowchart: { useMaxWidth: true, htmlLabels: true },
-      fontSize: 16
+      fontSize: 16,
+      gantt: { useWidth: 1200 }
     });
   };
 
@@ -9472,7 +9473,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           }
           if (window.mermaid) {
               try {
-                  window.mermaid.initialize({ startOnLoad: true, theme: '${isDarkTheme ? "dark" : "default"}' });
+                  window.mermaid.initialize({ startOnLoad: true, theme: '${isDarkTheme ? "dark" : "default"}', gantt: { useWidth: 1200 } });
               } catch (e) {
                   console.warn('Mermaid initialization failed:', e);
               }
