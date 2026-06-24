@@ -4960,3 +4960,9 @@ html[data-theme="dark"] .diagram-svg-abcnotation svg path {
   fill: #eceff4 !important;
   stroke: #eceff4 !important;
 }
+
+/* Fix Dark Mode Sankey Diagram rendering color mismatch by preventing mix-blend-mode: multiply from blending with dark backgrounds */
+html[data-theme="dark"] .mermaid svg {
+  isolation: isolate;
+}
+
