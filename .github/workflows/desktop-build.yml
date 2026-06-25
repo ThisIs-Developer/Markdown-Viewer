@@ -3,7 +3,7 @@ name: Build Desktop App Binaries
 on:
   push:
     tags:
-      - "desktop-v*"
+      - "v*"
 
 permissions:
   contents: write
@@ -41,7 +41,7 @@ jobs:
       - name: Stage release assets
         working-directory: desktop-app
         run: |
-          VERSION="${GITHUB_REF_NAME#desktop-}"
+          VERSION="${GITHUB_REF_NAME}"
           STAGING="release-assets"
           mkdir -p "$STAGING"
 
@@ -73,6 +73,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Markdown Viewer Desktop ${{ github.ref_name }}"
+          name: "Markdown Viewer ${{ github.ref_name }}"
           generate_release_notes: true
           files: desktop-app/release-assets/*
