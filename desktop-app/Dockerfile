@@ -13,7 +13,7 @@ COPY . .
 WORKDIR /app/desktop-app
 
 # Setup (download binaries + prepare resources) and build all variants
-RUN npm run build:all
+RUN npm run build
 
 # Final stage: Export the dist artifacts
 FROM alpine:latest

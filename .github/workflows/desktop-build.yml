@@ -36,7 +36,7 @@ jobs:
 
       - name: Build desktop bundles
         working-directory: desktop-app
-        run: npm run build:all
+        run: npm run build
 
       - name: Stage release assets
         working-directory: desktop-app
@@ -45,17 +45,14 @@ jobs:
           STAGING="release-assets"
           mkdir -p "$STAGING"
 
-          # Windows embedded single-file executable
-          WIN_EMBEDDED="dist/windows-embedded/markdown-viewer/markdown-viewer-win_x64.exe"
-          if [ -f "$WIN_EMBEDDED" ]; then
-            cp "$WIN_EMBEDDED" "$STAGING/markdown-viewer-win_x64.exe"
+          # Windows executable from the portable Neutralino bundle
+          WIN_EXE="dist/markdown-viewer/markdown-viewer-win_x64.exe"
+          if [ -f "$WIN_EXE" ]; then
+            cp "$WIN_EXE" "$STAGING/markdown-viewer-win_x64.exe"
           fi
 
-          # Portable ZIP bundle from neu build --release
-          for zip in dist/*.zip; do
-            [ -f "$zip" ] || continue
-            cp "$zip" "$STAGING/"
-          done
+          # Portable bundle directory from neu build --release
+          (cd dist && zip -r "../$STAGING/markdown-viewer-${VERSION}-portable.zip" markdown-viewer)
 
           # Source archive
           cd ..

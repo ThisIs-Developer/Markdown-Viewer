@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markdown-viewer-cache-v3.7.19';
+const CACHE_NAME = 'markdown-viewer-cache-v3.8.0';
 
 // PERF-011: Split precache into critical (local files) and lazy (CDN libraries)
 // Critical assets are precached during SW install for instant offline startup
