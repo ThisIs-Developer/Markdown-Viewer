@@ -40,28 +40,50 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // PERF-002: Lazy script loader for optional heavy libraries
   const _loadedScripts = new Set();
+  const _loadingScripts = new Map();
   function loadScript(url) {
     if (_loadedScripts.has(url)) return Promise.resolve();
-    return new Promise(function(resolve, reject) {
+    if (_loadingScripts.has(url)) return _loadingScripts.get(url);
+    const loadPromise = new Promise(function(resolve, reject) {
       const script = document.createElement('script');
       script.src = url;
-      script.onload = function() { _loadedScripts.add(url); resolve(); };
-      script.onerror = function() { reject(new Error('Failed to load: ' + url)); };
+      script.onload = function() {
+        _loadedScripts.add(url);
+        _loadingScripts.delete(url);
+        resolve();
+      };
+      script.onerror = function() {
+        _loadingScripts.delete(url);
+        reject(new Error('Failed to load: ' + url));
+      };
       document.head.appendChild(script);
     });
+    _loadingScripts.set(url, loadPromise);
+    return loadPromise;
   }
 
   const _loadedStyles = new Set();
+  const _loadingStyles = new Map();
   function loadStyle(url) {
     if (_loadedStyles.has(url)) return Promise.resolve();
-    return new Promise(function(resolve, reject) {
+    if (_loadingStyles.has(url)) return _loadingStyles.get(url);
+    const loadPromise = new Promise(function(resolve, reject) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = url;
-      link.onload = function() { _loadedStyles.add(url); resolve(); };
-      link.onerror = function() { reject(new Error('Failed to load style: ' + url)); };
+      link.onload = function() {
+        _loadedStyles.add(url);
+        _loadingStyles.delete(url);
+        resolve();
+      };
+      link.onerror = function() {
+        _loadingStyles.delete(url);
+        reject(new Error('Failed to load style: ' + url));
+      };
       document.head.appendChild(link);
     });
+    _loadingStyles.set(url, loadPromise);
+    return loadPromise;
   }
 
   // CDN URLs for lazy-loaded libraries
@@ -193,6 +215,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const previewWorkerRequests = new Map();
   const previewSegmentHtmlCache = new Map();
   let previewSegmentCacheTabId = null;
+  let mathJaxLoadPromise = null;
   let mathJaxTypesetPromise = Promise.resolve();
   let mathJaxTypesetRunId = 0;
 
@@ -468,6 +491,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const renderer = new marked.Renderer();
   const BLOCK_MATH_MARKER_PATTERN = /^\$\$/m;
   const BLOCK_MATH_PATTERN = /^\$\$[ \t]*\n?([\s\S]*?)\n?\$\$[ \t]*(?:\n|$)/;
+  const RAW_MATH_TEXT_PATTERN = /\$\$|\$[^$]|\\\(|\\\[/;
+  const MATHJAX_TEXT_TARGET_SELECTOR = 'p, li, td, th, dd, dt, blockquote, figcaption, h1, h2, h3, h4, h5, h6, .math-block';
   const DEFINITION_LIST_ITEM_PATTERN = /^:[ \t]+(.*)$/;
   const SUPERSCRIPT_PATTERN = /^\^(?!\s)([^^\n]*?\S)\^(?!\^)/;
   const SUBSCRIPT_PATTERN = /^~(?!~)(?!\s)([^~\n]*?\S)~(?!~)/;
@@ -1772,6 +1797,49 @@ document.addEventListener("DOMContentLoaded", async function () {
     return mathJaxTypesetPromise;
   }
 
+  function configureMathJax() {
+    if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
+    if (window.MathJax && MathJax.loader && MathJax.tex) return;
+    window.MathJax = {
+      loader: { load: ['[tex]/boldsymbol'] },
+      startup: {
+        typeset: false
+      },
+      options: {
+        a11y: { inTabOrder: false }
+      },
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        packages: { '[+]': ['ams', 'boldsymbol'] }
+      }
+    };
+  }
+
+  function ensureMathJaxReady() {
+    if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
+      return MathJax.startup && MathJax.startup.promise
+        ? MathJax.startup.promise
+        : Promise.resolve();
+    }
+
+    configureMathJax();
+    if (!mathJaxLoadPromise) {
+      mathJaxLoadPromise = loadScript(CDN.mathjax)
+        .then(function() {
+          return MathJax.startup && MathJax.startup.promise
+            ? MathJax.startup.promise
+            : Promise.resolve();
+        })
+        .catch(function(error) {
+          mathJaxLoadPromise = null;
+          throw error;
+        });
+    }
+    return mathJaxLoadPromise;
+  }
+
   function clearMathJaxPreviewState(container) {
     if (!window.MathJax || typeof MathJax.typesetClear !== 'function' || !container) return;
     try {
@@ -2721,6 +2789,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const shouldRestoreScroll = previewHasCommittedRender && !previewContainsSkeleton();
     const scrollSnapshot = shouldRestoreScroll ? capturePreviewScroll() : null;
 
+    mathJaxTypesetRunId += 1;
     clearMathJaxPreviewState(markdownPreview);
     const patchResult = patchPreviewDom(markdownPreview, sanitizedHtml, {
       reusePreviewBlocks: context.previewEngineMode === 'segmented' && !context.force,
@@ -2773,6 +2842,38 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     });
     return matches;
+  }
+
+  function hasRawMathText(node) {
+    return Boolean(node && RAW_MATH_TEXT_PATTERN.test(node.textContent || ''));
+  }
+
+  function addMathJaxTarget(targets, candidate) {
+    if (!candidate || !hasRawMathText(candidate)) return;
+    if (targets.some(function(target) { return target.contains(candidate); })) return;
+    for (let index = targets.length - 1; index >= 0; index -= 1) {
+      if (candidate.contains(targets[index])) {
+        targets.splice(index, 1);
+      }
+    }
+    targets.push(candidate);
+  }
+
+  function getMathJaxTypesetTargets(roots) {
+    const targets = [];
+    roots.forEach(function(root) {
+      if (!root || root.nodeType !== Node.ELEMENT_NODE) return;
+      if (root.matches && root.matches(MATHJAX_TEXT_TARGET_SELECTOR)) {
+        addMathJaxTarget(targets, root);
+      }
+      root.querySelectorAll(MATHJAX_TEXT_TARGET_SELECTOR).forEach(function(candidate) {
+        addMathJaxTarget(targets, candidate);
+      });
+      if (targets.length === 0 && hasRawMathText(root)) {
+        addMathJaxTarget(targets, root);
+      }
+    });
+    return targets;
   }
 
   function markPreviewRootsReady(roots) {
@@ -3612,38 +3713,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const hasMath = /\$\$|\$[^$]|\\\(|\\\[/.test(rawVal || '') || /```math\b/.test(rawVal || '');
     if (hasMath) {
-      const typesetTargets = roots.filter(function(root) {
-        return root && root.nodeType === Node.ELEMENT_NODE && /\$\$|\$[^$]|\\\(|\\\[/.test(root.textContent || '');
+      const mathTargets = getMathJaxTypesetTargets(roots);
+      if (mathTargets.length === 0) return;
+      ensureMathJaxReady().then(function() {
+        if (context.renderId !== previewRenderGeneration) return;
+        typesetMathJaxTargets(mathTargets, context);
+      }).catch(function(e) {
+        console.warn('Failed to load MathJax:', e);
       });
-      const mathTargets = typesetTargets.length ? typesetTargets : roots;
-      if (window.MathJax) {
-        try {
-          typesetMathJaxTargets(mathTargets, context);
-        } catch (e) {
-          console.warn("MathJax rendering failed:", e);
-        }
-      } else {
-        window.MathJax = {
-          loader: { load: ['[tex]/boldsymbol'] },
-          options: {
-            a11y: { inTabOrder: false }
-          },
-          tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']],
-            processEscapes: true,
-            packages: { '[+]': ['ams', 'boldsymbol'] }
-          }
-        };
-        loadScript(CDN.mathjax).then(function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          try {
-            typesetMathJaxTargets(mathTargets, context);
-          } catch (e) {
-            console.warn('MathJax rendering failed:', e);
-          }
-        }).catch(function(e) { console.warn('Failed to load MathJax:', e); });
-      }
     }
 
     updateDocumentStats();
