@@ -7,7 +7,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 - **Description:** Delivered substantial new feature expansions and reliability enhancements, including diagram insertion workflow with live card previews, client-side rendering engines (PlantUML, D2, Graphviz), interactive ABC notation playback sync, export quality boosts, desktop data persistence, and layout fixes for squished or overlapping diagrams.
   - **Insert Diagram Modal:** Added an interactive "Insert Diagram" modal featuring high-fidelity static SVGs, actual live rendering of diagrams in split views, and a categorized search filter.
-  - **New Diagram Engines Support:** Integrated client-side rendering support for PlantUML, D2, and Graphviz (DOT) diagrams via Kroki API fallbacks for browser/offline environments.
+  - **New Diagram Engines Support:** Integrated client-side rendering support for PlantUML, D2, Graphviz (DOT), Vega-Lite, Wavedrom, and Markmap diagrams via dynamic libraries and Kroki API fallbacks for browser/offline environments.
   - **Interactive Diagram Toolbars:** Built interactive toolbar options (zoom, pan, copy SVG/PNG, reset, fit-to-view) for newly introduced engines.
   - **ABC Notation Enhancements:** Implemented synchronized playback cursor and note highlighting for synthesized audio playbacks and custom export actions.
   - **High-Definition Image Export:** Increased PNG export resolution to 3x for crisp, high-definition diagrams, and added solid backgrounds to transparent SVG renders to preserve visibility.

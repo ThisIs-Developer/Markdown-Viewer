@@ -84,14 +84,18 @@ Generate flowcharts, Gantt charts, and sequence diagrams with zoom, pan, and SVG
   <img src="https://github.com/user-attachments/assets/60e6c63b-df31-4097-a6df-556858087758" alt="Mermaid Toolbar" width="90%" />
 </p>
 
-### 📐 PlantUML Diagram Toolkit
-Render PlantUML diagrams instantly with a clean, theme-matched interface featuring zoom and pan controls, modal viewing, clipboard copy, and SVG/PNG export options.
+### 🎨 Advanced Diagram & Chart Plugins
+Render complex architectural diagrams and visualizations instantly with a clean, theme-matched interface featuring zoom/pan controls, modal viewing, clipboard copy, and SVG/PNG export options:
+- **PlantUML**: Compile sequence diagrams, use cases, and class structures natively.
+- **D2**: Script clean, modern diagrams-as-code layout structures.
+- **Graphviz**: Visualize network topologies, trees, and directed graphs via DOT script notation.
+- **Vega-Lite**: Describe declarative charts, data plots, and statistical visualizations.
+- **Wavedrom**: Draw digital timing diagrams and waveform representations.
+- **Markmap**: Generate interactive mindmaps from nested markdown lists.
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/027e0bcb-d149-46bb-adf5-0ece02ffaaac" alt="Client-Side PlantUML Diagrams" width="90%" />
 </p>
-
-### 🖼️ D2 Diagram Toolkit
-Render clean, modern D2 diagrams-as-code scripting blocks instantly with a theme-matched interactive toolbar for zoom/pan view, clipboard copy, and SVG/PNG downloads.
 
 ### 🗺️ Interactive Map Renderers
 Parse and visualize GeoJSON and TopoJSON map files directly inside your preview area.
