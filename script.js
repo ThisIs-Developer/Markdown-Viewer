@@ -193,6 +193,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const previewWorkerRequests = new Map();
   const previewSegmentHtmlCache = new Map();
   let previewSegmentCacheTabId = null;
+  let mathJaxTypesetPromise = Promise.resolve();
+  let mathJaxTypesetRunId = 0;
 
   const markdownEditor = document.getElementById("markdown-editor");
   const markdownPreview = document.getElementById("markdown-preview");
@@ -1736,6 +1738,49 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function typesetMathJaxTargets(mathTargets, context) {
+    const runId = ++mathJaxTypesetRunId;
+    const mathJaxReady = MathJax.startup && MathJax.startup.promise
+      ? MathJax.startup.promise
+      : Promise.resolve();
+
+    mathJaxTypesetPromise = mathJaxTypesetPromise.catch(function() {
+      // Continue with the newest render after a previous MathJax run fails.
+    }).then(function() {
+      return mathJaxReady;
+    }).then(function() {
+      if (runId !== mathJaxTypesetRunId) return null;
+      if (context.renderId !== previewRenderGeneration) return;
+      if (typeof MathJax.typesetPromise !== 'function') {
+        throw new Error('MathJax typesetPromise API is unavailable.');
+      }
+      const connectedTargets = mathTargets.filter(function(target) {
+        return target && target.isConnected;
+      });
+      if (connectedTargets.length === 0) return null;
+      return MathJax.typesetPromise(connectedTargets);
+    }).then(function() {
+      if (runId !== mathJaxTypesetRunId) return;
+      if (context.renderId !== previewRenderGeneration) return;
+      queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
+        mjx.removeAttribute('tabindex');
+      });
+    }).catch(function(err) {
+      console.warn('MathJax typesetting failed:', err);
+    });
+
+    return mathJaxTypesetPromise;
+  }
+
+  function clearMathJaxPreviewState(container) {
+    if (!window.MathJax || typeof MathJax.typesetClear !== 'function' || !container) return;
+    try {
+      MathJax.typesetClear([container]);
+    } catch (error) {
+      console.warn('MathJax cleanup failed:', error);
+    }
+  }
+
   // PERF-012: Inlined default template to eliminate network request, FOUC, and layout shifts
   const defaultMarkdownTemplate = document.getElementById('default-markdown');
   let templateText = '';
@@ -2676,6 +2721,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const shouldRestoreScroll = previewHasCommittedRender && !previewContainsSkeleton();
     const scrollSnapshot = shouldRestoreScroll ? capturePreviewScroll() : null;
 
+    clearMathJaxPreviewState(markdownPreview);
     const patchResult = patchPreviewDom(markdownPreview, sanitizedHtml, {
       reusePreviewBlocks: context.previewEngineMode === 'segmented' && !context.force,
     });
@@ -3572,20 +3618,13 @@ document.addEventListener("DOMContentLoaded", async function () {
       const mathTargets = typesetTargets.length ? typesetTargets : roots;
       if (window.MathJax) {
         try {
-          MathJax.typesetPromise(mathTargets).then(function() {
-            if (context.renderId !== previewRenderGeneration) return;
-            queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
-              mjx.removeAttribute('tabindex');
-            });
-          }).catch(function(err) {
-            console.warn('MathJax typesetting failed:', err);
-          });
+          typesetMathJaxTargets(mathTargets, context);
         } catch (e) {
           console.warn("MathJax rendering failed:", e);
         }
       } else {
         window.MathJax = {
-          loader: { load: ['[tex]/ams', '[tex]/boldsymbol'] },
+          loader: { load: ['[tex]/boldsymbol'] },
           options: {
             a11y: { inTabOrder: false }
           },
@@ -3599,14 +3638,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         loadScript(CDN.mathjax).then(function() {
           if (context.renderId !== previewRenderGeneration) return;
           try {
-            MathJax.typesetPromise(mathTargets).then(function() {
-              if (context.renderId !== previewRenderGeneration) return;
-              queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
-                mjx.removeAttribute('tabindex');
-              });
-            }).catch(function(err) {
-              console.warn('MathJax typesetting failed:', err);
-            });
+            typesetMathJaxTargets(mathTargets, context);
           } catch (e) {
             console.warn('MathJax rendering failed:', e);
           }

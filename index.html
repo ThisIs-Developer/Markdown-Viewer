@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME='; worker-src 'self'; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://kroki.io https://www.plantuml.com https://mermaid.ink; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data:; manifest-src 'self'; upgrade-insecure-requests">
     <!-- DNS Prefetch & Preconnect CDN Origins to Warm Up Latency -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -36,26 +37,29 @@
     <link rel="manifest" href="manifest.json">
 
     <!-- Primary Meta Tags -->
-    <meta name="title" content="Markdown Viewer">
+    <meta name="title" content="Markdown Viewer - Secure Online Markdown Editor and Previewer">
     <meta name="description" content="Markdown Viewer is a powerful GitHub-style Markdown rendering tool with live preview, LaTeX math, Mermaid diagrams, syntax highlighting, dark mode, and export options to PDF, HTML, and MD—all fully client-side and secure.">
     <meta name="keywords" content="Markdown Viewer, GitHub-style markdown, live preview, markdown editor, LaTeX support, Mermaid diagrams, PDF export, syntax highlighting, markdown to HTML, secure markdown tool, client-side markdown viewer, ThisIs-Developer, advanced markdown parser, future markdown viewer, next-gen markdown tool">
     <meta name="author" content="ThisIs-Developer">
-    <meta name="robots" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large">
     <meta name="language" content="English">
     <meta name="distribution" content="global">
     <meta name="rating" content="general">
+    <meta name="application-name" content="Markdown Viewer">
+    <meta name="theme-color" content="#0d1117">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://markdownviewer.pages.dev/">
-    <meta property="og:title" content="Markdown Viewer">
+    <meta property="og:title" content="Markdown Viewer - Secure Online Markdown Editor and Previewer">
     <meta property="og:description" content="Markdown Viewer is a powerful GitHub-style Markdown rendering tool with live preview, LaTeX math, Mermaid diagrams, syntax highlighting, dark mode, and export options to PDF, HTML, and MD—all fully client-side and secure.">
     <meta property="og:image" content="https://markdownviewer.pages.dev/assets/icon.jpg">
+    <meta property="og:site_name" content="Markdown Viewer">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://markdownviewer.pages.dev/">
-    <meta property="twitter:title" content="Markdown Viewer">
+    <meta property="twitter:title" content="Markdown Viewer - Secure Online Markdown Editor and Previewer">
     <meta property="twitter:description" content="Markdown Viewer is a powerful GitHub-style Markdown rendering tool with live preview, LaTeX math, Mermaid diagrams, syntax highlighting, dark mode, and export options to PDF, HTML, and MD—all fully client-side and secure.">
     <meta property="twitter:image" content="https://markdownviewer.pages.dev/assets/icon.jpg">
 
@@ -71,6 +75,14 @@
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "All",
       "browserRequirements": "Requires HTML5 compatible browser",
+      "softwareVersion": "3.8.0",
+      "featureList": [
+        "Client-side Markdown editing",
+        "GitHub-style live preview",
+        "LaTeX math rendering",
+        "Mermaid diagram rendering",
+        "PDF, HTML, PNG, and Markdown export"
+      ],
       "author": {
         "@type": "Organization",
         "name": "ThisIs-Developer",
@@ -84,13 +96,12 @@
     }
     </script>
 
-    <title>Markdown Viewer</title>
+    <title>Markdown Viewer - Secure Online Markdown Editor and Previewer</title>
     <link href="assets/icon.jpg" rel="icon" type="image/jpg">
     <!-- Updated libraries to latest versions with Subresource Integrity (SRI) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css" integrity="sha384-hZuxRjC/Dsr4zEx1JlUhDQqkvqBPp2VLHsgXfnxPq1ULDy1eIdWCiux7nvO1RIZP" crossorigin="anonymous">
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" as="style" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous"></noscript>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
     <link rel="stylesheet" href="styles.css">
     
     <!-- Loading order optimized - ensure libraries are loaded asynchronously using defer -->
@@ -1041,7 +1052,7 @@
         </div>
     </div>
 
-    <script type="text/markdown" id="default-markdown">---
+    <textarea id="default-markdown" hidden aria-hidden="true">---
 title: Welcome to Markdown Viewer
 description: A GitHub-style Markdown renderer with live preview, math, diagrams, and export support.
 author: ThisIs-Developer
@@ -1208,10 +1219,10 @@ Quote someone famous:
 ## 🛡️ Security Note
 
 This is a fully client-side application. Your content never leaves your browser and stays secure on your device.
-</script>
+</textarea>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
+    <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->
     <div id="app-accessibility-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 </body>
