@@ -250,6 +250,21 @@ async function prepareOfflineDependencies() {
       hash: null
     },
     {
+      url: "https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js",
+      dest: path.join(LIBS_DIR, "d3.min.js"),
+      hash: null
+    },
+    {
+      url: "https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js",
+      dest: path.join(LIBS_DIR, "markmap-lib.iife.js"),
+      hash: null
+    },
+    {
+      url: "https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js",
+      dest: path.join(LIBS_DIR, "markmap-view.js"),
+      hash: null
+    },
+    {
       url: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js",
       dest: path.join(LIBS_DIR, "tex-mml-chtml.min.js"),
       hash: null

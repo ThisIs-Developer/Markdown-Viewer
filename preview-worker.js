@@ -366,13 +366,16 @@ function configureMarked() {
     const krokiLanguages = {
       'vega-lite': ['vegalite', 'Vega-Lite'],
       vegalite: ['vegalite', 'Vega-Lite'],
-      wavedrom: ['wavedrom', 'WaveDrom'],
-      markmap: ['markmap', 'Markmap']
+      wavedrom: ['wavedrom', 'WaveDrom']
     };
     if (krokiLanguages[language]) {
       const [engine, label] = krokiLanguages[language];
       const uniqueId = `${engine}-diagram-worker-${krokiIdCounter++}`;
       return renderDiagramShell(engine, 'kroki-container', 'kroki-diagram', uniqueId, code, label);
+    }
+    if (language === 'markmap') {
+      const uniqueId = `markmap-diagram-worker-${krokiIdCounter++}`;
+      return renderDiagramShell('markmap', 'markmap-container', 'markmap-diagram', uniqueId, code, 'Markmap');
     }
 
     if (language === "math") {
@@ -400,6 +403,72 @@ function configureMarked() {
     return `<h${level} id="${id}">${text}</h${level}>`;
   };
 
+  function normalizeMarkmapFences(markdown) {
+    const lines = String(markdown || '').split(/\r?\n/);
+    const output = [];
+    let index = 0;
+
+    while (index < lines.length) {
+      const opening = lines[index].match(/^([ \t]{0,3})(`{3,}|~{3,})([ \t]*)(.*)$/);
+      const info = opening ? opening[4].trim() : '';
+      if (!opening || !/^markmap(?:\s|$)/i.test(info)) {
+        output.push(lines[index]);
+        index += 1;
+        continue;
+      }
+
+      const indent = opening[1];
+      const fence = opening[2];
+      const marker = fence[0];
+      const content = [];
+      let nestedFence = null;
+      let maxInnerFenceLength = fence.length;
+      let closeIndex = -1;
+
+      for (let scan = index + 1; scan < lines.length; scan += 1) {
+        const line = lines[scan];
+        const fenceMatch = line.match(/^[ \t]{0,3}(`{3,}|~{3,})([ \t]*.*)$/);
+        if (fenceMatch) {
+          const currentFence = fenceMatch[1];
+          const currentMarker = currentFence[0];
+          const tail = fenceMatch[2].trim();
+          if (currentMarker === marker) {
+            maxInnerFenceLength = Math.max(maxInnerFenceLength, currentFence.length);
+          }
+
+          if (nestedFence) {
+            if (currentMarker === nestedFence.marker && currentFence.length >= nestedFence.length && tail === '') {
+              nestedFence = null;
+            }
+          } else if (currentMarker === marker && currentFence.length >= fence.length && tail === '') {
+            closeIndex = scan;
+            break;
+          } else if (tail !== '') {
+            nestedFence = {
+              marker: currentMarker,
+              length: currentFence.length
+            };
+          }
+        }
+        content.push(line);
+      }
+
+      if (closeIndex === -1) {
+        output.push(lines[index]);
+        index += 1;
+        continue;
+      }
+
+      const normalizedFence = marker.repeat(maxInnerFenceLength + 1);
+      output.push(`${indent}${normalizedFence}${opening[3]}${opening[4]}`);
+      output.push(...content);
+      output.push(`${indent}${normalizedFence}`);
+      index = closeIndex + 1;
+    }
+
+    return output.join('\n');
+  }
+
   marked.use({
     extensions: [
       blockMathExtension,
@@ -412,7 +481,8 @@ function configureMarked() {
       preprocess(markdown) {
         if (suppressFootnotePreprocess) return markdown;
         resetExtendedMarkdownState();
-        const protectedMarkdown = markdown.replace(/\\\$/g, "&#36;");
+        const normalizedMarkdown = normalizeMarkmapFences(markdown);
+        const protectedMarkdown = normalizedMarkdown.replace(/\\\$/g, "&#36;");
         return applyFootnotes(extractFootnoteDefinitions(protectedMarkdown));
       },
     },
@@ -510,11 +580,12 @@ function splitMarkdownBlocks(markdown) {
 }
 
 function renderSegmentedMarkdown(markdown, options) {
-  if (!isSegmentedPreviewSafe(markdown)) {
+  const normalizedMarkdown = normalizeMarkmapFences(markdown);
+  if (!isSegmentedPreviewSafe(normalizedMarkdown)) {
     return { mode: "full-required", reason: "unsafe-markdown" };
   }
 
-  const blocks = splitMarkdownBlocks(markdown);
+  const blocks = splitMarkdownBlocks(normalizedMarkdown);
   if (blocks.length < (options.minimumBlocks || 1)) {
     return { mode: "full-required", reason: "too-few-blocks" };
   }

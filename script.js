@@ -101,7 +101,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     topojson: 'https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js',
     three: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
     stlLoader: 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js',
-    orbitControls: 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'
+    orbitControls: 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
+    d3: 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
+    markmapLib: 'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js',
+    markmapView: 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js'
   };
 
   // Resolve local paths for desktop (Neutralinojs) offline support
@@ -120,6 +123,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     CDN.three = '/libs/three.min.js';
     CDN.stlLoader = '/libs/STLLoader.js';
     CDN.orbitControls = '/libs/OrbitControls.js';
+    CDN.d3 = '/libs/d3.min.js';
+    CDN.markmapLib = '/libs/markmap-lib.iife.js';
+    CDN.markmapView = '/libs/markmap-view.js';
   }
 
   // Active WebGL / Three.js 3D STL renderers Map for memory cleanup
@@ -1118,13 +1124,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     const krokiLanguages = {
       'vega-lite': 'vegalite',
       vegalite: 'vegalite',
-      wavedrom: 'wavedrom',
-      markmap: 'markmap'
+      wavedrom: 'wavedrom'
     };
     if (krokiLanguages[language]) {
       const engine = krokiLanguages[language];
       const uniqueId = `${engine}-diagram-` + Math.random().toString(36).substr(2, 9);
       return renderDiagramShell(engine, 'kroki-container', 'kroki-diagram', uniqueId, code);
+    }
+
+    if (language === 'markmap') {
+      const uniqueId = 'markmap-diagram-' + Math.random().toString(36).substr(2, 9);
+      return renderDiagramShell('markmap', 'markmap-container', 'markmap-diagram', uniqueId, code);
     }
 
     if (language === 'math') {
@@ -1152,6 +1162,72 @@ document.addEventListener("DOMContentLoaded", async function () {
     return `<h${level} id="${id}">${text}</h${level}>`;
   };
 
+  function normalizeMarkmapFences(markdown) {
+    const lines = String(markdown || '').split(/\r?\n/);
+    const output = [];
+    let index = 0;
+
+    while (index < lines.length) {
+      const opening = lines[index].match(/^([ \t]{0,3})(`{3,}|~{3,})([ \t]*)(.*)$/);
+      const info = opening ? opening[4].trim() : '';
+      if (!opening || !/^markmap(?:\s|$)/i.test(info)) {
+        output.push(lines[index]);
+        index += 1;
+        continue;
+      }
+
+      const indent = opening[1];
+      const fence = opening[2];
+      const marker = fence[0];
+      const content = [];
+      let nestedFence = null;
+      let maxInnerFenceLength = fence.length;
+      let closeIndex = -1;
+
+      for (let scan = index + 1; scan < lines.length; scan += 1) {
+        const line = lines[scan];
+        const fenceMatch = line.match(/^[ \t]{0,3}(`{3,}|~{3,})([ \t]*.*)$/);
+        if (fenceMatch) {
+          const currentFence = fenceMatch[1];
+          const currentMarker = currentFence[0];
+          const tail = fenceMatch[2].trim();
+          if (currentMarker === marker) {
+            maxInnerFenceLength = Math.max(maxInnerFenceLength, currentFence.length);
+          }
+
+          if (nestedFence) {
+            if (currentMarker === nestedFence.marker && currentFence.length >= nestedFence.length && tail === '') {
+              nestedFence = null;
+            }
+          } else if (currentMarker === marker && currentFence.length >= fence.length && tail === '') {
+            closeIndex = scan;
+            break;
+          } else if (tail !== '') {
+            nestedFence = {
+              marker: currentMarker,
+              length: currentFence.length
+            };
+          }
+        }
+        content.push(line);
+      }
+
+      if (closeIndex === -1) {
+        output.push(lines[index]);
+        index += 1;
+        continue;
+      }
+
+      const normalizedFence = marker.repeat(maxInnerFenceLength + 1);
+      output.push(`${indent}${normalizedFence}${opening[3]}${opening[4]}`);
+      output.push(...content);
+      output.push(`${indent}${normalizedFence}`);
+      index = closeIndex + 1;
+    }
+
+    return output.join('\n');
+  }
+
   marked.use({
     extensions: [
       blockMathExtension,
@@ -1168,7 +1244,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         resetExtendedMarkdownState();
         // ✅ Replace escaped dollar signs before marked.js strips the backslash.
         // This prevents MathJax from treating lone $ as a math delimiter.
-        const protectedMarkdown = markdown.replace(/\\\$/g, '&#36;');
+        const normalizedMarkdown = normalizeMarkmapFences(markdown);
+        const protectedMarkdown = normalizedMarkdown.replace(/\\\$/g, '&#36;');
         return applyFootnotes(extractFootnoteDefinitions(protectedMarkdown));
       },
     },
@@ -1379,7 +1456,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     graphviz: { label: 'Graphviz', krokiType: 'graphviz' },
     vegalite: { label: 'Vega-Lite', krokiType: 'vegalite' },
     wavedrom: { label: 'WaveDrom', krokiType: 'wavedrom' },
-    markmap: { label: 'Markmap', krokiType: 'markmap' }
+    markmap: { label: 'Markmap', local: true }
   });
   const DIAGRAM_REQUEST_TIMEOUT = 15000;
   const DIAGRAM_REQUEST_RETRIES = 2;
@@ -1523,7 +1600,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!adapter) throw new Error(`Unsupported diagram engine: ${engine}`);
 
     if (engine === 'markmap') {
-      return renderMarkmapSvg(source);
+      return renderMarkmapPreviewSvg(source);
     }
 
     const rendererSource = normalizeDiagramSourceForRenderer(engine, source);
@@ -1567,44 +1644,126 @@ document.addEventListener("DOMContentLoaded", async function () {
       .replace(/"/g, '&quot;');
   }
 
-  function renderMarkmapSvg(source) {
-    const nodes = [];
-    String(source || '').split(/\r?\n/).forEach(line => {
-      const heading = /^(#{1,6})\s+(.+)$/.exec(line);
-      const list = /^(\s*)[-*+]\s+(.+)$/.exec(line);
-      if (!heading && !list) return;
-      const level = heading ? heading[1].length : Math.floor(list[1].replace(/\t/g, '  ').length / 2) + 2;
-      const label = (heading ? heading[2] : list[2]).replace(/[`*_~]/g, '').trim();
-      if (!label) return;
-      let parent = -1;
-      for (let index = nodes.length - 1; index >= 0; index -= 1) {
-        if (nodes[index].level < level) {
-          parent = index;
-          break;
-        }
-      }
-      nodes.push({ level, label, parent });
-    });
+  let markmapLibraryPromise = null;
 
-    if (!nodes.length) nodes.push({ level: 1, label: 'Mind map', parent: -1 });
-    const minLevel = Math.min(...nodes.map(node => node.level));
-    const horizontalGap = 190;
-    const verticalGap = 64;
-    const padding = 32;
-    nodes.forEach((node, index) => {
-      node.x = padding + (node.level - minLevel) * horizontalGap;
-      node.y = padding + index * verticalGap;
-      node.width = Math.min(Math.max(node.label.length * 7.2 + 28, 96), 176);
-      node.height = 36;
+  function ensureMarkmapReady() {
+    if (window.markmap && window.markmap.Transformer && window.markmap.Markmap) {
+      return Promise.resolve(window.markmap);
+    }
+    if (!markmapLibraryPromise) {
+      markmapLibraryPromise = loadDiagramLibrary(CDN.d3)
+        .then(() => loadDiagramLibrary(CDN.markmapLib))
+        .then(() => loadDiagramLibrary(CDN.markmapView))
+        .then(() => {
+          if (!window.markmap || !window.markmap.Transformer || !window.markmap.Markmap) {
+            throw new Error('Official Markmap API did not initialize.');
+          }
+          return window.markmap;
+        })
+        .catch(error => {
+          markmapLibraryPromise = null;
+          throw error;
+        });
+    }
+    return markmapLibraryPromise;
+  }
+
+  function getMarkmapNodeCount(node) {
+    if (!node) return 0;
+    return 1 + (node.children || []).reduce((count, child) => count + getMarkmapNodeCount(child), 0);
+  }
+
+  function getMarkmapDepth(node) {
+    if (!node || !node.children || node.children.length === 0) return 1;
+    return 1 + Math.max(...node.children.map(getMarkmapDepth));
+  }
+
+  function getMarkmapViewportSize(node, root, compact) {
+    const nodeCount = getMarkmapNodeCount(root);
+    const depth = getMarkmapDepth(root);
+    const viewer = node.closest ? node.closest('.diagram-viewer') : null;
+    const measuredWidth = Math.max(
+      node.getBoundingClientRect ? node.getBoundingClientRect().width : 0,
+      viewer && viewer.getBoundingClientRect ? viewer.getBoundingClientRect().width : 0
+    );
+    const width = compact ? 960 : Math.max(1, Math.min(1400, Math.round(measuredWidth || 960)));
+    const estimatedHeight = width * 0.56 + nodeCount * (compact ? 4 : 6) + depth * 12;
+    const minHeight = compact ? 360 : 480;
+    const maxHeight = compact ? 560 : 760;
+    const height = Math.max(minHeight, Math.min(maxHeight, Math.round(estimatedHeight)));
+    return { width, height };
+  }
+
+  async function buildMarkmap(source) {
+    const markmap = await ensureMarkmapReady();
+    const transformer = new markmap.Transformer();
+    const transformed = transformer.transform(String(source || ''));
+    const assets = transformer.getUsedAssets(transformed.features || {});
+    if (assets.styles && markmap.loadCSS) {
+      markmap.loadCSS(assets.styles);
+    }
+    if (assets.scripts && markmap.loadJS) {
+      await markmap.loadJS(assets.scripts, {
+        getMarkmap: () => markmap
+      });
+    }
+    const jsonOptions = transformed.frontmatter && typeof transformed.frontmatter.markmap === 'object'
+      ? transformed.frontmatter.markmap
+      : undefined;
+    const options = markmap.deriveOptions
+      ? markmap.deriveOptions(jsonOptions || {})
+      : jsonOptions;
+    return { markmap, root: transformed.root, options };
+  }
+
+  async function renderMarkmapIntoElement(node, source, compact) {
+    const { markmap, root, options } = await buildMarkmap(source);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const { width, height } = getMarkmapViewportSize(node, root, compact);
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Markmap preview');
+    node.style.setProperty('--markmap-height', `${height}px`);
+    svg.style.setProperty('--markmap-height', `${height}px`);
+    svg.style.width = '100%';
+    svg.style.height = `${height}px`;
+    svg.style.minHeight = `${height}px`;
+    svg.style.maxHeight = compact ? '100%' : 'min(70vh, 900px)';
+    node.replaceChildren(svg);
+    const instance = markmap.Markmap.create(svg, options, root);
+    const fitMarkmap = () => {
+      if (instance && typeof instance.fit === 'function' && document.body.contains(svg)) {
+        instance.fit();
+      }
+    };
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    fitMarkmap();
+    setTimeout(fitMarkmap, 120);
+    setTimeout(fitMarkmap, 500);
+    svg.querySelectorAll('image, img').forEach(image => {
+      image.addEventListener('load', fitMarkmap, { once: true });
+      image.addEventListener('error', fitMarkmap, { once: true });
     });
-    const width = Math.max(...nodes.map(node => node.x + node.width)) + padding;
-    const height = nodes[nodes.length - 1].y + nodes[nodes.length - 1].height + padding;
-    const edges = nodes.filter(node => node.parent >= 0).map(node => {
-      const parent = nodes[node.parent];
-      return `<path d="M ${parent.x + parent.width} ${parent.y + parent.height / 2} C ${parent.x + parent.width + 48} ${parent.y + parent.height / 2}, ${node.x - 48} ${node.y + node.height / 2}, ${node.x} ${node.y + node.height / 2}" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.55"/>`;
-    }).join('');
-    const boxes = nodes.map((node, index) => `<g><rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" fill="${index === 0 ? '#dbeafe' : '#f3f4f6'}" stroke="${index === 0 ? '#2563eb' : '#64748b'}"/><text x="${node.x + 14}" y="${node.y + 23}" font-family="system-ui, sans-serif" font-size="13" fill="#172033">${escapeDiagramXml(node.label)}</text></g>`).join('');
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${edges}${boxes}</svg>`;
+    normalizeDiagramSvg(node, 'markmap', source);
+    return svg;
+  }
+
+  async function renderMarkmapPreviewSvg(source) {
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'fixed';
+    wrapper.style.left = '-10000px';
+    wrapper.style.top = '0';
+    wrapper.style.width = '960px';
+    wrapper.style.height = '520px';
+    wrapper.style.pointerEvents = 'none';
+    document.body.appendChild(wrapper);
+    try {
+      const svg = await renderMarkmapIntoElement(wrapper, source, true);
+      return new XMLSerializer().serializeToString(svg);
+    } finally {
+      wrapper.remove();
+    }
   }
 
   function importDiagramSvg(node, svgText, engine, source) {
@@ -1737,13 +1896,20 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function renderRemoteDiagramNode(node, engine, context) {
-    const container = node.closest('[data-diagram-engine], .plantuml-container, .d2-container, .graphviz-container, .kroki-container');
+    const container = node.closest('[data-diagram-engine], .plantuml-container, .d2-container, .graphviz-container, .kroki-container, .markmap-container');
     const originalCode = node.getAttribute('data-original-code');
     if (!container || !originalCode) return;
     const source = decodeURIComponent(originalCode);
 
     setDiagramRenderState(container, 'loading', `Rendering ${REMOTE_DIAGRAM_ENGINES[engine].label}…`);
     try {
+      if (engine === 'markmap') {
+        await renderMarkmapIntoElement(node, source, false);
+        if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+        setDiagramRenderState(container, 'ready');
+        mountDiagramViewer(container, engine);
+        return;
+      }
       const svgText = await renderDiagramThroughAdapter(engine, source);
       if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
       importDiagramSvg(node, svgText, engine, source);
@@ -3776,6 +3942,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         ['.plantuml-diagram', 'plantuml'],
         ['.d2-diagram', 'd2'],
         ['.graphviz-diagram', 'graphviz'],
+        ['.markmap-diagram', 'markmap'],
         ['.kroki-diagram', null]
       ];
       const renderAdapterTargets = function() {

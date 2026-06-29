@@ -4443,6 +4443,17 @@ html[data-theme="dark"] .d2-diagram > svg:not([data-diagram-native-dark="true"])
   object-fit: contain;
 }
 
+.markmap-diagram > svg {
+  width: 100% !important;
+  height: var(--markmap-height, 420px) !important;
+  min-height: var(--markmap-height, 360px);
+  max-height: none !important;
+}
+
+.markmap-diagram .markmap-foreign {
+  color: var(--text-color);
+}
+
 .diagram-toolbar {
   position: absolute;
   top: 8px;
