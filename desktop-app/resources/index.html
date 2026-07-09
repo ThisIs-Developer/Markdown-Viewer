@@ -60,13 +60,13 @@
                 <!-- Right section: Toolbar -->
                 <div class="toolbar d-none d-md-flex header-right">
                     <div class="toolbar-group view-toolbar" role="group" aria-label="View mode">
-                        <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Editor only" aria-label="Editor only">
+                        <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Markdown editor only" aria-label="Markdown editor only">
                             <i class="bi bi-file-text"></i>
                         </button>
-                        <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split view" aria-label="Split view">
+                        <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split editor and live preview" aria-label="Split editor and live preview">
                             <i class="bi bi-layout-split"></i>
                         </button>
-                        <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview only" aria-label="Preview only">
+                        <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Markdown preview only" aria-label="Markdown preview only">
                             <i class="bi bi-eye"></i>
                         </button>
                     </div>
@@ -169,15 +169,15 @@
 
                         <!-- Story 1.4: Mobile View Mode Buttons -->
                         <div class="mobile-view-mode-group mb-3" role="group" aria-label="View mode">
-                            <button class="mobile-view-mode-btn" data-mode="editor" aria-pressed="false" title="Editor only">
+                            <button class="mobile-view-mode-btn" data-mode="editor" aria-pressed="false" title="Markdown editor only">
                                 <i class="bi bi-file-text"></i>
                                 <span>Editor</span>
                             </button>
-                            <button class="mobile-view-mode-btn active" data-mode="split" aria-pressed="true" title="Split view">
+                            <button class="mobile-view-mode-btn active" data-mode="split" aria-pressed="true" title="Split editor and live preview">
                                 <i class="bi bi-layout-split"></i>
                                 <span>Split</span>
                             </button>
-                            <button class="mobile-view-mode-btn" data-mode="preview" aria-pressed="false" title="Preview only">
+                            <button class="mobile-view-mode-btn" data-mode="preview" aria-pressed="false" title="Markdown preview only">
                                 <i class="bi bi-eye"></i>
                                 <span>Preview</span>
                             </button>
@@ -281,7 +281,7 @@
         </div>
 
         <!-- Markdown Formatting Toolbar -->
-        <div class="markdown-format-toolbar" id="markdown-format-toolbar" role="toolbar" aria-label="Markdown formatting toolbar">
+        <div class="markdown-format-toolbar" id="markdown-format-toolbar" role="toolbar" aria-label="Markdown formatting toolbar for plain-text editing">
           <div class="markdown-toolbar-group">
             <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo" aria-label="Undo"><i class="bi bi-arrow-counterclockwise"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo" aria-label="Redo"><i class="bi bi-arrow-clockwise"></i></button>
@@ -1037,7 +1037,7 @@
                     <div class="skeleton-placeholder skeleton-line skeleton-w92"></div>
                     <div class="skeleton-placeholder skeleton-line skeleton-w45"></div>
                 </div>
-                <textarea id="markdown-editor" placeholder="Type or paste your Markdown here..."></textarea>
+                <textarea id="markdown-editor" placeholder="Type, paste, or import Markdown here..." aria-label="Markdown editor input with live preview"></textarea>
                 <div class="drop-hint" aria-hidden="true">
                     <i class="bi bi-cloud-arrow-up me-1"></i>Drop .md files anywhere to open them
                 </div>
@@ -1046,7 +1046,7 @@
             <div class="resize-divider" role="separator" aria-orientation="vertical" aria-label="Resize panes" tabindex="0">
                 <div class="resize-divider-handle"></div>
             </div>
-            <div class="preview-pane">
+            <div class="preview-pane" role="region" aria-label="Rendered Markdown live preview">
                 <div id="markdown-preview" class="markdown-body">
                     <!-- Initial dynamic article skeleton loader -->
                     <div class="skeleton-preview-container" id="markdown-preview-skeleton" aria-hidden="true">
@@ -1153,11 +1153,12 @@ tags: ["markdown", "live-preview", "gfm", "mermaid", "plantuml", "stl", "abc-not
 
 ## ✨ Key Features
 - **Split-Screen Live Markdown Preview** with GitHub-Flavored Markdown and sync scroll
+- **Open Local .md and .markdown Files** by picker or drag and drop
 - **Smart Import/Export** (Markdown, HTML, PDF, PNG)
 - **Insert Diagram & More** for Mermaid, PlantUML, Graphviz, D2, Vega-Lite, WaveDrom, Markmap, maps, STL, and ABC notation
 - **LaTeX Math Support** for scientific notation
 - **Share Snapshot and Live Share** for quick Markdown sharing workflows
-- **No-login client-side defaults** for normal editing, preview, autosave, local file import, settings, and most exports
+- **No login required** for editing, preview, autosave, local file import, settings, and most exports
 - **Emoji Support** 😄 👍 🎉
 
 ## 💻 Code with Syntax Highlighting

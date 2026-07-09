@@ -316,8 +316,8 @@ async function prepareOfflineDependencies() {
 
   // Fix relative assets
   html = html.replace(/href="assets\//g, 'href="/assets/');
-  html = html.replace(/href="styles\.css"/g, 'href="/styles.css"');
-  html = html.replace(/href="script\.js"/g, 'href="/js/script.js"');
+  html = html.replace(/href="styles(?:\.min)?\.css"/g, 'href="/styles.css"');
+  html = html.replace(/href="script(?:\.min)?\.js"/g, 'href="/js/script.js"');
   
   // PERF-034: Strip web-specific SEO tags, canonical, hreflang, preconnect, manifest and JSON-LD structured data for desktop build
   html = html.replace(/<!-- DNS Prefetch & Preconnect CDN Origins to Warm Up Latency -->[\s\S]*?<!-- PERF-015:/i, '<!-- PERF-015:');
@@ -328,7 +328,7 @@ async function prepareOfflineDependencies() {
 
   // Inject Neutralino script tags
   html = html.replace(
-    /<script\s+src="script\.js"[^>]*><\/script>/i,
+    /<script\s+src="script(?:\.min)?\.js"[^>]*><\/script>/i,
     '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/script.js"></script>',
   );
 

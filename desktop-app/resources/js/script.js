@@ -677,7 +677,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     let scriptUrl = "";
     for (let i = scripts.length - 1; i >= 0; i -= 1) {
       const src = scripts[i].getAttribute("src") || "";
-      if (src.includes("script.js")) {
+      if (/script(?:\.min)?\.js(?:[?#].*)?$/.test(src)) {
         scriptUrl = src;
         break;
       }
@@ -2223,7 +2223,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       templateText = defaultMarkdownTemplate.textContent ? defaultMarkdownTemplate.textContent.trim() : '';
     }
   }
-  const sampleMarkdown = templateText || '# Welcome to Markdown Viewer\n\nStart typing your markdown here...';
+  const sampleMarkdown = templateText || '# Welcome to Markdown Viewer\n\nStart typing, pasting, or importing Markdown to use the live preview...';
 
   if (!markdownEditor.value) {
     markdownEditor.value = sampleMarkdown;
@@ -3577,6 +3577,73 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
+  function renderAbcNotationNode(node, context) {
+    if (context.renderId !== previewRenderGeneration) return;
+    const originalCode = node.getAttribute('data-original-code');
+    if (!originalCode) return;
+    const decodedCode = decodeURIComponent(originalCode);
+
+    const container = node.closest('.abc-container');
+    try {
+      node.innerHTML = '';
+      const visualObj = ABCJS.renderAbc(node.id, decodedCode, {
+        responsive: "resize",
+        add_classes: true
+      });
+
+      node.innerHTML = DOMPurify.sanitize(node.innerHTML, PREVIEW_SANITIZE_OPTIONS);
+
+      const headers = parseAbcHeaders(decodedCode);
+      const svgElement = node.querySelector('svg');
+      if (svgElement) {
+        svgElement.setAttribute('role', 'img');
+        const titleId = 'abc-title-' + node.id;
+        const descId = 'abc-desc-' + node.id;
+        svgElement.setAttribute('aria-labelledby', titleId + ' ' + descId);
+        svgElement.setAttribute('aria-describedby', 'abc-source-' + node.id);
+
+        const svgTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+        svgTitle.id = titleId;
+        svgTitle.textContent = `Sheet music for: ${headers.title}`;
+
+        const svgDesc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
+        svgDesc.id = descId;
+        svgDesc.textContent = `Score in ${headers.key}, ${headers.meter} meter, composed by ${headers.composer}.`;
+
+        svgElement.insertBefore(svgDesc, svgElement.firstChild);
+        svgElement.insertBefore(svgTitle, svgElement.firstChild);
+      }
+
+      if (container) {
+        setDiagramRenderState(container, 'ready');
+
+        const oldRaw = container.querySelector('.abc-raw-code');
+        if (oldRaw) oldRaw.remove();
+        const oldSrOnly = container.querySelector('.abc-sr-only');
+        if (oldSrOnly) oldSrOnly.remove();
+
+        mountDiagramViewer(container, 'abc', [{
+          title: 'Listen to score',
+          ariaLabel: 'Listen to score',
+          html: '<i class="bi bi-play-fill"></i> Listen',
+          onClick: (btn) => toggleAbcPlay(visualObj, btn, container)
+        }]);
+
+        const srOnlyDiv = document.createElement('div');
+        srOnlyDiv.className = 'abc-sr-only';
+        srOnlyDiv.id = 'abc-source-' + node.id;
+        srOnlyDiv.textContent = decodedCode;
+
+        container.appendChild(srOnlyDiv);
+      }
+    } catch (err) {
+      console.error("ABCJS rendering failed:", err);
+      if (container) {
+        setDiagramRenderState(container, 'error', 'ABC notation could not be rendered. Check the score syntax and retry.');
+      }
+    }
+  }
+
   function disposeStlView(viewId) {
     const view = activeStlViews.get(viewId);
     if (!view) return;
@@ -4051,7 +4118,20 @@ document.addEventListener("DOMContentLoaded", async function () {
               tileAttribution += ' &copy; <a href="https://carto.com/attributions">CARTO</a>';
             }
             layer.setUrl(tileUrl);
-            layer.setAttribution(tileAttribution);
+            const oldAttribution = typeof layer.getAttribution === 'function'
+              ? layer.getAttribution()
+              : (layer.options && layer.options.attribution);
+            if (layer.options) {
+              layer.options.attribution = tileAttribution;
+            }
+            if (map.attributionControl) {
+              if (oldAttribution && typeof map.attributionControl.removeAttribution === 'function') {
+                map.attributionControl.removeAttribution(oldAttribution);
+              }
+              if (typeof map.attributionControl.addAttribution === 'function') {
+                map.attributionControl.addAttribution(tileAttribution);
+              }
+            }
           }
         });
       }
@@ -4103,6 +4183,240 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
       }
     });
+  }
+
+  function waitForBrowserPrintFrame() {
+    return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
+
+  function withBrowserPrintTimeout(promise, timeoutMs) {
+    return Promise.race([
+      promise,
+      new Promise(resolve => setTimeout(resolve, timeoutMs))
+    ]);
+  }
+
+  function getSafeCssIdSelector(id) {
+    if (window.CSS && typeof window.CSS.escape === 'function') {
+      return `#${window.CSS.escape(id)}`;
+    }
+    return `#${String(id).replace(/[^a-zA-Z0-9_-]/g, '\\$&')}`;
+  }
+
+  function applyLightMermaidPrintOverrides(node) {
+    const svg = node ? node.querySelector('svg') : null;
+    if (!svg) return;
+
+    if (!svg.id) {
+      svg.id = `mermaid-print-${Math.random().toString(36).slice(2)}`;
+    }
+
+    svg.querySelectorAll('style[data-browser-print-light-override]').forEach(style => style.remove());
+
+    const selector = getSafeCssIdSelector(svg.id);
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.setAttribute('data-browser-print-light-override', 'true');
+    style.textContent = `
+${selector} {
+  background: #ffffff !important;
+  color: #24292f !important;
+}
+${selector} text,
+${selector} tspan,
+${selector} .nodeLabel,
+${selector} .edgeLabel,
+${selector} .label,
+${selector} foreignObject,
+${selector} foreignObject * {
+  color: #24292f !important;
+  fill: #24292f !important;
+}
+${selector} rect,
+${selector} polygon,
+${selector} circle,
+${selector} ellipse,
+${selector} .actor,
+${selector} .note,
+${selector} .labelBox {
+  fill: #f6f8fa !important;
+  stroke: #8c959f !important;
+}
+${selector} .cluster rect,
+${selector} .edgeLabel rect,
+${selector} .labelBox {
+  fill: #ffffff !important;
+}
+${selector} .edgePath path,
+${selector} .flowchart-link,
+${selector} .messageLine0,
+${selector} .messageLine1,
+${selector} .loopLine,
+${selector} .activation0,
+${selector} .activation1,
+${selector} .activation2 {
+  fill: none !important;
+  stroke: #57606a !important;
+}
+${selector} marker path,
+${selector} .arrowheadPath {
+  fill: #57606a !important;
+  stroke: #57606a !important;
+}
+`;
+    svg.insertBefore(style, svg.firstChild);
+  }
+
+  function applyLightMermaidPrintOverridesToPreview() {
+    markdownPreview.querySelectorAll('.mermaid').forEach(applyLightMermaidPrintOverrides);
+  }
+
+  async function renderThemeSensitivePreviewContentForPrint() {
+    const context = {
+      renderId: previewRenderGeneration,
+      previewDocumentId: getActivePreviewDocumentId(),
+      reason: 'browser-print-theme'
+    };
+
+    try {
+      const mermaidNodes = Array.from(markdownPreview.querySelectorAll('.mermaid'));
+      if (mermaidNodes.length > 0) {
+        if (typeof mermaid === 'undefined') {
+          await loadDiagramLibrary(CDN.mermaid);
+        }
+        initMermaid(true);
+        mermaidNodes.forEach(function(node) {
+          restoreDiagramNodeSource(node);
+          const container = node.closest('.mermaid-container');
+          if (container) {
+            container.querySelectorAll('.mermaid-toolbar').forEach(toolbar => toolbar.remove());
+            setDiagramRenderState(container, 'loading', 'Preparing Mermaid for print...');
+          }
+        });
+        await renderMermaidNodeList(mermaidNodes, context);
+        if (document.documentElement.getAttribute('data-browser-print-export') === 'light') {
+          mermaidNodes.forEach(applyLightMermaidPrintOverrides);
+        }
+      }
+    } catch (error) {
+      console.warn('Mermaid print theme preparation failed:', error);
+      markdownPreview.querySelectorAll('.mermaid-container.is-loading').forEach(function(container) {
+        setDiagramRenderState(container, 'ready');
+      });
+      if (document.documentElement.getAttribute('data-browser-print-export') === 'light') {
+        applyLightMermaidPrintOverridesToPreview();
+      }
+    }
+
+    try {
+      updateMapThemes();
+    } catch (error) {
+      console.warn('Map print theme preparation failed:', error);
+    }
+
+    try {
+      updateStlThemes();
+      activeStlViews.forEach(function(view) {
+        if (view && view.renderer && view.scene && view.camera) {
+          view.renderer.render(view.scene, view.camera);
+        }
+      });
+    } catch (error) {
+      console.warn('STL print theme preparation failed:', error);
+    }
+
+    await waitForBrowserPrintFrame();
+  }
+
+  async function prepareBrowserPrintExport() {
+    const root = document.documentElement;
+    const previousTheme = root.getAttribute('data-theme') || initialTheme || 'light';
+    const previousPrintExport = root.getAttribute('data-browser-print-export');
+    const shouldForceLightTheme = previousTheme === 'dark';
+
+    root.setAttribute('data-browser-print-export', 'light');
+    if (shouldForceLightTheme) {
+      root.setAttribute('data-theme', 'light');
+    }
+
+    await renderThemeSensitivePreviewContentForPrint();
+
+    if (document.fonts && document.fonts.ready) {
+      await withBrowserPrintTimeout(document.fonts.ready.catch(() => null), 1500);
+    }
+    await withBrowserPrintTimeout(waitForAllImages(markdownPreview), 2500);
+    await waitForBrowserPrintFrame();
+
+    return function restoreBrowserPrintExport() {
+      if (previousPrintExport === null) {
+        root.removeAttribute('data-browser-print-export');
+      } else {
+        root.setAttribute('data-browser-print-export', previousPrintExport);
+      }
+
+      if (shouldForceLightTheme) {
+        root.setAttribute('data-theme', previousTheme);
+        renderThemeSensitivePreviewContentForPrint().catch(function(error) {
+          console.warn('Preview theme restoration after print failed:', error);
+        });
+      }
+    };
+  }
+
+  async function runBrowserPrintExport() {
+    const previousDocumentTitle = document.title;
+    document.title = getBrowserPrintDocumentTitle();
+    let restoreBrowserPrintExport;
+    try {
+      restoreBrowserPrintExport = await prepareBrowserPrintExport();
+    } catch (error) {
+      document.title = previousDocumentTitle;
+      throw error;
+    }
+    let restored = false;
+    const mediaQuery = window.matchMedia ? window.matchMedia('print') : null;
+
+    const restoreOnce = function() {
+      if (restored) return;
+      restored = true;
+      window.removeEventListener('afterprint', restoreOnce);
+      window.removeEventListener('focus', restoreOnce);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (mediaQuery) {
+        if (typeof mediaQuery.removeEventListener === 'function') {
+          mediaQuery.removeEventListener('change', handlePrintMediaChange);
+        } else if (typeof mediaQuery.removeListener === 'function') {
+          mediaQuery.removeListener(handlePrintMediaChange);
+        }
+      }
+      restoreBrowserPrintExport();
+      document.title = previousDocumentTitle;
+    };
+
+    const handlePrintMediaChange = function(event) {
+      if (!event.matches) restoreOnce();
+    };
+
+    const handleVisibilityChange = function() {
+      if (!document.hidden) restoreOnce();
+    };
+
+    window.addEventListener('afterprint', restoreOnce);
+    window.addEventListener('focus', restoreOnce);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    if (mediaQuery) {
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', handlePrintMediaChange);
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(handlePrintMediaChange);
+      }
+    }
+
+    try {
+      window.print();
+    } catch (error) {
+      restoreOnce();
+      throw error;
+    }
   }
 
   function postProcessPreview(rawVal, context, patchResult) {
@@ -4175,84 +4489,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (abcNodes.length > 0) {
         const renderAbcNodes = function() {
           if (context.renderId !== previewRenderGeneration) return;
-          
-          const observer = new IntersectionObserver((entries, obs) => {
-            entries.forEach(entry => {
-              if (entry.isIntersecting) {
-                const node = entry.target;
-                obs.unobserve(node);
-                
-                setTimeout(() => {
-                  if (context.renderId !== previewRenderGeneration) return;
-                  const originalCode = node.getAttribute('data-original-code');
-                  if (!originalCode) return;
-                  const decodedCode = decodeURIComponent(originalCode);
-                  
-                  const container = node.closest('.abc-container');
-                  try {
-                    node.innerHTML = '';
-                    const visualObj = ABCJS.renderAbc(node.id, decodedCode, {
-                      responsive: "resize",
-                      add_classes: true
-                    });
-                    
-                    node.innerHTML = DOMPurify.sanitize(node.innerHTML, PREVIEW_SANITIZE_OPTIONS);
-                    
-                    const headers = parseAbcHeaders(decodedCode);
-                    const svgElement = node.querySelector('svg');
-                    if (svgElement) {
-                      svgElement.setAttribute('role', 'img');
-                      const titleId = 'abc-title-' + node.id;
-                      const descId = 'abc-desc-' + node.id;
-                      svgElement.setAttribute('aria-labelledby', titleId + ' ' + descId);
-                      svgElement.setAttribute('aria-describedby', 'abc-source-' + node.id);
-                      
-                      const svgTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                      svgTitle.id = titleId;
-                      svgTitle.textContent = `Sheet music for: ${headers.title}`;
-                      
-                      const svgDesc = document.createElementNS('http://www.w3.org/2000/svg', 'desc');
-                      svgDesc.id = descId;
-                      svgDesc.textContent = `Score in ${headers.key}, ${headers.meter} meter, composed by ${headers.composer}.`;
-                      
-                      svgElement.insertBefore(svgDesc, svgElement.firstChild);
-                      svgElement.insertBefore(svgTitle, svgElement.firstChild);
-                    }
-                    
-                    if (container) {
-                      setDiagramRenderState(container, 'ready');
 
-                      const oldRaw = container.querySelector('.abc-raw-code');
-                      if (oldRaw) oldRaw.remove();
-                      const oldSrOnly = container.querySelector('.abc-sr-only');
-                      if (oldSrOnly) oldSrOnly.remove();
-
-                      mountDiagramViewer(container, 'abc', [{
-                        title: 'Listen to score',
-                        ariaLabel: 'Listen to score',
-                        html: '<i class="bi bi-play-fill"></i> Listen',
-                        onClick: (btn) => toggleAbcPlay(visualObj, btn, container)
-                      }]);
-
-                      const srOnlyDiv = document.createElement('div');
-                      srOnlyDiv.className = 'abc-sr-only';
-                      srOnlyDiv.id = 'abc-source-' + node.id;
-                      srOnlyDiv.textContent = decodedCode;
-
-                      container.appendChild(srOnlyDiv);
-                    }
-                  } catch (err) {
-                    console.error("ABCJS rendering failed:", err);
-                    if (container) {
-                      setDiagramRenderState(container, 'error', 'ABC notation could not be rendered. Check the score syntax and retry.');
-                    }
-                  }
-                }, 0);
-              }
-            });
-          }, { rootMargin: '150px 0px' });
-          
-          abcNodes.forEach(node => observer.observe(node));
+          abcNodes.forEach(function(node) {
+            setTimeout(() => renderAbcNotationNode(node, context), 0);
+          });
         };
         
         const loadAndRenderAbc = function() {
@@ -11746,55 +11986,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   pdfExportModeRaster?.addEventListener('change', syncPdfExportCardStyles);
 
   pdfExportCancelBtn?.addEventListener("click", () => closeAppModal(pdfExportModal));
-
-  async function runBrowserPrintExport() {
-    const previousDocumentTitle = document.title;
-    document.title = getBrowserPrintDocumentTitle();
-    let restored = false;
-    const mediaQuery = window.matchMedia ? window.matchMedia('print') : null;
-
-    const restoreOnce = function() {
-      if (restored) return;
-      restored = true;
-      window.removeEventListener('afterprint', restoreOnce);
-      window.removeEventListener('focus', restoreOnce);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (mediaQuery) {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', handlePrintMediaChange);
-        } else if (typeof mediaQuery.removeListener === 'function') {
-          mediaQuery.removeListener(handlePrintMediaChange);
-        }
-      }
-      document.title = previousDocumentTitle;
-    };
-
-    const handlePrintMediaChange = function(event) {
-      if (!event.matches) restoreOnce();
-    };
-
-    const handleVisibilityChange = function() {
-      if (!document.hidden) restoreOnce();
-    };
-
-    window.addEventListener('afterprint', restoreOnce);
-    window.addEventListener('focus', restoreOnce);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    if (mediaQuery) {
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', handlePrintMediaChange);
-      } else if (typeof mediaQuery.addListener === 'function') {
-        mediaQuery.addListener(handlePrintMediaChange);
-      }
-    }
-
-    try {
-      window.print();
-    } catch (error) {
-      restoreOnce();
-      throw error;
-    }
-  }
 
   pdfExportConfirmBtn?.addEventListener("click", async function (event) {
     event.preventDefault();

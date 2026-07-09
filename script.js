@@ -677,7 +677,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     let scriptUrl = "";
     for (let i = scripts.length - 1; i >= 0; i -= 1) {
       const src = scripts[i].getAttribute("src") || "";
-      if (src.includes("script.js")) {
+      if (/script(?:\.min)?\.js(?:[?#].*)?$/.test(src)) {
         scriptUrl = src;
         break;
       }
