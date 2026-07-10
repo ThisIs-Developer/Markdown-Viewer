@@ -263,6 +263,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const scrollSyncObservedImages = new WeakSet();
   const SCROLL_SYNC_DELAY = 10;
   const SCROLL_SYNC_LOCK_MS = 90;
+  const SCROLL_SYNC_BOUNDARY_THRESHOLD_PX = 12;
 
   // View Mode State - Story 1.1
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
@@ -5819,6 +5820,35 @@ ${selector} .arrowheadPath {
     return Math.max(0, markdownEditor.scrollHeight - markdownEditor.clientHeight);
   }
 
+  function getMaxScrollTop(element) {
+    if (!element) return 0;
+    return Math.max(0, element.scrollHeight - element.clientHeight);
+  }
+
+  function isNearScrollTop(element) {
+    if (!element) return false;
+    return element.scrollTop <= SCROLL_SYNC_BOUNDARY_THRESHOLD_PX;
+  }
+
+  function isNearScrollBottom(element) {
+    if (!element) return false;
+    const maxScrollTop = getMaxScrollTop(element);
+    if (maxScrollTop <= 0) return false;
+    return maxScrollTop - element.scrollTop <= SCROLL_SYNC_BOUNDARY_THRESHOLD_PX;
+  }
+
+  function scrollToSyncTop(element) {
+    if (element) {
+      element.scrollTop = 0;
+    }
+  }
+
+  function scrollToSyncBottom(element) {
+    if (element) {
+      element.scrollTop = getMaxScrollTop(element);
+    }
+  }
+
   function getPreviewSyncAnchors() {
     if (!previewPane || !markdownPreview) return [];
     const paneRect = previewPane.getBoundingClientRect();
@@ -5960,6 +5990,18 @@ ${selector} .arrowheadPath {
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
+      if (isNearScrollTop(markdownEditor)) {
+        scrollToSyncTop(previewPane);
+        releaseScrollSyncLock('editor');
+        return;
+      }
+
+      if (isNearScrollBottom(markdownEditor)) {
+        scrollToSyncBottom(previewPane);
+        releaseScrollSyncLock('editor');
+        return;
+      }
+
       const sourceLine = getEditorTopSourceLine();
       const previewScrollPosition = interpolatePreviewScrollForSourceLine(sourceLine);
 
@@ -5977,6 +6019,20 @@ ${selector} .arrowheadPath {
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
+      if (isNearScrollTop(previewPane)) {
+        scrollToSyncTop(markdownEditor);
+        syncEditorScrollOverlays();
+        releaseScrollSyncLock('preview');
+        return;
+      }
+
+      if (isNearScrollBottom(previewPane)) {
+        scrollToSyncBottom(markdownEditor);
+        syncEditorScrollOverlays();
+        releaseScrollSyncLock('preview');
+        return;
+      }
+
       const editorScrollPosition = interpolateEditorScrollForPreviewTop(previewPane.scrollTop);
 
       if (!isNaN(editorScrollPosition) && isFinite(editorScrollPosition)) {
