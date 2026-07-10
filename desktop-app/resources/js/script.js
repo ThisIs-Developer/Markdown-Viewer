@@ -256,7 +256,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   let isPreviewScrolling = false;
   let isProgrammaticScrolling = false;
   let scrollSyncTimeout = null;
+  let scrollSyncReleaseTimeout = null;
+  let scrollSyncLayoutFrame = null;
+  let lastScrollSyncSource = 'editor';
+  let previewScrollSyncResizeObserver = null;
+  const scrollSyncObservedImages = new WeakSet();
   const SCROLL_SYNC_DELAY = 10;
+  const SCROLL_SYNC_LOCK_MS = 90;
 
   // View Mode State - Story 1.1
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
@@ -3473,8 +3479,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     previewLastRenderedTabId = context.previewDocumentId;
     markdownPreview.removeAttribute('aria-busy');
     markdownPreview.dataset.renderState = 'ready';
-
     restorePreviewScroll(scrollSnapshot);
+    annotatePreviewSourcePositions(rawVal);
     return patchResult;
   }
 
@@ -5616,26 +5622,352 @@ ${selector} .arrowheadPath {
     readingTimeElement.textContent = readingTimeMinutes;
   }
 
+  function isMarkdownBlankLine(line) {
+    return !line || /^\s*$/.test(line);
+  }
+
+  function isMarkdownFenceStart(line) {
+    return line.match(/^\s{0,3}(`{3,}|~{3,})/);
+  }
+
+  function isMarkdownBlockStart(line) {
+    return (
+      /^\s{0,3}#{1,6}\s+/.test(line) ||
+      /^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line) ||
+      /^\s{0,3}>/.test(line) ||
+      /^\s{0,3}(?:[-+*]|\d+[.)])\s+/.test(line) ||
+      /^\s{0,3}(?:```|~~~)/.test(line) ||
+      /^\s{0,3}\|?.+\|.+/.test(line)
+    );
+  }
+
+  function isMarkdownReferenceDefinition(line) {
+    return /^\s{0,3}\[[^\]]+\]:\s+\S/.test(line || '');
+  }
+
+  function buildMarkdownSourceBlocks(markdown) {
+    const lines = String(markdown || '').split('\n');
+    const blocks = [];
+    let lineIndex = 0;
+
+    function addBlock(startLine, endLine) {
+      if (startLine < 0 || endLine < startLine) return;
+      blocks.push({
+        startLine,
+        endLine,
+      });
+    }
+
+    if (/^\s*---\s*$/.test(lines[0] || '')) {
+      let frontmatterEnd = -1;
+      for (let i = 1; i < lines.length; i += 1) {
+        if (/^\s*(?:---|\.\.\.)\s*$/.test(lines[i] || '')) {
+          frontmatterEnd = i;
+          break;
+        }
+      }
+      if (frontmatterEnd > 0) {
+        addBlock(0, frontmatterEnd);
+        lineIndex = frontmatterEnd + 1;
+      }
+    }
+
+    while (lineIndex < lines.length) {
+      while (lineIndex < lines.length && isMarkdownBlankLine(lines[lineIndex])) {
+        lineIndex += 1;
+      }
+      if (lineIndex >= lines.length) break;
+
+      if (isMarkdownReferenceDefinition(lines[lineIndex])) {
+        lineIndex += 1;
+        while (lineIndex < lines.length && /^\s{4,}\S/.test(lines[lineIndex] || '')) {
+          lineIndex += 1;
+        }
+        continue;
+      }
+
+      const startLine = lineIndex;
+      const fence = isMarkdownFenceStart(lines[lineIndex] || '');
+      if (fence) {
+        const marker = fence[1];
+        const closePattern = new RegExp("^\\s{0,3}" + marker[0] + "{" + marker.length + ",}\\s*$");
+        lineIndex += 1;
+        while (lineIndex < lines.length) {
+          if (closePattern.test(lines[lineIndex] || '')) {
+            lineIndex += 1;
+            break;
+          }
+          lineIndex += 1;
+        }
+        addBlock(startLine, Math.max(startLine, lineIndex - 1));
+        continue;
+      }
+
+      if (/^\s{0,3}#{1,6}\s+/.test(lines[lineIndex] || '') || /^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/.test(lines[lineIndex] || '')) {
+        addBlock(startLine, lineIndex);
+        lineIndex += 1;
+        continue;
+      }
+
+      if (
+        lineIndex + 1 < lines.length &&
+        /^\s{0,3}\|?.+\|.+/.test(lines[lineIndex] || '') &&
+        /^\s{0,3}\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[lineIndex + 1] || '')
+      ) {
+        lineIndex += 2;
+        while (lineIndex < lines.length && !isMarkdownBlankLine(lines[lineIndex]) && /\|/.test(lines[lineIndex] || '')) {
+          lineIndex += 1;
+        }
+        addBlock(startLine, Math.max(startLine, lineIndex - 1));
+        continue;
+      }
+
+      if (/^\s{0,3}>/.test(lines[lineIndex] || '') || /^\s{0,3}(?:[-+*]|\d+[.)])\s+/.test(lines[lineIndex] || '')) {
+        lineIndex += 1;
+        while (lineIndex < lines.length && !isMarkdownBlankLine(lines[lineIndex])) {
+          lineIndex += 1;
+        }
+        addBlock(startLine, Math.max(startLine, lineIndex - 1));
+        continue;
+      }
+
+      lineIndex += 1;
+      while (
+        lineIndex < lines.length &&
+        !isMarkdownBlankLine(lines[lineIndex]) &&
+        !isMarkdownReferenceDefinition(lines[lineIndex]) &&
+        !isMarkdownBlockStart(lines[lineIndex])
+      ) {
+        lineIndex += 1;
+      }
+      addBlock(startLine, Math.max(startLine, lineIndex - 1));
+    }
+
+    if (blocks.length === 0) {
+      addBlock(0, Math.max(0, lines.length - 1));
+    }
+
+    return blocks;
+  }
+
+  function getPreviewSyncElements() {
+    if (!markdownPreview) return [];
+    return Array.from(markdownPreview.children).filter(function(element) {
+      return element && element.id !== 'markdown-preview-skeleton';
+    });
+  }
+
+  function annotatePreviewSourcePositions(rawVal) {
+    if (!markdownPreview) return;
+    const blocks = buildMarkdownSourceBlocks(rawVal);
+    const elements = getPreviewSyncElements();
+
+    elements.forEach(function(element, index) {
+      const block = blocks[index];
+      if (!block) {
+        delete element.dataset.sourceLine;
+        delete element.dataset.sourceStart;
+        delete element.dataset.sourceEnd;
+        return;
+      }
+
+      element.dataset.sourceLine = String(block.startLine + 1);
+      element.dataset.sourceStart = String(block.startLine);
+      element.dataset.sourceEnd = String(block.endLine);
+    });
+
+    observePreviewAsyncLayoutChanges();
+    scheduleScrollSyncLayoutRefresh();
+  }
+
+  function getScrollSyncLineHeight() {
+    const styles = window.getComputedStyle(markdownEditor);
+    const computed = parseFloat(styles.lineHeight);
+    if (!Number.isNaN(computed) && computed > 0) return computed;
+    const fontSize = parseFloat(styles.fontSize) || 14;
+    return fontSize * 1.5;
+  }
+
+  function getScrollSyncEditorPaddingTop() {
+    const styles = window.getComputedStyle(markdownEditor);
+    return parseFloat(styles.paddingTop) || 0;
+  }
+
+  function getSourceLineCount() {
+    return Math.max(1, String(markdownEditor.value || '').split('\n').length);
+  }
+
+  function getEditorTopSourceLine() {
+    const lineHeight = getScrollSyncLineHeight();
+    const paddingTop = getScrollSyncEditorPaddingTop();
+    const line = Math.floor(Math.max(0, markdownEditor.scrollTop - paddingTop) / lineHeight);
+    return Math.max(0, Math.min(getSourceLineCount() - 1, line));
+  }
+
+  function getEditorScrollTopForSourceLine(line) {
+    const lineHeight = getScrollSyncLineHeight();
+    const paddingTop = getScrollSyncEditorPaddingTop();
+    const target = paddingTop + (Math.max(0, line) * lineHeight);
+    return clampEditorScrollTop(target);
+  }
+
+  function getPreviewScrollRange() {
+    return Math.max(0, previewPane.scrollHeight - previewPane.clientHeight);
+  }
+
+  function getEditorScrollRange() {
+    return Math.max(0, markdownEditor.scrollHeight - markdownEditor.clientHeight);
+  }
+
+  function getPreviewSyncAnchors() {
+    if (!previewPane || !markdownPreview) return [];
+    const paneRect = previewPane.getBoundingClientRect();
+    return getPreviewSyncElements()
+      .map(function(element) {
+        const startLine = Number.parseInt(element.dataset.sourceStart, 10);
+        const endLine = Number.parseInt(element.dataset.sourceEnd, 10);
+        if (!Number.isFinite(startLine) || !Number.isFinite(endLine)) return null;
+        const rect = element.getBoundingClientRect();
+        return {
+          element,
+          startLine,
+          endLine: Math.max(startLine, endLine),
+          top: previewPane.scrollTop + (rect.top - paneRect.top),
+          height: Math.max(1, rect.height),
+        };
+      })
+      .filter(Boolean)
+      .sort(function(a, b) {
+        return a.startLine - b.startLine || a.top - b.top;
+      });
+  }
+
+  function clampPreviewScrollTop(scrollTop) {
+    return Math.min(getPreviewScrollRange(), Math.max(0, scrollTop));
+  }
+
+  function getPreviewFallbackScrollFromEditor() {
+    const editorRange = getEditorScrollRange();
+    const ratio = editorRange > 0 ? markdownEditor.scrollTop / editorRange : 0;
+    return clampPreviewScrollTop(getPreviewScrollRange() * ratio);
+  }
+
+  function getEditorFallbackScrollFromPreview() {
+    const previewRange = getPreviewScrollRange();
+    const ratio = previewRange > 0 ? previewPane.scrollTop / previewRange : 0;
+    return clampEditorScrollTop(getEditorScrollRange() * ratio);
+  }
+
+  function interpolatePreviewScrollForSourceLine(sourceLine) {
+    const anchors = getPreviewSyncAnchors();
+    if (anchors.length === 0) return getPreviewFallbackScrollFromEditor();
+
+    const maxPreviewScroll = getPreviewScrollRange();
+    if (sourceLine <= anchors[0].startLine) {
+      return clampPreviewScrollTop(anchors[0].top);
+    }
+
+    for (let i = 0; i < anchors.length; i += 1) {
+      const current = anchors[i];
+      const next = anchors[i + 1] || null;
+      const segmentEndLine = next ? next.startLine : Math.max(current.endLine + 1, getSourceLineCount() - 1);
+      const segmentEndTop = next ? next.top : maxPreviewScroll;
+
+      if (!next || sourceLine < next.startLine) {
+        const lineSpan = Math.max(1, segmentEndLine - current.startLine);
+        const topSpan = Math.max(0, segmentEndTop - current.top);
+        const ratio = Math.max(0, Math.min(1, (sourceLine - current.startLine) / lineSpan));
+        return clampPreviewScrollTop(current.top + (topSpan * ratio));
+      }
+    }
+
+    return maxPreviewScroll;
+  }
+
+  function interpolateEditorScrollForPreviewTop(previewTop) {
+    const anchors = getPreviewSyncAnchors();
+    if (anchors.length === 0) return getEditorFallbackScrollFromPreview();
+
+    if (previewTop <= anchors[0].top) {
+      return getEditorScrollTopForSourceLine(anchors[0].startLine);
+    }
+
+    for (let i = 0; i < anchors.length; i += 1) {
+      const current = anchors[i];
+      const next = anchors[i + 1] || null;
+      const segmentEndTop = next ? next.top : getPreviewScrollRange();
+      const segmentEndLine = next ? next.startLine : Math.max(current.endLine + 1, getSourceLineCount() - 1);
+
+      if (!next || previewTop < segmentEndTop) {
+        const topSpan = Math.max(1, segmentEndTop - current.top);
+        const ratio = Math.max(0, Math.min(1, (previewTop - current.top) / topSpan));
+        const sourceLine = current.startLine + ((segmentEndLine - current.startLine) * ratio);
+        return getEditorScrollTopForSourceLine(sourceLine);
+      }
+    }
+
+    return clampEditorScrollTop(getEditorScrollRange());
+  }
+
+  function releaseScrollSyncLock(source) {
+    if (scrollSyncReleaseTimeout) {
+      clearTimeout(scrollSyncReleaseTimeout);
+    }
+    scrollSyncReleaseTimeout = setTimeout(function() {
+      if (source === 'editor') {
+        isEditorScrolling = false;
+      } else if (source === 'preview') {
+        isPreviewScrolling = false;
+      }
+      scrollSyncReleaseTimeout = null;
+    }, SCROLL_SYNC_LOCK_MS);
+  }
+
+  function scheduleScrollSyncLayoutRefresh() {
+    if (!syncScrollingEnabled || !markdownEditor || !previewPane || scrollSyncLayoutFrame) return;
+    scrollSyncLayoutFrame = requestAnimationFrame(function() {
+      scrollSyncLayoutFrame = null;
+      if (!syncScrollingEnabled) return;
+      if (lastScrollSyncSource === 'preview') {
+        syncPreviewToEditor();
+      } else {
+        syncEditorToPreview();
+      }
+    });
+  }
+
+  function observePreviewAsyncLayoutChanges() {
+    if (!markdownPreview) return;
+    markdownPreview.querySelectorAll('img').forEach(function(image) {
+      if (scrollSyncObservedImages.has(image)) return;
+      scrollSyncObservedImages.add(image);
+      image.addEventListener('load', scheduleScrollSyncLayoutRefresh);
+      image.addEventListener('error', scheduleScrollSyncLayoutRefresh);
+    });
+  }
+
+  function initPreviewScrollSyncObservers() {
+    if (previewScrollSyncResizeObserver || typeof ResizeObserver === 'undefined' || !markdownPreview) return;
+    previewScrollSyncResizeObserver = new ResizeObserver(function() {
+      scheduleScrollSyncLayoutRefresh();
+    });
+    previewScrollSyncResizeObserver.observe(markdownPreview);
+  }
+
   function syncEditorToPreview() {
     if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling) return;
     isEditorScrolling = true;
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
-      const editorScrollRange = markdownEditor.scrollHeight - markdownEditor.clientHeight;
-      const editorScrollRatio =
-        editorScrollRange > 0 ? markdownEditor.scrollTop / editorScrollRange : 0;
-      const previewScrollPosition =
-        (previewPane.scrollHeight - previewPane.clientHeight) *
-        editorScrollRatio;
+      const sourceLine = getEditorTopSourceLine();
+      const previewScrollPosition = interpolatePreviewScrollForSourceLine(sourceLine);
 
       if (!isNaN(previewScrollPosition) && isFinite(previewScrollPosition)) {
-        previewPane.scrollTop = previewScrollPosition;
+        previewPane.scrollTop = clampPreviewScrollTop(previewScrollPosition);
       }
 
-      setTimeout(function() {
-        isEditorScrolling = false;
-      }, 50);
+      releaseScrollSyncLock('editor');
     });
   }
 
@@ -5645,21 +5977,14 @@ ${selector} .arrowheadPath {
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
-      const previewScrollRange = previewPane.scrollHeight - previewPane.clientHeight;
-      const previewScrollRatio =
-        previewScrollRange > 0 ? previewPane.scrollTop / previewScrollRange : 0;
-      const editorScrollPosition =
-        (markdownEditor.scrollHeight - markdownEditor.clientHeight) *
-        previewScrollRatio;
+      const editorScrollPosition = interpolateEditorScrollForPreviewTop(previewPane.scrollTop);
 
       if (!isNaN(editorScrollPosition) && isFinite(editorScrollPosition)) {
-        markdownEditor.scrollTop = editorScrollPosition;
+        markdownEditor.scrollTop = clampEditorScrollTop(editorScrollPosition);
         syncEditorScrollOverlays();
       }
 
-      setTimeout(function() {
-        isPreviewScrolling = false;
-      }, 50);
+      releaseScrollSyncLock('preview');
     });
   }
 
@@ -10596,10 +10921,20 @@ ${selector} .arrowheadPath {
   markdownEditor.addEventListener("scroll", function() {
     cachedScrollTop = this.scrollTop;
     cachedScrollLeft = this.scrollLeft;
+    if (!isPreviewScrolling && !isProgrammaticScrolling) {
+      lastScrollSyncSource = 'editor';
+    }
     syncEditorToPreview();
     scheduleEditorOverlayScrollSync();
   });
-  previewPane.addEventListener("scroll", syncPreviewToEditor);
+  previewPane.addEventListener("scroll", function() {
+    if (!isEditorScrolling && !isProgrammaticScrolling) {
+      lastScrollSyncSource = 'preview';
+    }
+    syncPreviewToEditor();
+  });
+  initPreviewScrollSyncObservers();
+  window.addEventListener("resize", scheduleScrollSyncLayoutRefresh);
   toggleSyncButton.addEventListener("click", toggleSyncScrolling);
   if (directionToggle) {
     directionToggle.addEventListener("click", function () {
