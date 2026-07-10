@@ -269,6 +269,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let findMatches = [];
   let activeFindIndex = -1;
   let lastFindQuery = '';
+  let isSectionPickMode = false;
+  let sectionLocateMessageTimer = null;
 
   // Custom Editor History State Manager variables
   const tabHistories = {};
@@ -459,6 +461,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const findReplaceModal = document.getElementById("find-replace-modal");
   const findReplaceInput = document.getElementById("find-replace-input");
   const findReplaceWith = document.getElementById("find-replace-with");
+  const findSectionButton = document.getElementById("find-section");
   const findReplaceCount = document.getElementById("find-replace-count");
   const findReplacePrev = document.getElementById("find-prev");
   const findReplaceNext = document.getElementById("find-next");
@@ -855,8 +858,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         previewSegmentHtmlCache.set(cacheKey, sanitizedBlock);
       }
       const blockId = block.id || `preview-block-${index}`;
+      const sourceStart = Number(block.startLine) || 0;
+      const sourceEnd = Number(block.endLine) || sourceStart;
+      const sourceAttrs = sourceStart > 0
+        ? ` data-source-line="${sourceStart}" data-source-start="${sourceStart}" data-source-end="${Math.max(sourceStart, sourceEnd)}"`
+        : '';
       htmlParts.push(
-        `<section class="preview-render-block" style="content-visibility: auto; contain-intrinsic-size: auto 220px;" data-preview-block-id="${escapeHtmlAttribute(blockId)}" data-preview-block-hash="${escapeHtmlAttribute(cacheKey)}">${sanitizedBlock}</section>`
+        `<section class="preview-render-block" style="content-visibility: auto; contain-intrinsic-size: auto 220px;" data-preview-block-id="${escapeHtmlAttribute(blockId)}" data-preview-block-hash="${escapeHtmlAttribute(cacheKey)}"${sourceAttrs}>${sanitizedBlock}</section>`
       );
     });
 
@@ -2896,6 +2904,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function switchTab(tabId) {
     if (tabId === activeTabId) return;
+    if (isSectionPickMode) {
+      setSectionPickMode(false);
+    }
     saveCurrentTabState();
     
     // Clear typing timeout and reset tracking for the new tab
@@ -2942,6 +2953,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function closeTab(tabId) {
+    if (isSectionPickMode) {
+      setSectionPickMode(false);
+    }
     if (liveCollaboration && liveCollaboration.tabId === tabId) {
       if (liveCollaboration.isHost) {
         endLiveSessionForEveryone();
@@ -4845,6 +4859,7 @@ ${selector} .arrowheadPath {
 
     previewSegmentHtmlCache.clear();
     const patchResult = commitPreviewHtml(sanitizedHtml, referenceData, rawVal, context);
+    applySourceRangesToRenderedPreview(rawVal);
     postProcessPreview(rawVal, context, patchResult);
   }
 
@@ -5686,6 +5701,9 @@ ${selector} .arrowheadPath {
       announceToScreenReader(getEditorReadOnlyMessage());
     }
     if (mode === currentViewMode) return;
+    if (isSectionPickMode) {
+      setSectionPickMode(false);
+    }
 
     const previousMode = currentViewMode;
     currentViewMode = mode;
@@ -9265,6 +9283,371 @@ ${selector} .arrowheadPath {
     syncEditorScrollOverlays();
   }
 
+  function setSectionPickMode(active, message) {
+    isSectionPickMode = Boolean(active);
+    if (findSectionButton) {
+      findSectionButton.classList.toggle('active', isSectionPickMode);
+      findSectionButton.setAttribute('aria-pressed', isSectionPickMode ? 'true' : 'false');
+    }
+    document.body.classList.toggle('section-pick-active', isSectionPickMode);
+    if (isSectionPickMode) {
+      announceToScreenReader('Find Section active. Click content in the editor or preview.');
+    } else if (message !== false) {
+      announceToScreenReader(message || 'Find Section canceled.');
+    }
+  }
+
+  function showSectionLocateMessage(message) {
+    announceToScreenReader(message);
+    const oldToast = document.querySelector('.section-locate-toast');
+    if (oldToast) oldToast.remove();
+    const toast = document.createElement('div');
+    toast.className = 'section-locate-toast';
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    if (sectionLocateMessageTimer) clearTimeout(sectionLocateMessageTimer);
+    sectionLocateMessageTimer = setTimeout(function() {
+      sectionLocateMessageTimer = null;
+      toast.remove();
+    }, 2400);
+  }
+
+  function getLineNumberForIndex(index) {
+    return countLinesBeforeIndex(markdownEditor.value || '', index) + 1;
+  }
+
+  function splitMarkdownSourceBlocksForLocate(markdown) {
+    const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+    const blocks = [];
+    let buffer = [];
+    let startLine = 1;
+    let inFence = false;
+    let fenceChar = '';
+    let fenceLength = 0;
+    let inMathBlock = false;
+
+    function flush(endLine) {
+      const source = buffer.join('\n').trimEnd();
+      if (source.trim()) {
+        blocks.push({ source, startLine, endLine });
+      }
+      buffer = [];
+    }
+
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const lineNumber = index + 1;
+      const trimmed = line.trim();
+      const fenceMatch = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+
+      if (fenceMatch) {
+        const marker = fenceMatch[1];
+        if (!inFence) {
+          inFence = true;
+          fenceChar = marker[0];
+          fenceLength = marker.length;
+        } else if (marker[0] === fenceChar && marker.length >= fenceLength) {
+          inFence = false;
+        }
+      }
+
+      if (!inFence && trimmed === '$$') {
+        inMathBlock = !inMathBlock;
+      }
+
+      if (!inFence && !inMathBlock && trimmed === '') {
+        flush(lineNumber);
+        startLine = lineNumber + 1;
+        continue;
+      }
+
+      if (buffer.length === 0) startLine = lineNumber;
+      buffer.push(line);
+    }
+
+    flush(lines.length);
+    return blocks;
+  }
+
+  function countRenderedTopLevelElementsForSource(source) {
+    try {
+      const template = document.createElement('template');
+      template.innerHTML = marked.parse(source || '');
+      const count = Array.from(template.content.childNodes).filter(function(node) {
+        return node.nodeType === Node.ELEMENT_NODE || (node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      }).length;
+      return Math.max(1, count);
+    } catch (error) {
+      return 1;
+    }
+  }
+
+  function applySourceRangesToRenderedPreview(markdown) {
+    if (!markdownPreview) return;
+    const topLevelElements = Array.from(markdownPreview.children).filter(function(element) {
+      return element.nodeType === Node.ELEMENT_NODE && element.id !== 'markdown-preview-skeleton';
+    });
+    if (!topLevelElements.length) return;
+
+    const blocks = splitMarkdownSourceBlocksForLocate(markdown);
+    let elementIndex = 0;
+    blocks.forEach(function(block) {
+      const renderedCount = countRenderedTopLevelElementsForSource(block.source);
+      for (let count = 0; count < renderedCount && elementIndex < topLevelElements.length; count += 1) {
+        const element = topLevelElements[elementIndex];
+        element.setAttribute('data-source-line', String(block.startLine));
+        element.setAttribute('data-source-start', String(block.startLine));
+        element.setAttribute('data-source-end', String(block.endLine));
+        elementIndex += 1;
+      }
+    });
+  }
+
+  function getMarkdownSourceBlockAroundLine(lineNumber) {
+    const lines = (markdownEditor.value || '').replace(/\r\n/g, '\n').split('\n');
+    const targetLine = Math.max(1, Math.min(lines.length, lineNumber));
+    if (!lines[targetLine - 1] || !lines[targetLine - 1].trim()) return null;
+    return splitMarkdownSourceBlocksForLocate(markdownEditor.value || '').find(function(block) {
+      return targetLine >= block.startLine && targetLine <= block.endLine;
+    }) || null;
+  }
+
+  function getEditorSourceRangeFromMouseEvent(event) {
+    if (!event || !markdownEditor) return null;
+    if (!isGeometryInitialized || cachedEditorWidth !== markdownEditor.clientWidth) {
+      refreshEditorWidth();
+    }
+    const rect = markdownEditor.getBoundingClientRect();
+    const styles = window.getComputedStyle(markdownEditor);
+    const paddingTop = parseFloat(styles.paddingTop) || 10;
+    const targetY = event.clientY - rect.top - paddingTop + markdownEditor.scrollTop;
+    if (!Number.isFinite(targetY) || targetY < 0) return null;
+
+    const lines = (markdownEditor.value || '').split('\n');
+    let offset = 0;
+    for (let index = 0; index < lines.length; index += 1) {
+      const lineHeight = getWrappedLineCountMonospace(lines[index] || '', cachedMaxCharsPerLine) * cachedLineHeight;
+      if (targetY <= offset + lineHeight) {
+        return getMarkdownSourceBlockAroundLine(index + 1);
+      }
+      offset += lineHeight;
+    }
+    return null;
+  }
+
+  function getPickedEditorSourceRange(event) {
+    const selectionStart = markdownEditor.selectionStart || 0;
+    const selectionEnd = markdownEditor.selectionEnd || selectionStart;
+    const selectedText = selectionEnd > selectionStart ? markdownEditor.value.slice(selectionStart, selectionEnd) : '';
+    if (!selectedText.trim()) {
+      return getEditorSourceRangeFromMouseEvent(event) || getMarkdownSourceBlockAroundLine(getLineNumberForIndex(selectionStart));
+    }
+    const startLine = getLineNumberForIndex(selectionStart);
+    const effectiveEnd = selectionEnd > selectionStart && markdownEditor.value[selectionEnd - 1] === '\n'
+      ? selectionEnd - 1
+      : selectionEnd;
+    const endLine = getLineNumberForIndex(Math.max(selectionStart, effectiveEnd));
+    const lines = (markdownEditor.value || '').split('\n');
+    let targetLine = startLine;
+    for (let line = startLine; line <= endLine; line += 1) {
+      if ((lines[line - 1] || '').trim()) {
+        targetLine = line;
+        break;
+      }
+    }
+    return getMarkdownSourceBlockAroundLine(targetLine);
+  }
+
+  function getMappedPreviewBlocks() {
+    if (!markdownPreview) return [];
+    return Array.from(markdownPreview.querySelectorAll('[data-source-start], [data-source-line]'))
+      .map(function(element) {
+        const start = parseInt(element.getAttribute('data-source-start') || element.getAttribute('data-source-line'), 10);
+        const end = parseInt(element.getAttribute('data-source-end') || element.getAttribute('data-source-line'), 10);
+        return {
+          element,
+          startLine: Number.isFinite(start) ? start : null,
+          endLine: Number.isFinite(end) ? end : start,
+        };
+      })
+      .filter(function(item) {
+        return item.startLine !== null;
+      });
+  }
+
+  function findPreviewBlockForSourceRange(sourceRange) {
+    if (!sourceRange || !markdownPreview) return null;
+    const mappedBlocks = getMappedPreviewBlocks();
+    let nearest = null;
+    let nearestDistance = Infinity;
+    for (const block of mappedBlocks) {
+      const overlaps = block.startLine <= sourceRange.endLine && block.endLine >= sourceRange.startLine;
+      if (overlaps) return block.element;
+      const distance = Math.min(
+        Math.abs(block.startLine - sourceRange.startLine),
+        Math.abs(block.endLine - sourceRange.endLine)
+      );
+      if (distance < nearestDistance) {
+        nearest = block.element;
+        nearestDistance = distance;
+      }
+    }
+    if (nearest) return nearest;
+    return findPreviewElementBySourceRatio(sourceRange.startLine);
+  }
+
+  function findPreviewElementBySourceRatio(lineNumber) {
+    if (!markdownPreview || !previewPane) return null;
+    const children = Array.from(markdownPreview.children).filter(function(child) {
+      return child.nodeType === Node.ELEMENT_NODE && child.offsetHeight > 0;
+    });
+    if (!children.length) return null;
+    const totalLines = countLinesFast(markdownEditor.value || '');
+    const ratio = totalLines > 1 ? (Math.max(1, lineNumber) - 1) / (totalLines - 1) : 0;
+    const targetTop = ratio * Math.max(0, markdownPreview.scrollHeight - previewPane.clientHeight);
+    return children.reduce(function(best, child) {
+      const distance = Math.abs(child.offsetTop - targetTop);
+      if (!best || distance < best.distance) {
+        return { element: child, distance };
+      }
+      return best;
+    }, null)?.element || null;
+  }
+
+  function getPreviewSourceRangeFromTarget(target) {
+    if (!target || !markdownPreview) return null;
+    const mapped = target.closest('[data-source-start], [data-source-line]');
+    if (mapped && markdownPreview.contains(mapped)) {
+      const start = parseInt(mapped.getAttribute('data-source-start') || mapped.getAttribute('data-source-line'), 10);
+      const end = parseInt(mapped.getAttribute('data-source-end') || mapped.getAttribute('data-source-line'), 10);
+      if (Number.isFinite(start)) {
+        return {
+          element: mapped,
+          sourceRange: {
+            startLine: start,
+            endLine: Number.isFinite(end) ? end : start,
+          },
+        };
+      }
+    }
+
+    const previewBlock = target.closest('.preview-render-block') || target.closest('.markdown-body > *');
+    if (previewBlock && previewPane) {
+      const ratio = previewPane.scrollHeight > previewPane.clientHeight
+        ? Math.max(0, Math.min(1, previewBlock.offsetTop / Math.max(1, previewPane.scrollHeight - previewPane.clientHeight)))
+        : 0;
+      const approximateLine = Math.max(1, Math.round(ratio * Math.max(1, countLinesFast(markdownEditor.value || ''))));
+      const sourceRange = getMarkdownSourceBlockAroundLine(approximateLine) || { startLine: approximateLine, endLine: approximateLine };
+      return { element: previewBlock, sourceRange };
+    }
+
+    return null;
+  }
+
+  function scrollPreviewSectionIntoView(element) {
+    if (!element || !previewPane) return;
+    isProgrammaticScrolling = true;
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (window.programmaticScrollTimeout) clearTimeout(window.programmaticScrollTimeout);
+    window.programmaticScrollTimeout = setTimeout(function() {
+      isProgrammaticScrolling = false;
+    }, 900);
+  }
+
+  function highlightPreviewSection(element) {
+    if (!element) return;
+    element.classList.remove('section-locate-preview-highlight');
+    void element.offsetWidth;
+    element.classList.add('section-locate-preview-highlight');
+    setTimeout(function() {
+      element.classList.remove('section-locate-preview-highlight');
+    }, 2300);
+  }
+
+  function getEditorLineBlockMetrics(sourceRange) {
+    if (!sourceRange) return null;
+    if (!isGeometryInitialized || cachedEditorWidth !== markdownEditor.clientWidth) {
+      refreshEditorWidth();
+    }
+    const lines = (markdownEditor.value || '').split('\n');
+    const startLine = Math.max(1, Math.min(lines.length, sourceRange.startLine));
+    const endLine = Math.max(startLine, Math.min(lines.length, sourceRange.endLine));
+    const styles = window.getComputedStyle(markdownEditor);
+    const paddingTop = parseFloat(styles.paddingTop) || 10;
+    let top = paddingTop;
+    for (let index = 0; index < startLine - 1; index += 1) {
+      top += getWrappedLineCountMonospace(lines[index] || '', cachedMaxCharsPerLine) * cachedLineHeight;
+    }
+    let height = 0;
+    for (let index = startLine - 1; index < endLine; index += 1) {
+      height += getWrappedLineCountMonospace(lines[index] || '', cachedMaxCharsPerLine) * cachedLineHeight;
+    }
+    return { top, height: Math.max(cachedLineHeight, height) };
+  }
+
+  function scrollEditorSectionIntoView(sourceRange) {
+    const metrics = getEditorLineBlockMetrics(sourceRange);
+    if (!metrics) return;
+    isProgrammaticScrolling = true;
+    markdownEditor.scrollTo({
+      top: clampEditorScrollTop(metrics.top - (markdownEditor.clientHeight / 2) + (metrics.height / 2)),
+      behavior: 'smooth',
+    });
+    setTimeout(function() {
+      syncEditorScrollOverlays();
+      isProgrammaticScrolling = false;
+    }, 700);
+  }
+
+  function highlightEditorSourceRange(sourceRange) {
+    if (!sourceRange || !editorPaneElement) return;
+    const metrics = getEditorLineBlockMetrics(sourceRange);
+    if (!metrics) return;
+    const styles = window.getComputedStyle(markdownEditor);
+    const paddingLeft = parseFloat(styles.paddingLeft) || cachedPaddingLeft || 10;
+    const highlight = document.createElement('div');
+    highlight.className = 'section-locate-editor-highlight';
+    highlight.style.top = `${markdownEditor.offsetTop + metrics.top - markdownEditor.scrollTop}px`;
+    highlight.style.left = `${markdownEditor.offsetLeft + paddingLeft}px`;
+    highlight.style.height = `${metrics.height}px`;
+    editorPaneElement.appendChild(highlight);
+    setTimeout(function() {
+      highlight.remove();
+    }, 2300);
+  }
+
+  function locateSectionFromEditorPick(event) {
+    const sourceRange = getPickedEditorSourceRange(event);
+    if (!sourceRange) {
+      showSectionLocateMessage('Matching section not found.');
+      return false;
+    }
+    const previewBlock = findPreviewBlockForSourceRange(sourceRange);
+    if (!previewBlock) {
+      showSectionLocateMessage('Matching section not found.');
+      return false;
+    }
+    scrollPreviewSectionIntoView(previewBlock);
+    highlightPreviewSection(previewBlock);
+    setSectionPickMode(false, 'Matching section located.');
+    return true;
+  }
+
+  function locateSectionFromPreviewPick(target) {
+    const match = getPreviewSourceRangeFromTarget(target);
+    if (!match || !match.sourceRange) {
+      showSectionLocateMessage('Matching section not found.');
+      return false;
+    }
+    scrollEditorSectionIntoView(match.sourceRange);
+    setTimeout(function() {
+      highlightEditorSourceRange(match.sourceRange);
+    }, 450);
+    setSectionPickMode(false, 'Matching section located.');
+    return true;
+  }
+
   // Class encapsulating Search & Replace Engine
   class FindReplaceEngine {
     constructor(editor) {
@@ -9816,6 +10199,9 @@ ${selector} .arrowheadPath {
   }
 
   function closeFindReplaceModal() {
+    if (isSectionPickMode) {
+      setSectionPickMode(false);
+    }
     isFindModalOpen = false;
     const panel = document.getElementById('find-replace-modal');
     const contentCont = document.querySelector('.content-container');
@@ -10099,6 +10485,12 @@ ${selector} .arrowheadPath {
     const allBtn = document.getElementById('find-replace-all');
     if (currentBtn) currentBtn.addEventListener('click', replaceCurrentMatch);
     if (allBtn) allBtn.addEventListener('click', replaceAllMatches);
+
+    if (findSectionButton) {
+      findSectionButton.addEventListener('click', function() {
+        setSectionPickMode(!isSectionPickMode);
+      });
+    }
 
     // Close buttons
     const closeBtn = document.getElementById('find-replace-close');
@@ -10553,6 +10945,18 @@ ${selector} .arrowheadPath {
   markdownEditor.addEventListener('keyup', updateLastCursor);
   markdownEditor.addEventListener('mousedown', updateLastCursor);
   markdownEditor.addEventListener('mouseup', updateLastCursor);
+  markdownEditor.addEventListener('mouseup', function(event) {
+    if (!isSectionPickMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const pickEvent = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+    };
+    setTimeout(function() {
+      locateSectionFromEditorPick(pickEvent);
+    }, 0);
+  });
   markdownEditor.addEventListener('focus', updateLastCursor);
   markdownEditor.addEventListener('beforeinput', function(e) {
     if (!canMutateEditor()) {
@@ -15094,6 +15498,12 @@ ${selector} .arrowheadPath {
       return;
     }
     
+    if (e.key === 'Escape' && isSectionPickMode) {
+      e.preventDefault();
+      setSectionPickMode(false);
+      return;
+    }
+
     // Global Escape dismissal for find-replace panel
     if (e.key === 'Escape' && isFindModalOpen) {
       e.preventDefault();
@@ -17462,6 +17872,13 @@ ${selector} .arrowheadPath {
 
   // Intercept all link clicks in the preview pane to open them securely and prevent page navigation
   if (markdownPreview) {
+    markdownPreview.addEventListener('click', function(e) {
+      if (!isSectionPickMode) return;
+      e.preventDefault();
+      e.stopPropagation();
+      locateSectionFromPreviewPick(e.target);
+    }, true);
+
     markdownPreview.addEventListener('click', function(e) {
       const link = e.target.closest('a');
       if (link) {

@@ -31,6 +31,8 @@
   --fr-btn-active: #0969da;
   --fr-btn-active-bg: #ddf4ff;
   --fr-match-highlight: #ffdf5d;
+  --section-locate-highlight: rgba(255, 223, 93, 0.48);
+  --section-locate-outline: rgba(9, 105, 218, 0.9);
   --fr-match-active: #ff9b30;
   --fr-match-text-color: #24292e;
   --fr-match-active-text-color: #24292e;
@@ -71,6 +73,8 @@
   --fr-btn-active: #2f81f7;
   --fr-btn-active-bg: rgba(56, 139, 253, 0.15);
   --fr-match-highlight: rgba(187, 128, 9, 0.4);
+  --section-locate-highlight: rgba(187, 128, 9, 0.45);
+  --section-locate-outline: rgba(88, 166, 255, 0.95);
   --fr-match-active: #ad6200;
   --fr-match-text-color: #c9d1d9;
   --fr-match-active-text-color: #ffffff;
@@ -731,6 +735,45 @@ body {
   color: var(--fr-match-active-text-color, inherit) !important;
   outline: 1px solid var(--accent-color, #0366d6) !important;
   outline-offset: -1px;
+}
+
+.section-locate-editor-highlight {
+  position: absolute;
+  right: 12px;
+  border-radius: 4px;
+  background-color: var(--section-locate-highlight);
+  outline: 2px solid var(--section-locate-outline);
+  outline-offset: -1px;
+  pointer-events: none;
+  z-index: 2;
+  animation: section-locate-fade 2.2s ease-out forwards;
+}
+
+.section-locate-preview-highlight {
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px var(--section-locate-outline), 0 0 0 9999px rgba(255, 223, 93, 0.08) inset;
+  background-color: var(--section-locate-highlight);
+  animation: section-locate-fade 2.2s ease-out forwards;
+}
+
+.section-pick-active #markdown-editor,
+.section-pick-active .preview-pane [data-source-start],
+.section-pick-active .preview-pane [data-source-line],
+.section-pick-active .preview-pane .preview-render-block,
+.section-pick-active .preview-pane .markdown-body > * {
+  cursor: crosshair;
+}
+
+@keyframes section-locate-fade {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* Dropdown improvements */
@@ -4278,6 +4321,65 @@ html[lang="ko"] .markdown-body h3 {
 .find-nav-arrow-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.find-section-btn {
+  background: none;
+  border: 1px solid var(--fr-border);
+  color: var(--text-color);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.find-section-btn:hover {
+  background-color: var(--button-hover);
+}
+
+.find-section-btn.active {
+  color: var(--fr-btn-active);
+  border-color: var(--accent-color);
+  background-color: var(--fr-btn-active-bg);
+}
+
+.section-locate-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1100;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--fr-border);
+  background-color: var(--fr-bg);
+  color: var(--text-color);
+  box-shadow: var(--fr-shadow);
+  font-size: 13px;
+  pointer-events: none;
+  animation: section-locate-toast-fade 2.4s ease-out forwards;
+}
+
+@keyframes section-locate-toast-fade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .find-drawer-toggle-row {
