@@ -566,7 +566,7 @@ function splitMarkdownBlocks(markdown) {
     }
 
     if (!inFence && !inMathBlock && trimmed === "") {
-      flush(lineNumber);
+      flush(lineNumber - 1);
       startLine = lineNumber + 1;
       continue;
     }

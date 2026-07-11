@@ -271,6 +271,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let lastFindQuery = '';
   let isSectionPickMode = false;
   let sectionLocateMessageTimer = null;
+  let sectionPickEditorMouseDown = null;
 
   // Custom Editor History State Manager variables
   const tabHistories = {};
@@ -9357,7 +9358,7 @@ ${selector} .arrowheadPath {
       }
 
       if (!inFence && !inMathBlock && trimmed === '') {
-        flush(lineNumber);
+        flush(lineNumber - 1);
         startLine = lineNumber + 1;
         continue;
       }
@@ -9436,7 +9437,11 @@ ${selector} .arrowheadPath {
     return null;
   }
 
-  function getPickedEditorSourceRange(event) {
+  function getPickedEditorSourceRange(event, preferSelection) {
+    if (!preferSelection) {
+      return getEditorSourceRangeFromMouseEvent(event) || getMarkdownSourceBlockAroundLine(getLineNumberForIndex(markdownEditor.selectionStart || 0));
+    }
+
     const selectionStart = markdownEditor.selectionStart || 0;
     const selectionEnd = markdownEditor.selectionEnd || selectionStart;
     const selectedText = selectionEnd > selectionStart ? markdownEditor.value.slice(selectionStart, selectionEnd) : '';
@@ -9617,8 +9622,8 @@ ${selector} .arrowheadPath {
     }, 2300);
   }
 
-  function locateSectionFromEditorPick(event) {
-    const sourceRange = getPickedEditorSourceRange(event);
+  function locateSectionFromEditorPick(event, preferSelection) {
+    const sourceRange = getPickedEditorSourceRange(event, preferSelection);
     if (!sourceRange) {
       showSectionLocateMessage('Matching section not found.');
       return false;
@@ -10944,17 +10949,39 @@ ${selector} .arrowheadPath {
   markdownEditor.addEventListener('keydown', updateLastCursor);
   markdownEditor.addEventListener('keyup', updateLastCursor);
   markdownEditor.addEventListener('mousedown', updateLastCursor);
+  markdownEditor.addEventListener('mousedown', function(event) {
+    if (!isSectionPickMode) {
+      sectionPickEditorMouseDown = null;
+      return;
+    }
+    sectionPickEditorMouseDown = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      selectionStart: markdownEditor.selectionStart || 0,
+      selectionEnd: markdownEditor.selectionEnd || 0,
+    };
+  });
   markdownEditor.addEventListener('mouseup', updateLastCursor);
   markdownEditor.addEventListener('mouseup', function(event) {
     if (!isSectionPickMode) return;
     event.preventDefault();
     event.stopPropagation();
+    const start = sectionPickEditorMouseDown;
+    sectionPickEditorMouseDown = null;
+    const moved = start
+      ? Math.abs(event.clientX - start.clientX) > 4 || Math.abs(event.clientY - start.clientY) > 4
+      : false;
+    const selectionStart = markdownEditor.selectionStart || 0;
+    const selectionEnd = markdownEditor.selectionEnd || selectionStart;
+    const hasSelection = selectionEnd > selectionStart && (markdownEditor.value || '').slice(selectionStart, selectionEnd).trim().length > 0;
+    const selectionChanged = Boolean(start && (selectionStart !== start.selectionStart || selectionEnd !== start.selectionEnd));
+    const preferSelection = hasSelection && (moved || selectionChanged);
     const pickEvent = {
       clientX: event.clientX,
       clientY: event.clientY,
     };
     setTimeout(function() {
-      locateSectionFromEditorPick(pickEvent);
+      locateSectionFromEditorPick(pickEvent, preferSelection);
     }, 0);
   });
   markdownEditor.addEventListener('focus', updateLastCursor);
