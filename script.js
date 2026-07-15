@@ -11584,6 +11584,27 @@ ${selector} .arrowheadPath {
       applyMarkdownList('unordered');
     } else if (action === 'ordered-list') {
       applyMarkdownList('ordered');
+    } else if (action === 'task-list') {
+      transformEditorLines(function(line) {
+        if (!line) return '- [ ] ';
+        return '- [ ] ' + line.replace(/^\s*[-*+]\s+(?:\[[ xX]\]\s+)?/, '');
+      });
+    } else if (action === 'math') {
+      insertMarkdownBlock('$$\nE = mc^2\n$$\n');
+    } else if (action === 'footnote') {
+      const marker = '[^' + referenceCounter + ']';
+      referenceCounter += 1;
+      insertMarkdownBlock(marker + '\n\n' + marker + ': Footnote text\n');
+    } else if (action === 'toc') {
+      const tocItems = (markdownEditor.value || '').split('\n').reduce(function(items, line) {
+        const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
+        if (!match) return items;
+        const title = match[2].replace(/[*_`~]/g, '').trim();
+        const slug = title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+        items.push('  '.repeat(Math.max(0, match[1].length - 1)) + '- [' + title + '](#' + slug + ')');
+        return items;
+      }, []);
+      insertMarkdownBlock((tocItems.length ? tocItems.join('\n') : '- [Section](#section)') + '\n');
     } else if (action === 'horizontal-rule') insertMarkdownBlock('---\n');
     else if (action === 'link') insertMarkdownLink();
     else if (action === 'reference') insertMarkdownReference();
@@ -17311,7 +17332,7 @@ ${selector} .arrowheadPath {
     modalCurrentSvgEl = svgClone;
 
     const engine = container.getAttribute('data-diagram-engine') || 'diagram';
-    const title = document.getElementById('diagram-modal-title');
+    const title = document.getElementById('diagram-viewer-title');
     if (title) title.textContent = `${getDiagramEngineLabel(engine)} Viewer`;
     mermaidZoomModal.classList.add('active');
     mermaidZoomModal.setAttribute('aria-hidden', 'false');
