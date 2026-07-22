@@ -179,9 +179,9 @@
                     </button>
                     <div id="live-share-toolbar-participants" class="live-share-toolbar-participants" aria-label="Live Share participants" hidden></div>
 
-                    <a class="header-icon-command report-command" href="https://github.com/ThisIs-Developer/Markdown-Viewer/issues/new" target="_blank" rel="noopener noreferrer" title="Report an issue" aria-label="Report an issue">
+                    <button id="header-report-button" class="header-icon-command report-command" type="button" title="Report an issue" aria-label="Report an issue">
                         <i class="lucide lucide-bug" aria-hidden="true"></i>
-                    </a>
+                    </button>
                     <button id="header-about-button" class="header-icon-command" type="button" data-md-action="info" title="About Markdown Viewer" aria-label="About Markdown Viewer">
                         <i class="lucide lucide-info" aria-hidden="true"></i>
                     </button>
@@ -332,9 +332,9 @@
                                     <span id="mobile-live-share-participants" class="live-share-toolbar-participants mobile-live-share-participants" aria-label="Live Share participants" hidden></span>
                                 </button>
 
-                                <a id="mobile-report-button" class="mobile-menu-item mobile-menu-command report-command" href="https://github.com/ThisIs-Developer/Markdown-Viewer/issues/new" target="_blank" rel="noopener noreferrer" title="Report an issue">
+                                <button id="mobile-report-button" class="mobile-menu-item mobile-menu-command report-command" type="button" title="Report an issue">
                                     <span class="mobile-menu-item-label"><i class="lucide lucide-bug" aria-hidden="true"></i><span>Report</span></span>
-                                </a>
+                                </button>
 
                                 <button id="mobile-about-button" class="mobile-menu-item mobile-menu-command" type="button" title="About Markdown Viewer">
                                     <span class="mobile-menu-item-label"><i class="lucide lucide-info" aria-hidden="true"></i><span>About</span></span>
@@ -925,6 +925,126 @@
             </div>
             <div class="reset-modal-actions">
               <button class="reset-modal-btn reset-modal-cancel" id="share-error-close">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report Issue Modal -->
+        <div id="report-issue-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="report-issue-modal-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box report-issue-modal-box">
+            <div class="modal-header">
+              <p id="report-issue-modal-title" class="reset-modal-message">Report an Issue</p>
+              <button type="button" class="modal-close-btn" id="report-issue-modal-close-icon" aria-label="Close report issue dialog">
+                <i class="lucide lucide-x"></i>
+              </button>
+            </div>
+
+            <!-- Form Body -->
+            <form id="report-issue-form" class="modal-body report-issue-modal-body" novalidate>
+              <div id="report-issue-error-banner" class="report-issue-error-banner" hidden aria-live="assertive"></div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-type">Issue Type <span class="required-star">*</span></label>
+                <select id="report-issue-type" class="rename-modal-input report-issue-select">
+                  <option value="Bug Report" selected>Bug Report</option>
+                  <option value="Feature Request">Feature Request</option>
+                  <option value="UI/UX Issue">UI/UX Issue</option>
+                  <option value="Performance Issue">Performance Issue</option>
+                  <option value="Documentation Issue">Documentation Issue</option>
+                  <option value="Security Concern">Security Concern</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-title">Issue Title <span class="required-star">*</span></label>
+                <input type="text" id="report-issue-title" class="rename-modal-input" placeholder="Briefly describe the issue" maxlength="200" required />
+                <span id="report-issue-title-error" class="form-error" hidden></span>
+              </div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-description">Issue Description <span class="required-star">*</span></label>
+                <textarea id="report-issue-description" class="rename-modal-input report-issue-textarea" rows="4" placeholder="Explain the issue in detail" maxlength="10000" required></textarea>
+                <span id="report-issue-description-error" class="form-error" hidden></span>
+              </div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-steps">Steps to Reproduce</label>
+                <textarea id="report-issue-steps" class="rename-modal-input report-issue-textarea" rows="3" placeholder="1. Open...&#10;2. Click...&#10;3. Observe..." maxlength="5000"></textarea>
+              </div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-expected">Expected Behaviour</label>
+                <textarea id="report-issue-expected" class="rename-modal-input report-issue-textarea" rows="2" placeholder="What did you expect to happen?" maxlength="5000"></textarea>
+              </div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-actual">Actual Behaviour</label>
+                <textarea id="report-issue-actual" class="rename-modal-input report-issue-textarea" rows="2" placeholder="What actually happened?" maxlength="5000"></textarea>
+              </div>
+
+              <div class="reset-modal-field">
+                <label class="reset-modal-label" for="report-issue-attachment">Attachment</label>
+                <div id="report-issue-dropzone" class="report-issue-dropzone">
+                  <input type="file" id="report-issue-attachment" class="report-issue-file-input" accept=".png,.jpg,.jpeg,.webp,.gif,.txt,.log,.json" />
+                  <div id="report-issue-dropzone-prompt" class="report-issue-dropzone-prompt">
+                    <i class="lucide lucide-upload-cloud" aria-hidden="true"></i>
+                    <span>Drag and drop a file or <strong class="report-issue-browse-text">browse</strong></span>
+                    <span class="modal-subtext">Supported: PNG, JPG, WEBP, GIF, TXT, LOG, JSON (Max 5MB)</span>
+                  </div>
+                  <div id="report-issue-file-preview" class="report-issue-file-preview" hidden>
+                    <i class="lucide lucide-file-text" aria-hidden="true"></i>
+                    <div class="report-issue-file-details">
+                      <span id="report-issue-file-name" class="report-issue-file-name"></span>
+                      <span id="report-issue-file-size" class="report-issue-file-size modal-subtext"></span>
+                    </div>
+                    <button type="button" id="report-issue-attachment-remove" class="report-issue-remove-btn" title="Remove attachment" aria-label="Remove attachment">
+                      <i class="lucide lucide-x"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="report-issue-attachment-progress" class="report-issue-progress-bar" hidden>
+                  <div class="report-issue-progress-fill"></div>
+                </div>
+                <span id="report-issue-attachment-error" class="form-error" hidden></span>
+              </div>
+
+              <div class="reset-modal-field report-issue-checkbox-field">
+                <label class="report-issue-checkbox-label" for="report-issue-include-env">
+                  <input type="checkbox" id="report-issue-include-env" checked />
+                  <span>Include application and browser information</span>
+                </label>
+                <span class="modal-subtext">Includes app version, browser, OS, and screen resolution. No private document content is collected.</span>
+              </div>
+
+              <div id="report-issue-turnstile" class="report-issue-turnstile"></div>
+            </form>
+
+            <!-- Success View -->
+            <div id="report-issue-success-view" class="modal-body report-issue-success-view" hidden>
+              <div class="report-issue-success-icon">
+                <i class="lucide lucide-check-circle-2"></i>
+              </div>
+              <h3 class="report-issue-success-title">Issue submitted successfully</h3>
+              <p class="report-issue-success-desc">
+                Your report has been submitted to GitHub as issue <strong id="report-issue-success-number">#</strong>.
+              </p>
+              <div class="report-issue-success-info">
+                <span class="modal-subtext">Title:</span>
+                <p id="report-issue-success-issue-title" class="report-issue-success-issue-title"></p>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="reset-modal-actions">
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="report-issue-cancel">Cancel</button>
+              <button type="button" class="reset-modal-btn reset-modal-cancel report-issue-fallback-btn" id="report-issue-fallback" hidden>Open GitHub Issue Page</button>
+              <button type="submit" form="report-issue-form" class="reset-modal-btn share-generate-btn" id="report-issue-submit">
+                <i class="lucide lucide-send"></i>
+                <span>Submit Issue</span>
+              </button>
+              <a id="report-issue-success-view-btn" class="reset-modal-btn reset-modal-confirm" target="_blank" rel="noopener noreferrer" hidden>View Issue on GitHub</a>
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="report-issue-success-close" hidden>Close</button>
             </div>
           </div>
         </div>

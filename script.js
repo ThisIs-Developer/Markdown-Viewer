@@ -20043,6 +20043,9 @@ ${selector} .arrowheadPath {
     if (e.key === 'Escape' && liveShareExpiredModal && liveShareExpiredModal.classList.contains('is-visible')) {
       closeLiveShareExpiredModal();
     }
+    if (e.key === 'Escape' && reportIssueModal && reportIssueModal.classList.contains('is-visible') && !isSubmittingIssue) {
+      closeReportIssueModal();
+    }
     
     // Global Ctrl+F / Cmd+F interception
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
@@ -20081,6 +20084,414 @@ ${selector} .arrowheadPath {
     closeMobileMenu();
     openShareModal();
   });
+
+  // ============================================
+  // Report an Issue Modal System
+  // ============================================
+
+  const reportIssueModal       = document.getElementById('report-issue-modal');
+  const reportIssueModalCloseX = document.getElementById('report-issue-modal-close-icon');
+  const reportIssueCancelBtn   = document.getElementById('report-issue-cancel');
+  const reportIssueForm        = document.getElementById('report-issue-form');
+  const reportIssueType        = document.getElementById('report-issue-type');
+  const reportIssueTitle       = document.getElementById('report-issue-title');
+  const reportIssueDescription = document.getElementById('report-issue-description');
+  const reportIssueSteps       = document.getElementById('report-issue-steps');
+  const reportIssueExpected    = document.getElementById('report-issue-expected');
+  const reportIssueActual      = document.getElementById('report-issue-actual');
+  const reportIssueAttachment  = document.getElementById('report-issue-attachment');
+  const reportIssueDropzone    = document.getElementById('report-issue-dropzone');
+  const reportIssueDropzonePrompt = document.getElementById('report-issue-dropzone-prompt');
+  const reportIssueFilePreview = document.getElementById('report-issue-file-preview');
+  const reportIssueFileName    = document.getElementById('report-issue-file-name');
+  const reportIssueFileSize    = document.getElementById('report-issue-file-size');
+  const reportIssueRemoveAttachmentBtn = document.getElementById('report-issue-attachment-remove');
+  const reportIssueAttachmentProgress  = document.getElementById('report-issue-attachment-progress');
+  const reportIssueAttachmentProgressFill = reportIssueAttachmentProgress ? reportIssueAttachmentProgress.querySelector('.report-issue-progress-fill') : null;
+  const reportIssueAttachmentError     = document.getElementById('report-issue-attachment-error');
+  const reportIssueIncludeEnv  = document.getElementById('report-issue-include-env');
+  const reportIssueErrorBanner = document.getElementById('report-issue-error-banner');
+  const reportIssueSubmitBtn   = document.getElementById('report-issue-submit');
+  const reportIssueFallbackBtn = document.getElementById('report-issue-fallback');
+  const reportIssueSuccessView = document.getElementById('report-issue-success-view');
+  const reportIssueSuccessNumber = document.getElementById('report-issue-success-number');
+  const reportIssueSuccessIssueTitle = document.getElementById('report-issue-success-issue-title');
+  const reportIssueSuccessViewBtn    = document.getElementById('report-issue-success-view-btn');
+  const reportIssueSuccessCloseBtn   = document.getElementById('report-issue-success-close');
+
+  let reportAttachmentData = null;
+  let lastReportFocusedElement = null;
+  let isSubmittingIssue = false;
+
+  const MAX_REPORT_ATTACHMENT_SIZE = 5 * 1024 * 1024; // 5 MB
+  const ALLOWED_REPORT_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'txt', 'log', 'json'];
+
+  function detectUserBrowser() {
+    const ua = navigator.userAgent;
+    if (ua.includes('Firefox/')) return 'Firefox ' + (ua.split('Firefox/')[1] || '').split(' ')[0];
+    if (ua.includes('Edg/')) return 'Edge ' + (ua.split('Edg/')[1] || '').split(' ')[0];
+    if (ua.includes('Chrome/')) return 'Chrome ' + (ua.split('Chrome/')[1] || '').split(' ')[0];
+    if (ua.includes('Safari/')) return 'Safari ' + ((ua.split('Version/')[1] || '').split(' ')[0] || '');
+    return navigator.appName || 'Unknown Browser';
+  }
+
+  function detectUserOS() {
+    const ua = navigator.userAgent;
+    const platform = navigator.platform || '';
+    if (/Win/i.test(platform) || /Windows/i.test(ua)) return 'Windows';
+    if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return 'macOS';
+    if (/Linux/i.test(platform) || /Linux/i.test(ua)) return 'Linux';
+    if (/Android/i.test(ua)) return 'Android';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+    return 'Unknown OS';
+  }
+
+  function collectEnvironmentInfo() {
+    const currentModeText = document.documentElement.getAttribute('data-theme') === 'dark' ? 'Dark Theme' : 'Light Theme';
+    return {
+      appName: 'Markdown Viewer',
+      appVersion: '1.0.0',
+      browser: detectUserBrowser(),
+      os: detectUserOS(),
+      screenResolution: `${window.screen.width} × ${window.screen.height}`,
+      viewport: `${window.innerWidth} × ${window.innerHeight}`,
+      currentMode: currentModeText,
+      pageUrl: window.location.origin + window.location.pathname,
+      language: navigator.language || 'en-US',
+      submittedAt: new Date().toISOString()
+    };
+  }
+
+  function formatReportFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function resetReportIssueForm() {
+    if (reportIssueForm) reportIssueForm.reset();
+    if (reportIssueErrorBanner) {
+      reportIssueErrorBanner.hidden = true;
+      reportIssueErrorBanner.textContent = '';
+    }
+    if (reportIssueFallbackBtn) reportIssueFallbackBtn.hidden = true;
+    reportAttachmentData = null;
+    clearReportAttachmentUI();
+    
+    if (reportIssueForm) reportIssueForm.hidden = false;
+    if (reportIssueSuccessView) reportIssueSuccessView.hidden = true;
+    
+    if (reportIssueCancelBtn) {
+      reportIssueCancelBtn.hidden = false;
+      reportIssueCancelBtn.disabled = false;
+    }
+    if (reportIssueSubmitBtn) {
+      reportIssueSubmitBtn.hidden = false;
+      reportIssueSubmitBtn.disabled = false;
+      reportIssueSubmitBtn.innerHTML = '<i class="lucide lucide-send"></i><span>Submit Issue</span>';
+    }
+    if (reportIssueSuccessViewBtn) reportIssueSuccessViewBtn.hidden = true;
+    if (reportIssueSuccessCloseBtn) reportIssueSuccessCloseBtn.hidden = true;
+    
+    isSubmittingIssue = false;
+  }
+
+  function clearReportAttachmentUI() {
+    if (reportIssueAttachment) reportIssueAttachment.value = '';
+    if (reportIssueDropzonePrompt) reportIssueDropzonePrompt.hidden = false;
+    if (reportIssueFilePreview) reportIssueFilePreview.hidden = true;
+    if (reportIssueAttachmentProgress) reportIssueAttachmentProgress.hidden = true;
+    if (reportIssueAttachmentError) {
+      reportIssueAttachmentError.hidden = true;
+      reportIssueAttachmentError.textContent = '';
+    }
+    reportAttachmentData = null;
+  }
+
+  function handleReportFileSelected(file) {
+    clearReportAttachmentUI();
+    if (!file) return;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_REPORT_EXTENSIONS.includes(ext)) {
+      if (reportIssueAttachmentError) {
+        reportIssueAttachmentError.textContent = `Unsupported file type .${ext}. Allowed types: ${ALLOWED_REPORT_EXTENSIONS.join(', ')}`;
+        reportIssueAttachmentError.hidden = false;
+      }
+      return;
+    }
+
+    if (file.size > MAX_REPORT_ATTACHMENT_SIZE) {
+      if (reportIssueAttachmentError) {
+        reportIssueAttachmentError.textContent = `File size (${formatReportFileSize(file.size)}) exceeds the 5 MB limit.`;
+        reportIssueAttachmentError.hidden = false;
+      }
+      return;
+    }
+
+    if (reportIssueAttachmentProgress) {
+      reportIssueAttachmentProgress.hidden = false;
+      if (reportIssueAttachmentProgressFill) reportIssueAttachmentProgressFill.style.width = '30%';
+    }
+
+    const reader = new FileReader();
+    reader.onprogress = function(e) {
+      if (e.lengthComputable && reportIssueAttachmentProgressFill) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        reportIssueAttachmentProgressFill.style.width = percent + '%';
+      }
+    };
+
+    reader.onload = function(e) {
+      if (reportIssueAttachmentProgressFill) reportIssueAttachmentProgressFill.style.width = '100%';
+      setTimeout(() => {
+        if (reportIssueAttachmentProgress) reportIssueAttachmentProgress.hidden = true;
+      }, 300);
+
+      reportAttachmentData = {
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        size: file.size,
+        base64Data: e.target.result
+      };
+
+      if (reportIssueDropzonePrompt) reportIssueDropzonePrompt.hidden = true;
+      if (reportIssueFilePreview) reportIssueFilePreview.hidden = false;
+      if (reportIssueFileName) reportIssueFileName.textContent = file.name;
+      if (reportIssueFileSize) reportIssueFileSize.textContent = formatReportFileSize(file.size);
+    };
+
+    reader.onerror = function() {
+      if (reportIssueAttachmentProgress) reportIssueAttachmentProgress.hidden = true;
+      if (reportIssueAttachmentError) {
+        reportIssueAttachmentError.textContent = 'Failed to read attachment file.';
+        reportIssueAttachmentError.hidden = false;
+      }
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function openReportIssueModal() {
+    lastReportFocusedElement = document.activeElement;
+    resetReportIssueForm();
+
+    if (reportIssueModal) {
+      reportIssueModal.style.display = 'flex';
+      reportIssueModal.classList.add('is-visible');
+      reportIssueModal.setAttribute('aria-hidden', 'false');
+      if (reportIssueTitle) reportIssueTitle.focus();
+    }
+  }
+
+  function closeReportIssueModal() {
+    if (!reportIssueModal) return;
+    reportIssueModal.classList.remove('is-visible');
+    reportIssueModal.setAttribute('aria-hidden', 'true');
+    reportIssueModal.addEventListener('transitionend', function handler() {
+      reportIssueModal.style.display = 'none';
+      reportIssueModal.removeEventListener('transitionend', handler);
+      if (lastReportFocusedElement && typeof lastReportFocusedElement.focus === 'function') {
+        lastReportFocusedElement.focus();
+      }
+    }, { once: true });
+  }
+
+  function getFallbackGitHubUrl() {
+    const titleVal = reportIssueTitle ? reportIssueTitle.value.trim() : '';
+    const descVal = reportIssueDescription ? reportIssueDescription.value.trim() : '';
+    const typeVal = reportIssueType ? reportIssueType.value : 'Bug Report';
+    
+    let body = `## Issue Type\n${typeVal}\n\n## Description\n${descVal}`;
+    const url = new URL('https://github.com/ThisIs-Developer/Markdown-Viewer/issues/new');
+    if (titleVal) url.searchParams.set('title', titleVal);
+    if (body) url.searchParams.set('body', body);
+    return url.toString();
+  }
+
+  // Global click delegation for report issue buttons
+  document.addEventListener('click', function(e) {
+    const reportBtn = e.target.closest('.report-command');
+    if (reportBtn) {
+      e.preventDefault();
+      if (typeof closeMobileMenu === 'function') closeMobileMenu();
+      openReportIssueModal();
+    }
+  });
+
+  if (reportIssueModalCloseX) {
+    reportIssueModalCloseX.addEventListener('click', closeReportIssueModal);
+  }
+
+  if (reportIssueCancelBtn) {
+    reportIssueCancelBtn.addEventListener('click', closeReportIssueModal);
+  }
+
+  if (reportIssueSuccessCloseBtn) {
+    reportIssueSuccessCloseBtn.addEventListener('click', closeReportIssueModal);
+  }
+
+  if (reportIssueFallbackBtn) {
+    reportIssueFallbackBtn.addEventListener('click', function() {
+      window.open(getFallbackGitHubUrl(), '_blank', 'noopener,noreferrer');
+      closeReportIssueModal();
+    });
+  }
+
+  if (reportIssueRemoveAttachmentBtn) {
+    reportIssueRemoveAttachmentBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      clearReportAttachmentUI();
+    });
+  }
+
+  if (reportIssueAttachment) {
+    reportIssueAttachment.addEventListener('change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        handleReportFileSelected(e.target.files[0]);
+      }
+    });
+  }
+
+  if (reportIssueDropzone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      reportIssueDropzone.addEventListener(eventName, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        reportIssueDropzone.classList.add('is-dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      reportIssueDropzone.addEventListener(eventName, function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        reportIssueDropzone.classList.remove('is-dragover');
+      }, false);
+    });
+
+    reportIssueDropzone.addEventListener('drop', function(e) {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files[0]) {
+        handleReportFileSelected(dt.files[0]);
+      }
+    });
+  }
+
+  if (reportIssueModal) {
+    reportIssueModal.addEventListener('click', function(e) {
+      if (e.target === reportIssueModal && !isSubmittingIssue) {
+        closeReportIssueModal();
+      }
+    });
+  }
+
+  if (reportIssueForm) {
+    reportIssueForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (isSubmittingIssue) return;
+
+      if (reportIssueErrorBanner) {
+        reportIssueErrorBanner.hidden = true;
+        reportIssueErrorBanner.textContent = '';
+      }
+
+      const titleVal = reportIssueTitle ? reportIssueTitle.value.trim() : '';
+      const descVal = reportIssueDescription ? reportIssueDescription.value.trim() : '';
+      const typeVal = reportIssueType ? reportIssueType.value : 'Bug Report';
+      const stepsVal = reportIssueSteps ? reportIssueSteps.value.trim() : '';
+      const expectedVal = reportIssueExpected ? reportIssueExpected.value.trim() : '';
+      const actualVal = reportIssueActual ? reportIssueActual.value.trim() : '';
+      const includeEnv = reportIssueIncludeEnv ? reportIssueIncludeEnv.checked : true;
+
+      if (!titleVal || titleVal.length < 3) {
+        if (reportIssueErrorBanner) {
+          reportIssueErrorBanner.textContent = 'Please enter an issue title (at least 3 characters).';
+          reportIssueErrorBanner.hidden = false;
+        }
+        if (reportIssueTitle) reportIssueTitle.focus();
+        return;
+      }
+
+      if (!descVal || descVal.length < 10) {
+        if (reportIssueErrorBanner) {
+          reportIssueErrorBanner.textContent = 'Please provide a detailed issue description (at least 10 characters).';
+          reportIssueErrorBanner.hidden = false;
+        }
+        if (reportIssueDescription) reportIssueDescription.focus();
+        return;
+      }
+
+      isSubmittingIssue = true;
+      if (reportIssueSubmitBtn) {
+        reportIssueSubmitBtn.disabled = true;
+        reportIssueSubmitBtn.innerHTML = '<i class="lucide lucide-loader-2 spin"></i><span>Submitting…</span>';
+      }
+      if (reportIssueCancelBtn) reportIssueCancelBtn.disabled = true;
+
+      const payload = {
+        issueType: typeVal,
+        title: titleVal,
+        description: descVal,
+        stepsToReproduce: stepsVal,
+        expectedBehaviour: expectedVal,
+        actualBehaviour: actualVal,
+        environment: includeEnv ? collectEnvironmentInfo() : null,
+        attachment: reportAttachmentData
+      };
+
+      try {
+        const apiUrl = window.location.protocol === 'file:' ? 'https://markdownviewer.pages.dev/api/report-issue' : '/api/report-issue';
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || `Server responded with status ${response.status}`);
+        }
+
+        if (reportIssueForm) reportIssueForm.hidden = true;
+        if (reportIssueSuccessView) reportIssueSuccessView.hidden = false;
+        if (reportIssueSuccessNumber) reportIssueSuccessNumber.textContent = '#' + data.issueNumber;
+        if (reportIssueSuccessIssueTitle) reportIssueSuccessIssueTitle.textContent = data.issueTitle || titleVal;
+        
+        if (reportIssueSuccessViewBtn) {
+          reportIssueSuccessViewBtn.href = data.issueUrl || 'https://github.com/ThisIs-Developer/Markdown-Viewer/issues';
+          reportIssueSuccessViewBtn.hidden = false;
+        }
+        if (reportIssueSuccessCloseBtn) reportIssueSuccessCloseBtn.hidden = false;
+
+        if (reportIssueSubmitBtn) reportIssueSubmitBtn.hidden = true;
+        if (reportIssueCancelBtn) reportIssueCancelBtn.hidden = true;
+
+      } catch (err) {
+        console.error('Issue submission error:', err);
+        if (reportIssueErrorBanner) {
+          reportIssueErrorBanner.textContent = `Submission failed: ${err.message}. You can try submitting directly on GitHub.`;
+          reportIssueErrorBanner.hidden = false;
+        }
+        if (reportIssueFallbackBtn) {
+          reportIssueFallbackBtn.hidden = false;
+        }
+      } finally {
+        isSubmittingIssue = false;
+        if (reportIssueSubmitBtn && reportIssueForm && !reportIssueForm.hidden) {
+          reportIssueSubmitBtn.disabled = false;
+          reportIssueSubmitBtn.innerHTML = '<i class="lucide lucide-send"></i><span>Submit Issue</span>';
+        }
+        if (reportIssueCancelBtn) reportIssueCancelBtn.disabled = false;
+      }
+    });
+  }
 
   async function loadStoredShareHash(hash) {
     const rest = hash.slice('#id='.length);

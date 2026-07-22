@@ -11,6 +11,10 @@ name = "LIVE_ROOMS"
 class_name = "LiveRoom"
 script_name = "markdown-viewer-live-room"
 
+[[r2_buckets]]
+binding = "ATTACHMENTS_R2"
+bucket_name = "markdown-viewer-attachments"
+
 [[env.production.kv_namespaces]]
 binding = "SHARE_KV"
 id = "c820d2705f5742858a27b91b88f544bd"
@@ -19,3 +23,8 @@ id = "c820d2705f5742858a27b91b88f544bd"
 name = "LIVE_ROOMS"
 class_name = "LiveRoom"
 script_name = "markdown-viewer-live-room"
+
+[[env.production.r2_buckets]]
+binding = "ATTACHMENTS_R2"
+bucket_name = "markdown-viewer-attachments"
+

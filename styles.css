@@ -10548,3 +10548,215 @@ html[data-theme="dark"] .mermaid svg {
     background: white !important;
   }
 }
+
+/* ========================================
+   REPORT ISSUE MODAL
+   ======================================== */
+
+.report-issue-modal-box {
+  width: 92%;
+  max-width: 600px;
+}
+
+.report-issue-modal-body {
+  max-height: min(70vh, 580px);
+  gap: 14px;
+}
+
+.report-issue-select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.report-issue-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.required-star {
+  color: var(--danger-color, #cf222e);
+  margin-left: 2px;
+}
+
+.report-issue-dropzone {
+  position: relative;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  background: var(--bg-color);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.report-issue-dropzone:hover,
+.report-issue-dropzone.is-dragover {
+  border-color: var(--accent-color);
+  background: var(--button-hover, rgba(0, 0, 0, 0.04));
+}
+
+.report-issue-file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.report-issue-dropzone-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.report-issue-dropzone-prompt i {
+  font-size: 24px;
+  color: var(--accent-color);
+}
+
+.report-issue-browse-text {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
+.report-issue-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.report-issue-file-details {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  overflow: hidden;
+}
+
+.report-issue-file-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.report-issue-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #57606a);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.report-issue-remove-btn:hover {
+  color: var(--danger-color, #cf222e);
+  background: var(--button-hover, rgba(0, 0, 0, 0.05));
+}
+
+.report-issue-progress-bar {
+  height: 4px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.report-issue-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent-color);
+  transition: width 0.2s ease;
+}
+
+.report-issue-checkbox-field {
+  gap: 4px;
+}
+
+.report-issue-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.report-issue-checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-color);
+  width: 15px;
+  height: 15px;
+}
+
+.report-issue-error-banner {
+  background: rgba(207, 34, 46, 0.1);
+  border: 1px solid rgba(207, 34, 46, 0.4);
+  color: var(--danger-color, #cf222e);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.report-issue-success-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 10px;
+  gap: 12px;
+}
+
+.report-issue-success-icon {
+  font-size: 44px;
+  color: #1a7f37;
+}
+
+[data-theme="dark"] .report-issue-success-icon {
+  color: #3fb950;
+}
+
+.report-issue-success-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.report-issue-success-desc {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.report-issue-success-info {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 14px;
+  width: 100%;
+  text-align: left;
+}
+
+.report-issue-success-issue-title {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-issue-fallback-btn {
+  color: var(--accent-color);
+}
+
