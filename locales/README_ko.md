@@ -11,6 +11,15 @@
   [![라이선스](https://img.shields.io/github/license/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=red)](../LICENSE)
   [![최신 릴리스](https://img.shields.io/github/v/release/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=FF6B00)](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
 
+  <p>
+    <a href="https://codewiki.google/github.com/thisis-developer/markdown-viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/badge/CodeWiki-Explore-4285F4?logo=wikipedia&logoColor=white&style=flat" alt="CodeWiki에서 Markdown Viewer 살펴보기" />
+    </a>
+    <a href="https://deepwiki.com/ThisIs-Developer/Markdown-Viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://deepwiki.com/badge.svg" alt="DeepWiki에서 Markdown Viewer 살펴보기" />
+    </a>
+  </p>
+
   [English](../README.md) · [日本語](README_ja.md) · **한국어** · [简体中文](README_zh.md) · [繁體中文](README_tw.md)
 
   [웹 앱 열기](https://markdownviewer.pages.dev/) · [문서(영어)](../wiki/Home.md) · [이슈 보고](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) · [릴리스](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
@@ -117,6 +126,26 @@ Share Snapshot 및 Live Share URL은 베어러 링크입니다. 유효한 링크
 | 문제 해결 | [Troubleshooting](../wiki/Troubleshooting.md)/[FAQ](../wiki/FAQ.md) |
 | 기여 | [Contributing](../wiki/Contributing.md) |
 | 다국어 용어 및 현지화 | [Localization and Terminology](../wiki/Localization.md) |
+
+## 쇼케이스 프로젝트
+
+Markdown Viewer를 활용한 다음 커뮤니티 프로젝트는 해당 개발자가 독립적으로 유지 관리합니다.
+
+- [**Markdown Desk**](https://github.com/jhrepo/markdown-desk): Tauri로 만든 네이티브 macOS 래퍼입니다. 네이티브 파일 대화 상자와 파일 핸들러, 메뉴 막대 통합, 자동 다시 불러오기 및 앱 내 업데이트 기능을 추가합니다.
+
+## 📈 개발 여정
+
+Markdown Viewer는 PC에서 시작한 작은 개인 프로젝트였습니다. 호기심에서 출발해 실수와 수정을 거치고 많은 정성을 담아 만든 단순한 Markdown 뷰어입니다. <a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">초기 버전</a>은 지금도 온라인에서 사용할 수 있으며 프로젝트의 중심으로 남아 있습니다.
+
+더 자세한 역사는 [Development Journey(영어)](../wiki/Development-Journey.md)를 참조하세요.
+
+## 기여자
+
+Markdown Viewer는 커뮤니티의 기여를 통해 성장하고 있습니다.
+
+<a href="https://github.com/ThisIs-Developer/Markdown-Viewer/graphs/contributors" target="_blank" rel="noopener noreferrer">
+  <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer 기여자" />
+</a>
 
 ## 기여 및 라이선스
 

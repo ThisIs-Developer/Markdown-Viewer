@@ -11,6 +11,15 @@
   [![授權條款](https://img.shields.io/github/license/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=red)](../LICENSE)
   [![最新版本](https://img.shields.io/github/v/release/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=FF6B00)](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
 
+  <p>
+    <a href="https://codewiki.google/github.com/thisis-developer/markdown-viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/badge/CodeWiki-Explore-4285F4?logo=wikipedia&logoColor=white&style=flat" alt="在 CodeWiki 上探索 Markdown Viewer" />
+    </a>
+    <a href="https://deepwiki.com/ThisIs-Developer/Markdown-Viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://deepwiki.com/badge.svg" alt="在 DeepWiki 上探索 Markdown Viewer" />
+    </a>
+  </p>
+
   [English](../README.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [简体中文](README_zh.md) · **繁體中文**
 
   [開啟 Web 應用程式](https://markdownviewer.pages.dev/) · [文件（英文）](../wiki/Home.md) · [回報問題](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) · [版本發佈](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
@@ -117,6 +126,26 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 | 疑難排解 | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
 | 參與貢獻 | [Contributing](../wiki/Contributing.md) |
 | 多語言術語與在地化 | [Localization and Terminology](../wiki/Localization.md) |
+
+## 展示專案
+
+以下以 Markdown Viewer 為基礎的社群專案由其開發者獨立維護。
+
+- [**Markdown Desk**](https://github.com/jhrepo/markdown-desk)：使用 Tauri 建置的原生 macOS 封裝應用程式，新增原生檔案對話方塊與檔案處理常式、選單列整合、自動重新載入及應用程式內更新功能。
+
+## 📈 開發歷程
+
+Markdown Viewer 最初是 PC 上的一個小型個人專案：一款源自好奇心、歷經錯誤與修正，並投入許多心力的簡單 Markdown 檢視器。<a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">初始版本</a>目前仍可在線上存取，也始終是這個專案的初心所在。
+
+若要瞭解更完整的專案歷史，請閱讀 [Development Journey（英文）](../wiki/Development-Journey.md)。
+
+## 貢獻者
+
+Markdown Viewer 在社群貢獻者的共同參與下持續成長。
+
+<a href="https://github.com/ThisIs-Developer/Markdown-Viewer/graphs/contributors" target="_blank" rel="noopener noreferrer">
+  <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer 貢獻者" />
+</a>
 
 ## 參與貢獻與授權條款
 

@@ -11,6 +11,15 @@
   [![License](https://img.shields.io/github/license/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=red)](LICENSE)
   [![Latest release](https://img.shields.io/github/v/release/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=FF6B00)](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
 
+  <p>
+    <a href="https://codewiki.google/github.com/thisis-developer/markdown-viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/badge/CodeWiki-Explore-4285F4?logo=wikipedia&logoColor=white&style=flat" alt="Explore Markdown Viewer on CodeWiki" />
+    </a>
+    <a href="https://deepwiki.com/ThisIs-Developer/Markdown-Viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://deepwiki.com/badge.svg" alt="Explore Markdown Viewer on DeepWiki" />
+    </a>
+  </p>
+
   **English** · [日本語](locales/README_ja.md) · [한국어](locales/README_ko.md) · [简体中文](locales/README_zh.md) · [繁體中文](locales/README_tw.md)
 
   [Open the web app](https://markdownviewer.pages.dev/) · [Start with the documentation](wiki/Home.md) · [Report an issue](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) · [View releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
@@ -117,6 +126,26 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - Raster PDF and PNG exports remain subject to browser memory, canvas, and cross-origin resource limits.
 
 See [Features: Known Technical Limits](wiki/Features.md#known-technical-limits) for context.
+
+## Showcase Projects
+
+The following community project builds on Markdown Viewer and is maintained independently:
+
+- [**Markdown Desk**](https://github.com/jhrepo/markdown-desk): A native macOS wrapper built with Tauri that adds native file dialogs and handlers, menu-bar integration, automatic reloads, and in-app updates.
+
+## 📈 Development Journey
+
+Markdown Viewer started as a small personal project on a PC: a simple Markdown viewer built with curiosity, mistakes, fixes, and a lot of care. The <a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">original version</a> is still online and remains at the heart of the project.
+
+Read the [Development Journey](wiki/Development-Journey.md) for the longer project history.
+
+## Contributors
+
+Markdown Viewer grows through contributions from its community.
+
+<a href="https://github.com/ThisIs-Developer/Markdown-Viewer/graphs/contributors" target="_blank" rel="noopener noreferrer">
+  <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer contributors" />
+</a>
 
 ## Contributing and Support
 

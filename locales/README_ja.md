@@ -11,6 +11,15 @@
   [![ライセンス](https://img.shields.io/github/license/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=red)](../LICENSE)
   [![最新リリース](https://img.shields.io/github/v/release/ThisIs-Developer/Markdown-Viewer?style=flat-square&color=FF6B00)](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
 
+  <p>
+    <a href="https://codewiki.google/github.com/thisis-developer/markdown-viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/badge/CodeWiki-Explore-4285F4?logo=wikipedia&logoColor=white&style=flat" alt="CodeWiki で Markdown Viewer を見る" />
+    </a>
+    <a href="https://deepwiki.com/ThisIs-Developer/Markdown-Viewer" target="_blank" rel="noopener noreferrer">
+      <img src="https://deepwiki.com/badge.svg" alt="DeepWiki で Markdown Viewer を見る" />
+    </a>
+  </p>
+
   [English](../README.md) · **日本語** · [한국어](README_ko.md) · [简体中文](README_zh.md) · [繁體中文](README_tw.md)
 
   [Web アプリを開く](https://markdownviewer.pages.dev/) · [ドキュメント（英語）](../wiki/Home.md) · [Issue を報告](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) · [リリース](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
@@ -117,6 +126,26 @@ Share Snapshot と Live Share の URL はベアラーリンクです。有効な
 | トラブルシューティング | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
 | コントリビューション | [Contributing](../wiki/Contributing.md) |
 | 多言語用語とローカライズ | [Localization and Terminology](../wiki/Localization.md) |
+
+## ショーケースプロジェクト
+
+Markdown Viewer を活用した以下のコミュニティプロジェクトは、各開発者によって独立して保守されています。
+
+- [**Markdown Desk**](https://github.com/jhrepo/markdown-desk)：Tauri で構築された macOS 向けネイティブラッパーです。ネイティブのファイルダイアログとファイルハンドラー、メニューバー連携、自動再読み込み、アプリ内更新を追加します。
+
+## 📈 開発の歩み
+
+Markdown Viewer は、PC 上の小さな個人プロジェクトとして始まりました。好奇心を出発点に、失敗と修正を重ね、多くの配慮を込めて作られたシンプルな Markdown ビューアーです。<a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">初期バージョン</a>は今も公開されており、プロジェクトの原点であり続けています。
+
+詳しい歴史は [Development Journey（英語）](../wiki/Development-Journey.md)をご覧ください。
+
+## コントリビューター
+
+Markdown Viewer は、コミュニティからのコントリビューションによって成長しています。
+
+<a href="https://github.com/ThisIs-Developer/Markdown-Viewer/graphs/contributors" target="_blank" rel="noopener noreferrer">
+  <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer のコントリビューター" />
+</a>
 
 ## コントリビューションとライセンス
 
