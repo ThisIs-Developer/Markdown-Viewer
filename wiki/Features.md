@@ -12,11 +12,12 @@ Most work happens in the browser or desktop webview. Markdown parsing, syntax hi
 
 The app opens with a header, Files sidebar, document tab bar, formatting toolbar, editor pane, resize divider, preview pane, and bottom status bar.
 
-- The left **Files** sidebar organizes Markdown files into fixed Default and Secret workspaces with one-level folders, All files, Recent, Favorites, and search views.
+- The left **Files** sidebar organizes Markdown files into fixed **Workspace** and **Secret Workspace** roots with nested folders, All files, Recent, Favorites, and search views.
 - The sidebar is resizable and collapsible on desktop, narrower on tablet, and becomes a full-height drawer on mobile.
 - Editor mode shows only the textarea.
 - Split mode shows the editor and preview side by side.
 - Preview mode shows only the rendered document.
+- A file menu can open a second document beside the active document. A shared control switches both sides between Edit and Preview, and synchronized scrolling is optional.
 - On small screens, the mobile menu exposes the same core actions and the layout avoids a cramped split view.
 - A draggable divider resizes editor and preview in split mode and keeps both panes above 20% width.
 - The divider also supports keyboard adjustment with left and right arrow keys while split view is active.
@@ -29,20 +30,21 @@ The editor includes line numbers, wrapped-line height handling, a highlight laye
 
 Users can work with multiple documents at once.
 
-- Every existing saved document is migrated into **Workspace**. Workspaces are fixed; users create one level of folders inside Workspace or the password-protected **Secret Workspace**.
+- Every existing saved document is migrated into **Workspace**. The two workspace roots are fixed, but users can create nested folders inside either root.
 - Secret Workspace encrypts its files and folder names locally with a password-derived AES-GCM key. It remains locked after reload, the key stays in memory only while unlocked, and a forgotten password cannot be recovered. Resetting Secret Workspace permanently deletes its encrypted payload.
 - The sidebar has explicit **New file** and **New folder** actions for the selected location. Files can be dragged onto another folder or workspace; the Move dialog remains available for keyboard and touch workflows.
-- Deleting a folder moves its files to the workspace root so container deletion does not discard content.
+- Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.
 - New files can be created from the sidebar, tab bar, mobile menu, imports, shared snapshots, and Live Share joins. Multi-file imports show a compact bottom progress indicator.
 - The sidebar supports file open, rename, duplicate, favorite, move, Markdown download, and delete actions. Recent and Favorites are filtered references to the original files, not copies.
-- Tabs can be renamed, duplicated, deleted, and reordered by drag and drop.
+- Multi-selected files can be opened or moved together. Any mixed selection of files and folders can be deleted together after a confirmation that explains which files will be deleted and which files inside removed folders will return to the workspace root.
+- Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
 - Hovering a tab shows its containing folder path and filename. Files stored directly at the Workspace root show only their filename.
-- The app enforces a consistent limit of 50 open documents. New documents, duplication, local/GitHub imports, Share Snapshot, and Live Share joins all use this limit.
+- The app stores at most 50 documents across Workspace, Secret Workspace, and temporary shared/live tabs. New documents, duplication, local/GitHub imports, Share Snapshot, and Live Share joins all use this limit.
 - Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, scroll position, view mode, local review threads, and creation time.
 - The active tab id and untitled-document counter are stored separately.
 - Temporary Share Snapshot and Live Share tabs are deliberately excluded from persistent tab storage.
-- The Reset button clears the current saved workspace and returns the app to a clean starting state.
+- **Reset workspace** clears saved files and review data and returns the app to a clean starting state.
 
 Storage keys used by the current implementation include:
 
@@ -149,7 +151,7 @@ Supported Markdown behavior includes:
 - Emoji shortcodes processed through JoyPixels when the emoji library is available.
 - Raw HTML is allowed only after sanitization. Scripts and unsafe event handlers are removed.
 
-The worker and main renderer both preserve block math, custom diagram shells, footnote state, definition lists, superscript, subscript, and highlight syntax so advanced blocks do not collapse during live updates.
+The worker and main renderer both preserve block math, custom diagram shells, footnote state, definition lists, superscript, subscript, and highlight syntax so advanced blocks do not collapse during live updates. The two-document split uses the same post-processing pipeline for math, Mermaid, remote diagrams, maps, STL, and ABC notation.
 
 ## Web Worker and Preview Performance
 
@@ -383,7 +385,7 @@ Privacy implications:
 - Live Share document updates, display names, cursor positions, and presence are transmitted through the configured Cloudflare Durable Object.
 - Live room content is temporary relay state, not permanent document storage.
 - Anyone with the invite URL, including the secret, can join while the room is active.
-- View-only mode is enforced by the app and message handling; it is intended for normal use, not as a cryptographic access-control boundary against modified clients.
+- View-only and editable roles are checked by the Durable Object, which filters message types by capability. Invite URLs still contain bearer credentials, and Live Share is not end-to-end encrypted.
 
 ## Clipboard and Copy Behavior
 
@@ -412,12 +414,12 @@ Localization:
 - The UI includes English, Simplified Chinese, Japanese, Korean, Brazilian Portuguese, Spanish, French, German, Russian, Italian, Turkish, Polish, Traditional Chinese, and Ukrainian.
 - Language is selected in this order: URL `?lang=`, hash query `?lang=`, saved `app-lang`, browser language, then English.
 - Selecting a language updates the URL query and saves `app-lang`.
-- Translations are static in `I18N_DICTS` inside `script.js`.
-- Some generated renderer messages and third-party output remain English.
+- Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is the source list and other catalogs use the same keys.
+- Some renderer output, browser messages, third-party text, filenames, and low-level errors can remain English.
 
 ## Statistics
 
-The header and mobile menu show:
+The bottom status bar and mobile interface show:
 
 - Estimated reading time.
 - Word count.
@@ -515,7 +517,7 @@ Security limitations:
 - Sanitization reduces XSS risk but cannot make every third-party renderer or browser bug impossible.
 - Remote diagram services receive diagram source for supported remote engines.
 - Links and images in Markdown can request external resources when rendered or clicked.
-- View-only Live Share relies on cooperative client enforcement and relay filtering, not end-to-end encryption.
+- Live Share roles are server-checked, but invite links are bearer credentials and room content is not end-to-end encrypted.
 - Share Snapshot links are bearer links: possession of the URL grants access.
 - Security headers and CSP depend on the deployment surface; self-hosters should preserve the policies in `_headers` and review the Docker/Nginx policy when customizing it.
 
@@ -542,6 +544,7 @@ Security limitations:
 ## Known Technical Limits
 
 - Browser storage quotas can reject very large saved workspaces.
+- The workspace can contain at most 50 documents, including locked Secret Workspace counts and temporary shared/live tabs.
 - The GitHub importer shows a maximum of 30 Markdown files.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.

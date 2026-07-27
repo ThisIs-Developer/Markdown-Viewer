@@ -41,7 +41,7 @@ docker run -d \
   --name markdown-viewer \
   -p 8080:80 \
   --restart unless-stopped \
-  ghcr.io/thisis-developer/markdown-viewer:sha-15eafb0
+  ghcr.io/thisis-developer/markdown-viewer:latest
 ```
 
 Open `http://localhost:8080`.
@@ -104,7 +104,6 @@ From `desktop-app/`:
 
 ```bash
 npm install
-npm run setup
 npm run dev
 ```
 
@@ -118,7 +117,7 @@ The results are written to `desktop-app/dist/markdown-viewer/`. Each Windows,
 Linux, and macOS binary embeds the application resources, so users can download
 only the file matching their operating system and architecture.
 
-What setup does:
+The development and build commands run setup automatically. Setup:
 
 - Downloads Neutralino binaries.
 - Runs `prepare.js`.

@@ -24,7 +24,7 @@
 
   🌐 [English](../README.md) • [简体中文](README_zh.md) • [日本語](README_ja.md) • **한국어** • <a href="../wiki/Localization.md">더 많은 언어</a>
 
-  [라이브 데모](https://markdownviewer.pages.dev/) • [Wiki](../wiki/Home.md#start-here) • [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) • [Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
+  [라이브 데모](https://markdownviewer.pages.dev/) • [Wiki](../wiki/Home.md#start-here) • [이슈 추적기](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) • [릴리스](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
 
 </div>
 
@@ -47,6 +47,7 @@
   - [프로젝트 디렉터리 구조](#프로젝트-디렉터리-구조)
   - [Built With (기술 스택)](#built-with-기술-스택)
   - [개인정보](#개인정보)
+  - [보안 및 개인정보 보호](#보안-및-개인정보-보호)
   - [기여와 코드 품질](#기여와-코드-품질)
   - [쇼케이스와 커뮤니티 프로젝트](#쇼케이스와-커뮤니티-프로젝트)
   - [기여자](#기여자)
@@ -71,7 +72,7 @@
 
 1. [온라인 Markdown 에디터](https://markdownviewer.pages.dev/)를 엽니다.
 2. `.md` 또는 `.markdown` 파일을 끌어오거나 바로 작성합니다.
-3. 필요에 따라 실시간 미리보기, **Review**, **Insert Diagram & More**, 내보내기 메뉴, Share Snapshot, Live Share를 사용합니다.
+3. 필요에 따라 실시간 미리보기, **Insert Diagram & More**, 내보내기 메뉴, Share Snapshot, Live Share를 사용합니다.
 
 자세한 내용은 Wiki의 [기능](../wiki/Features.md#product-summary), [개인정보](../wiki/Home.md#privacy-at-a-glance), [공유](../wiki/Features.md#share-markdown-with-snapshot-links), [내보내기](../wiki/Features.md#export-markdown-to-pdf-html-png-and-md), [데스크톱](../wiki/Features.md#desktop-app) 섹션을 참고하세요.
 
@@ -93,18 +94,22 @@ Markdown Viewer는 기본 Markdown 기능을 지원하면서, 더 풍부한 기�
    - **STL 3D Model Renderer**: 기술 노트 옆에서 3D 모델 미리보기.
    - **ABC Music Player & Sheet Music Viewer**: 악보 렌더링과 브라우저 재생.
 
-3. **Comments & Suggestions**: Markdown 소스를 변경하지 않고 렌더링된 문서 블록에 피드백을 추가하고 관리하며 해결할 수 있습니다.
-4. **Live Share Temporary Rooms**: 편집 가능 또는 보기 전용 접근 모드로 빠른 편집 세션, 리뷰, 페어 작성에 사용할 수 있는 실시간 협업 공간입니다.
-5. **Share Snapshot Links**: 문서 상태를 빠르게 보내야 할 때 읽기 전용 또는 편집 가능한 특정 시점 링크를 만들 수 있습니다.
-6. **LaTeX Math Notation**: MathJax로 인라인 및 표시 수식을 렌더링하며, 수식이 많은 노트, 논문, 기술 설명에 유용합니다.
-7. **Markdown to PDF, HTML & PNG Export**: 공유, 인쇄, 보관이 필요한 문서를 위해 Markdown, HTML, PNG, Browser Print / Save as PDF, Legacy Raster PDF를 내보낼 수 있습니다.
+3. **문서 탐색기 및 두 문서 분할 보기**: 중첩 폴더에 저장된 파일을 최대 50개까지 정리하고, 일괄 파일 작업을 사용하며, 두 문서를 나란히 열어 Markdown, 수식, 다이어그램, 지도, STL, ABC 기보를 모두 렌더링할 수 있습니다.
+4. **Comments & Suggestions**: Markdown 소스를 변경하지 않고 렌더링된 문서 블록에 피드백을 추가하고 관리하며 해결할 수 있습니다.
+5. **Live Share Temporary Rooms**: 서버가 확인하는 호스트, 편집 가능, 보기 전용 권한으로 빠른 편집 세션, 리뷰, 페어 작성에 사용할 수 있는 실시간 협업 공간입니다.
+6. **Share Snapshot Links**: 문서 상태를 빠르게 보내야 할 때 읽기 전용 또는 편집 가능한 특정 시점 링크를 만들 수 있습니다. 저장된 큰 스냅샷은 90일 후 만료됩니다.
+7. **LaTeX Math Notation**: MathJax로 인라인 및 표시 수식을 렌더링하며, 수식이 많은 노트, 논문, 기술 설명에 유용합니다.
+8. **Markdown to PDF, HTML & PNG Export**: 공유, 인쇄, 보관이 필요한 문서를 위해 Markdown, HTML, PNG, Browser Print / Save as PDF, Legacy Raster PDF를 내보낼 수 있습니다.
+9. **개인정보 및 보안 제어**: 작업 공간 설정에서 Private mode를 켜 문서와 리뷰 데이터를 현재 세션에만 유지할 수 있습니다. 미리보기는 정리되고, 내보낸 HTML은 보안이 강화되며, 데스크톱 네이티브 API는 제한됩니다.
 
 자세한 기능, 제한, 개인정보 관련 사항은 [기능 참고](../wiki/Features.md#product-summary)를 확인하세요.
 
 ## Markdown 편집과 실시간 미리보기
 
 - 일반 Markdown을 작성하면서 GFM, 구문 강조, 수식, 알림, 각주, 표, 작업 목록, 정리된 HTML을 실시간으로 미리볼 수 있습니다.
-- 여러 Markdown 문서를 탭으로 작업하고, 탭 이름 변경 또는 복제, 로컬 Markdown 파일 가져오기, 일반 작업 공간 상태의 브라우저 저장을 사용할 수 있습니다.
+- 반응형 탐색기에서 저장된 Markdown 파일을 최대 50개까지 정리할 수 있습니다. 고정된 Workspace 및 Secret Workspace 루트, 중첩 폴더, 검색, 최근 파일, 즐겨찾기, 끌어서 놓기 이동, 폴더 자동 펼치기, 가장자리 자동 스크롤을 지원합니다. Secret Workspace 내용은 기기에서 비밀번호로 암호화됩니다.
+- 파일 메뉴에서 두 문서를 나란히 열 수 있습니다. 하나의 공용 컨트롤로 양쪽을 편집과 미리보기 사이에서 전환하며, 미리보기 모드에서는 Markdown, 수식, Mermaid와 원격 다이어그램, 지도, STL 모델, ABC 기보를 렌더링합니다. 탐색기에서 파일을 여러 개 선택해 함께 열거나 이동하거나 삭제할 수 있고, 빈 영역이나 문서 영역을 마우스 오른쪽 버튼으로 클릭해 관련 작업을 열 수 있습니다.
+- 편집기 커서 위치에 이미지, 애니메이션 GIF, MP4, WebM, Ogg 동영상을 붙여넣거나 업로드하거나 놓을 수 있습니다. 진행 토스트가 업로드 상태를 보여 주며, 관리형 미디어는 짧은 콘텐츠 주소형 HTTPS 링크를 사용해 새로 고침, Share Snapshot, Live Share, Markdown 내보내기 후에도 90일 만료 시점까지 사용할 수 있습니다. 같은 최초 동의 후 기존 인라인 래스터 이미지도 변환할 수 있습니다.
 - WYSIWYG 스타일 툴바를 사용하면서도 일반 텍스트 Markdown 소스를 그대로 제어할 수 있습니다.
 - 큰 문서는 디바운스 렌더링과 백그라운드 Worker로 미리보며, 입력이 계속 빠르게 반응하도록 합니다.
 
@@ -127,13 +132,13 @@ Markdown Viewer는 기술 노트, 문서, 하드웨어 글, 음악 스니펫, �
 
 ## 공유, 협업, 내보내기
 
-- **Comments & Suggestions**는 Markdown을 변경하지 않고 표, 제목, 문단, 코드 블록, 다이어그램에 리뷰 피드백을 추가합니다. 일반 탭에 저장되며 활성 Live Share 공간에서만 동기화됩니다.
-- **Share Snapshot**은 특정 시점의 Markdown 공유를 위한 빠른 링크를 만듭니다. 작은 문서는 URL hash에 남길 수 있고, 더 큰 스냅샷은 해당 백엔드가 구성된 경우 임시 Cloudflare KV 저장소를 사용합니다.
+- **Comments & Suggestions**는 Markdown을 변경하지 않고 렌더링된 YAML, 제목, 문단, 코드 블록, 다이어그램에 리뷰 계층을 추가합니다. 피드백을 추가, 편집, 해결, 다시 열기, 삭제, 복사할 수 있으며 일반 탭에 저장되고 활성 Live Share 공간에서만 동기화됩니다.
+- **Share Snapshot**은 특정 시점의 Markdown 공유를 위한 빠른 링크를 만듭니다. 작은 문서는 URL hash에 남길 수 있고, 더 큰 스냅샷은 해당 백엔드가 구성된 경우 Cloudflare KV에 최대 90일간 임시 저장됩니다. 링크를 가진 사람은 누구나 열 수 있습니다.
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e62ca1a0-011a-4b01-90f9-e72638b9a6d5" alt="Share Snapshot" width="90%" />
 </p>
 
-- **Live Share rooms**는 Cloudflare Durable Objects를 통한 임시 공동 편집을 제공하며, 편집 가능한 협업 또는 보기 전용 리뷰를 위한 접근 모드가 있습니다. 리뷰와 페어 작성에 유용하지만 엔드 투 엔드 암호화는 아닙니다.
+- **Live Share rooms**는 Cloudflare Durable Objects를 통한 임시 공동 편집을 제공하며, 서버가 호스트, 편집 가능, 보기 전용 권한을 확인합니다. 리뷰와 페어 작성에 유용하지만 엔드 투 엔드 암호화는 아닙니다.
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4d7a72c7-8eec-48df-9f66-49fe9f205d4f" alt="Live Share rooms" width="90%" />
 </p>
@@ -205,18 +210,13 @@ docker compose up -d
    ```bash
    cd desktop-app
    ```
-2. 설치, 준비, 빌드 명령을 실행합니다.
+2. 의존성을 설치하고 빌드합니다.
    ```powershell
-   # node 의존성을 설치하고 Neutralino 바이너리를 다운로드
    npm install
-   node setup-binaries.js
-
-   # 리소스를 메인 웹 앱과 동기화
-   node prepare.js
-
-   # 릴리스 애플리케이션 빌드/컴파일
    npm run build
    ```
+
+`npm run build`는 필요한 Neutralino 바이너리를 다운로드하고 로컬 리소스를 준비한 뒤, 자체 실행 가능한 플랫폼별 실행 파일 7개를 만듭니다.
 
 미리 빌드된 바이너리는 [Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)에서 받을 수 있습니다.
 
@@ -232,22 +232,23 @@ docker compose up -d
 
 ```text
 Markdown-Viewer/
-+-- index.html              # Main web app shell
-+-- script.js               # App logic and UI controller
-+-- styles.css              # App and preview styles
-+-- preview-worker.js       # Markdown preview worker
-+-- sw.js                   # Service worker cache behavior
-+-- assets/                 # App images and icons
++-- index.html              # 웹 앱 기본 화면
++-- script.js               # 앱 로직과 UI 제어
++-- styles.css              # 앱 및 미리보기 스타일
++-- preview-worker.js       # Markdown 미리보기 Worker
++-- sw.js                   # Service Worker 캐시
++-- assets/                 # 앱 이미지와 아이콘
+|   +-- i18n/              # UI 번역 카탈로그와 생성기
 +-- functions/              # Cloudflare Pages Functions
-+-- workers/                # Live Share Worker source
-+-- desktop-app/            # Neutralinojs desktop build
-+-- locales/                # Localized README summaries
-+-- wiki/                   # Project documentation
-+-- Dockerfile              # Docker image setup
-+-- docker-compose.yml      # Local container run config
-+-- wrangler.toml           # Cloudflare deployment config
-+-- README.md               # Main project overview
-+-- CHANGELOG.md            # Release history
++-- workers/                # Live Share Worker 소스
++-- desktop-app/            # Neutralinojs 데스크톱 빌드
++-- locales/                # 현지화된 README
++-- wiki/                   # 프로젝트 문서
++-- Dockerfile              # Docker 이미지 설정
++-- docker-compose.yml      # 로컬 컨테이너 설정
++-- wrangler.toml           # Cloudflare 배포 설정
++-- README.md               # 프로젝트 개요
++-- CHANGELOG.md            # 릴리스 기록
 +-- LICENSE                 # Apache License 2.0
 ```
 
@@ -265,9 +266,9 @@ Markdown-Viewer/
 
 핵심 기술 스택: HTML, CSS, JavaScript, Bootstrap, Bootstrap Icons, Neutralinojs, Marked.js, Highlight.js, DOMPurify, MathJax, Mermaid, Leaflet, Three.js, ABCJS, Markmap, Yjs, jsPDF, html2canvas, Cloudflare Pages/Workers.
 
-의존성 로딩 방식, CDN 사용, 데스크톱 로컬 라이브러리 복사본은 [client library notes](../wiki/Configuration.md#client-libraries)를 참고하세요.
+의존성 로딩 방식, CDN 사용, 데스크톱 로컬 라이브러리 복사본은 [클라이언트 라이브러리 설명](../wiki/Configuration.md#client-libraries)을 참고하세요.
 
-일부 고급 다이어그램 엔진은 필요할 때 PlantUML, Kroki, mermaid.ink 같은 원격 렌더러를 사용합니다. 렌더러 동작과 개인정보 세부 사항은 [diagram renderer notes](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)를 참고하세요.
+일부 고급 다이어그램 엔진은 필요할 때 PlantUML, Kroki, mermaid.ink 같은 원격 렌더러를 사용합니다. 렌더러 동작과 개인정보 세부 사항은 [다이어그램 렌더러 설명](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)을 참고하세요.
 
 ---
 
@@ -275,13 +276,22 @@ Markdown-Viewer/
 
 Markdown Viewer는 클라우드 작업 공간이 아닙니다. 일반 입력, 미리보기 렌더링, 로컬 파일 가져오기, 탭 자동 저장, 테마 설정, 대부분의 내보내기는 사용자의 기기에서 처리됩니다. 로그인은 필요하지 않으며 분석, 텔레메트리, 광고, 추적 쿠키를 구현하지 않습니다.
 
-네트워크 사용은 GitHub 가져오기, 원격 다이어그램 렌더러, Share Snapshot, Live Share, CDN 라이브러리, 외부 문서 자산처럼 사용자가 실행하는 기능에 한정됩니다. 전체 내용은 [data handling summary](../wiki/Features.md#data-handling-summary)를 참고하세요.
+네트워크 사용은 동의한 관리형 미디어 업로드, GitHub 가져오기, 원격 다이어그램 렌더러, Share Snapshot, Live Share, CDN 라이브러리, 외부 문서 자산처럼 사용자가 실행하는 기능에 한정됩니다. 작업 공간 설정의 Private mode를 사용하면 편집 및 리뷰 도구는 그대로 사용하면서 문서 내용, 작업 공간 상태, 리뷰 피드백을 현재 세션에만 유지할 수 있습니다. 전체 내용은 [데이터 처리 요약](../wiki/Features.md#data-handling-summary)을 참고하세요.
+
+## 보안 및 개인정보 보호
+
+- 미리보기 HTML은 삽입 전에 정리됩니다. 내보낸 HTML에는 제한적인 CSP와 외부 자산용 SRI 메타데이터가 포함됩니다.
+- Secret Workspace는 PBKDF2-SHA-256으로 비밀번호에서 로컬 키를 만들고 AES-GCM으로 파일 및 폴더 이름을 암호화합니다. 키는 잠금 해제된 세션 동안만 유지되며, 잊어버린 비밀번호는 복구할 수 없습니다.
+- Cloudflare Pages는 `_headers`를 사용해 CSP, 클릭재킹 방지, 리퍼러 및 권한 정책, MIME 스니핑 방지를 적용합니다. 민감한 경로는 404로 리디렉션됩니다.
+- 관리형 미디어 및 저장형 Share Snapshot API 업로드는 프로덕션 앱, 미리보기, `null`, 로컬 개발 출처로 제한됩니다. 이미지, GIF, 동영상은 추측하기 어려운 공개 링크로 90일간 가져올 수 있습니다. 스냅샷 응답은 `no-store`를 사용하며 생성자는 삭제 토큰을 받습니다.
+- STL 렌더링은 WebGL 처리 전에 크기가 너무 큰 소스, 유한하지 않은 형상, 과도한 정점 수를 거부합니다.
+- Neutralino 데스크톱 빌드는 기본 `os.execCommand`를 노출하지 않고 네이티브 API를 명시적인 허용 목록으로 제한합니다. 자세한 내용은 [보안 모델](../wiki/Features.md#security-model)과 [설정 참고](../wiki/Configuration.md#share-api)를 확인하세요.
 
 ---
 
 ## 기여와 코드 품질
 
-커뮤니티 기여를 환영합니다! Pull Request를 만들기 전에 [contributing before changing code](../wiki/Contributing.md#before-changing-code)를 확인하세요.
+커뮤니티 기여를 환영합니다! Pull Request를 만들기 전에 [코드 변경 전 기여 안내](../wiki/Contributing.md#before-changing-code)를 확인하세요.
 
 ### 핵심 워크플로 요약:
 1. **Fork** 저장소를 포크하고 기능 브랜치를 만듭니다(`git checkout -b feature/your-feature`).
@@ -326,4 +336,4 @@ Markdown Viewer는 PC에서 시작한 작은 개인 프로젝트였습니다. �
 개발 및 유지 관리: **[ThisIs-Developer](https://github.com/ThisIs-Developer)**
 
 *   **버그 보고와 요청:** [Issue 제출](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)
-*   **문서:** [Wiki start here](../wiki/Home.md#start-here)
+*   **문서:** [Wiki 시작 안내](../wiki/Home.md#start-here)

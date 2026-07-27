@@ -245,6 +245,8 @@ MathJax renders math on demand. Escape literal dollar signs as `\$` when they ar
 
 ## Diagrams, Maps, Music, and Rich Fences
 
+These fences render in the normal live preview and, when the split is in Preview mode, on both sides of the two-document split.
+
 ### Mermaid
 
 ````markdown
@@ -383,7 +385,7 @@ endsolid example
 ```
 ````
 
-STL renders with Three.js. The viewer supports orbit controls, a zoom modal, solid mode, surface-angle mode, wireframe mode, copy image, and PNG export. Large models depend on browser memory and WebGL support.
+STL renders with Three.js. The viewer supports orbit controls, a zoom modal, solid mode, surface-angle mode, wireframe mode, copy image, and PNG export. Sources over 2 MiB, non-finite geometry, and models over 300,000 vertices are rejected before WebGL rendering.
 
 ### ABC Music Notation
 
@@ -397,7 +399,7 @@ C D E F | G A B c |
 ```
 ````
 
-ABCJS renders sheet music. Playback uses browser audio support and shows a synchronized cursor and note highlighting when audio is supported.
+ABCJS renders sheet music. Playback uses browser audio support and shows a synchronized cursor and note highlighting when audio is supported. The toolbar can copy or export the rendered score as PNG or SVG.
 
 ## Export Notes for Markdown Authors
 

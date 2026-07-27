@@ -33,7 +33,7 @@ Desktop-only files:
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
 
-Network features still use the network when invoked: GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links.
+Network features still use the network when invoked: managed media upload, GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links.
 
 ## Development
 
@@ -47,11 +47,10 @@ Run:
 ```bash
 cd desktop-app
 npm install
-npm run setup
 npm run dev
 ```
 
-`npm run setup` downloads Neutralino binaries and runs `prepare.js`. Binaries are cached in `bin/` and refreshed when the configured Neutralino version changes.
+`npm run dev` runs setup first. Setup downloads Neutralino binaries, runs `prepare.js`, and caches binaries in `bin/` until the configured Neutralino version changes.
 
 ## Build
 
@@ -59,13 +58,9 @@ npm run dev
 npm run build
 ```
 
-The current build script runs:
+The build script runs `build-standalone.js`. It invokes Neutralino once per target with embedded resources so Node.js does not need to package every platform in one memory-heavy pass.
 
-```bash
-npx -y @neutralinojs/neu@11.7.0 build --release --clean
-```
-
-Build output is written under `desktop-app/dist/`.
+Seven self-contained executables are written to `desktop-app/dist/markdown-viewer/`: Linux ARM64, ARMHF, and x64; macOS ARM64, universal, and x64; and Windows x64. They do not need a neighboring `resources.neu` file.
 
 ## Configuration Highlights
 
@@ -89,13 +84,13 @@ Remote-safe diagram rendering continues to work where supported. Local command r
 
 ## Docker Build
 
-The desktop folder includes Docker files for building desktop artifacts in a container:
+The desktop folder also includes Docker files for building these artifacts in a container:
 
 ```bash
 docker compose up --build
 ```
 
-Check the compose file for the mounted output path used by the current build.
+The compose build copies the generated files to `desktop-app/output/`.
 
 ## Releases
 

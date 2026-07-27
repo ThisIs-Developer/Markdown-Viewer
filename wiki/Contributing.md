@@ -28,17 +28,16 @@ Use a local HTTP server, not `file://`, because Web Workers and Service Workers 
 ```bash
 cd desktop-app
 npm install
-npm run setup
 npm run dev
 ```
 
-Run `npm run setup` or `node prepare.js` after changing root assets that the desktop build consumes. Desktop generated resource files should match the root app after preparation.
+`npm run dev` triggers setup and preparation automatically. Run `node prepare.js` directly when you only need to refresh desktop resource copies after changing root assets.
 
 ## Cloudflare Features
 
 Managed media and stored Share Snapshot require `SHARE_KV`. Live Share requires `LIVE_ROOMS` and the `LiveRoom` Durable Object.
 
-When changing share or live behavior, update:
+When changing managed media, snapshot, or live behavior, update the relevant files:
 
 - `script.js`
 - `functions/api/image/[[id]].js`
@@ -68,6 +67,7 @@ When changing share or live behavior, update:
 - If a feature sends data to a service, say so.
 - If a feature is local-only, say where it is stored.
 - Keep README summaries aligned with the wiki.
+- When visible interface text changes, regenerate `assets/i18n/*.json`, review every new translation in context, and update `wiki/Localization.md` if the workflow changes.
 
 ## Commit Messages
 
@@ -106,6 +106,7 @@ Please do not open public issues for vulnerabilities. Use GitHub Security Adviso
 | `preview-worker.js` | Worker Markdown rendering path. |
 | `styles.css` | Layout, themes, renderer styles, modals, responsive UI. |
 | `sw.js` | PWA/service-worker cache behavior. |
+| `assets/i18n/` | Interface catalogs and their generator. |
 | `functions/api/image/[[id]].js` | Content-addressed managed raster image and GIF API. |
 | `functions/api/media/[[id]].js` | Route alias for content-addressed managed video uploads and delivery. |
 | `functions/api/share/[[id]].js` | Stored Share Snapshot API. |

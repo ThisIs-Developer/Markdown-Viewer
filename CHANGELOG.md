@@ -5,19 +5,15 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- **Workspace context menus and tab locations:** Right-clicking the no-document workspace now exposes every Quick Start command. Editor, preview, and two-document split surfaces provide selection-aware Cut, Copy, and Paste alongside New file and the current document's rename, duplicate, favorite, move, download, and delete actions. Tab hover text now includes the containing folder path while root-level files keep their filename-only tooltip.
-- **Explorer keyboard selection:** Arrow navigation now moves Explorer selection together with keyboard focus, Shift+Arrow extends the selected range, and the oversized full-row blue focus border is replaced by a compact leading-edge focus marker.
-- **Media upload, file drag-and-drop, and GitHub folders:** Replaced the blocking full-window drop overlay with a compact notice, made folder-targeted Markdown imports land in the selected folder, kept untargeted imports at the default workspace root, added hover-to-expand folders and Explorer edge auto-scrolling, and added a Markdown-style file drag preview. GitHub imports now recreate the repository's nested directory tree inside its repository-named folder, and the mobile Explorer filter bar now matches the compact 44 px search-control height. Uploaded, pasted, and dropped images now use short 90-day content-addressed links; animated GIFs retain animation, and MP4, WebM, and Ogg videos insert as sanitized playable media. Upload progress and every user-facing toast now share the GitHub-import toast position, while unsupported files show a red "File not supported" alert with recovery guidance. Right-clicking blank Explorer space offers New file and New folder, and existing embedded raster images can still be converted automatically after consent.
+- **Context menus:** Added Quick Start and document actions to workspace, editor, preview, and split-view menus. Tab tooltips now show folder paths.
+- **Explorer:** Added keyboard selection, Shift-range selection, folder-aware imports, hover expansion, edge scrolling, and clearer focus.
+- **Imports and media:** GitHub imports preserve nested folders. Drag-and-drop is simpler, and images, GIFs, and supported videos use 90-day managed links with clear progress and error messages.
 
 ## v3.9.3
 
-- **Description:** Redesigned the Markdown Viewer workspace around a professional document Explorer, streamlined toolbar, responsive navigation, consistent icon system, and complete interface localization.
-- **Explorer & Documents:** Added workspace, folder, file, favorite, recent-document, secret-workspace, drag-and-drop, multi-selection, context-menu, bulk-delete, and GitHub repository import workflows. Closing tabs remains separate from deleting documents, and repository imports are grouped into repository-named folders with background progress.
-- **Tabs, Editing & Split View:** Added complete tab-closing commands, synchronized two-document split view, compact long-title handling, shared Edit or Preview modes, save-state feedback, and reliable empty-document behavior.
-- **Toolbar, Icons & Overlays:** Reorganized document and formatting actions, standardized dropdowns, introduced a lightweight local Lucide icon subset with consistent 1.5px strokes, refined the empty state, and unified application dialogs and modal accessibility.
-- **Responsive UI:** Replaced the mobile floating menu with a compact workspace drawer, aligned mobile toolbar and tab sizing with desktop, and improved responsive status, settings, and action layouts.
-- **Localization:** Added complete interface catalogs for 14 languages, covering static and dynamic menus, dialogs, Explorer states, progress messages, validation feedback, titles, and accessibility labels while preserving user-authored Markdown and filenames.
-- **Desktop:** Synchronized the Neutralino desktop application with the redesigned web interface and retained seven standalone Linux, macOS, and Windows release targets.
+- **Workspace:** Added the document Explorer, folders, favorites, recent files, Secret Workspace, bulk actions, drag-and-drop, GitHub imports, and separate tab/file deletion.
+- **Editing and UI:** Added synchronized two-document Edit/Preview modes, improved tab controls, toolbars, dialogs, icons, save feedback, empty states, and responsive mobile navigation.
+- **Localization and desktop:** Added 14 interface language catalogs and synchronized seven standalone Linux, macOS, and Windows desktop targets.
 - **Date:** 2026-07-20
 - **Commits:** `a7572d682db557563f24ff5f5873267639c19cc6` through `4c04ef7706bb356cecedd388c1c455c9a36f113e`
 - **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.3
@@ -26,11 +22,8 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## v3.9.2
 
-- **Description:** Added a complete comments-and-suggestions review workflow with responsive controls, lifecycle tracking, and Live Share synchronization.
-- **Comments & Suggestions UI:** Simplified the Review panel, composer, suggestion cards, and preview pins using the app's existing accent, button, border, hover, disabled, and theme tokens. The main toolbar Review button shows its open-item count inline beside the existing icon instead of using a separate count button. Review target buttons match the main toolbar controls, align in a straight column at the preview's right edge, and show a plus before feedback exists. Reviewed targets provide separate controls for reading saved feedback and adding another item, so opening the review count no longer opens the composer. Threads now record and display opened/closed date and time, and copied summaries include lifecycle dates plus open/resolved totals. Opening a new tab closes Review mode automatically. YAML frontmatter tables are reviewable, reviewed text has clear spacing from its side marker, and existing comments and suggestions can be edited in place. Saved feedback appears before the composer in one shared scroll area, keeping previous reviews visible in short panels while new and edited feedback scrolls into view. Refined the layout into a compact desktop side panel, tablet drawer, and touch-friendly mobile bottom sheet without introducing a separate color palette.
-- **Review Management:** Added follow-up feedback, in-place editing, clearer navigation between reviewed targets, separate read/add controls, lifecycle timestamps, and improved visibility for saved feedback.
-- **Live Share:** Synchronized comments and suggestions during active Live Share rooms and allowed configured Cloudflare preview origins for snapshot and collaboration endpoints.
-- **Reset & Documentation:** Improved the all-files reset confirmation and aligned the main, localized, desktop, configuration, FAQ, feature, collaboration, and usage documentation with the review workflow.
+- **Review workflow:** Added responsive comments and suggestions with editing, follow-ups, lifecycle dates, open/resolved states, YAML support, preview markers, and copied summaries.
+- **Sharing and cleanup:** Synchronized review feedback during Live Share, allowed configured preview origins, improved workspace reset, and updated related documentation.
 - **Date:** 2026-07-14
 - **Commits:** `a36bd928150614b902f020305149cc7484b324af` through `75a64f562c8b7af05bb26f081ebabf44bfc7cec6`
 - **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.2

@@ -7,7 +7,7 @@ This page documents the runtime, storage, dependency, Docker, Cloudflare, and de
 | Key | Location | Purpose |
 | :--- | :--- | :--- |
 | `markdownViewerTabs` | `localStorage`, mirrored to Neutralino storage in desktop | Normal Workspace tabs, including local review threads. Secret and temporary share/live tabs are excluded. |
-| `markdownViewerDocumentOrganization` | `localStorage`, mirrored to Neutralino storage in desktop | Fixed workspace expansion state, non-secret folders, sidebar filter, sidebar width/collapse state, and last non-secret creation location. |
+| `markdownViewerDocumentOrganization` | `localStorage`, mirrored to Neutralino storage in desktop | Fixed workspace expansion state, nested non-secret folders, sidebar filter, sidebar width/collapse state, and last non-secret creation location. |
 | `markdownViewerSecretWorkspace` | `localStorage`, mirrored to Neutralino storage in desktop | Secret Workspace files and folder names encrypted with AES-GCM using a PBKDF2-SHA-256 password-derived key. The salt, IV, and non-sensitive counts are stored with the ciphertext; the key is session-only. |
 | `markdownViewerActiveTab` | `localStorage`, mirrored in desktop | Active tab id. |
 | `markdownViewerUntitledCounter` | `localStorage`, mirrored in desktop | Next Untitled document number. |
@@ -147,7 +147,7 @@ script_name = "markdown-viewer-live-room"
 - `GET /api/share/<id>` to load a stored snapshot.
 - `DELETE /api/share/<id>` to delete a stored snapshot when the creator supplies its deletion token.
 
-Responses set `Cache-Control: no-store` and vary CORS by request origin. The allowed origins are the production app, `null`, and localhost/127.0.0.1 development origins; unsupported origins receive `403`. Stored records contain content, mode, title, creation time, size, and a hash of the creator deletion token. The token is returned only when the snapshot is created. Invalid ids, missing content, oversized content, invalid deletion tokens, missing KV binding, and unknown routes return JSON errors.
+Responses set `Cache-Control: no-store` and vary CORS by request origin. The allowed origins are the production app, HTTPS `*.markdownviewer.pages.dev` previews, `null`, and localhost/127.0.0.1 development origins; unsupported origins receive `403`. Stored records contain content, mode, title, creation time, size, and a hash of the creator deletion token. The token is returned only when the snapshot is created. Invalid ids, missing content, oversized content, invalid deletion tokens, missing KV binding, and unknown routes return JSON errors.
 
 ## Managed Media API
 
@@ -159,6 +159,8 @@ Responses set `Cache-Control: no-store` and vary CORS by request origin. The all
 - `OPTIONS` for CORS preflight.
 
 The API accepts still images up to 300 KiB after client-side optimization, GIFs up to 5 MiB, and videos up to 10 MiB. It validates both the declared media type and file signature, derives an unguessable 24-character id from SHA-256 content, and stores the record in `SHARE_KV` with a 90-day TTL. Duplicate content returns the existing id and refreshes its TTL. Responses are public, immutable, and cross-origin until expiry; possession of the URL is sufficient to retrieve the media. This is the same 90-day retention duration used for stored Share Snapshot links, though the two features store separate records.
+
+Upload and preflight requests use the same production, Cloudflare preview, local-file, and localhost origin checks as Share Snapshot.
 
 ## Live Room API
 
@@ -227,6 +229,8 @@ The browser/chrome modes block filesystem and/or OS APIs more aggressively.
 | `predev` | Runs setup before development. |
 | `dev` | Runs `npx -y @neutralinojs/neu@11.7.0 run`. |
 | `prebuild` | Runs setup before build. |
-| `build` | Runs `npx -y @neutralinojs/neu@11.7.0 build --release --clean` and removes the release zip if present. |
+| `build` | Runs `build-standalone.js`, which builds seven targets separately with embedded resources and gathers them in `dist/markdown-viewer/`. |
+
+Running `npm run build` first triggers `prebuild`, which runs setup and its `postsetup` preparation step. `build-standalone.js` builds each target separately to avoid exhausting Node.js memory, and every output is a self-contained executable without a neighboring `resources.neu` file.
 
 `prepare.js` copies root app files into `desktop-app/resources`, downloads and verifies libraries, rewrites dynamic library paths, strips web-only SEO metadata, and prepares local renderer/export resources for the desktop bundle.

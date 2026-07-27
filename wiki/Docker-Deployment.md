@@ -9,7 +9,7 @@ docker run -d \
   --name markdown-viewer \
   -p 8080:80 \
   --restart unless-stopped \
-  ghcr.io/thisis-developer/markdown-viewer:sha-15eafb0
+  ghcr.io/thisis-developer/markdown-viewer:latest
 ```
 
 Open `http://localhost:8080`.

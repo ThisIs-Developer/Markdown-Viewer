@@ -13,7 +13,7 @@ The desktop app wraps Markdown Viewer in Neutralinojs for users who want a light
 - Prepared builds load renderer libraries from local `/libs/...` files instead of CDNs.
 - The default configuration does not expose `os.execCommand`; Markdown preview cannot execute local shell commands through the standard desktop build.
 
-Network features remain network features: GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links can still contact remote services.
+Network features remain network features: managed media upload, GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links can still contact remote services.
 
 ## Directory Structure
 
@@ -42,11 +42,10 @@ desktop-app/
 ```bash
 cd desktop-app
 npm install
-npm run setup
 npm run dev
 ```
 
-`npm run setup` downloads Neutralino binaries and runs `prepare.js`. Development runs the Neutralino app through `npx -y @neutralinojs/neu@11.7.0 run`.
+`npm run dev` runs setup first, then starts the Neutralino app through `npx -y @neutralinojs/neu@11.7.0 run`. Setup downloads the binaries and runs `prepare.js`.
 
 ## Build
 

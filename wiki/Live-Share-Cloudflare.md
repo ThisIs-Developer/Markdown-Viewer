@@ -76,8 +76,7 @@ Live Share does not write document content to Cloudflare KV or a database. State
 
 - The room secret is part of the invite URL. Anyone with the link can try to join while the room is active.
 - No end-to-end encryption is implemented in the app.
-- View-only mode is enforced by the client and message handling. It is useful for normal collaboration, but it is not a cryptographic permission boundary against modified clients.
-- Capability values are bearer credentials in the invite URL. Treat role-specific invite links as sensitive and do not paste them into public channels.
+- View-only and editable roles are checked by the Durable Object, which filters message types by capability. Each capability is still a bearer credential, so treat role-specific invite links as sensitive and do not paste them into public channels.
 - The server rejects unsupported WebSocket origins, but origin checks do not replace authentication or end-to-end encryption.
 - The host should end the room when collaboration is finished.
 - Cloudflare deployment logs and platform behavior are controlled by the deployer's Cloudflare account configuration.

@@ -22,6 +22,10 @@ Not in the strict sense. Markdown Viewer is a plain-text Markdown editor with li
 
 Yes. You can open `.md` and `.markdown` files with the file picker or drag and drop. The desktop app can also open Markdown files through native file dialogs and command-line file arguments.
 
+### How do I organize documents?
+
+Use the Explorer to create nested folders inside Workspace or the password-protected Secret Workspace. Drag files between locations or use **Move to…**. Ctrl/Cmd-click selects separate items, while Shift-click or Shift+Arrow selects a range for bulk open, move, or delete actions.
+
 ## Privacy and Data
 
 ### Does my Markdown leave my device?
@@ -41,7 +45,7 @@ No analytics, telemetry, ads, tracking pixels, or app-specific cookies are imple
 
 ### What does the app store locally?
 
-The app stores normal tabs and their review threads, active tab id, untitled-tab counter, theme/direction/view settings, language selection, scroll sync state, and Find and Replace dock preference. Web storage uses browser `localStorage`; the desktop app mirrors selected values into Neutralino storage. Private mode clears document/workspace state and prevents those document-state keys from being written until it is turned off.
+The app stores normal tabs and their review threads, nested folder organization, active tab id, untitled-tab counter, theme/direction/view settings, language selection, scroll sync state, and Find and Replace dock preference. Web storage uses browser `localStorage`; the desktop app mirrors selected values into Neutralino storage. Private mode clears document/workspace state and prevents those document-state keys from being written until it is turned off.
 
 ### Are comments and suggestions added to my Markdown?
 
@@ -55,7 +59,7 @@ Small snapshots keep compressed content inside the URL hash. Large snapshots use
 
 ### Are uploaded media links private?
 
-No. Device images are optimized and images, animated GIFs, and supported videos are uploaded only after first-use consent, then referenced by a short content-addressed HTTPS link. The id is difficult to guess, but anyone who receives the URL can retrieve the media for up to 90 days. Cloudflare KV deletes it after that TTL, so the link stops rendering. Duplicate content reuses the same link and refreshes its 90-day expiry; legacy inline raster data can be converted to managed links after the same consent. The duration is the same 90-day limit used by stored Share Snapshot links, but their storage records are separate.
+No. Still images are optimized; images, animated GIFs, and supported videos are uploaded only after first-use consent, then referenced by a short content-addressed HTTPS link. The id is difficult to guess, but anyone who receives the URL can retrieve the media for up to 90 days. Cloudflare KV deletes it after that TTL, so the link stops rendering. Duplicate content reuses the same link and refreshes its 90-day expiry; legacy inline raster data can be converted to managed links after the same consent. The duration is the same 90-day limit used by stored Share Snapshot links, but their storage records are separate.
 
 ### Is Live Share saved permanently?
 
@@ -91,11 +95,15 @@ Base Markdown renders first. Advanced content such as MathJax, diagrams, maps, S
 
 Share Snapshot and Live Share tabs are temporary by design. They are stripped from persistent tab storage so opening someone else's link does not silently save their document into your workspace.
 
+### Can I open two documents side by side?
+
+Yes. Choose **Open in split view** from a file menu and select the second file. A shared control switches both documents between Edit and Preview. Preview mode renders Markdown, math, Mermaid and remote diagrams, maps, STL models, and ABC notation. This is separate from the normal Editor/Split/Preview modes for one document.
+
 ## Import and Export
 
 ### Can I import local files?
 
-Yes. Import `.md`, `.markdown`, or `text/markdown` files through the file picker or drag and drop. The app scans the first 8 KB for null bytes and rejects likely binary files.
+Yes. Import `.md`, `.markdown`, or `text/markdown` files through the file picker or drag and drop. Dropping onto an Explorer folder imports there; untargeted drops use the Workspace root. The app scans the first 8 KB for null bytes and rejects likely binary files.
 
 ### Can I import private GitHub repositories?
 
@@ -103,7 +111,7 @@ No. The GitHub importer only uses public GitHub URLs and does not ask for tokens
 
 ### Why are only 30 GitHub files shown?
 
-The importer limits repository/folder results to the first 30 Markdown files to keep the modal and network requests manageable.
+The importer limits repository/folder results to the first 30 Markdown files to keep the modal and network requests manageable. Imported files go into a repository-named folder and keep their nested GitHub directory paths.
 
 ### Which PDF export should I use?
 

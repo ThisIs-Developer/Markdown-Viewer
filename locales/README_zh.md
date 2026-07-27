@@ -47,6 +47,7 @@
   - [项目目录结构](#项目目录结构)
   - [Built With（技术栈）](#built-with技术栈)
   - [隐私](#隐私)
+  - [安全与隐私控制](#安全与隐私控制)
   - [贡献与代码质量](#贡献与代码质量)
   - [展示与社区项目](#展示与社区项目)
   - [贡献者](#贡献者)
@@ -71,7 +72,7 @@
 
 1. 打开 [在线 Markdown 编辑器](https://markdownviewer.pages.dev/)。
 2. 拖入 `.md` 或 `.markdown` 文件，或直接开始编写。
-3. 根据需要使用实时预览、**Review**、**Insert Diagram & More**、导出菜单、Share Snapshot 或 Live Share。
+3. 根据需要使用实时预览、**Insert Diagram & More**、导出菜单、Share Snapshot 或 Live Share。
 
 更多说明请查看 Wiki 中的 [功能](../wiki/Features.md#product-summary)、[隐私](../wiki/Home.md#privacy-at-a-glance)、[分享](../wiki/Features.md#share-markdown-with-snapshot-links)、[导出](../wiki/Features.md#export-markdown-to-pdf-html-png-and-md) 和 [桌面版](../wiki/Features.md#desktop-app) 部分。
 
@@ -93,18 +94,22 @@ Markdown Viewer 覆盖常见 Markdown 基础能力，同时帮助用户在不离
    - **STL 3D Model Renderer**：在技术笔记旁预览 3D 模型。
    - **ABC Music Player & Sheet Music Viewer**：乐谱渲染和浏览器播放。
 
-3. **Comments & Suggestions**：无需更改 Markdown 源码，即可在渲染后的文档块上添加、管理和解决反馈。
-4. **Live Share Temporary Rooms**：通过可编辑或仅查看访问模式进行实时协作，适合快速编辑会话、审阅或结对写作。
-5. **Share Snapshot Links**：在需要快速发送文档状态时，创建只读或可编辑的时间点快照链接。
-6. **LaTeX Math Notation**：使用 MathJax 渲染行内和块级公式，适合数学笔记、论文和技术说明。
-7. **Markdown to PDF, HTML & PNG Export**：导出 Markdown、HTML、PNG、浏览器打印/另存为 PDF，或 Legacy Raster PDF，适合需要分享、打印或归档的文档。
+3. **文档资源管理器与双文档分屏**：在嵌套文件夹中整理最多 50 个已存储文件，使用批量文件操作，并在两个并排文档中完整渲染 Markdown、数学公式、图表、地图、STL 和 ABC 记谱。
+4. **Comments & Suggestions**：无需更改 Markdown 源码，即可在渲染后的文档块上添加、管理和解决反馈。
+5. **Live Share Temporary Rooms**：通过服务器验证的主持人、可编辑和仅查看权限进行实时协作，适合快速编辑、审阅或结对写作。
+6. **Share Snapshot Links**：在需要快速发送文档状态时，创建只读或可编辑的时间点快照链接。较大的已存储快照会在 90 天后过期。
+7. **LaTeX Math Notation**：使用 MathJax 渲染行内和块级公式，适合数学笔记、论文和技术说明。
+8. **Markdown to PDF, HTML & PNG Export**：导出 Markdown、HTML、PNG、浏览器打印/另存为 PDF，或 Legacy Raster PDF，适合需要分享、打印或归档的文档。
+9. **隐私与安全控制**：在工作区设置中启用隐私模式，使文档和审阅数据仅保留在当前会话中；预览会经过清理，导出的 HTML 经过安全加固，桌面原生 API 也受到限制。
 
 完整细节、限制和隐私说明请查看 [功能参考](../wiki/Features.md#product-summary)。
 
 ## Markdown 编辑与实时预览
 
 - 编写纯文本 Markdown，同时实时预览渲染 GFM、语法高亮、数学公式、提示块、脚注、表格、任务列表和已清理的 HTML。
-- 使用多文档标签处理多个 Markdown 文档，重命名或复制标签，导入本地 Markdown 文件，并将普通工作区状态保存在浏览器存储中。
+- 在响应式资源管理器中整理最多 50 个已存储 Markdown 文件。它包含固定的 Workspace 和 Secret Workspace 根目录、嵌套文件夹、搜索、最近使用、收藏、拖放移动、悬停展开文件夹和边缘自动滚动。Secret Workspace 内容会在设备上用密码加密。
+- 从文件菜单并排打开两个文档。一个共享控件可让两侧在编辑和预览之间切换；预览模式能渲染 Markdown、数学公式、Mermaid 和远程图表、地图、STL 模型与 ABC 记谱。可以在资源管理器中多选文件并批量打开、移动或删除，也可以右键空白区域或文档区域打开相关操作。
+- 在编辑器光标处粘贴、上传或拖入图片、动画 GIF，以及 MP4、WebM 或 Ogg 视频。进度提示会显示上传状态；托管媒体使用短的内容寻址 HTTPS 链接，可在刷新、Share Snapshot、Live Share 和 Markdown 导出后继续使用，直到 90 天后过期。首次同意后，也可以转换已有的内嵌栅格图片。
 - 使用 WYSIWYG 风格的工具栏辅助功能，同时保留对纯文本 Markdown 源码的完全控制。
 - 通过防抖渲染和后台 Worker 预览大型文档，让输入保持响应迅速。
 
@@ -127,13 +132,13 @@ Markdown Viewer 也适合作为技术笔记、文档、硬件说明、音乐片�
 
 ## 分享、协作与导出
 
-- **Comments & Suggestions** 可在不更改 Markdown 的情况下，为表格、标题、段落、代码块和图表添加审阅反馈。反馈保存在普通标签中，并且只在活跃的 Live Share 房间内同步。
-- **Share Snapshot** 创建用于时间点 Markdown 分享的快速链接。小文档可以保留在 URL hash 中；较大的快照会在配置该后端时使用临时 Cloudflare KV 存储。
+- **Comments & Suggestions** 在不更改 Markdown 的情况下，为渲染后的 YAML、标题、段落、代码块和图表添加审阅层。反馈可以添加、编辑、解决、重新打开、删除或复制；它保存在普通标签中，并且只在活跃的 Live Share 房间内同步。
+- **Share Snapshot** 创建用于时间点 Markdown 分享的快速链接。小文档可以保留在 URL hash 中；较大的快照会在配置该后端时使用 Cloudflare KV 临时存储最多 90 天。快照属于持有链接即可访问的链接，任何拿到链接的人都能打开。
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e62ca1a0-011a-4b01-90f9-e72638b9a6d5" alt="Share Snapshot" width="90%" />
 </p>
 
-- **Live Share rooms** 通过 Cloudflare Durable Objects 提供临时协作编辑，并提供可编辑协作或仅查看审阅的访问模式。它们适用于审阅和结对写作，但不是端到端加密。
+- **Live Share rooms** 通过 Cloudflare Durable Objects 提供临时协作编辑，并由服务器检查主持人、可编辑和仅查看权限。它适用于审阅和结对写作，但不是端到端加密。
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4d7a72c7-8eec-48df-9f66-49fe9f205d4f" alt="Live Share rooms" width="90%" />
 </p>
@@ -206,18 +211,13 @@ docker compose up -d
    ```bash
    cd desktop-app
    ```
-2. 运行安装、准备和构建命令：
+2. 安装依赖并构建：
    ```powershell
-   # 安装 node 依赖并下载 Neutralino 二进制文件
    npm install
-   node setup-binaries.js
-
-   # 将资源与主 Web 应用同步
-   node prepare.js
-
-   # 构建/编译发布应用
    npm run build
    ```
+
+`npm run build` 会下载所需的 Neutralino 二进制文件、准备本地资源，并创建七个独立运行的平台可执行文件。
 
 也可以从 [Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases) 下载预构建二进制文件。
 
@@ -233,22 +233,23 @@ docker compose up -d
 
 ```text
 Markdown-Viewer/
-+-- index.html              # Main web app shell
-+-- script.js               # App logic and UI controller
-+-- styles.css              # App and preview styles
-+-- preview-worker.js       # Markdown preview worker
-+-- sw.js                   # Service worker cache behavior
-+-- assets/                 # App images and icons
++-- index.html              # Web 应用主界面
++-- script.js               # 应用逻辑和界面控制
++-- styles.css              # 应用与预览样式
++-- preview-worker.js       # Markdown 预览 Worker
++-- sw.js                   # Service Worker 缓存
++-- assets/                 # 应用图片和图标
+|   +-- i18n/              # 界面语言目录和生成器
 +-- functions/              # Cloudflare Pages Functions
-+-- workers/                # Live Share Worker source
-+-- desktop-app/            # Neutralinojs desktop build
-+-- locales/                # Localized README summaries
-+-- wiki/                   # Project documentation
-+-- Dockerfile              # Docker image setup
-+-- docker-compose.yml      # Local container run config
-+-- wrangler.toml           # Cloudflare deployment config
-+-- README.md               # Main project overview
-+-- CHANGELOG.md            # Release history
++-- workers/                # Live Share Worker 源码
++-- desktop-app/            # Neutralinojs 桌面版
++-- locales/                # 本地化 README
++-- wiki/                   # 项目文档
++-- Dockerfile              # Docker 镜像配置
++-- docker-compose.yml      # 本地容器配置
++-- wrangler.toml           # Cloudflare 部署配置
++-- README.md               # 项目概览
++-- CHANGELOG.md            # 版本记录
 +-- LICENSE                 # Apache License 2.0
 ```
 
@@ -266,9 +267,9 @@ Markdown-Viewer/
 
 核心技术栈：HTML、CSS、JavaScript、Bootstrap、Bootstrap Icons、Neutralinojs、Marked.js、Highlight.js、DOMPurify、MathJax、Mermaid、Leaflet、Three.js、ABCJS、Markmap、Yjs、jsPDF、html2canvas 和 Cloudflare Pages/Workers。
 
-依赖加载行为、CDN 使用和桌面本地库副本请查看 [client library notes](../wiki/Configuration.md#client-libraries)。
+依赖加载行为、CDN 使用和桌面本地库副本请查看 [客户端库说明](../wiki/Configuration.md#client-libraries)。
 
-部分高级图表引擎会在需要时使用 PlantUML、Kroki 或 mermaid.ink 等远程渲染器。渲染器行为和隐私细节请查看 [diagram renderer notes](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)。
+部分高级图表引擎会在需要时使用 PlantUML、Kroki 或 mermaid.ink 等远程渲染器。渲染器行为和隐私细节请查看 [图表渲染器说明](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)。
 
 ---
 
@@ -276,13 +277,22 @@ Markdown-Viewer/
 
 Markdown Viewer 不是云端工作区。普通输入、预览渲染、本地文件导入、标签自动保存、主题设置和大多数导出都在你的设备上进行。无需登录，应用也没有实现分析、遥测、广告或跟踪 Cookie。
 
-网络使用只会发生在用户触发的功能中，例如 GitHub 导入、远程图表渲染器、Share Snapshot、Live Share、CDN 库和外部文档资源。完整说明请查看 [data handling summary](../wiki/Features.md#data-handling-summary)。
+网络使用只会发生在用户触发的功能中，例如经过同意的托管媒体上传、GitHub 导入、远程图表渲染器、Share Snapshot、Live Share、CDN 库和外部文档资源。工作区设置中的隐私模式会让文档内容、工作区状态和审阅反馈仅保留在当前会话中，同时仍可使用编辑和审阅工具。完整说明请查看 [数据处理摘要](../wiki/Features.md#data-handling-summary)。
+
+## 安全与隐私控制
+
+- 预览 HTML 在插入前会经过清理；导出的 HTML 使用严格的 CSP，并为外部资源提供 SRI 元数据。
+- Secret Workspace 使用 PBKDF2-SHA-256 从密码生成本地密钥，并用 AES-GCM 加密文件和文件夹名称。密钥只在解锁会话中保留，忘记的密码无法恢复。
+- Cloudflare Pages 通过 `_headers` 提供 CSP、防点击劫持、引用来源策略、权限策略和 MIME 类型保护；敏感路径会重定向到 404。
+- 托管媒体和已存储的 Share Snapshot API 上传仅允许生产站点、预览站点、`null` 和本地开发来源。托管图片、GIF 和视频可通过难以猜测的公开链接访问 90 天；快照响应使用 `no-store`，创建者会收到删除令牌。
+- STL 渲染会在 WebGL 处理前拒绝过大的源、非有限几何数据和过多顶点。
+- Neutralino 桌面版不开放默认的 `os.execCommand`，原生 API 仅使用明确的允许列表。详情请查看 [安全模型](../wiki/Features.md#security-model) 和 [配置参考](../wiki/Configuration.md#share-api)。
 
 ---
 
 ## 贡献与代码质量
 
-欢迎社区贡献！创建 Pull Request 前，请先查看 [contributing before changing code](../wiki/Contributing.md#before-changing-code)。
+欢迎社区贡献！创建 Pull Request 前，请先查看 [修改代码前的贡献指南](../wiki/Contributing.md#before-changing-code)。
 
 ### 核心工作流摘要：
 1. **Fork** 仓库并创建功能分支（`git checkout -b feature/your-feature`）。
@@ -327,4 +337,4 @@ Markdown Viewer 最初是 PC 上的一个小型个人项目：一个带着好奇
 由 **[ThisIs-Developer](https://github.com/ThisIs-Developer)** 开发和维护。
 
 *   **错误报告与功能请求：** [提交 Issue](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)
-*   **文档：** [Wiki start here](../wiki/Home.md#start-here)
+*   **文档：** [Wiki 入门](../wiki/Home.md#start-here)

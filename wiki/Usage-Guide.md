@@ -9,7 +9,7 @@ The app has seven main areas:
 | Area | What It Does |
 | :--- | :--- |
 | Header | Shows the app name and primary New, Export, Share, Live Share, Sync, Copy, About, and Workspace settings actions. |
-| Files sidebar | Organizes up to 50 Markdown files in fixed Default and Secret workspaces, with folders, All files, Recent, Favorites, and search. |
+| Files sidebar | Organizes up to 50 stored Markdown files in fixed Workspace and Secret Workspace roots, with nested folders, All files, Recent, Favorites, and search. |
 | Tab bar | Preserves quick switching and drag-to-reorder for open documents. |
 | Formatting toolbar | Inserts Markdown syntax, opens helper modals, starts Find and Replace, toggles fullscreen, and switches review/view modes. |
 | Editor pane | Plain-text Markdown textarea with line numbers, custom undo/redo, list continuation, and find highlights. |
@@ -18,24 +18,27 @@ The app has seven main areas:
 
 Use the view buttons to switch between Editor, Split, and Preview. Split view is the main live Markdown preview workflow: type, paste, or open Markdown on one side and read the rendered result on the other. Sync scrolling can keep the source and preview aligned while you write. Drag the divider to change the pane widths. The app prevents either side from becoming too narrow. On small screens, the document sidebar opens as a full-height drawer and the mobile menu exposes the remaining main actions without forcing a cramped split layout.
 
+To compare or edit two files, open a file menu and choose **Open in split view**, then select the second document. A shared control switches both sides between Edit and Preview. Preview mode supports Markdown, math, diagrams, maps, STL, and ABC rendering. Use the combined tab menu to exit this view.
+
 ## Files, Folders, and Autosave
 
 - Select Workspace, Secret Workspace, or a folder, then use the clearly labeled **New file** or **New folder** button. The selected row shows where the item will be created; the plus menu beside an unlocked workspace or folder creates directly inside it.
-- Workspaces are fixed. Create one-level folders inside **Workspace** or the password-protected **Secret Workspace**.
+- Workspace roots are fixed. Create nested folders inside **Workspace** or the password-protected **Secret Workspace**.
 - The first time Secret Workspace is opened, create a password of at least eight characters. Files and folder names are encrypted locally. Use its menu to lock it when finished; the password cannot be recovered.
 - Drag a file row onto a folder or workspace to move it. Use **Move to…** from the file menu as the keyboard and touch-friendly alternative. Dropping local Markdown files onto a folder imports them there.
 - Use **All files** for the hierarchy, **Recent** for recently opened or edited files, and **Favorites** for starred files.
 - On desktop, one click selects a sidebar document and a double click opens it. On touch layouts, one tap opens it and closes the drawer.
-- Each document menu supports Open, Rename, Duplicate, Favorites, Move, Download Markdown, and Delete. The tab strip still supports quick switching and drag-to-reorder.
-- Deleting a folder moves its files to the workspace root.
+- Each document menu supports Open, Rename, Duplicate, Favorites, Move, Open in split view, Download Markdown, and Delete. The tab strip supports quick switching, drag-to-reorder, and close commands for one or several tabs.
+- Ctrl/Cmd-click selects separate Explorer items; Shift-click or Shift+Arrow selects a range. When only files are selected, the context menu can **Open all** or **Move to…**. Any multi-selection can be deleted after confirmation.
+- Deleting a folder tree moves all files inside it to the workspace root before removing the folders.
 - Dragging or selecting several local Markdown files shows a small import-progress popup at the bottom of the screen until processing finishes.
 - Closing the last normal tab resets to a clean document.
-- Reset clears the saved workspace.
 - Normal tabs autosave to local browser storage or desktop storage.
-- The document limit is 50 across creation, duplication, imports, Share Snapshot, and Live Share joins.
+- The document limit is 50 stored files across creation, duplication, imports, Share Snapshot, Live Share joins, and locked Secret Workspace files.
 - Temporary Share Snapshot and Live Share tabs are not saved to the recipient's workspace.
 - Use **Private mode** from Workspace settings to clear existing document state and prevent normal document-state persistence while it is enabled.
 - Use **Reset workspace** from Workspace settings to remove saved files and review data and return to a clean workspace.
+- Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
 
 Storage is local unless you explicitly use a network feature such as GitHub import, Share Snapshot storage, or Live Share.
 
@@ -95,13 +98,12 @@ Paste an image or GIF from the clipboard, drop an image/GIF/video file, or use t
 
 - Managed still images are limited to 300 KiB after optimization.
 - Animated GIFs are limited to 5 MiB, and managed videos to 10 MiB.
-- The 90-day media expiry uses the same duration as stored Share Snapshot links, but each feature keeps separate KV records.
-
 - Supported file types are `.md`, `.markdown`, and `text/markdown`.
 - Extension matching is case-insensitive.
 - Dragging over the app shows a compact notice without blocking the editor or Explorer drop targets.
 - The app scans the first 8 KB for null bytes and rejects likely binary files.
 - Local file content stays on the device unless you later share it.
+- The 90-day media expiry uses the same duration as stored Share Snapshot links, but each feature keeps separate KV records.
 
 ### GitHub
 
@@ -112,7 +114,7 @@ Use Import > From GitHub and paste one of these URL types:
 - `https://github.com/owner/repo/blob/main/README.md`
 - `https://raw.githubusercontent.com/owner/repo/main/README.md`
 
-Direct Markdown file URLs import immediately. Repository and folder URLs query GitHub's public API, show a tree of Markdown files, and let you import selected files into separate tabs. If more than 30 Markdown files exist, only the first 30 are shown.
+Direct Markdown file URLs import immediately. Repository and folder URLs query GitHub's public API, show a tree of Markdown files, and let you import selected files into separate tabs. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved. If more than 30 Markdown files exist, only the first 30 are shown.
 
 GitHub import sends the repository/path request to GitHub and only works for public content. The app does not ask for GitHub credentials.
 

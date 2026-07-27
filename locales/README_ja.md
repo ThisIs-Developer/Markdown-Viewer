@@ -24,7 +24,7 @@
 
   🌐 [English](../README.md) • [简体中文](README_zh.md) • **日本語** • [한국어](README_ko.md) • <a href="../wiki/Localization.md">その他の言語</a>
 
-  [ライブデモ](https://markdownviewer.pages.dev/) • [Wiki](../wiki/Home.md#start-here) • [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) • [Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
+  [ライブデモ](https://markdownviewer.pages.dev/) • [Wiki](../wiki/Home.md#start-here) • [Issue トラッカー](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) • [リリース](https://github.com/ThisIs-Developer/Markdown-Viewer/releases)
 
 </div>
 
@@ -47,6 +47,7 @@
   - [プロジェクトディレクトリ構成](#プロジェクトディレクトリ構成)
   - [Built With（技術スタック）](#built-with技術スタック)
   - [プライバシー](#プライバシー)
+  - [セキュリティとプライバシーの管理](#セキュリティとプライバシーの管理)
   - [コントリビューションとコード品質](#コントリビューションとコード品質)
   - [ショーケースとコミュニティプロジェクト](#ショーケースとコミュニティプロジェクト)
   - [コントリビューター](#コントリビューター)
@@ -71,7 +72,7 @@
 
 1. [オンライン Markdown エディター](https://markdownviewer.pages.dev/) を開きます。
 2. `.md` または `.markdown` ファイルをドラッグするか、そのまま書き始めます。
-3. 必要に応じてライブプレビュー、**Review**、**Insert Diagram & More**、エクスポート、Share Snapshot、Live Share を使います。
+3. 必要に応じてライブプレビュー、**Insert Diagram & More**、エクスポート、Share Snapshot、Live Share を使います。
 
 詳しくは Wiki の [機能](../wiki/Features.md#product-summary)、[プライバシー](../wiki/Home.md#privacy-at-a-glance)、[共有](../wiki/Features.md#share-markdown-with-snapshot-links)、[エクスポート](../wiki/Features.md#export-markdown-to-pdf-html-png-and-md)、[デスクトップ](../wiki/Features.md#desktop-app) を参照してください。
 
@@ -93,18 +94,22 @@ Markdown Viewer は基本的な Markdown 機能に加え、技術文書をより
    - **STL 3D Model Renderer**: 技術メモと一緒に 3D モデルをプレビュー。
    - **ABC Music Player & Sheet Music Viewer**: 楽譜レンダリングとブラウザー再生。
 
-3. **Comments & Suggestions**: Markdown ソースを変更せずに、レンダリング済みの文書ブロックへフィードバックを追加し、管理、解決できます。
-4. **Live Share Temporary Rooms**: 編集可能または閲覧専用のアクセスモードを使って、短時間の編集セッション、レビュー、ペアライティングをリアルタイムに行えます。
-5. **Share Snapshot Links**: 文書の状態をすばやく送る必要があるときに、読み取り専用または編集可能な時点リンクを作成できます。
-6. **LaTeX Math Notation**: MathJax でインライン数式と表示数式をレンダリングでき、数式の多いメモ、論文、技術説明に便利です。
-7. **Markdown to PDF, HTML & PNG Export**: 共有、印刷、アーカイブが必要な文書向けに、Markdown、HTML、PNG、Browser Print / Save as PDF、Legacy Raster PDF をエクスポートできます。
+3. **文書エクスプローラーと 2 文書分割表示**: 最大 50 件の保存済みファイルをネストしたフォルダーで整理し、一括操作を使い、2 つの文書を並べて Markdown、数式、図表、地図、STL、ABC 記譜まで完全にレンダリングできます。
+4. **Comments & Suggestions**: Markdown ソースを変更せずに、レンダリング済みの文書ブロックへフィードバックを追加し、管理、解決できます。
+5. **Live Share Temporary Rooms**: サーバーで確認されるホスト、編集可能、閲覧専用の権限を使って、短時間の編集、レビュー、ペアライティングをリアルタイムに行えます。
+6. **Share Snapshot Links**: 文書の状態をすばやく送るときに、読み取り専用または編集可能な時点リンクを作成できます。保存された大きなスナップショットは 90 日後に期限切れになります。
+7. **LaTeX Math Notation**: MathJax でインライン数式と表示数式をレンダリングでき、数式の多いメモ、論文、技術説明に便利です。
+8. **Markdown to PDF, HTML & PNG Export**: 共有、印刷、アーカイブが必要な文書向けに、Markdown、HTML、PNG、Browser Print / Save as PDF、Legacy Raster PDF をエクスポートできます。
+9. **プライバシーとセキュリティの管理**: ワークスペース設定で Private mode を有効にすると、文書とレビューデータをセッション中だけ保持できます。プレビューはサニタイズされ、エクスポート HTML は保護され、デスクトップのネイティブ API は制限されています。
 
 詳細、制限、プライバシーについては [機能リファレンス](../wiki/Features.md#product-summary) を参照してください。
 
 ## Markdown 編集とライブプレビュー
 
 - プレーン Markdown を書きながら、GFM、シンタックスハイライト、数式、アラート、脚注、表、タスクリスト、サニタイズ済み HTML をライブプレビューできます。
-- 複数の Markdown 文書をタブで扱い、タブの名前変更や複製、ローカル Markdown ファイルのインポート、通常の作業状態のブラウザー保存ができます。
+- レスポンシブなエクスプローラーで最大 50 件の保存済み Markdown ファイルを整理できます。固定された Workspace と Secret Workspace、ネストしたフォルダー、検索、最近使った項目、お気に入り、ドラッグ＆ドロップ移動、ホバー展開、端での自動スクロールに対応します。Secret Workspace の内容は端末上でパスワード暗号化されます。
+- ファイルメニューから 2 つの文書を並べて開けます。共通の操作で両側を Edit と Preview の間で切り替え、Preview では Markdown、数式、Mermaid とリモート図表、地図、STL モデル、ABC 記譜をレンダリングできます。エクスプローラーでは複数ファイルをまとめて開く、移動する、削除する操作ができ、空白領域や文書領域の右クリックから関連操作を開けます。
+- エディターのカーソル位置に画像、アニメーション GIF、MP4、WebM、Ogg 動画を貼り付け、アップロード、またはドロップできます。進行状況トーストがアップロード状態を示し、管理対象メディアは短いコンテンツアドレス型 HTTPS リンクとして、再読み込み、Share Snapshot、Live Share、Markdown エクスポート後も 90 日の期限まで利用できます。同じ初回同意の後、既存のインラインラスター画像も変換できます。
 - WYSIWYG 風ツールバーで入力を補助しつつ、Markdown ソースはそのまま管理できます。
 - 大きな文書はデバウンス処理とバックグラウンド Worker でプレビューし、入力の応答性を保ちます。
 
@@ -127,13 +132,13 @@ Markdown Viewer は、技術メモ、ドキュメント、ハードウェア記�
 
 ## 共有、共同編集、エクスポート
 
-- **Comments & Suggestions** は、Markdown を変更せずに表、見出し、段落、コードブロック、図へレビュー用フィードバックを追加します。通常のタブに保存され、アクティブな Live Share ルームでのみ同期されます。
-- **Share Snapshot** は、時点 Markdown 共有用のすばやいリンクを作成します。小さな文書は URL hash に保持でき、より大きなスナップショットは、そのバックエンドが構成されている場合に一時的な Cloudflare KV ストレージを使用します。
+- **Comments & Suggestions** は、Markdown を変更せずに、レンダリング済みの YAML、見出し、段落、コードブロック、図へレビュー層を追加します。フィードバックは追加、編集、解決、再開、削除、コピーができ、通常のタブに保存され、アクティブな Live Share ルームでのみ同期されます。
+- **Share Snapshot** は、時点 Markdown 共有用のすばやいリンクを作成します。小さな文書は URL hash に保持でき、より大きなスナップショットは、そのバックエンドが構成されている場合に Cloudflare KV へ最大 90 日間一時保存されます。リンクを持つ人は誰でも開けます。
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e62ca1a0-011a-4b01-90f9-e72638b9a6d5" alt="Share Snapshot" width="90%" />
 </p>
 
-- **Live Share rooms** は Cloudflare Durable Objects を使った一時的な共同編集機能で、編集可能な共同作業または閲覧専用レビューのアクセスモードがあります。レビューやペアライティングに便利ですが、エンドツーエンド暗号化ではありません。
+- **Live Share rooms** は Cloudflare Durable Objects を使った一時的な共同編集機能で、ホスト、編集可能、閲覧専用の権限をサーバーが確認します。レビューやペアライティングに便利ですが、エンドツーエンド暗号化ではありません。
 <p align="center">
   <img src="https://github.com/user-attachments/assets/4d7a72c7-8eec-48df-9f66-49fe9f205d4f" alt="Live Share rooms" width="90%" />
 </p>
@@ -205,18 +210,13 @@ docker compose up -d
    ```bash
    cd desktop-app
    ```
-2. インストール、準備、ビルドコマンドを実行します。
+2. 依存関係をインストールしてビルドします。
    ```powershell
-   # node 依存関係をインストールし、Neutralino バイナリをダウンロード
    npm install
-   node setup-binaries.js
-
-   # リソースをメイン Web アプリと同期
-   node prepare.js
-
-   # リリースアプリをビルド/コンパイル
    npm run build
    ```
+
+`npm run build` は必要な Neutralino バイナリをダウンロードし、ローカルリソースを準備して、7 つの自己完結型プラットフォーム実行ファイルを作成します。
 
 ビルド済みバイナリは [Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases) から入手できます。
 
@@ -232,22 +232,23 @@ docker compose up -d
 
 ```text
 Markdown-Viewer/
-+-- index.html              # Main web app shell
-+-- script.js               # App logic and UI controller
-+-- styles.css              # App and preview styles
-+-- preview-worker.js       # Markdown preview worker
-+-- sw.js                   # Service worker cache behavior
-+-- assets/                 # App images and icons
++-- index.html              # Web アプリ本体
++-- script.js               # アプリロジックと UI 制御
++-- styles.css              # アプリとプレビューのスタイル
++-- preview-worker.js       # Markdown プレビュー Worker
++-- sw.js                   # Service Worker キャッシュ
++-- assets/                 # アプリの画像とアイコン
+|   +-- i18n/              # UI 翻訳カタログと生成ツール
 +-- functions/              # Cloudflare Pages Functions
-+-- workers/                # Live Share Worker source
-+-- desktop-app/            # Neutralinojs desktop build
-+-- locales/                # Localized README summaries
-+-- wiki/                   # Project documentation
-+-- Dockerfile              # Docker image setup
-+-- docker-compose.yml      # Local container run config
-+-- wrangler.toml           # Cloudflare deployment config
-+-- README.md               # Main project overview
-+-- CHANGELOG.md            # Release history
++-- workers/                # Live Share Worker ソース
++-- desktop-app/            # Neutralinojs デスクトップ版
++-- locales/                # ローカライズ済み README
++-- wiki/                   # プロジェクト文書
++-- Dockerfile              # Docker イメージ設定
++-- docker-compose.yml      # ローカルコンテナー設定
++-- wrangler.toml           # Cloudflare デプロイ設定
++-- README.md               # プロジェクト概要
++-- CHANGELOG.md            # リリース履歴
 +-- LICENSE                 # Apache License 2.0
 ```
 
@@ -265,9 +266,9 @@ Markdown-Viewer/
 
 主な技術スタック: HTML、CSS、JavaScript、Bootstrap、Bootstrap Icons、Neutralinojs、Marked.js、Highlight.js、DOMPurify、MathJax、Mermaid、Leaflet、Three.js、ABCJS、Markmap、Yjs、jsPDF、html2canvas、Cloudflare Pages/Workers。
 
-依存関係の読み込み、CDN 利用、デスクトップ用ローカルライブラリについては [client library notes](../wiki/Configuration.md#client-libraries) を参照してください。
+依存関係の読み込み、CDN 利用、デスクトップ用ローカルライブラリについては [クライアントライブラリの説明](../wiki/Configuration.md#client-libraries) を参照してください。
 
-一部の高度な図表エンジンは PlantUML、Kroki、mermaid.ink などのリモートレンダラーを使います。挙動とプライバシーの詳細は [diagram renderer notes](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music) を参照してください。
+一部の高度な図表エンジンは PlantUML、Kroki、mermaid.ink などのリモートレンダラーを使います。挙動とプライバシーの詳細は [図表レンダラーの説明](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music) を参照してください。
 
 ---
 
@@ -275,13 +276,22 @@ Markdown-Viewer/
 
 Markdown Viewer はクラウドワークスペースではありません。通常の入力、プレビュー、ローカルファイル読み込み、タブの自動保存、テーマ設定、多くのエクスポートは端末上で行われます。ログインは不要で、分析、テレメトリ、広告、追跡 Cookie は実装していません。
 
-ネットワーク利用は GitHub インポート、リモート図表レンダラー、Share Snapshot、Live Share、CDN ライブラリ、外部文書リソースなど、ユーザーが使う機能に限られます。詳細は [data handling summary](../wiki/Features.md#data-handling-summary) を参照してください。
+ネットワーク利用は、同意後の管理対象メディアのアップロード、GitHub インポート、リモート図表レンダラー、Share Snapshot、Live Share、CDN ライブラリ、外部文書リソースなど、ユーザーが使う機能に限られます。ワークスペース設定の Private mode を使うと、編集とレビュー機能を保ったまま、文書内容、ワークスペース状態、レビューフィードバックをセッション中だけ保持できます。詳細は [データ処理の概要](../wiki/Features.md#data-handling-summary) を参照してください。
+
+## セキュリティとプライバシーの管理
+
+- プレビュー HTML は挿入前にサニタイズされます。エクスポート HTML には制限の厳しい CSP と、外部アセット用の SRI メタデータが含まれます。
+- Secret Workspace は PBKDF2-SHA-256 でパスワードからローカル鍵を生成し、AES-GCM でファイルとフォルダー名を暗号化します。鍵はロック解除中のセッションだけに保持され、忘れたパスワードは復元できません。
+- Cloudflare Pages は `_headers` を使い、CSP、クリックジャッキング対策、リファラーポリシー、権限ポリシー、MIME スニッフィング対策を適用します。機密パスは 404 にリダイレクトされます。
+- 管理対象メディアと保存型 Share Snapshot API のアップロード元は、本番アプリ、プレビュー、`null`、ローカル開発環境に制限されます。画像、GIF、動画は推測しにくい公開リンクで 90 日間取得できます。スナップショット応答は `no-store` で、作成者には削除トークンが返されます。
+- STL レンダリングは WebGL 処理前に、サイズ超過、有限でない形状、頂点数超過を拒否します。
+- Neutralino デスクトップ版は既定の `os.execCommand` を公開せず、ネイティブ API を明示的な許可リストに限定します。詳しくは [セキュリティモデル](../wiki/Features.md#security-model) と [設定リファレンス](../wiki/Configuration.md#share-api) を参照してください。
 
 ---
 
 ## コントリビューションとコード品質
 
-コミュニティからの貢献を歓迎します。Pull Request を作成する前に [contributing before changing code](../wiki/Contributing.md#before-changing-code) を確認してください。
+コミュニティからの貢献を歓迎します。Pull Request を作成する前に [コード変更前のコントリビューションガイド](../wiki/Contributing.md#before-changing-code) を確認してください。
 
 ### コアワークフロー概要:
 1. **Fork** して機能ブランチを作成します（`git checkout -b feature/your-feature`）。
@@ -326,4 +336,4 @@ Markdown Viewer は PC 上の小さな個人プロジェクトとして始まり
 開発と保守: **[ThisIs-Developer](https://github.com/ThisIs-Developer)**
 
 *   **バグ報告と要望:** [Issue を送信](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)
-*   **ドキュメント:** [Wiki start here](../wiki/Home.md#start-here)
+*   **ドキュメント:** [Wiki の案内](../wiki/Home.md#start-here)

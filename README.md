@@ -37,7 +37,7 @@
   - [About the Project](#about-the-project)
   - [Try It Quickly](#try-it-quickly)
   - [Key Features](#key-features)
-  - [Markdown Editing and Live Preview](#markdown-editing-and-live-preview)
+  - [Media Support and Storage](#media-support-and-storage)
   - [Diagrams and Visual Content](#diagrams-and-visual-content)
   - [Sharing, Collaboration, and Export](#sharing-collaboration-and-export)
   - [System Architecture](#system-architecture)
@@ -81,39 +81,29 @@ For detailed notes, see the wiki sections for [features](wiki/Features.md#produc
 Markdown Viewer handles the usual Markdown basics, but its real value is helping users build richer technical documents without leaving the editor.
 
 1. **GitHub-Flavored Markdown (GFM)**: write normal Markdown with tables, task lists, strikethrough, autolinks, code blocks, alerts, footnotes, and live preview. Most Markdown editors cover the basics; the features below show what Markdown Viewer adds for richer technical documents.
-2. **Advanced Diagram Support & More**: one **Insert Diagram & More** button opens visual templates, previews, and insert-ready examples so users can add complex content without memorizing every syntax.
+2. **Advanced Diagram Support & More**: insert diagrams, charts, maps, 3D models, and music notation from ready-to-use templates and previews.
 
-   - **Mermaid**: create flowcharts, sequences, Gantt charts, state diagrams, and docs-friendly architecture visuals.
-   - **PlantUML**: add sequence, class, use case, and engineering diagrams for software design notes.
-   - **Graphviz**: render DOT graphs for trees, dependency maps, and network relationships.
-   - **D2**: build clean diagrams-as-code with modern layout output.
-   - **Vega-Lite**: describe charts and data visualizations directly inside Markdown.
-   - **Markmap**: turn nested Markdown lists into mind maps for planning and study notes.
-   - **WaveDrom**: document timing diagrams and signal waveforms for hardware or protocol work.
-   - **Map**: preview GeoJSON and TopoJSON data without leaving the document.
-   - **STL 3D Model Renderer**: inspect 3D model previews alongside technical notes.
-   - **ABC Music Player & Sheet Music Viewer**: render sheet music and play notation in the browser.
-
-3. **Comments & Suggestions**: add, manage, and resolve feedback on rendered document blocks without changing the Markdown source.
-4. **Live Share Temporary Rooms**: collaborate in real time for quick editing sessions, reviews, or pair-writing, with server-checked host, editable, and view-only capabilities.
-5. **Share Snapshot Links**: create view-only or editable point-in-time links when you need to send a document state quickly. Large stored snapshots expire after 90 days.
-6. **LaTeX Math Notation**: render inline and display formulas with MathJax, useful for math-heavy notes, papers, and technical explanations.
-7. **Markdown to PDF, HTML & PNG Export**: export Markdown, HTML, PNG, Browser Print / Save as PDF, or Legacy Raster PDF for documents that need sharing, printing, or archiving.
-8. **Privacy and Security Controls**: enable Private mode from Workspace settings to keep document and review data session-only, and rely on sanitized previews, hardened export HTML, and restricted desktop native APIs.
+3. **Document Explorer & Two-Document Split**: organize up to 50 stored files in nested folders, use bulk file actions, and open two documents side by side with full Markdown, math, diagram, map, STL, and ABC rendering.
+4. **Comments & Suggestions**: add, manage, and resolve feedback on rendered document blocks without changing the Markdown source.
+5. **Live Share Temporary Rooms**: collaborate in real time for quick editing sessions, reviews, or pair-writing, with server-checked host, editable, and view-only capabilities.
+6. **Share Snapshot Links**: create view-only or editable point-in-time links when you need to send a document state quickly. Large stored snapshots expire after 90 days.
+7. **LaTeX Math Notation**: render inline and display formulas with MathJax, useful for math-heavy notes, papers, and technical explanations.
+8. **Markdown to PDF, HTML & PNG Export**: export Markdown, HTML, PNG, Browser Print / Save as PDF, or Legacy Raster PDF for documents that need sharing, printing, or archiving.
+9. **Privacy and Security Controls**: enable Private mode from Workspace settings to keep document and review data session-only, and rely on sanitized previews, hardened export HTML, and restricted desktop native APIs.
 
 For the full feature list, details, limitations, and privacy notes, see the [features reference](wiki/Features.md#product-summary).
 
-## Markdown Editing and Live Preview
+## Media Support and Storage
 
-- Write plain Markdown in a focused editor while the live preview renders GitHub-Flavored Markdown, syntax highlighting, math, alerts, footnotes, tables, task lists, and sanitized HTML.
-- Organize up to 50 Markdown files in a closable, responsive left sidebar with a persistent tab-strip toggle, fixed Default and Secret workspaces, one-level folders, search, Recent, Favorites, single-click opening, precise drag-and-drop moves, hover-to-expand folders, and edge auto-scrolling. Secret Workspace content is password-encrypted on the device, and multi-file imports show compact progress without blocking the editor.
-- Paste, upload, or drop images, animated GIFs, and MP4, WebM, or Ogg videos at the editor cursor. A GitHub-import-style toast reports media upload progress, and managed media uses short content-addressed HTTPS links that remain usable across refreshes, Share Snapshot, Live Share, and Markdown export until their 90-day expiry. Existing inline raster data can be converted after the same first-use consent.
-- Use WYSIWYG-style toolbar helpers for common Markdown syntax while keeping full control of the plain-text Markdown source.
-- Preview large documents with debounced rendering and a background worker so typing stays responsive.
+- Paste, upload, or drop AVIF, BMP, GIF (including animated GIFs), JPEG, PNG, and WebP images, plus MP4, WebM, or Ogg videos, at the editor cursor.
+- After first-use consent, media is uploaded to temporary Cloudflare storage and inserted as a short, content-addressed HTTPS link.
+- Managed media links are public to anyone who has them and expire 90 days after the latest upload of the same content.
+- Share Snapshot and Live Share include the media link in the Markdown; they do not create another media copy. Recipients can view the media until its link expires.
+
 
 ## Diagrams and Visual Content
 
-Markdown Viewer works well as a Markdown diagram editor for technical notes, docs, hardware writeups, music snippets, and data-heavy documents.
+Use **Insert Diagram & More** for ready-to-use templates and previews:
 
 - **Mermaid, PlantUML, Graphviz / DOT, and D2** for flowcharts, sequence diagrams, class diagrams, architecture sketches, dependency graphs, and diagram-as-code workflows.
 - **Vega-Lite and Markmap** for Markdown charts, data visualization, and mind maps.
@@ -141,10 +131,7 @@ Markdown Viewer works well as a Markdown diagram editor for technical notes, doc
   <img src="https://github.com/user-attachments/assets/4d7a72c7-8eec-48df-9f66-49fe9f205d4f" alt="Live Share rooms" width="90%" />
 </p>
 
-- **Markdown export** downloads the raw `.md` document.
-- **HTML export** creates a standalone rendered document.
-- **PDF export** includes Browser Print / Save as PDF and Legacy Raster PDF modes.
-- **PNG export** captures the rendered preview as an image.
+- **Exports:** download raw Markdown, standalone HTML, or a PNG of the rendered preview. PDF offers Browser Print / Save as PDF for selectable text and Legacy Raster PDF, which captures the rendered preview as page-sized images to preserve complex layouts.
 
 ---
 
@@ -202,18 +189,13 @@ Build the Neutralinojs desktop app from source:
    ```bash
    cd desktop-app
    ```
-2. Run the install, prepare, and build commands:
+2. Install dependencies and build:
    ```powershell
-   # Install node dependencies and download Neutralino binaries
    npm install
-   node setup-binaries.js
-
-   # Synchronize resources with the main web app
-   node prepare.js
-
-   # Build/compile the release application
    npm run build
    ```
+
+`npm run build` downloads the required Neutralino binaries, prepares local resources, and creates seven self-contained platform executables.
 
 Prebuilt binaries are available from [Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases).
 
