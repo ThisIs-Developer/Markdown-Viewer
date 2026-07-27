@@ -26,9 +26,29 @@
 
 </div>
 
+<details>
+<summary><strong>Table of contents</strong> (click to expand)</summary>
+
+- [What Markdown Viewer Does](#what-markdown-viewer-does)
+- [Highlights](#highlights)
+- [Quick Start](#quick-start)
+- [Local and Network Behavior](#local-and-network-behavior)
+- [Visual Renderer Summary](#visual-renderer-summary)
+- [Documentation](#documentation)
+- [Important Limits](#important-limits)
+- [Showcase Projects](#showcase-projects)
+- [Development Journey](#development-journey)
+- [Contributors](#contributors)
+- [Contributing and Support](#contributing-and-support)
+- [License](#license)
+
+</details>
+
 ## What Markdown Viewer Does
 
 Markdown Viewer is an open source editor for `.md` and `.markdown` documents. It combines a plain-text Editor with a sanitized Preview, a multi-document Workspace, review tools, rich visual renderers, import/export workflows, point-in-time Share Snapshot links, and temporary Live Share rooms.
+
+What distinguishes Markdown Viewer is the combination of local-first, multi-document organization with review workflows, rich visual renderers, flexible exports, and optional link-based sharing in one account-free interface. The same project can be used as a hosted web app, installable PWA, self-hosted Docker deployment, or Neutralino desktop application, and its documentation makes network-dependent behavior explicit.
 
 It is intended for developers, technical writers, students, researchers, and anyone who wants to work with Markdown without creating an account. Normal editing, Preview rendering, local imports, document organization, and most exports happen on the device. Features that use the network are identified below and documented in detail.
 
