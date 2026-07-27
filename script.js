@@ -7379,6 +7379,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function disposeDocumentSplitPreviewResources() {
+    if (!documentSplitPreview) return;
+    documentSplitPreview.querySelectorAll('.geojson-map, .topojson-map').forEach(function(node) {
+      if (node._leafletMap) {
+        node._leafletMap.remove();
+        node._leafletMap = null;
+      }
+    });
+    activeStlViews.forEach(function(view, id) {
+      if (view.container && documentSplitPreview.contains(view.container)) {
+        disposeStlView(id);
+      }
+    });
+  }
+
   function renderDocumentSplitPreview(tab) {
     if (!documentSplitPreview || !tab) return;
     const content = tab.content || '';
@@ -7386,7 +7401,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentSplitPreviewTabId === tab.id &&
       documentSplitPreviewContent === content &&
       documentSplitPreview.childNodes.length &&
-      !documentSplitPreview.querySelector('.diagram-viewer.is-loading') &&
+      !documentSplitPreview.querySelector(
+        '.diagram-viewer.is-loading, .geojson-container.is-loading, .topojson-container.is-loading, .stl-container.is-loading'
+      ) &&
       !(hasRawMathText(documentSplitPreview) && !documentSplitPreview.querySelector('mjx-container'))
     ) {
       return;
@@ -7396,6 +7413,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const tableHtml = parsed.frontmatter ? renderFrontmatterTable(parsed.frontmatter) : '';
     const referenceData = extractReferenceDefinitions(parsed.body);
     const html = tableHtml + marked.parse(referenceData.cleanedMarkdown);
+    disposeDocumentSplitPreviewResources();
     documentSplitPreview.innerHTML = sanitizePreviewHtml(html);
     applyReferencePreviewLinks(documentSplitPreview, referenceData.definitions);
     enhanceGitHubAlerts(documentSplitPreview);
@@ -7421,6 +7439,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     );
     renderRemoteDiagramNodes([documentSplitPreview], context);
     renderAbcNodes([documentSplitPreview], context);
+    renderMapNodes([documentSplitPreview], context);
+    renderStlNodes([documentSplitPreview], context);
     renderMathJaxNodes([documentSplitPreview], content, context);
   }
 
@@ -7500,6 +7520,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   function closeDocumentSplitView(options) {
     const settings = options || {};
     saveSecondarySplitState();
+    disposeDocumentSplitPreviewResources();
+    if (documentSplitPreview) documentSplitPreview.textContent = '';
     secondarySplitTabId = null;
     documentSplitPreviewTabId = null;
     documentSplitPreviewContent = null;
@@ -8834,6 +8856,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderMapNode(node, isTopo, context) {
+    if (!node || !node.isConnected || !isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
     if (!originalCode) return;
     const decodedCode = decodeURIComponent(originalCode);
@@ -8926,10 +8949,50 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       if (container) container.classList.remove('is-loading');
     } catch (err) {
+      if (!isPreviewRenderContextCurrent(context) || !node.isConnected) return;
       console.error("Map rendering failed:", err);
       node.innerHTML = `<div class="render-error-msg" style="padding: 2em; color: var(--text-color); text-align: center;">Error rendering map: ${escapeHtml(err.message)}</div>`;
       if (container) container.classList.remove('is-loading');
     }
+  }
+
+  function renderMapNodes(roots, context) {
+    const geojsonNodes = queryPreviewRoots(roots, '.geojson-map');
+    const topojsonNodes = queryPreviewRoots(roots, '.topojson-map');
+    if (geojsonNodes.length === 0 && topojsonNodes.length === 0) return;
+
+    const renderAll = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      geojsonNodes.forEach(function(node) { renderMapNode(node, false, context); });
+      topojsonNodes.forEach(function(node) { renderMapNode(node, true, context); });
+    };
+    const loadPromises = [];
+    if (typeof L === 'undefined') {
+      loadPromises.push(loadStyle(CDN.leaflet_css));
+      loadPromises.push(loadScript(CDN.leaflet_js));
+    }
+    if (topojsonNodes.length > 0 && !getTopoJsonLibrary()) {
+      loadPromises.push(loadScript(CDN.topojson).then(function() {
+        if (!getTopoJsonLibrary()) {
+          throw new Error('TopoJSON renderer failed to initialize.');
+        }
+      }));
+    }
+
+    if (loadPromises.length === 0) {
+      renderAll();
+      return;
+    }
+    Promise.all(loadPromises).then(function() {
+      renderAll();
+    }).catch(function(error) {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      console.warn('Failed to load map libraries:', error);
+      geojsonNodes.concat(topojsonNodes).forEach(function(node) {
+        const container = node.closest('.geojson-container') || node.closest('.topojson-container');
+        if (container) container.classList.remove('is-loading');
+      });
+    });
   }
 
   const MAX_STL_SOURCE_CHARS = 2 * 1024 * 1024;
@@ -9264,6 +9327,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderStlNode(node, context) {
+    if (!node || !node.isConnected || !isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
     if (!originalCode) return;
     const decodedCode = decodeURIComponent(originalCode);
@@ -9282,15 +9346,54 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       addStlToolbar(container, node, decodedCode, view);
     } catch (err) {
+      if (!isPreviewRenderContextCurrent(context) || !node.isConnected) return;
       console.error("STL rendering failed:", err);
       node.innerHTML = `<div class="render-error-msg" style="padding: 2em; color: var(--text-color); text-align: center;">Error rendering 3D model: ${escapeHtml(err.message)}</div>`;
       if (container) container.classList.remove('is-loading');
     }
   }
 
+  function renderStlNodes(roots, context) {
+    const stlNodes = queryPreviewRoots(roots, '.stl-viewer');
+    if (stlNodes.length === 0) return;
+
+    const renderAll = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      stlNodes.forEach(function(node) { renderStlNode(node, context); });
+    };
+    const loadLoaderAndControls = function() {
+      if (!isPreviewRenderContextCurrent(context)) return Promise.resolve();
+      const loadPromises = [];
+      if (typeof THREE.STLLoader === 'undefined') {
+        loadPromises.push(loadScript(CDN.stlLoader));
+      }
+      if (typeof THREE.OrbitControls === 'undefined') {
+        loadPromises.push(loadScript(CDN.orbitControls));
+      }
+      return loadPromises.length > 0 ? Promise.all(loadPromises) : Promise.resolve();
+    };
+    const threeReady = typeof THREE === 'undefined'
+      ? loadScript(CDN.three)
+      : Promise.resolve();
+
+    threeReady.then(function() {
+      if (!isPreviewRenderContextCurrent(context)) return null;
+      return loadLoaderAndControls();
+    }).then(function() {
+      renderAll();
+    }).catch(function(error) {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      console.warn('Failed to load Three.js libraries:', error);
+      stlNodes.forEach(function(node) {
+        const container = node.closest('.stl-container');
+        if (container) container.classList.remove('is-loading');
+      });
+    });
+  }
+
   function updateMapThemes() {
     if (typeof L === 'undefined') return;
-    const mapNodes = markdownPreview.querySelectorAll('.geojson-map, .topojson-map');
+    const mapNodes = queryPreviewRoots([markdownPreview, documentSplitPreview], '.geojson-map, .topojson-map');
     mapNodes.forEach(node => {
       const map = node._leafletMap;
       if (map) {
@@ -9329,7 +9432,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function updateStlThemes() {
     if (typeof THREE === 'undefined') return;
-    const stlNodes = markdownPreview.querySelectorAll('.stl-viewer');
+    const stlNodes = queryPreviewRoots([markdownPreview, documentSplitPreview], '.stl-viewer');
     stlNodes.forEach(node => {
       const view = activeStlViews.get(node.id);
       if (view && view.scene) {
@@ -9756,100 +9859,15 @@ ${selector} .arrowheadPath {
     }
 
     try {
-      const geojsonNodes = queryPreviewRoots(roots, '.geojson-map');
-      const topojsonNodes = queryPreviewRoots(roots, '.topojson-map');
-      
-      if (geojsonNodes.length > 0 || topojsonNodes.length > 0) {
-        const renderAllMaps = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          geojsonNodes.forEach(node => renderMapNode(node, false, context));
-          topojsonNodes.forEach(node => renderMapNode(node, true, context));
-        };
-        
-        const promises = [];
-        if (typeof L === 'undefined') {
-          promises.push(loadStyle(CDN.leaflet_css));
-          promises.push(loadScript(CDN.leaflet_js));
-        }
-        if (topojsonNodes.length > 0 && !getTopoJsonLibrary()) {
-          promises.push(loadScript(CDN.topojson).then(function() {
-            if (!getTopoJsonLibrary()) {
-              throw new Error('TopoJSON renderer failed to initialize.');
-            }
-          }));
-        }
-        
-        if (promises.length > 0) {
-          Promise.all(promises).then(function() {
-            renderAllMaps();
-          }).catch(function(e) {
-            console.warn('Failed to load map libraries:', e);
-            geojsonNodes.concat(topojsonNodes).forEach(node => {
-              const container = node.closest('.geojson-container') || node.closest('.topojson-container');
-              if (container) container.classList.remove('is-loading');
-            });
-          });
-        } else {
-          renderAllMaps();
-        }
-      }
-    } catch (e) {
-      console.warn("GeoJSON/TopoJSON processing failed:", e);
+      renderMapNodes(roots, context);
+    } catch (error) {
+      console.warn("GeoJSON/TopoJSON processing failed:", error);
     }
 
     try {
-      const stlNodes = queryPreviewRoots(roots, '.stl-viewer');
-      if (stlNodes.length > 0) {
-        const renderAllStls = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          stlNodes.forEach(node => renderStlNode(node, context));
-        };
-        
-        const promises = [];
-        if (typeof THREE === 'undefined') {
-          promises.push(loadScript(CDN.three));
-        }
-        
-        const loadLoaderAndControls = function() {
-          const subPromises = [];
-          if (typeof THREE.STLLoader === 'undefined') {
-            subPromises.push(loadScript(CDN.stlLoader));
-          }
-          if (typeof THREE.OrbitControls === 'undefined') {
-            subPromises.push(loadScript(CDN.orbitControls));
-          }
-          if (subPromises.length > 0) {
-            return Promise.all(subPromises);
-          }
-          return Promise.resolve();
-        };
-        
-        if (typeof THREE === 'undefined') {
-          loadScript(CDN.three).then(function() {
-            return loadLoaderAndControls();
-          }).then(function() {
-            renderAllStls();
-          }).catch(function(e) {
-            console.warn('Failed to load Three.js libraries:', e);
-            stlNodes.forEach(node => {
-              const container = node.closest('.stl-container');
-              if (container) container.classList.remove('is-loading');
-            });
-          });
-        } else {
-          loadLoaderAndControls().then(function() {
-            renderAllStls();
-          }).catch(function(e) {
-            console.warn('Failed to load Three.js addons:', e);
-            stlNodes.forEach(node => {
-              const container = node.closest('.stl-container');
-              if (container) container.classList.remove('is-loading');
-            });
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("STL processing failed:", e);
+      renderStlNodes(roots, context);
+    } catch (error) {
+      console.warn("STL processing failed:", error);
     }
 
     try {
