@@ -4,6 +4,8 @@ Markdown Viewer supports standard Markdown, GitHub-Flavored Markdown (GFM), sele
 
 All rendered HTML is sanitized before display. Raw HTML is useful for formatting, but scripts and unsafe event handlers are removed. The preview is GitHub-style and GFM-oriented, not a promise of byte-for-byte identical rendering to GitHub, Pandoc, Obsidian, Typora, or other Markdown tools.
 
+For editing workflows, see [Usage Guide](Usage-Guide.md). For renderer network and privacy boundaries, see [Privacy and Security](Privacy-and-Security.md).
+
 ## Core Markdown and GFM
 
 ### Headings
@@ -401,9 +403,32 @@ C D E F | G A B c |
 
 ABCJS renders sheet music. Playback uses browser audio support and shows a synchronized cursor and note highlighting when audio is supported. The toolbar can copy or export the rendered score as PNG or SVG.
 
+## Official Renderer Documentation
+
+Use these upstream references for complete syntax and renderer-specific behavior:
+
+| Markdown Viewer feature | Official documentation |
+| --- | --- |
+| Mermaid | [Mermaid](https://mermaid.js.org/) |
+| PlantUML | [PlantUML](https://plantuml.com/) |
+| Remote diagram service | [Kroki](https://kroki.io/) |
+| Graphviz/DOT | [Graphviz](https://graphviz.org/) |
+| D2 | [D2](https://d2lang.com/) |
+| Vega-Lite | [Vega-Lite](https://vega.github.io/vega-lite/) |
+| WaveDrom | [WaveDrom](https://wavedrom.com/) |
+| Markmap | [Markmap](https://markmap.js.org/) |
+| GeoJSON and TopoJSON maps | [Leaflet](https://leafletjs.com/) and [TopoJSON](https://github.com/topojson/topojson) |
+| STL | [Three.js](https://threejs.org/) |
+| ABC notation | [ABCJS](https://www.abcjs.net/) |
+| Math | [MathJax](https://www.mathjax.org/) |
+
+Upstream support does not imply that Markdown Viewer exposes every upstream option. The verified fence behavior and limits on this page describe the application.
+
 ## Export Notes for Markdown Authors
 
 - Browser Print is usually best for long documents.
 - Raster PDF and PNG exports are screenshots of rendered HTML and can be affected by cross-origin images, very large canvases, and late-loading remote diagrams.
 - Remote-rendered diagrams should finish rendering before export.
 - Wide tables, large diagrams, and huge STL models may be scaled or moved during export.
+
+Related pages: [Features](Features.md), [Usage Guide](Usage-Guide.md), and [Troubleshooting](Troubleshooting.md).

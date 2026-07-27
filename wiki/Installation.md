@@ -1,6 +1,6 @@
 # Install Markdown Viewer: Browser, Docker, Cloudflare, and Desktop
 
-Markdown Viewer is a browser-based Markdown editor and viewer that can run as a static web app, a self-hosted Docker site, a Cloudflare deployment with optional sharing features, or a Neutralino desktop app. Choose the setup that matches how you want to open, read, edit, preview, and export Markdown files.
+Markdown Viewer is a browser-based Markdown editor and viewer that can run as a static web application, a self-hosted Docker site, a Cloudflare deployment with optional sharing features, or a Neutralino desktop application. Choose the setup that matches how you want to open, read, edit, preview, and export Markdown files.
 
 ## Requirements
 
@@ -30,7 +30,18 @@ npx serve . -p 8080
 
 Open `http://localhost:8080`.
 
-This runs the editor, split live preview, sync scrolling, local storage, local `.md` file imports, exports, PWA registration, and CDN-loaded renderers. The default local client sends consented managed-media uploads to the production image/media API. Other Cloudflare-only features such as stored Share Snapshot and Live Share require their matching deployed endpoints.
+This runs the Editor, Split view, live Preview, sync scrolling, local storage, local `.md` file imports, exports, PWA registration, and CDN-loaded renderers. The default local client sends consented managed-media uploads to the production image/media API. Other Cloudflare-only features such as stored Share Snapshot and Live Share require their matching deployed endpoints.
+
+An individual local Markdown import is limited to 10 MB. See [Features: Known Technical Limits](Features.md#known-technical-limits) for the other enforced limits.
+
+## Install as a PWA
+
+1. Open the application over HTTPS or `localhost`.
+2. Wait for the first page load and Service Worker registration.
+3. Use the browser's **Install** or **Add to Home Screen** action.
+4. Launch the installed application once while online and open any renderer you expect to use offline so its CDN libraries can be cached.
+
+The PWA is offline-capable, not fully offline on first use. Network-backed sharing, import, media, remote diagrams, external assets, and map tiles always need connectivity.
 
 ## Docker
 
@@ -59,6 +70,8 @@ docker compose up -d --build
 ```
 
 The Docker image serves static files with Nginx. It does not magically provide Cloudflare KV or Durable Objects; deploy those separately if you want stored Share Snapshot or Live Share.
+
+> **Known limitation:** The checked-in root `Dockerfile` does not copy `preview-worker.js` or `sample.md`, while `sw.js` expects both during critical precache. The stock image can use main-thread Preview fallback, but large-Document Worker rendering and PWA/offline installation are incomplete. This documentation audit does not change Docker behavior. See [Docker Deployment](Docker-Deployment.md#known-stock-image-limitation).
 
 ## Static Hosting
 
@@ -96,9 +109,9 @@ Deploy the live room worker with:
 wrangler deploy -c wrangler.live-room.toml
 ```
 
-Then deploy the Pages project with `wrangler.toml` or your Cloudflare Pages configuration. See [Live Share Cloudflare](Live-Share-Cloudflare) and [Configuration](Configuration).
+Then deploy the Pages project with `wrangler.toml` or your Cloudflare Pages configuration. See [Live Share](Live-Share-Cloudflare.md) and [Configuration](Configuration.md).
 
-## Desktop App
+## Desktop Application
 
 From `desktop-app/`:
 
@@ -126,7 +139,9 @@ The development and build commands run setup automatically. Setup:
 - Rewrites dynamic renderer library paths to local `/libs/...` files.
 - Prepares bundled renderer and export libraries for local desktop loading after setup.
 
-The desktop app uses native open/save dialogs for Markdown and HTML files, asks before closing, and can load a Markdown file passed as a command-line argument.
+See [Desktop Application](Desktop-App.md) for output names, native permissions, and platform launch notes.
+
+The desktop application uses native open/save dialogs for Markdown and HTML files, asks before closing, and can load a Markdown file passed as a command-line argument.
 
 ## Offline Use
 
@@ -160,3 +175,27 @@ xattr -d com.apple.quarantine markdown-viewer-mac_universal
 chmod +x markdown-viewer-mac_universal
 ./markdown-viewer-mac_universal
 ```
+
+Run quarantine-removal commands only for a binary you trust.
+
+## Official Platform Documentation
+
+- [Docker documentation](https://docs.docker.com/)
+- [Cloudflare Pages Functions](https://developers.cloudflare.com/pages/functions/)
+- [Cloudflare Workers KV](https://developers.cloudflare.com/kv/)
+- [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/)
+- [Neutralinojs documentation](https://neutralino.js.org/docs/)
+
+These upstream pages describe their platforms. Markdown Viewer-specific commands, bindings, and limitations remain documented in this Wiki.
+
+## Validate an Installation
+
+- Open a local `.md` file smaller than 10 MB.
+- Switch among Editor, Split view, and Preview.
+- Render one client-side fence such as `mermaid` and one remote fence such as `graphviz` if remote rendering is intended.
+- Export Markdown and HTML.
+- Confirm Service Worker registration only on HTTPS or localhost.
+- For Cloudflare, create a stored Share Snapshot and test a Live Share room from a second browser profile.
+- For desktop, test native open/save and verify that `os.execCommand` remains unavailable in the default build.
+
+If a check fails, use [Troubleshooting](Troubleshooting.md).

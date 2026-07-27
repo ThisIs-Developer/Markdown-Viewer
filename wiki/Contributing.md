@@ -4,10 +4,12 @@ Thanks for helping improve Markdown Viewer. Contributions can include bug report
 
 ## Before Changing Code
 
-- Read [Features](Features) to understand current user-facing behavior and privacy boundaries.
+- Read [Features](Features.md) to understand current user-facing behavior and [Privacy and Security](Privacy-and-Security.md) for data boundaries.
 - Check `CHANGELOG.md` for historical context.
 - Keep changes scoped to the feature or bug you are working on.
 - Do not remove user-facing behavior from docs unless the code no longer implements it.
+
+Create a branch; do not work directly on `main`. Keep documentation-only changes separate from application behavior changes when practical.
 
 ## Local Web Development
 
@@ -61,13 +63,65 @@ When changing managed media, snapshot, or live behavior, update the relevant fil
 
 ## Documentation Rules
 
-- Update existing wiki pages instead of creating new pages for small topics.
+- Follow [Documentation Style Guide](Documentation-Style-Guide.md).
+- Update the responsible Wiki page instead of creating a new page for a small addition.
 - Document user-facing behavior, limits, data handling, and privacy implications.
 - Keep wording simple and direct.
 - If a feature sends data to a service, say so.
 - If a feature is local-only, say where it is stored.
 - Keep README summaries aligned with the wiki.
 - When visible interface text changes, regenerate `assets/i18n/*.json`, review every new translation in context, and update `wiki/Localization.md` if the workflow changes.
+- Verify claims against current code and tests rather than copying an older changelog statement.
+- Use explicit `.md` extensions for repository-relative documentation links.
+
+## Translation Contributions
+
+1. Finalize the English source.
+2. Review [Terminology Glossary](Terminology-Glossary.md).
+3. Update the relevant localized README or interface catalog without translating code, commands, paths, URLs, routes, keys, library names, Markdown syntax, or branch names.
+4. Preserve Markdown structure, links, anchors, tables, and code fences.
+5. Compare the translation with the English source for technical meaning and omissions.
+6. Review grammar, UI-label consistency, heading length, and link targets in context.
+7. Run `node assets/i18n/generate-ui-locales.mjs` only when interface catalogs are in scope, then review generated output before committing.
+8. Run the desktop preparation workflow when interface catalogs change so bundled copies remain synchronized.
+
+Detailed Wiki pages are maintained in English. When no localized page exists, label the English destination instead of creating a broken localized link.
+
+## Testing
+
+Choose checks that match the change:
+
+```bash
+npm run build
+npm run test:e2e
+```
+
+`npm run build` runs the repository static asset validator. `npm run test:e2e` runs Playwright, and `npm test` runs both. Use a focused Playwright spec while iterating, then the broader applicable suite before a pull request.
+
+For documentation:
+
+- run `git diff --check`;
+- validate every relative file, image, and heading anchor;
+- check Markdown fences and one-H1 structure;
+- compare localized README headings and navigation;
+- search for outdated terminology and unsupported claims; and
+- review `git diff --name-only` to confirm the intended scope.
+
+At commit `5511dc7`, the static validator includes a pre-existing reference to missing `functions/api/report-issue.js`. If that baseline remains, `npm run build` reports the missing asset before documentation changes. Record the baseline failure accurately; do not change product source in a documentation-only pull request.
+
+## Issue Reports
+
+Search [existing issues](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) before opening a new one. Include:
+
+- affected version or commit;
+- browser/operating system and delivery target;
+- exact reproduction steps;
+- minimal non-sensitive Markdown;
+- expected and actual results;
+- console/network errors; and
+- screenshots only when they add useful evidence.
+
+Do not attach confidential Documents, managed-media URLs, Share Snapshot bearer links, Live Share invitations, room secrets, capabilities, or deletion tokens.
 
 ## Commit Messages
 
@@ -97,6 +151,8 @@ A good PR includes:
 
 Please do not open public issues for vulnerabilities. Use GitHub Security Advisories if available or contact the maintainers privately with a minimal reproduction and impact notes.
 
+Include the affected version/commit, required preconditions, impact, minimal reproduction, and a suggested mitigation when known. Do not test against data or systems you do not own or have permission to assess.
+
 ## Repository Map
 
 | Path | Purpose |
@@ -114,3 +170,5 @@ Please do not open public issues for vulnerabilities. Use GitHub Security Adviso
 | `workers/live-room-worker.js` | Live Share Durable Object relay. |
 | `desktop-app/` | Neutralino desktop wrapper and build preparation. |
 | `wiki/` | Documentation source pages. |
+
+Related pages: [Installation](Installation.md), [Localization](Localization.md), [Documentation Style Guide](Documentation-Style-Guide.md), and [Troubleshooting](Troubleshooting.md).

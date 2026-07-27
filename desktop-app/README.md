@@ -1,12 +1,12 @@
-# Markdown Viewer Desktop App
+# Markdown Viewer Desktop Application
 
-This folder contains the Neutralinojs desktop wrapper for Markdown Viewer. It turns the browser-based Markdown editor, viewer, and reader into a lightweight desktop build for opening local `.md` files, using split live preview, exporting documents, and working with native file dialogs. It reuses the root web app and adds window lifecycle handling, desktop storage mirroring, and prepared local renderer assets.
+This folder contains the Neutralinojs desktop wrapper for Markdown Viewer. It turns the browser-based Markdown editor and viewer into a lightweight desktop build for opening local `.md` files, using Split view and live Preview, exporting Documents, and working with native file dialogs. It reuses the root web app and adds window lifecycle handling, desktop storage mirroring, and prepared local renderer assets.
 
-For the complete product behavior and privacy reference, see [../wiki/Features.md](../wiki/Features.md).
+For complete product behavior, see [Features](../wiki/Features.md). For storage and network boundaries, see [Privacy and Security](../wiki/Privacy-and-Security.md).
 
 ## Architecture
 
-The desktop app shares the same core product code as the browser version:
+The desktop application shares the same core product code as the browser version:
 
 - `../index.html`
 - `../script.js`
@@ -32,6 +32,7 @@ Desktop-only files:
 - A Markdown file passed as a launch argument is loaded into the editor.
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
+- Private mode and **Reset workspace** clear persisted normal and Secret Workspace Document data. Export needed Documents before using either control.
 
 Network features still use the network when invoked: managed media upload, GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links.
 
@@ -78,9 +79,9 @@ Native APIs are intentionally allowlisted: app exit, open/save dialogs, message 
 
 ## Local Renderer Security
 
-Markdown content is treated as untrusted input. The desktop app does not allow Markdown preview rendering to run local shell commands by default. Native file open/save remains available through Neutralino dialogs and filesystem APIs.
+Markdown content is treated as untrusted input. The desktop application does not allow Markdown Preview rendering to run local shell commands by default. Native file open/save remains available through Neutralino dialogs and filesystem APIs.
 
-Remote-safe diagram rendering continues to work where supported. Local command renderers such as D2 or PlantUML should only be enabled in a custom build after the user has explicitly accepted that local renderer programs process document content on their machine, and only fixed commands with stdin input should be allowed.
+Remote diagram rendering continues to work where supported. PlantUML and D2 use their remote paths in the standard build. Local command renderers should only be enabled in a custom build after the user has explicitly accepted that local renderer programs process Document content on the machine, and only fixed commands with standard input should be allowed.
 
 ## Docker Build
 

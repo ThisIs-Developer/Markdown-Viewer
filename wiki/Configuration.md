@@ -16,14 +16,14 @@ This page documents the runtime, storage, dependency, Docker, Cloudflare, and de
 | `find-replace-docked` | `localStorage` | Find and Replace panel dock preference. |
 | `markdownViewerPrivateMode` | `localStorage` | Whether document-state persistence is disabled. This preference remains while document-state keys are cleared. |
 
-The desktop app starts by copying known Neutralino storage values back into `localStorage`, then writes through `saveStorageItem()` to keep both layers aligned.
+The desktop application starts by copying known Neutralino storage values back into `localStorage`, then writes through `saveStorageItem()` to keep both layers aligned.
 
 Temporary shared content is intentionally not persisted:
 
 - Share Snapshot tabs have `kind: "share-snapshot"`.
 - Live Share participant tabs use `kind: "live-share"` plus `temporary: true`; host documents are restored when leaving the session.
 
-Private mode in Workspace settings clears the normal document-state keys (`markdownViewerTabs`, `markdownViewerDocumentOrganization`, `markdownViewerActiveTab`, `markdownViewerUntitledCounter`, and `markdownViewerGlobalState`) when enabled and prevents them from being written until the mode is turned off. Use **Reset workspace** in Workspace settings to remove files and review data without enabling private mode.
+Private mode in Workspace settings clears the document-state keys (`markdownViewerTabs`, `markdownViewerDocumentOrganization`, `markdownViewerActiveTab`, `markdownViewerUntitledCounter`, `markdownViewerGlobalState`, and `markdownViewerSecretWorkspace`) when enabled and prevents them from being written until the mode is turned off. **Reset workspace** also removes normal files, review data, and Secret Workspace storage before recreating the welcome Document. Export needed content before either action.
 
 ## Client Libraries
 
@@ -69,6 +69,7 @@ When running inside Neutralino, dynamic library URLs are rewritten to local `/li
 | Huge render debounce | 240 ms |
 | Minimum split pane width | 20% |
 | Line-height cache size | 5,000 entries |
+| Local Markdown import | 10 MB per file |
 | GitHub importer shown files | 30 |
 | Share URL warning ceiling | 32,000 characters |
 | Legacy share URL ceiling | 4,096 characters |
@@ -134,7 +135,9 @@ class_name = "LiveRoom"
 script_name = "markdown-viewer-live-room"
 ```
 
-`SHARE_KV` stores large Share Snapshot records and content-addressed managed media for 90 days. Re-uploading identical content refreshes that media item's 90-day expiry. The snapshot and media record types use separate key prefixes. `LIVE_ROOMS` routes Live Share WebSocket rooms to Durable Objects. Share Snapshot, managed media storage, and Live Share are separate data paths.
+`SHARE_KV` stores large Share Snapshot records and content-addressed managed media for 90 days. Re-uploading identical content refreshes that media item's 90-day expiry. The snapshot and media record types use separate key prefixes. `LIVE_ROOMS` routes Live Share WebSocket rooms to Durable Objects.
+
+Live Share does not persist Markdown or Review content server-side. Its Durable Object does persist the host, edit, and view bearer capability values plus `createdAt` under `live-room-auth-v1`; the current implementation defines no application TTL or deletion route for that record. Share Snapshot, managed media storage, and Live Share are separate data paths.
 
 `wrangler.live-room.toml` deploys `workers/live-room-worker.js` with the `LiveRoom` Durable Object migration.
 
@@ -147,7 +150,9 @@ script_name = "markdown-viewer-live-room"
 - `GET /api/share/<id>` to load a stored snapshot.
 - `DELETE /api/share/<id>` to delete a stored snapshot when the creator supplies its deletion token.
 
-Responses set `Cache-Control: no-store` and vary CORS by request origin. The allowed origins are the production app, HTTPS `*.markdownviewer.pages.dev` previews, `null`, and localhost/127.0.0.1 development origins; unsupported origins receive `403`. Stored records contain content, mode, title, creation time, size, and a hash of the creator deletion token. The token is returned only when the snapshot is created. Invalid ids, missing content, oversized content, invalid deletion tokens, missing KV binding, and unknown routes return JSON errors.
+Responses set `Cache-Control: no-store` and vary CORS by request origin. The allowed origins are the production app, HTTPS `*.markdownviewer.pages.dev` previews, `null`, and localhost/127.0.0.1 development origins; unsupported origins receive `403`. Requests without an `Origin` header are accepted, so origin filtering is not an access-control substitute.
+
+Stored records contain content, mode, title, creation time, size, and a hash of the creator deletion token. The token is returned only when the snapshot is created. The current UI does not display the token or expose a Delete snapshot action; API clients must capture the response to use early deletion. Invalid ids, missing content, oversized content, invalid deletion tokens, missing KV binding, and unknown routes return JSON errors. See [Share Snapshot](Share-Snapshot.md).
 
 ## Managed Media API
 
@@ -164,9 +169,9 @@ Upload and preflight requests use the same production, Cloudflare preview, local
 
 ## Live Room API
 
-`functions/live-room/[[room]].js` supports WebSocket upgrades only. It validates the WebSocket `Origin`, room and secret length, requires `LIVE_ROOMS`, and forwards to a Durable Object chosen by `roomName + ":" + secret`. The Durable Object authenticates host, edit, and view capabilities, filters message types by role, and enforces the participant/message limits.
+`functions/live-room/[[room]].js` supports WebSocket upgrades only. It validates the WebSocket `Origin`, room and secret length, requires `LIVE_ROOMS`, and forwards to a Durable Object chosen by `roomName + ":" + secret`. The Durable Object authenticates host, edit, and view capabilities, filters message types by role, enforces the participant/message limits, and persists the capability record described above.
 
-See [Live Share Cloudflare](Live-Share-Cloudflare) for runtime flow and limits.
+See [Live Share](Live-Share-Cloudflare.md) for runtime flow and limits.
 
 ## Docker and Nginx
 
@@ -182,7 +187,9 @@ Security headers configured in Docker/Nginx documentation include:
 - `Permissions-Policy`
 - `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`
 
-Cloudflare Pages reads the root `_headers` and `_redirects` files. `_redirects` hides `.env`, `_headers`, and source-map paths behind 404 responses. Self-hosters should preserve equivalent policies and make sure `preview-worker.js`, `sw.js`, `manifest.json`, `script.js`, `styles.css`, `assets/`, `workers/`, and `functions/` or their Cloudflare equivalents are deployed according to the features they intend to use.
+Cloudflare Pages reads the root `_headers` and `_redirects` files. `_redirects` hides `.env`, `_headers`, and source-map paths behind 404 responses. Self-hosters should preserve equivalent policies and make sure `preview-worker.js`, `sample.md`, `sw.js`, `manifest.json`, `script.js`, `styles.css`, `assets/`, `workers/`, and `functions/` or their Cloudflare equivalents are deployed according to the features they intend to use.
+
+The checked-in root Dockerfile does not copy `preview-worker.js` or `sample.md`; see [Docker Deployment: Known Stock Image Limitation](Docker-Deployment.md#known-stock-image-limitation).
 
 ## Neutralino Desktop Configuration
 
@@ -234,3 +241,5 @@ The browser/chrome modes block filesystem and/or OS APIs more aggressively.
 Running `npm run build` first triggers `prebuild`, which runs setup and its `postsetup` preparation step. `build-standalone.js` builds each target separately to avoid exhausting Node.js memory, and every output is a self-contained executable without a neighboring `resources.neu` file.
 
 `prepare.js` copies root app files into `desktop-app/resources`, downloads and verifies libraries, rewrites dynamic library paths, strips web-only SEO metadata, and prepares local renderer/export resources for the desktop bundle.
+
+Related pages: [Installation](Installation.md), [Privacy and Security](Privacy-and-Security.md), [Share Snapshot](Share-Snapshot.md), [Live Share](Live-Share-Cloudflare.md), and [Troubleshooting](Troubleshooting.md).

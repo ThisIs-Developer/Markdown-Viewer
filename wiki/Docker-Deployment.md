@@ -53,17 +53,36 @@ docker run -d --name markdown-viewer-local -p 8080:80 markdown-viewer:local
 
 The root `.dockerignore` excludes desktop build output and unrelated local files from the web container.
 
-## What The Container Provides
+## What the Container Provides
 
-The container serves the static browser app: editor, preview, local storage, imports, exports, PWA assets, and CDN-loaded renderers.
+The container serves the static browser shell: `index.html`, `script.js`, `styles.css`, `sw.js`, `manifest.json`, `robots.txt`, `sitemap.xml`, and `assets/`. It provides the Editor, main-thread Preview, local storage, local imports, most exports, and CDN-loaded renderer libraries.
 
-The container alone does not provide Cloudflare KV or Durable Objects. Stored Share Snapshot and Live Share require Cloudflare deployment or equivalent compatible endpoints.
+On `localhost`, managed-media and stored Share Snapshot requests use the production `https://markdownviewer.pages.dev` API. Live Share defaults to the Docker origin and fails unless a compatible `/live-room` endpoint is available or `window.MARKDOWN_VIEWER_LIVE_ROOM_URL` is configured in a custom deployment.
+
+The container alone does not provide Cloudflare KV or Durable Objects. Self-hosted stored Share Snapshot and Live Share require separately deployed compatible endpoints.
+
+## Known Stock Image Limitation
+
+The checked-in root `Dockerfile` does not copy:
+
+- `preview-worker.js`; or
+- `sample.md`.
+
+Both files are listed in `sw.js` as critical precache assets. The consequences are:
+
+- Documents eligible for Preview Worker rendering receive a Worker load failure and fall back to main-thread rendering; and
+- Service Worker installation can fail because `cache.addAll()` rejects the complete precache when either asset returns `404`.
+
+This is an implementation packaging limitation, not a documentation configuration step. The documentation audit records it without changing Docker behavior.
+
+If you maintain a custom image, copy both files to `/usr/share/nginx/html/`, rebuild, and verify that every `CRITICAL_ASSETS` URL in `sw.js` returns `200` with the correct MIME type.
 
 ## Nginx and Headers
 
 The Docker image uses `nginx:alpine`. Production deployments should keep these behaviors:
 
 - Serve `index.html`, `script.js`, `styles.css`, `preview-worker.js`, `sw.js`, `manifest.json`, and `assets/`.
+- Serve `sample.md` because the Service Worker includes it in the critical precache.
 - Serve JavaScript files with correct MIME types.
 - Allow Service Worker registration from the app origin.
 - Send security headers that match the app's CSP and deployment policy. The current Docker image includes:
@@ -131,9 +150,12 @@ Serving from a sub-path such as `/editor/` requires testing:
 
 Root hosting is the simplest and best-tested deployment mode.
 
-## Privacy Notes For Self-Hosting
+## Privacy Notes for Self-Hosting
 
 - Normal documents stay in the user's browser storage.
 - Your server will serve static assets and may log normal HTTP requests.
 - URL-hash Share Snapshot content is not sent to the server as an HTTP fragment, but users can paste links into other systems.
 - Stored Share Snapshot and Live Share need Cloudflare or compatible services and have their own data flows.
+- The stock localhost client sends consented managed-media and stored Share Snapshot requests to the production Markdown Viewer API.
+
+For the complete boundary, see [Privacy and Security](Privacy-and-Security.md). For diagnostics, see [Troubleshooting](Troubleshooting.md#docker-preview-or-pwa-offline-support-is-incomplete).

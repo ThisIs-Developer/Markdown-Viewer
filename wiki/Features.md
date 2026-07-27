@@ -4,7 +4,7 @@ This page is the source-of-truth feature reference for Markdown Viewer. It descr
 
 ## Product Summary
 
-Markdown Viewer is a browser-based Markdown editor, viewer, reader, and previewer for opening `.md` and `.markdown` files, writing plain Markdown, and reading a live GitHub-style preview. It runs as a static web app, a Progressive Web App, a Docker-hosted static site, and a Neutralino desktop app. The editor is built around a plain textarea, a split-screen rendered preview pane with sync scrolling, document tabs, import/export tools, sharing tools, rich Markdown renderers, and optional Cloudflare endpoints for Share Snapshot and Live Share.
+Markdown Viewer is a browser-based Markdown editor and viewer for opening `.md` and `.markdown` files, writing plain Markdown, and reading a live GitHub-style Preview. It runs as a static web application, a Progressive Web App, a Docker-hosted static site, and a Neutralino desktop application. The Editor is built around a plain textarea, a rendered Preview pane in Split view with sync scrolling, Document tabs, import/export tools, sharing tools, rich Markdown renderers, and optional Cloudflare endpoints for Share Snapshot and Live Share.
 
 Most work happens in the browser or desktop webview. Markdown parsing, syntax highlighting, math rendering, diagram post-processing, PDF/PNG capture, tab storage, undo/redo, search, and formatting tools are client-side. The exceptions are explicit network features: GitHub import, emoji lookup, CDN library loading in the web build, remote diagram fallback services, large Share Snapshot storage, and Live Share relay rooms.
 
@@ -15,11 +15,11 @@ The app opens with a header, Files sidebar, document tab bar, formatting toolbar
 - The left **Files** sidebar organizes Markdown files into fixed **Workspace** and **Secret Workspace** roots with nested folders, All files, Recent, Favorites, and search views.
 - The sidebar is resizable and collapsible on desktop, narrower on tablet, and becomes a full-height drawer on mobile.
 - Editor mode shows only the textarea.
-- Split mode shows the editor and preview side by side.
+- Split view shows the Editor and Preview side by side.
 - Preview mode shows only the rendered document.
 - A file menu can open a second document beside the active document. A shared control switches both sides between Edit and Preview, and synchronized scrolling is optional.
 - On small screens, the mobile menu exposes the same core actions and the layout avoids a cramped split view.
-- A draggable divider resizes editor and preview in split mode and keeps both panes above 20% width.
+- A draggable divider resizes the Editor and Preview in Split view and keeps both panes above 20% width.
 - The divider also supports keyboard adjustment with left and right arrow keys while split view is active.
 - The GitHub link in the header opens the source repository.
 - The bottom status bar centers reading time, word count, and character count, while its right edge reports Saving or All changes saved.
@@ -44,7 +44,7 @@ Users can work with multiple documents at once.
 - Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, scroll position, view mode, local review threads, and creation time.
 - The active tab id and untitled-document counter are stored separately.
 - Temporary Share Snapshot and Live Share tabs are deliberately excluded from persistent tab storage.
-- **Reset workspace** clears saved files and review data and returns the app to a clean starting state.
+- **Reset workspace** clears normal files, review data, and Secret Workspace storage, ends Live Share, and returns the app to a clean starting state.
 
 Storage keys used by the current implementation include:
 
@@ -59,9 +59,9 @@ Storage keys used by the current implementation include:
 | `app-lang` | Selected interface language. |
 | `find-replace-docked` | Whether the Find and Replace panel is docked. |
 
-On the web, these values live in browser `localStorage`. In the desktop app, the code mirrors selected localStorage values into Neutralino storage, so preferences and workspace state survive desktop restarts.
+On the web, these values live in browser `localStorage`. In the desktop application, the code mirrors selected `localStorage` values into Neutralino storage, so preferences and Workspace state survive desktop restarts.
 
-Workspace settings includes **Private mode**, which removes saved document/workspace state and prevents normal document-state keys from being written while it is enabled. The private-mode preference itself remains so the behavior survives a reload. **Reset workspace** removes files and review data and returns the application to a clean workspace. The About dialog describes storage privacy but does not duplicate these controls.
+Workspace settings includes **Private mode**, which removes saved document/workspace state and prevents normal document-state keys from being written while it is enabled. The cleared keys include the encrypted Secret Workspace payload. The private-mode preference itself remains so the behavior survives a reload. **Reset workspace** removes normal files, review data, and Secret Workspace storage before returning the application to a clean Workspace. Export needed Documents before either action; Markdown Viewer cannot recover deleted storage. The About dialog describes storage privacy but does not duplicate these controls.
 
 ## Comments and Suggestion Mode
 
@@ -192,7 +192,7 @@ Limitations:
 
 ## Insert Diagrams, Charts, Maps, Models, and Music
 
-Markdown Viewer supports many fenced-code renderers, so it can work as a Markdown diagram editor, Mermaid editor, PlantUML editor, Graphviz/DOT editor, D2 diagram editor, Vega-Lite chart previewer, Markmap mind map viewer, WaveDrom timing diagram viewer, ABC notation viewer, map previewer, and 3D STL viewer.
+Markdown Viewer supports many fenced-code renderers for diagrams, charts, mind maps, digital timing diagrams, music notation, geographic maps, and 3D STL models.
 
 | Fence Language | Renderer | User Behavior | Network Notes |
 | :--- | :--- | :--- | :--- |
@@ -235,6 +235,7 @@ Local file import:
 
 - Accepts `.md`, `.markdown`, and `text/markdown`.
 - Extension checks are case-insensitive.
+- Rejects an individual Markdown file larger than 10 MB.
 - Dragging files over the app shows a compact drop notice. Explorer document drags use a Markdown file preview, folders expand on hover, and the Explorer scrolls near its top and bottom edges.
 - The first 8 KB of a file are scanned for null bytes to avoid loading binary files as text.
 - Imported local files open in the active tab or a new tab depending on the action.
@@ -269,7 +270,7 @@ GitHub import:
 
 Limitations and privacy:
 
-- Local file content is read in the browser or desktop app and is not uploaded by local import.
+- Local file content is read in the browser or desktop application and is not uploaded by local import.
 - GitHub import sends repository and path information to GitHub and downloads public file contents from GitHub.
 - Private GitHub repositories are not supported because the app does not ask for tokens.
 
@@ -281,7 +282,7 @@ Markdown export:
 
 - Saves the raw Markdown text.
 - In the web app, it downloads through the browser.
-- In the desktop app, it uses a native save dialog and Neutralino filesystem writing.
+- In the desktop application, it uses a native save dialog and Neutralino filesystem writing.
 
 HTML export:
 
@@ -321,7 +322,7 @@ Share Snapshot creates a link to a point-in-time copy of the current document.
 Modes:
 
 - View only opens the shared content in preview mode with the editor hidden.
-- Editable opens the shared content in split mode so the recipient can edit their own copy.
+- Can edit opens the shared content in Split view so the recipient can edit their own copy.
 
 Storage behavior:
 
@@ -333,17 +334,18 @@ Storage behavior:
 - The server accepts up to 8,000,000 characters per stored snapshot.
 - Snapshot ids are random 10-character values using a reduced alphabet and must match the app's id pattern.
 - Stored snapshot responses use `Cache-Control: no-store`.
-- The Share API allows CORS only for the production app, `null`, and `localhost`/`127.0.0.1` development origins; unsupported origins are rejected.
+- The Share API allows CORS for the production app, HTTPS `*.markdownviewer.pages.dev` previews, `null`, and `localhost`/`127.0.0.1` development origins; unsupported browser origins are rejected.
 - Creating a stored snapshot returns a creator-side deletion token. The token is hashed in KV and is required for `DELETE /api/share/<id>`; it is not part of the share URL.
+- The current UI retains that token only in memory and does not display it or provide an early-delete action. An API client must capture the creation response if it needs to delete the stored record before expiry.
 - Shared snapshot tabs are temporary and are not saved to the recipient's local workspace.
 
 Privacy implications:
 
 - URL-hash snapshots keep document content inside the link itself.
 - Anyone with a snapshot link can read the snapshot.
-- Editable snapshot links are not collaborative; they only let the recipient edit their local opened copy.
+- Can edit snapshot links are not collaborative; they only let the recipient edit their local opened copy.
 - Stored snapshots upload document content, mode, title, creation time, and size to the configured Cloudflare KV namespace until expiry.
-- The app prevents sharing a temporary shared snapshot again, and prevents Share Snapshot from a Live Share document, to avoid confusing copies of copies.
+- The app prevents sharing a temporary snapshot again. A Live Share participant cannot create a snapshot from the live Document; the host can.
 
 ## Live Share Rooms for Markdown Collaboration
 
@@ -369,7 +371,7 @@ Implementation:
 - The host connection establishes separate host, edit, and view capabilities. The Durable Object stores these capabilities and authenticates each joining role server-side.
 - Cloudflare Pages routes the WebSocket to a Durable Object named `LIVE_ROOMS`.
 - The Durable Object relays only known message types and filters them by role: viewers cannot send Markdown updates or session-end messages, but they can request and send Review updates; editors can send Markdown and Review updates; only the host can publish full Review state or send every supported type.
-- The Durable Object does not write document state to KV or a database.
+- The Durable Object does not persist Markdown or Review document state. It does persist the host, edit, and view bearer capability values plus `createdAt` in Durable Object storage under `live-room-auth-v1`.
 - Room identity is derived from room id plus secret.
 
 Limits:
@@ -378,14 +380,14 @@ Limits:
 - A live room can have at most 64 WebSocket participants.
 - Participant presence is considered stale after 45 seconds without updates.
 - Join waits up to 8 seconds for initial room state before showing an expired/unavailable room message.
-- The room exists only while the Durable Object instance and connected sessions are alive.
+- A participant needs an active client, normally the host, to supply initial Yjs document state. The server does not retain a document copy for later recovery.
 
 Privacy implications:
 
 - Live Share document updates, display names, cursor positions, and presence are transmitted through the configured Cloudflare Durable Object.
-- Live room content is temporary relay state, not permanent document storage.
+- Live Markdown and Review content is temporary relay/client state, not permanent server-side document storage. Capability metadata is durable and has no application TTL or deletion route.
 - Anyone with the invite URL, including the secret, can join while the room is active.
-- View-only and editable roles are checked by the Durable Object, which filters message types by capability. Invite URLs still contain bearer credentials, and Live Share is not end-to-end encrypted.
+- View only and Can edit roles are checked by the Durable Object, which filters message types by capability. Invite URLs still contain bearer credentials, and Live Share is not end-to-end encrypted.
 
 ## Clipboard and Copy Behavior
 
@@ -436,7 +438,7 @@ Common shortcuts:
 | Save/export Markdown | `Ctrl+S` / `Cmd+S` |
 | Find | `Ctrl+F` / `Cmd+F` |
 | Replace | `Ctrl+H` / `Cmd+H` |
-| Toggle scroll sync | `Ctrl+Shift+S` / `Cmd+Shift+S` in split mode |
+| Toggle scroll sync | `Ctrl+Shift+S` / `Cmd+Shift+S` in Split view |
 | Undo | `Ctrl+Z` / `Cmd+Z` |
 | Redo | `Ctrl+Shift+Z`, `Cmd+Shift+Z`, `Ctrl+Y`, or `Cmd+Y` |
 | New tab | Desktop: `Ctrl+T` / `Cmd+T`; web and desktop: `Alt+Shift+T` |
@@ -470,8 +472,9 @@ Limitations:
 - First use of CDN-based renderers requires network access unless already cached.
 - Clearing site data removes the cached app shell and local documents.
 - Opening `index.html` through `file://` can break workers and service workers because of browser security rules.
+- The checked-in root Dockerfile does not copy `preview-worker.js` or `sample.md`, although the Service Worker precache requires both. The stock container therefore falls back to main-thread Preview for large Documents and can fail Service Worker installation until the image is corrected.
 
-## Desktop App
+## Desktop Application
 
 The desktop build wraps the same app in Neutralino.
 
@@ -508,7 +511,7 @@ Important protections:
 - Canvas exports use `allowTaint: false`.
 - STL rendering validates source size, finite vertex coordinates, and geometry vertex count before creating a WebGL view.
 - The desktop native API allowlist follows least privilege for the app's current features.
-- Private mode and Reset workspace provide explicit controls over local document persistence.
+- Private mode and Reset workspace provide explicit controls over local document persistence, but both delete persisted Secret Workspace content in the current implementation.
 - Share and live endpoints return no-store responses for dynamic content.
 - The app does not include analytics, telemetry scripts, ad pixels, accounts, cookies, or subscription code.
 
@@ -517,7 +520,7 @@ Security limitations:
 - Sanitization reduces XSS risk but cannot make every third-party renderer or browser bug impossible.
 - Remote diagram services receive diagram source for supported remote engines.
 - Links and images in Markdown can request external resources when rendered or clicked.
-- Live Share roles are server-checked, but invite links are bearer credentials and room content is not end-to-end encrypted.
+- Live Share roles are server-checked, but invite links are bearer credentials, room content is not end-to-end encrypted, and persisted capability metadata has no application TTL or deletion path.
 - Share Snapshot links are bearer links: possession of the URL grants access.
 - Security headers and CSP depend on the deployment surface; self-hosters should preserve the policies in `_headers` and review the Docker/Nginx policy when customizing it.
 
@@ -528,7 +531,7 @@ Security limitations:
 | Typing and local preview | No | Browser memory and saved tabs | Sanitized before preview insertion. |
 | Normal tab autosave | No | `localStorage` or desktop storage mirror | Cleared with site/app data or Reset. |
 | Comments and suggestions | Only during Live Share | Normal saved tabs plus temporary Live Share relay state | Excluded from document exports and Share Snapshot; synchronized between active Live Share participants. |
-| Private mode | No | No document-state persistence | Clears existing document state when enabled and prevents normal document-state writes until disabled. |
+| Private mode | No | No document-state persistence | Clears existing document state, including Secret Workspace storage, when enabled and prevents normal document-state writes until disabled. |
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
@@ -538,17 +541,21 @@ Security limitations:
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |
 | Share Snapshot hash link | Only when user sends the link | Inside URL hash | Small documents are not uploaded by generation. |
 | Stored Share Snapshot | Yes | Cloudflare KV for 90 days | Content, mode, title, createdAt, and size. |
-| Live Share | Yes | Cloudflare Durable Object relay memory | Temporary while active; no KV/database write. |
+| Live Share | Yes | Client/WebSocket relay state plus Durable Object capability storage | Markdown and Review content are not persisted server-side; role capabilities and `createdAt` are stored without an application TTL. |
 | Desktop native storage | No | Local app storage | Mirrors app state for restart persistence. |
 
 ## Known Technical Limits
 
 - Browser storage quotas can reject very large saved workspaces.
 - The workspace can contain at most 50 documents, including locked Secret Workspace counts and temporary shared/live tabs.
+- An individual local Markdown import is limited to 10 MB.
 - The GitHub importer shows a maximum of 30 Markdown files.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.
+- The current Share Snapshot UI does not expose its API deletion token, so UI-created stored snapshots normally remain until their 90-day expiry.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.
 - Legacy raster PDF and PNG exports can fail on extremely tall documents because canvas size and memory are browser-limited.
 - Remote renderer availability depends on third-party services and network conditions.
 - The service worker cannot cache assets that have never been successfully fetched.
-- The desktop app depends on the platform webview and Neutralino runtime behavior.
+- The desktop application depends on the platform webview and Neutralino runtime behavior.
+
+Related pages: [Usage Guide](Usage-Guide.md), [Markdown Reference](Markdown-Reference.md), [Share Snapshot](Share-Snapshot.md), [Live Share](Live-Share-Cloudflare.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md).
