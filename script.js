@@ -274,6 +274,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentSplitSyncReleaseTimeout = null;
   let documentSplitPreviewTabId = null;
   let documentSplitPreviewContent = null;
+  let documentSplitPreviewRenderGeneration = 0;
   const SCROLL_SYNC_DELAY = 10;
 
   // View Mode State - Story 1.1
@@ -2335,25 +2336,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function renderRemoteDiagramNode(node, engine, context) {
     const container = node.closest('[data-diagram-engine], .plantuml-container, .d2-container, .graphviz-container, .kroki-container, .markmap-container');
     const originalCode = node.getAttribute('data-original-code');
-    if (!container || !originalCode) return;
+    if (!container || !originalCode || !isPreviewRenderContextCurrent(context)) return;
     const source = decodeURIComponent(originalCode);
 
     setDiagramRenderState(container, 'loading', `Rendering ${REMOTE_DIAGRAM_ENGINES[engine].label}…`);
     try {
       if (engine === 'markmap') {
         await renderMarkmapIntoElement(node, source, false);
-        if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+        if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
         setDiagramRenderState(container, 'ready');
         mountDiagramViewer(container, engine);
         return;
       }
       const svgText = await renderDiagramThroughAdapter(engine, source);
-      if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+      if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
       importDiagramSvg(node, svgText, engine, source);
       setDiagramRenderState(container, 'ready');
       mountDiagramViewer(container, engine);
     } catch (error) {
-      if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+      if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
       console.error('Diagram rendering failed', {
         engine,
         status: error.status || null,
@@ -2366,8 +2367,43 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function renderRemoteDiagramNodes(roots, context) {
+    const adapterTargets = [
+      ['.plantuml-diagram', 'plantuml'],
+      ['.d2-diagram', 'd2'],
+      ['.graphviz-diagram', 'graphviz'],
+      ['.markmap-diagram', 'markmap'],
+      ['.kroki-diagram', null]
+    ];
+    const renderAdapterTargets = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      adapterTargets.forEach(([selector, fixedEngine]) => {
+        queryPreviewRoots(roots, selector).forEach(node => {
+          const engine = fixedEngine || node.closest('[data-diagram-engine]')?.dataset.diagramEngine;
+          if (engine && REMOTE_DIAGRAM_ENGINES[engine]) {
+            renderRemoteDiagramNode(node, engine, context);
+          }
+        });
+      });
+    };
+
+    if (typeof pako === 'undefined') {
+      loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
+        console.warn('Failed to load diagram encoder; POST fallbacks remain available', error);
+        renderAdapterTargets();
+      });
+    } else {
+      renderAdapterTargets();
+    }
+  }
+
   function typesetMathJaxTargets(mathTargets, context) {
-    const runId = ++mathJaxTypesetRunId;
+    const usesMainPreviewGeneration = !context || typeof context.isCurrent !== 'function';
+    const runId = usesMainPreviewGeneration ? ++mathJaxTypesetRunId : null;
+    const isCurrent = function() {
+      return isPreviewRenderContextCurrent(context)
+        && (!usesMainPreviewGeneration || runId === mathJaxTypesetRunId);
+    };
     const mathJaxReady = MathJax.startup && MathJax.startup.promise
       ? MathJax.startup.promise
       : Promise.resolve();
@@ -2377,8 +2413,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }).then(function() {
       return mathJaxReady;
     }).then(function() {
-      if (runId !== mathJaxTypesetRunId) return null;
-      if (context.renderId !== previewRenderGeneration) return;
+      if (!isCurrent()) return null;
       if (typeof MathJax.typesetPromise !== 'function') {
         throw new Error('MathJax typesetPromise API is unavailable.');
       }
@@ -2388,8 +2423,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (connectedTargets.length === 0) return null;
       return MathJax.typesetPromise(connectedTargets);
     }).then(function() {
-      if (runId !== mathJaxTypesetRunId) return;
-      if (context.renderId !== previewRenderGeneration) return;
+      if (!isCurrent()) return;
       queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
         mjx.removeAttribute('tabindex');
       });
@@ -2452,6 +2486,22 @@ document.addEventListener("DOMContentLoaded", async function () {
         });
     }
     return mathJaxLoadPromise;
+  }
+
+  function renderMathJaxNodes(roots, rawVal, context, options) {
+    const hasMath = /\$\$|\$[^$]|\\\(|\\\[/.test(rawVal || '') || /```math\b/.test(rawVal || '');
+    if (!hasMath) return;
+    const mathTargets = getMathJaxTypesetTargets(roots);
+    if (options && options.snapshotReviewTargets) {
+      snapshotMathReviewTargetSources(mathTargets);
+    }
+    if (mathTargets.length === 0) return;
+    ensureMathJaxReady().then(function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      typesetMathJaxTargets(mathTargets, context);
+    }).catch(function(error) {
+      console.warn('Failed to load MathJax:', error);
+    });
   }
 
   function clearMathJaxPreviewState(container) {
@@ -3504,8 +3554,17 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function openMoveDocumentDialog(tabId) {
-    const tab = tabs.find(function(item) { return item.id === tabId; });
-    if (!tab || isTemporaryDocument(tab)) return;
+    openMoveDocumentsDialog([tabId]);
+  }
+
+  function openMoveDocumentsDialog(tabIds) {
+    const documents = Array.from(new Set(tabIds || [])).map(function(documentId) {
+      return tabs.find(function(item) { return item.id === documentId; });
+    }).filter(function(item) {
+      return item && !isTemporaryDocument(item);
+    });
+    if (documents.length === 0) return;
+    const tab = documents[0];
     const modal = document.getElementById('document-move-modal');
     const title = document.getElementById('document-move-modal-title');
     const select = document.getElementById('document-move-destination');
@@ -3515,6 +3574,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!modal || !select || !confirmButton || !cancelButton) return;
 
     title.textContent = 'Move “' + (tab.title || 'Untitled') + '”';
+    if (documents.length > 1) title.textContent = 'Move ' + documents.length + ' selected files';
     select.textContent = '';
     documentOrganization.workspaces.forEach(function(workspace) {
       const rootOption = document.createElement('option');
@@ -3551,7 +3611,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       const parts = String(select.value || '').split('|');
       cleanup();
       closeAppModal(modal);
-      await moveDocumentToLocation(tab.id, parts[0], parts[1] || null);
+      if (documents.length === 1) {
+        await moveDocumentToLocation(tab.id, parts[0], parts[1] || null);
+      } else {
+        await moveDocumentsToLocation(documents.map(function(item) { return item.id; }), parts[0], parts[1] || null);
+      }
     }
 
     confirmButton.addEventListener('click', move);
@@ -3967,16 +4031,73 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function getSelectedDocuments() {
+    const entities = getSelectedDocumentTreeEntities();
+    if (entities.length < 2 || entities.some(function(entity) { return entity.type !== 'document'; })) {
+      return [];
+    }
+    return entities.map(function(entity) { return entity.item; });
+  }
+
+  function openSelectedDocuments() {
+    const documents = getSelectedDocuments();
+    if (documents.length < 2) return;
+    const openedAt = Date.now();
+    documents.forEach(function(tab) {
+      tab.isOpen = true;
+      tab.lastOpenedAt = openedAt;
+    });
+    saveTabsToStorage(tabs);
+
+    const target = documents.find(function(tab) { return tab.id === activeTabId; }) || documents[0];
+    selectedDocumentId = target.id;
+    setSingleDocumentTreeSelection('document', target.id);
+    if (target.id !== activeTabId) {
+      switchTab(target.id);
+    } else {
+      updateNoOpenDocumentState();
+      renderTabBar(tabs, activeTabId);
+      renderDocumentSidebar();
+    }
+    closeDocumentSidebarOnMobile();
+    announceToScreenReader('Opened ' + documents.length + ' selected files.');
+  }
+
+  function openMoveSelectedDocumentsDialog() {
+    const documents = getSelectedDocuments();
+    if (documents.length < 2) return;
+    openMoveDocumentsDialog(documents.map(function(tab) { return tab.id; }));
+  }
+
   function getBulkDocumentTreeMenuActions() {
     const entities = getSelectedDocumentTreeEntities();
     if (entities.length < 2) return [];
-    return [{
+    const actions = [];
+    if (entities.every(function(entity) { return entity.type === 'document'; })) {
+      actions.push(
+        {
+          id: 'open-selected',
+          icon: 'lucide-files',
+          label: 'Open all',
+          run: openSelectedDocuments
+        },
+        {
+          id: 'move-selected',
+          icon: 'lucide-arrow-right-to-line',
+          label: 'Move to\u2026',
+          run: openMoveSelectedDocumentsDialog
+        },
+        { separator: true }
+      );
+    }
+    actions.push({
       id: 'delete-selected',
       icon: 'lucide-trash-2',
       label: 'Delete ' + entities.length + ' selected items',
       danger: true,
       run: deleteSelectedDocumentTreeItems
-    }];
+    });
+    return actions;
   }
 
   function openDocumentTreeContextMenu(row, event) {
@@ -4165,12 +4286,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     );
   }
 
-  async function moveDocumentToLocation(tabId, workspaceId, folderId) {
+  async function moveDocumentToLocation(tabId, workspaceId, folderId, options) {
+    const shouldAnnounce = !options || options.announce !== false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || isTemporaryDocument(tab)) return false;
     if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
       withUnlockedSecretWorkspace(function() {
-        moveDocumentToLocation(tabId, workspaceId, folderId);
+        moveDocumentToLocation(tabId, workspaceId, folderId, options);
       });
       return false;
     }
@@ -4178,7 +4300,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const previousWorkspaceId = tab.workspaceId || DEFAULT_WORKSPACE_ID;
     const previousFolderId = tab.folderId || null;
     if (previousWorkspaceId === workspaceId && previousFolderId === (folderId || null)) {
-      announceToScreenReader('File is already in that location.');
+      if (shouldAnnounce) announceToScreenReader('File is already in that location.');
       return true;
     }
     if (!setDocumentLocation(tab, workspaceId, folderId)) return false;
@@ -4204,7 +4326,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       return false;
     }
     renderTabBar(tabs, activeTabId);
-    announceToScreenReader('File moved to ' + getDocumentLocationLabel(tab) + '.');
+    if (shouldAnnounce) announceToScreenReader('File moved to ' + getDocumentLocationLabel(tab) + '.');
+    return true;
+  }
+
+  async function moveDocumentsToLocation(tabIds, workspaceId, folderId) {
+    const documents = Array.from(new Set(tabIds || [])).map(function(tabId) {
+      return tabs.find(function(item) { return item.id === tabId; });
+    }).filter(function(tab) {
+      return tab && !isTemporaryDocument(tab);
+    });
+    if (documents.length === 0) return false;
+    if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
+      withUnlockedSecretWorkspace(function() {
+        moveDocumentsToLocation(documents.map(function(tab) { return tab.id; }), workspaceId, folderId);
+      });
+      return false;
+    }
+
+    let movedCount = 0;
+    for (const tab of documents) {
+      const alreadyThere = (tab.workspaceId || DEFAULT_WORKSPACE_ID) === workspaceId
+        && (tab.folderId || null) === (folderId || null);
+      const moved = await moveDocumentToLocation(tab.id, workspaceId, folderId, { announce: false });
+      if (moved && !alreadyThere) movedCount += 1;
+    }
+    if (movedCount === 0) {
+      announceToScreenReader('Selected files are already in that location.');
+    } else {
+      announceToScreenReader('Moved ' + movedCount + ' selected file' + (movedCount === 1 ? '' : 's') + '.');
+    }
     return true;
   }
 
@@ -7228,14 +7379,41 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function disposeDocumentSplitPreviewResources() {
+    if (!documentSplitPreview) return;
+    documentSplitPreview.querySelectorAll('.geojson-map, .topojson-map').forEach(function(node) {
+      if (node._leafletMap) {
+        node._leafletMap.remove();
+        node._leafletMap = null;
+      }
+    });
+    activeStlViews.forEach(function(view, id) {
+      if (view.container && documentSplitPreview.contains(view.container)) {
+        disposeStlView(id);
+      }
+    });
+  }
+
   function renderDocumentSplitPreview(tab) {
     if (!documentSplitPreview || !tab) return;
     const content = tab.content || '';
-    if (documentSplitPreviewTabId === tab.id && documentSplitPreviewContent === content && documentSplitPreview.childNodes.length) return;
+    if (
+      documentSplitPreviewTabId === tab.id &&
+      documentSplitPreviewContent === content &&
+      documentSplitPreview.childNodes.length &&
+      !documentSplitPreview.querySelector(
+        '.diagram-viewer.is-loading, .geojson-container.is-loading, .topojson-container.is-loading, .stl-container.is-loading'
+      ) &&
+      !(hasRawMathText(documentSplitPreview) && !documentSplitPreview.querySelector('mjx-container'))
+    ) {
+      return;
+    }
+    const renderGeneration = ++documentSplitPreviewRenderGeneration;
     const parsed = parseFrontmatter(content);
     const tableHtml = parsed.frontmatter ? renderFrontmatterTable(parsed.frontmatter) : '';
     const referenceData = extractReferenceDefinitions(parsed.body);
     const html = tableHtml + marked.parse(referenceData.cleanedMarkdown);
+    disposeDocumentSplitPreviewResources();
     documentSplitPreview.innerHTML = sanitizePreviewHtml(html);
     applyReferencePreviewLinks(documentSplitPreview, referenceData.definitions);
     enhanceGitHubAlerts(documentSplitPreview);
@@ -7244,6 +7422,26 @@ document.addEventListener("DOMContentLoaded", async function () {
     namespaceSplitPreviewIds(documentSplitPreview, tab.id);
     documentSplitPreviewTabId = tab.id;
     documentSplitPreviewContent = content;
+    const context = {
+      isCurrent: function() {
+        return (
+          renderGeneration === documentSplitPreviewRenderGeneration &&
+          documentSplitPreviewTabId === tab.id &&
+          documentSplitPreviewContent === content &&
+          documentSplitPreview.isConnected
+        );
+      }
+    };
+    renderMermaidNodes(
+      Array.from(documentSplitPreview.querySelectorAll('.mermaid')),
+      context,
+      documentSplitPreview
+    );
+    renderRemoteDiagramNodes([documentSplitPreview], context);
+    renderAbcNodes([documentSplitPreview], context);
+    renderMapNodes([documentSplitPreview], context);
+    renderStlNodes([documentSplitPreview], context);
+    renderMathJaxNodes([documentSplitPreview], content, context);
   }
 
   function syncDocumentSplitScroll(source, target) {
@@ -7322,9 +7520,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   function closeDocumentSplitView(options) {
     const settings = options || {};
     saveSecondarySplitState();
+    disposeDocumentSplitPreviewResources();
+    if (documentSplitPreview) documentSplitPreview.textContent = '';
     secondarySplitTabId = null;
     documentSplitPreviewTabId = null;
     documentSplitPreviewContent = null;
+    documentSplitPreviewRenderGeneration += 1;
     documentSplitScrollSource = null;
     if (secondarySplitSaveTimeout) {
       clearTimeout(secondarySplitSaveTimeout);
@@ -8409,8 +8610,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
   }
 
+  function isPreviewRenderContextCurrent(context) {
+    if (!context) return true;
+    if (typeof context.isCurrent === 'function') return context.isCurrent();
+    return context.renderId === previewRenderGeneration;
+  }
+
   async function renderMermaidNode(node, context) {
-    if (!node || (context && context.renderId !== previewRenderGeneration)) return false;
+    if (!node || !isPreviewRenderContextCurrent(context)) return false;
     const container = node.closest('.mermaid-container');
     const code = getDiagramNodeSource(node);
     const renderId = `${node.id || 'mermaid-diagram'}-render-${Math.random().toString(36).slice(2)}`;
@@ -8421,7 +8628,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const result = await withMutedMermaidConsole(function() {
         return mermaid.render(renderId, code);
       });
-      if (context && context.renderId !== previewRenderGeneration) return false;
+      if (!isPreviewRenderContextCurrent(context)) return false;
       node.innerHTML = result.svg;
       if (typeof result.bindFunctions === 'function') {
         result.bindFunctions(node);
@@ -8429,7 +8636,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       setDiagramRenderState(container, 'ready');
       return true;
     } catch (error) {
-      if (context && context.renderId !== previewRenderGeneration) return false;
+      if (!isPreviewRenderContextCurrent(context)) return false;
       setDiagramRenderState(container, 'error', 'Mermaid could not be rendered. Check the diagram syntax and retry.', () => {
         renderMermaidNode(node, context);
       });
@@ -8437,14 +8644,61 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function renderMermaidNodeList(nodes, context) {
+  async function renderMermaidNodeList(nodes, context, toolbarRoot) {
     const results = [];
     for (const node of nodes) {
-      if (context && context.renderId !== previewRenderGeneration) return results;
+      if (!isPreviewRenderContextCurrent(context)) return results;
       results.push(await renderMermaidNode(node, context));
     }
-    addMermaidToolbars();
+    if (isPreviewRenderContextCurrent(context)) {
+      addMermaidToolbars(toolbarRoot);
+    }
     return results;
+  }
+
+  function renderMermaidNodes(nodes, context, toolbarRoot) {
+    if (!nodes || nodes.length === 0 || !isPreviewRenderContextCurrent(context)) {
+      return Promise.resolve([]);
+    }
+
+    const markRenderError = function(message) {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      nodes.forEach(function(node) {
+        setDiagramRenderState(
+          node.closest('.mermaid-container'),
+          'error',
+          message,
+          () => renderMermaidNodes([node], context, toolbarRoot)
+        );
+      });
+    };
+
+    const renderLoadedNodes = function(forceInit) {
+      if (!isPreviewRenderContextCurrent(context)) return Promise.resolve([]);
+      initMermaid(forceInit);
+      return renderMermaidNodeList(nodes, context, toolbarRoot)
+        .catch(function(error) {
+          if (!isPreviewRenderContextCurrent(context)) return [];
+          console.warn('Mermaid rendering failed:', error);
+          markRenderError('Mermaid could not be rendered. Check the diagram syntax and retry.');
+          return [];
+        });
+    };
+
+    if (typeof mermaid === 'undefined') {
+      return loadDiagramLibrary(CDN.mermaid)
+        .then(function() {
+          return renderLoadedNodes(true);
+        })
+        .catch(function(error) {
+          if (!isPreviewRenderContextCurrent(context)) return [];
+          console.warn('Failed to load mermaid:', error);
+          markRenderError('Mermaid renderer is unavailable. Check your connection and retry.');
+          return [];
+        });
+    }
+
+    return renderLoadedNodes(false);
   }
 
   function parseAbcHeaders(abcString) {
@@ -8462,7 +8716,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderAbcNotationNode(node, context) {
-    if (context.renderId !== previewRenderGeneration) return;
+    if (!isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
     if (!originalCode) return;
     const decodedCode = decodeURIComponent(originalCode);
@@ -8528,6 +8782,46 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function renderAbcNodes(roots, context) {
+    const abcNodes = queryPreviewRoots(roots, '.abc-notation');
+    if (abcNodes.length === 0) return;
+
+    const renderNodes = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      abcNodes.forEach(function(node) {
+        setTimeout(function() {
+          renderAbcNotationNode(node, context);
+        }, 0);
+      });
+    };
+    const loadAndRender = function() {
+      loadDiagramLibrary(CDN.abcjs).then(function() {
+        if (!isPreviewRenderContextCurrent(context)) return;
+        renderNodes();
+      }).catch(function(error) {
+        if (!isPreviewRenderContextCurrent(context)) return;
+        console.warn('Failed to load abcjs:', error);
+        abcNodes.forEach(function(node) {
+          const container = node.closest('.abc-container');
+          if (container) {
+            setDiagramRenderState(
+              container,
+              'error',
+              'ABC notation renderer is unavailable. Check your connection and retry.',
+              loadAndRender
+            );
+          }
+        });
+      });
+    };
+
+    if (typeof ABCJS === 'undefined') {
+      loadAndRender();
+    } else {
+      renderNodes();
+    }
+  }
+
   function disposeStlView(viewId) {
     const view = activeStlViews.get(viewId);
     if (!view) return;
@@ -8562,6 +8856,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderMapNode(node, isTopo, context) {
+    if (!node || !node.isConnected || !isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
     if (!originalCode) return;
     const decodedCode = decodeURIComponent(originalCode);
@@ -8654,10 +8949,50 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       if (container) container.classList.remove('is-loading');
     } catch (err) {
+      if (!isPreviewRenderContextCurrent(context) || !node.isConnected) return;
       console.error("Map rendering failed:", err);
       node.innerHTML = `<div class="render-error-msg" style="padding: 2em; color: var(--text-color); text-align: center;">Error rendering map: ${escapeHtml(err.message)}</div>`;
       if (container) container.classList.remove('is-loading');
     }
+  }
+
+  function renderMapNodes(roots, context) {
+    const geojsonNodes = queryPreviewRoots(roots, '.geojson-map');
+    const topojsonNodes = queryPreviewRoots(roots, '.topojson-map');
+    if (geojsonNodes.length === 0 && topojsonNodes.length === 0) return;
+
+    const renderAll = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      geojsonNodes.forEach(function(node) { renderMapNode(node, false, context); });
+      topojsonNodes.forEach(function(node) { renderMapNode(node, true, context); });
+    };
+    const loadPromises = [];
+    if (typeof L === 'undefined') {
+      loadPromises.push(loadStyle(CDN.leaflet_css));
+      loadPromises.push(loadScript(CDN.leaflet_js));
+    }
+    if (topojsonNodes.length > 0 && !getTopoJsonLibrary()) {
+      loadPromises.push(loadScript(CDN.topojson).then(function() {
+        if (!getTopoJsonLibrary()) {
+          throw new Error('TopoJSON renderer failed to initialize.');
+        }
+      }));
+    }
+
+    if (loadPromises.length === 0) {
+      renderAll();
+      return;
+    }
+    Promise.all(loadPromises).then(function() {
+      renderAll();
+    }).catch(function(error) {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      console.warn('Failed to load map libraries:', error);
+      geojsonNodes.concat(topojsonNodes).forEach(function(node) {
+        const container = node.closest('.geojson-container') || node.closest('.topojson-container');
+        if (container) container.classList.remove('is-loading');
+      });
+    });
   }
 
   const MAX_STL_SOURCE_CHARS = 2 * 1024 * 1024;
@@ -8992,6 +9327,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderStlNode(node, context) {
+    if (!node || !node.isConnected || !isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
     if (!originalCode) return;
     const decodedCode = decodeURIComponent(originalCode);
@@ -9010,15 +9346,54 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       addStlToolbar(container, node, decodedCode, view);
     } catch (err) {
+      if (!isPreviewRenderContextCurrent(context) || !node.isConnected) return;
       console.error("STL rendering failed:", err);
       node.innerHTML = `<div class="render-error-msg" style="padding: 2em; color: var(--text-color); text-align: center;">Error rendering 3D model: ${escapeHtml(err.message)}</div>`;
       if (container) container.classList.remove('is-loading');
     }
   }
 
+  function renderStlNodes(roots, context) {
+    const stlNodes = queryPreviewRoots(roots, '.stl-viewer');
+    if (stlNodes.length === 0) return;
+
+    const renderAll = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      stlNodes.forEach(function(node) { renderStlNode(node, context); });
+    };
+    const loadLoaderAndControls = function() {
+      if (!isPreviewRenderContextCurrent(context)) return Promise.resolve();
+      const loadPromises = [];
+      if (typeof THREE.STLLoader === 'undefined') {
+        loadPromises.push(loadScript(CDN.stlLoader));
+      }
+      if (typeof THREE.OrbitControls === 'undefined') {
+        loadPromises.push(loadScript(CDN.orbitControls));
+      }
+      return loadPromises.length > 0 ? Promise.all(loadPromises) : Promise.resolve();
+    };
+    const threeReady = typeof THREE === 'undefined'
+      ? loadScript(CDN.three)
+      : Promise.resolve();
+
+    threeReady.then(function() {
+      if (!isPreviewRenderContextCurrent(context)) return null;
+      return loadLoaderAndControls();
+    }).then(function() {
+      renderAll();
+    }).catch(function(error) {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      console.warn('Failed to load Three.js libraries:', error);
+      stlNodes.forEach(function(node) {
+        const container = node.closest('.stl-container');
+        if (container) container.classList.remove('is-loading');
+      });
+    });
+  }
+
   function updateMapThemes() {
     if (typeof L === 'undefined') return;
-    const mapNodes = markdownPreview.querySelectorAll('.geojson-map, .topojson-map');
+    const mapNodes = queryPreviewRoots([markdownPreview, documentSplitPreview], '.geojson-map, .topojson-map');
     mapNodes.forEach(node => {
       const map = node._leafletMap;
       if (map) {
@@ -9057,7 +9432,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function updateStlThemes() {
     if (typeof THREE === 'undefined') return;
-    const stlNodes = markdownPreview.querySelectorAll('.stl-viewer');
+    const stlNodes = queryPreviewRoots([markdownPreview, documentSplitPreview], '.stl-viewer');
     stlNodes.forEach(node => {
       const view = activeStlViews.get(node.id);
       if (view && view.scene) {
@@ -9472,225 +9847,36 @@ ${selector} .arrowheadPath {
 
     try {
       const mermaidNodes = queryPreviewRoots(roots, '.mermaid');
-      if (mermaidNodes.length > 0) {
-        const renderMermaidNodes = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          initMermaid(false);
-          renderMermaidNodeList(mermaidNodes, context)
-            .catch((e) => {
-              if (context.renderId !== previewRenderGeneration) return;
-              console.warn("Mermaid rendering failed:", e);
-              mermaidNodes.forEach(function(node) {
-                setDiagramRenderState(
-                  node.closest('.mermaid-container'),
-                  'error',
-                  'Mermaid could not be rendered. Check the diagram syntax and retry.',
-                  () => renderMermaidNode(node, context)
-                );
-              });
-            });
-        };
-        if (typeof mermaid === 'undefined') {
-          loadDiagramLibrary(CDN.mermaid).then(function() {
-            if (context.renderId !== previewRenderGeneration) return;
-            initMermaid(true);
-            renderMermaidNodes();
-          }).catch(function(e) {
-            console.warn('Failed to load mermaid:', e);
-            mermaidNodes.forEach(function(node) {
-              setDiagramRenderState(
-                node.closest('.mermaid-container'),
-                'error',
-                'Mermaid renderer is unavailable. Check your connection and retry.',
-                () => renderMermaidNode(node, context)
-              );
-            });
-          });
-        } else {
-          renderMermaidNodes();
-        }
-      }
+      renderMermaidNodes(mermaidNodes, context, markdownPreview);
     } catch (e) {
       console.warn("Mermaid rendering failed:", e);
     }
 
     try {
-      const abcNodes = queryPreviewRoots(roots, '.abc-notation');
-      if (abcNodes.length > 0) {
-        const renderAbcNodes = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-
-          abcNodes.forEach(function(node) {
-            setTimeout(() => renderAbcNotationNode(node, context), 0);
-          });
-        };
-        
-        const loadAndRenderAbc = function() {
-          loadDiagramLibrary(CDN.abcjs).then(function() {
-            if (context.renderId !== previewRenderGeneration) return;
-            renderAbcNodes();
-          }).catch(function(e) {
-            console.warn('Failed to load abcjs:', e);
-            abcNodes.forEach(function(node) {
-              const container = node.closest('.abc-container');
-              if (container) {
-                setDiagramRenderState(container, 'error', 'ABC notation renderer is unavailable. Check your connection and retry.', loadAndRenderAbc);
-              }
-            });
-          });
-        };
-        if (typeof ABCJS === 'undefined') {
-          loadAndRenderAbc();
-        } else {
-          renderAbcNodes();
-        }
-      }
-    } catch (e) {
-      console.warn("ABC notation processing failed:", e);
+      renderAbcNodes(roots, context);
+    } catch (error) {
+      console.warn("ABC notation processing failed:", error);
     }
 
     try {
-      const geojsonNodes = queryPreviewRoots(roots, '.geojson-map');
-      const topojsonNodes = queryPreviewRoots(roots, '.topojson-map');
-      
-      if (geojsonNodes.length > 0 || topojsonNodes.length > 0) {
-        const renderAllMaps = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          geojsonNodes.forEach(node => renderMapNode(node, false, context));
-          topojsonNodes.forEach(node => renderMapNode(node, true, context));
-        };
-        
-        const promises = [];
-        if (typeof L === 'undefined') {
-          promises.push(loadStyle(CDN.leaflet_css));
-          promises.push(loadScript(CDN.leaflet_js));
-        }
-        if (topojsonNodes.length > 0 && !getTopoJsonLibrary()) {
-          promises.push(loadScript(CDN.topojson).then(function() {
-            if (!getTopoJsonLibrary()) {
-              throw new Error('TopoJSON renderer failed to initialize.');
-            }
-          }));
-        }
-        
-        if (promises.length > 0) {
-          Promise.all(promises).then(function() {
-            renderAllMaps();
-          }).catch(function(e) {
-            console.warn('Failed to load map libraries:', e);
-            geojsonNodes.concat(topojsonNodes).forEach(node => {
-              const container = node.closest('.geojson-container') || node.closest('.topojson-container');
-              if (container) container.classList.remove('is-loading');
-            });
-          });
-        } else {
-          renderAllMaps();
-        }
-      }
-    } catch (e) {
-      console.warn("GeoJSON/TopoJSON processing failed:", e);
+      renderMapNodes(roots, context);
+    } catch (error) {
+      console.warn("GeoJSON/TopoJSON processing failed:", error);
     }
 
     try {
-      const stlNodes = queryPreviewRoots(roots, '.stl-viewer');
-      if (stlNodes.length > 0) {
-        const renderAllStls = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          stlNodes.forEach(node => renderStlNode(node, context));
-        };
-        
-        const promises = [];
-        if (typeof THREE === 'undefined') {
-          promises.push(loadScript(CDN.three));
-        }
-        
-        const loadLoaderAndControls = function() {
-          const subPromises = [];
-          if (typeof THREE.STLLoader === 'undefined') {
-            subPromises.push(loadScript(CDN.stlLoader));
-          }
-          if (typeof THREE.OrbitControls === 'undefined') {
-            subPromises.push(loadScript(CDN.orbitControls));
-          }
-          if (subPromises.length > 0) {
-            return Promise.all(subPromises);
-          }
-          return Promise.resolve();
-        };
-        
-        if (typeof THREE === 'undefined') {
-          loadScript(CDN.three).then(function() {
-            return loadLoaderAndControls();
-          }).then(function() {
-            renderAllStls();
-          }).catch(function(e) {
-            console.warn('Failed to load Three.js libraries:', e);
-            stlNodes.forEach(node => {
-              const container = node.closest('.stl-container');
-              if (container) container.classList.remove('is-loading');
-            });
-          });
-        } else {
-          loadLoaderAndControls().then(function() {
-            renderAllStls();
-          }).catch(function(e) {
-            console.warn('Failed to load Three.js addons:', e);
-            stlNodes.forEach(node => {
-              const container = node.closest('.stl-container');
-              if (container) container.classList.remove('is-loading');
-            });
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("STL processing failed:", e);
+      renderStlNodes(roots, context);
+    } catch (error) {
+      console.warn("STL processing failed:", error);
     }
 
     try {
-      const adapterTargets = [
-        ['.plantuml-diagram', 'plantuml'],
-        ['.d2-diagram', 'd2'],
-        ['.graphviz-diagram', 'graphviz'],
-        ['.markmap-diagram', 'markmap'],
-        ['.kroki-diagram', null]
-      ];
-      const renderAdapterTargets = function() {
-        if (context.renderId !== previewRenderGeneration) return;
-        adapterTargets.forEach(([selector, fixedEngine]) => {
-          queryPreviewRoots(roots, selector).forEach(node => {
-            const engine = fixedEngine || node.closest('[data-diagram-engine]')?.dataset.diagramEngine;
-            if (engine && REMOTE_DIAGRAM_ENGINES[engine]) {
-              renderRemoteDiagramNode(node, engine, context);
-            }
-          });
-        });
-      };
-
-      if (typeof pako === 'undefined') {
-        loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
-          console.warn('Failed to load diagram encoder; POST fallbacks remain available', error);
-          renderAdapterTargets();
-        });
-      } else {
-        renderAdapterTargets();
-      }
+      renderRemoteDiagramNodes(roots, context);
     } catch (error) {
       console.error('Diagram adapter processing failed', error);
     }
 
-    const hasMath = /\$\$|\$[^$]|\\\(|\\\[/.test(rawVal || '') || /```math\b/.test(rawVal || '');
-    if (hasMath) {
-      const mathTargets = getMathJaxTypesetTargets(roots);
-      snapshotMathReviewTargetSources(mathTargets);
-      if (mathTargets.length > 0) {
-        ensureMathJaxReady().then(function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          typesetMathJaxTargets(mathTargets, context);
-        }).catch(function(e) {
-          console.warn('Failed to load MathJax:', e);
-        });
-      }
-    }
+    renderMathJaxNodes(roots, rawVal, context, { snapshotReviewTargets: true });
 
     decorateReviewTargets();
     updateDocumentStats();
@@ -22690,8 +22876,8 @@ ${selector} .arrowheadPath {
    * Adds the hover toolbar to every rendered Mermaid container.
    * Safe to call multiple times – existing toolbars are not duplicated.
    */
-  function addMermaidToolbars() {
-    markdownPreview.querySelectorAll('.mermaid-container').forEach(container => {
+  function addMermaidToolbars(root) {
+    (root || markdownPreview).querySelectorAll('.mermaid-container').forEach(container => {
       mountDiagramViewer(container, 'mermaid');
     });
   }
