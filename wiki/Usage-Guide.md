@@ -1,6 +1,6 @@
 # Usage Guide: Online Markdown Editor with Live Preview
 
-This guide explains how to use Markdown Viewer as a browser-based Markdown editor, viewer, reader, and live preview tool. For deeper implementation notes, privacy details, and renderer limits, see [Features](Features).
+This guide explains how to use Markdown Viewer as a browser-based Markdown editor, viewer, reader, and live Preview tool. For deeper implementation notes and renderer limits, see [Features](Features.md). For data handling, see [Privacy and Security](Privacy-and-Security.md).
 
 ## Workspace Layout for Editing and Previewing Markdown
 
@@ -28,6 +28,7 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 - Drag a file row onto a folder or workspace to move it. Use **Move to…** from the file menu as the keyboard and touch-friendly alternative. Dropping local Markdown files onto a folder imports them there.
 - Use **All files** for the hierarchy, **Recent** for recently opened or edited files, and **Favorites** for starred files.
 - On desktop, one click selects a sidebar document and a double click opens it. On touch layouts, one tap opens it and closes the drawer.
+- The active Document is the one shown in the primary Editor/Preview, used by formatting, review, import-into-current, export, Share Snapshot, and Live Share actions. Opening a second Document in the two-Document view does not make it the active Document.
 - Each document menu supports Open, Rename, Duplicate, Favorites, Move, Open in split view, Download Markdown, and Delete. The tab strip supports quick switching, drag-to-reorder, and close commands for one or several tabs.
 - Ctrl/Cmd-click selects separate Explorer items; Shift-click or Shift+Arrow selects a range. When only files are selected, the context menu can **Open all** or **Move to…**. Any multi-selection can be deleted after confirmation.
 - Deleting a folder tree moves all files inside it to the workspace root before removing the folders.
@@ -36,11 +37,13 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 - Normal tabs autosave to local browser storage or desktop storage.
 - The document limit is 50 stored files across creation, duplication, imports, Share Snapshot, Live Share joins, and locked Secret Workspace files.
 - Temporary Share Snapshot and Live Share tabs are not saved to the recipient's workspace.
-- Use **Private mode** from Workspace settings to clear existing document state and prevent normal document-state persistence while it is enabled.
-- Use **Reset workspace** from Workspace settings to remove saved files and review data and return to a clean workspace.
+- Use **Private mode** from Workspace settings to clear existing Document state and prevent normal Document-state persistence while it is enabled. This also removes persisted Secret Workspace data.
+- Use **Reset workspace** from Workspace settings to remove normal files, review data, and Secret Workspace storage, end Live Share, and return to a clean Workspace.
 - Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
 
-Storage is local unless you explicitly use a network feature such as GitHub import, Share Snapshot storage, or Live Share.
+> **Warning:** Export needed Documents before enabling Private mode or selecting **Reset workspace**. Markdown Viewer cannot recover deleted storage.
+
+Normal Workspace storage is local. Managed media, GitHub import, remote renderers, stored Share Snapshot, Live Share, external assets, map tiles, and uncached web libraries use the network.
 
 ## Editing Tools
 
@@ -99,6 +102,7 @@ Paste an image or GIF from the clipboard, drop an image/GIF/video file, or use t
 - Managed still images are limited to 300 KiB after optimization.
 - Animated GIFs are limited to 5 MiB, and managed videos to 10 MiB.
 - Supported file types are `.md`, `.markdown`, and `text/markdown`.
+- An individual local Markdown file is limited to 10 MB.
 - Extension matching is case-insensitive.
 - Dragging over the app shows a compact notice without blocking the editor or Explorer drop targets.
 - The app scans the first 8 KB for null bytes and rejects likely binary files.
@@ -136,13 +140,15 @@ Raster PDF and PNG exports render Mermaid, ABC, and MathJax in an off-screen cap
 
 Use Share Snapshot when you want to send a point-in-time copy.
 
-1. Choose View only or Editable.
+1. Choose View only or Can edit.
 2. Click Share.
 3. Copy the generated link.
 
-View only opens the document in preview mode and hides editing. Editable opens the copy in split mode so the recipient can edit their own local copy. It is not real-time collaboration.
+View only opens the Document in Preview and hides editing. Can edit opens the copy in Split view so the recipient can edit their own local copy. It is not real-time collaboration.
 
-Small documents are compressed into the URL hash as `#share=...`. Large documents, or documents whose encoded URL would be too long, are stored through `/api/share` and opened with `#id=...`. Stored snapshots use Cloudflare KV for up to 90 days and can contain up to 8,000,000 characters, including optimized images embedded in the Markdown. They are bearer links: anyone with the URL can open the snapshot. The creator-side API response includes a deletion token; keep it separate from the share URL if you need to delete the stored record before expiry.
+Small Documents are compressed into the URL hash as `#share=...`. Documents of at least 3,000 UTF-8 bytes, or whose encoded URL exceeds 4,096 characters, are stored through `/api/share` and opened with `#id=...`. Stored snapshots use Cloudflare KV for up to 90 days and can contain up to 8,000,000 characters. They are bearer links: anyone with the URL can open the snapshot.
+
+The creation API returns a deletion token, but the current UI does not display it or provide an early-delete action. Normal UI-created stored snapshots therefore remain until expiry. See [Share Snapshot](Share-Snapshot.md).
 
 Shared snapshot tabs are temporary and are not saved into the recipient's workspace.
 
@@ -156,7 +162,7 @@ Use Live Share when you want a temporary real-time room.
 4. Start the session.
 5. Copy the invite link after the room starts.
 
-Live Share sends real-time Yjs updates through a Cloudflare Durable Object. It does not store the document in KV or a database. The invite URL contains a room id, room secret, access role/capability, and title, not the full document body. The server authenticates host, editable, and view-only capabilities and filters message types by role. Markdown and Review data use separate Yjs documents, so view-only participants can synchronize comments and suggestions without being allowed to edit Markdown.
+Live Share sends real-time Yjs updates through a Cloudflare Durable Object. It does not persist Markdown or Review Document content server-side. The Durable Object does persist the host, edit, and view capability values plus their creation time. The invite URL contains a room id, room secret, access role/capability, and title, not the full Document body. The server authenticates host, Can edit, and View only capabilities and filters message types by role. Markdown and Review data use separate Yjs documents, so View only participants can synchronize comments and suggestions without being allowed to edit Markdown.
 
 Participants get a temporary live tab, presence avatars, and live cursor indicators. The host can end the session for everyone. Rooms are limited to 64 WebSocket participants and 8 MB live messages. Managed images, GIFs, and videos travel as short HTTPS links rather than binary Live Share messages and stop rendering when their 90-day storage TTL expires.
 
@@ -191,3 +197,5 @@ Mermaid, Markmap, maps, STL, ABC, and MathJax use client-side libraries. PlantUM
 | Close modals, panels, tab menus, and diagram modals | `Escape` |
 
 Browser shortcuts are intentionally not all intercepted on the web. For example, web tab creation/closing uses `Alt+Shift+T/W` so the app does not hijack browser tab shortcuts.
+
+Related pages: [Features](Features.md), [Markdown Reference](Markdown-Reference.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md).

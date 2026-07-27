@@ -1,60 +1,84 @@
-# Markdown Viewer Wiki: Online Markdown Editor, Live Preview, Diagrams, and Export
+# Markdown Viewer Documentation
 
-Welcome to the documentation for Markdown Viewer. Markdown Viewer is a browser-based Markdown editor, viewer, reader, and previewer for opening `.md` and `.markdown` files, writing plain Markdown, and reading a split-screen live preview with sync scrolling. It includes a nested document Explorer, a fully rendered two-document split, GitHub-Flavored Markdown, comments and suggestions, rich visual renderers, Markdown-to-PDF/HTML/PNG exports, Share Snapshot links, Live Share rooms, a PWA-capable web build, Docker deployment, and a lightweight Neutralinojs desktop build.
+Markdown Viewer is a local-first Markdown editor and viewer for the web, Progressive Web App (PWA), Docker, Cloudflare, and Neutralino desktop application. It provides a plain-text Editor, sanitized Preview, Split view, a multi-Document Workspace, review tools, rich renderers, exports, Share Snapshot, and Live Share.
 
-Most editing and rendering happens on your own device. The important exceptions are documented clearly: GitHub import contacts GitHub, remote diagram fallbacks contact third-party renderers, consented media uploads and large Share Snapshot links use temporary Cloudflare KV storage, and Live Share relays temporary collaboration updates through Cloudflare Durable Objects. The web deployment also applies CSP and security headers, while the desktop build uses a restricted native API allowlist.
+Most editing and rendering happens on the device. Managed media, GitHub import, remote diagram services, stored Share Snapshot, Live Share, external assets, map tiles, and uncached web libraries use the network. Read [Privacy and Security](Privacy-and-Security.md) before using those features with sensitive content.
 
 ## Start Here
 
-| Need | Page |
+| I want to… | Start with |
 | :--- | :--- |
-| Learn every feature, limitation, and data-handling detail | [Features](Features) |
-| Use the editor day to day | [Usage Guide](Usage-Guide) |
-| Add and manage comments or suggestions | [Usage Guide: Comments and Suggestions](Usage-Guide#comments-and-suggestions) |
-| Write supported Markdown, math, diagrams, maps, STL, and ABC notation | [Markdown Reference](Markdown-Reference) |
-| Install locally, in Docker, or as a desktop app | [Installation](Installation) |
-| Tune deployment and runtime settings | [Configuration](Configuration) |
-| Deploy with Docker and reverse proxies | [Docker Deployment](Docker-Deployment) |
-| Build and understand the Neutralino desktop app | [Desktop App](Desktop-App) |
-| Understand Live Share on Cloudflare | [Live Share Cloudflare](Live-Share-Cloudflare) |
-| Add or maintain interface languages | [Localization](Localization) |
-| Review project history and design decisions | [Development Journey](Development-Journey) |
-| Answer common privacy and troubleshooting questions | [FAQ](FAQ) |
-| Contribute changes | [Contributing](Contributing) |
+| Understand the product and its limits | [Features](Features.md) |
+| Learn the Workspace, Editor, Preview, and shortcuts | [Usage Guide](Usage-Guide.md) |
+| Write Markdown, math, diagrams, maps, STL, or ABC notation | [Markdown Reference](Markdown-Reference.md) |
+| Create a point-in-time link | [Share Snapshot](Share-Snapshot.md) |
+| Collaborate in a temporary room | [Live Share](Live-Share-Cloudflare.md) |
+| Review local storage, network, retention, and security boundaries | [Privacy and Security](Privacy-and-Security.md) |
+| Run the web app, PWA, Docker, Cloudflare, or desktop build | [Installation](Installation.md) |
+| Configure storage, libraries, limits, or Cloudflare bindings | [Configuration](Configuration.md) |
+| Deploy behind Docker and a reverse proxy | [Docker Deployment](Docker-Deployment.md) |
+| Build or operate the Neutralino application | [Desktop Application](Desktop-App.md) |
+| Fix a problem | [Troubleshooting](Troubleshooting.md) or [FAQ](FAQ.md) |
+| Contribute code, documentation, or a translation | [Contributing](Contributing.md) |
+| Maintain interface translations and approved terms | [Localization and Terminology](Localization.md) |
+| Read project history and design context | [Development Journey](Development-Journey.md) |
 
-## Quick Run Options
+## Quick Run
 
-| Method | Command | URL |
-| :--- | :--- | :--- |
-| Python static server | `python -m http.server 8080` | `http://localhost:8080` |
-| Node static server | `npx serve . -p 8080` | `http://localhost:8080` |
-| Docker Compose | `docker compose up -d` | `http://localhost:8080` |
-| Docker image | `docker run -d --name markdown-viewer -p 8080:80 ghcr.io/thisis-developer/markdown-viewer:latest` | `http://localhost:8080` |
-| Desktop app | Download from GitHub Releases or build from `desktop-app/` | Desktop window |
+From the repository root:
 
-Run local web builds through `localhost` or another HTTP(S) server. Opening `index.html` with `file://` can break Web Workers and Service Workers because browsers block those APIs from local files.
+```bash
+python -m http.server 8080
+```
 
-## Product Principles
+Open `http://localhost:8080`. Use HTTP(S), not `file://`, so Web Workers and Service Workers can run.
 
-| Principle | What It Means |
+Other supported entry points:
+
+| Target | Command or action |
 | :--- | :--- |
-| On-device editing | Normal typing, preview, tabs, exports, themes, and settings stay on the user's device. No login is required. |
-| Explicit network features | Any feature that sends content elsewhere is user-triggered or tied to a renderer/importer that is documented. |
-| Rich Markdown support | The live preview supports GFM tables/task lists, math, footnotes, alerts, Mermaid, PlantUML, Graphviz, D2, Vega-Lite, Markmap, WaveDrom, maps, STL, ABC notation, and more. |
-| Responsive performance | Large documents use debounced rendering, optional worker rendering, DOM patching, and cached measurements. |
-| Deploy anywhere | The app can run as static files, a PWA, a Docker container, or a lightweight Neutralinojs desktop build. |
+| Hosted web app | Open [markdownviewer.pages.dev](https://markdownviewer.pages.dev/) |
+| PWA | Open the HTTPS site and use the browser's install action |
+| Docker image | `docker run -d --name markdown-viewer -p 8080:80 ghcr.io/thisis-developer/markdown-viewer:latest` |
+| Docker Compose | `docker compose up -d` |
+| Desktop development | Run `npm install` and `npm run dev` in `desktop-app/` |
+| Desktop build | Run `npm run build` in `desktop-app/` |
 
-## Privacy At A Glance
+See [Installation](Installation.md) before deploying. The stock Docker image has a documented Worker/PWA packaging limitation.
 
-- No accounts, cookies, analytics, ads, or telemetry are implemented.
-- Normal documents and settings are stored in browser localStorage or local desktop storage.
-- Comments and suggestions stay with normal local tabs, are excluded from exports and Share Snapshot, and synchronize only during an active Live Share room.
-- Private mode in Workspace settings clears document state and prevents normal document-state persistence until it is turned off; Reset workspace removes files and review data without enabling Private mode.
-- Small Share Snapshot links keep compressed content in the URL hash.
-- Large Share Snapshot links upload the snapshot to Cloudflare KV for up to 90 days and remain bearer links for anyone who has the URL.
-- Images, animated GIFs, and supported videos are uploaded only after first-use consent. Their unguessable public links expire 90 days after the latest upload of the same content.
-- Live Share sends real-time updates, display names, cursors, and presence through a Cloudflare Durable Object while the room is active.
-- Live Share host, edit, and view capabilities are authenticated server-side, and unsupported WebSocket origins are rejected.
-- Remote diagram renderers receive diagram source when PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, or some preview helpers need them.
+## Product Boundaries
 
-For the complete table of data flows, see [Features](Features#data-handling-summary).
+| Area | Implemented behavior |
+| :--- | :--- |
+| Workspace | Up to 50 Documents, nested Folders, Recent, Favorites, search, tabs, bulk actions, and encrypted Secret Workspace |
+| Editing | Editor, Split view, Preview, formatting toolbar, custom undo/redo, Find and Replace, LTR/RTL, large-Document rendering paths |
+| Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
+| Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
+| Import/export | Local and public GitHub import; Markdown, HTML, Browser Print, legacy raster PDF, and PNG export |
+| Sharing | URL-hash or KV-backed Share Snapshot; WebSocket Live Share with host/edit/view capabilities |
+| Delivery | Static web, PWA, Docker, Cloudflare, and seven Neutralino desktop targets |
+
+## Privacy at a Glance
+
+- Normal Workspace state is local to the browser profile or desktop storage.
+- Private mode clears persisted Document state, including Secret Workspace storage, and blocks further persistence while enabled.
+- **Reset workspace** deletes normal and Secret Workspace data and cannot be undone in Markdown Viewer.
+- Managed media is public-by-link and expires 90 days after the most recent upload of identical content.
+- Stored Share Snapshot content remains in Cloudflare KV for 90 days.
+- Live Share does not persist Markdown/Review content server-side, but its Durable Object stores role capability metadata without an application TTL.
+- The application does not implement end-to-end encryption for sharing.
+- The codebase does not implement accounts, analytics, telemetry, advertising, tracking pixels, or app-specific cookies.
+
+For the complete data-flow table and limitations, see [Privacy and Security](Privacy-and-Security.md).
+
+## Languages
+
+The interface supports 14 locales. Maintained documentation entry points are available in:
+
+- [English](../README.md)
+- [Japanese](../locales/README_ja.md)
+- [Korean](../locales/README_ko.md)
+- [Simplified Chinese](../locales/README_zh.md)
+- [Traditional Chinese](../locales/README_tw.md)
+
+Detailed Wiki pages are maintained in English. Localized READMEs identify English links rather than pointing to missing localized pages.

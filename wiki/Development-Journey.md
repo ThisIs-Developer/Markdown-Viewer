@@ -26,8 +26,8 @@ This page keeps the technical record too, but the journey is not only technical.
 
 Current sharing behavior separates two clear workflows:
 
-- Share Snapshot creates a read-only or editable point-in-time copy. Small documents stay inside the URL hash. Larger documents are stored in Cloudflare KV for 90 days, with restricted API origins and creator-side deletion tokens.
-- Live Share creates a temporary Cloudflare Durable Object room for real-time Yjs collaboration. The room relays updates and presence while active and does not store the document as a permanent record.
+- Share Snapshot creates a point-in-time copy with View only or Can edit access. Small documents stay inside the URL hash. Larger documents are stored in Cloudflare KV for 90 days, with restricted API origins and creator-side deletion tokens.
+- Live Share creates a Cloudflare Durable Object room for real-time Yjs collaboration. The room relays Markdown/Review updates and presence without persisting Document content server-side; it does persist host/edit/view capability metadata.
 
 Recent workspace work added nested folders, GitHub directory preservation, range and multi-item Explorer actions, document-surface context menus, and a two-document split whose previews run the full math, diagram, map, STL, and ABC rendering pipeline.
 
@@ -86,6 +86,8 @@ The changelog records many small fixes. The recurring themes are:
 - Temporary shared/live tabs are excluded from saved workspaces.
 - Small snapshot links keep content in the URL hash.
 - Stored snapshot links use Cloudflare KV for 90 days.
-- Private mode prevents normal document-state persistence, and Reset workspace removes saved files and review data.
+- Private mode prevents normal Document-state persistence after clearing it, and Reset workspace removes normal files, review data, and Secret Workspace storage.
 - Live Share uses Cloudflare Durable Objects as temporary relays.
 - Remote renderer and import features send only the data needed for that feature.
+
+This page is historical context, not the source of current product behavior. Use [Features](Features.md) and [Privacy and Security](Privacy-and-Security.md) for the current reference.

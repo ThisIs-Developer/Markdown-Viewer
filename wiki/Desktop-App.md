@@ -1,8 +1,8 @@
-# Desktop Markdown Editor App
+# Desktop Markdown Editor Application
 
-The desktop app wraps Markdown Viewer in Neutralinojs for users who want a lightweight local Markdown editor and viewer window. It uses the same editor, preview, renderer, sharing, and export code as the web app, with native file dialogs and local desktop storage.
+The desktop application wraps Markdown Viewer in Neutralinojs for users who want a lightweight local Markdown Editor and viewer window. It uses the same Editor, Preview, renderer, sharing, and export code as the web application, with native file dialogs and local desktop storage.
 
-## What Is Different From The Web App?
+## What Is Different from the Web Application?
 
 - Runs in a Neutralinojs desktop window.
 - Uses native open/save dialogs for Markdown and HTML.
@@ -14,6 +14,8 @@ The desktop app wraps Markdown Viewer in Neutralinojs for users who want a light
 - The default configuration does not expose `os.execCommand`; Markdown preview cannot execute local shell commands through the standard desktop build.
 
 Network features remain network features: managed media upload, GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links can still contact remote services.
+
+PlantUML and D2 contain an optional local-command code path, but it requires `os.execCommand` plus explicit opt-in. Because the default native allowlist omits that API, the standard desktop build uses the remote PlantUML/Kroki paths.
 
 ## Directory Structure
 
@@ -104,7 +106,7 @@ Browser/chrome modes block filesystem and OS APIs more tightly.
 - Bundles Bootstrap icon fonts.
 - Strips web-only SEO/canonical/hreflang/schema metadata from the desktop HTML.
 
-This is why the prepared desktop app can load core bundled renderer libraries without CDNs after setup.
+This is why the prepared desktop application can load core bundled renderer libraries without CDNs after setup.
 
 ## Platform Notes
 
@@ -131,3 +133,6 @@ chmod +x markdown-viewer-mac_universal
 - Native file access happens through explicit open/save actions or launch arguments.
 - The app does not include analytics or telemetry.
 - Sharing/import/remote-rendering features use the same network behavior as the web app.
+- Private mode and **Reset workspace** delete persisted Secret Workspace data as well as normal Document state.
+
+Related pages: [Installation](Installation.md), [Configuration](Configuration.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md#the-desktop-application-does-not-start).

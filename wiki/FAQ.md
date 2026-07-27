@@ -1,171 +1,147 @@
-# Markdown Viewer FAQ
+# Frequently Asked Questions
 
 ## General
 
 ### What is Markdown Viewer?
 
-Markdown Viewer is a browser-based Markdown editor, viewer, reader, and previewer for opening `.md` files, writing in plain Markdown, and using a split-screen live preview with sync scrolling. It also includes document tabs, GitHub-Flavored Markdown, math, diagrams, maps, STL models, ABC music notation, export tools, optional sharing, and a desktop app.
+Markdown Viewer is a local-first Markdown editor and viewer with a plain-text Editor, sanitized Preview, Split view, multi-Document Workspace, rich renderers, exports, Share Snapshot, and Live Share. It runs on the web, as a PWA, in Docker, and as a Neutralino desktop application.
 
 ### Is it free?
 
-Yes. The project is open source under the Apache License 2.0.
+Yes. Markdown Viewer is open source under the [Apache License 2.0](../LICENSE).
 
 ### Do I need an account?
 
-No. There is no login, subscription, account system, analytics identity, or cloud workspace account. You can use the editor as a no-signup Markdown reader and previewer.
+No. The application has no account, login, or subscription system.
 
-### Is it a WYSIWYG Markdown editor?
+### Is it a WYSIWYG editor?
 
-Not in the strict sense. Markdown Viewer is a plain-text Markdown editor with live preview and WYSIWYG-style toolbar helpers. You can quickly insert common formatting, but you do not directly edit the rendered preview like a full rich-text editor.
+No. You edit plain Markdown source. The formatting toolbar inserts or transforms Markdown, and Preview shows the rendered result.
 
-### Can it open local .md files?
+### Which platforms are supported?
 
-Yes. You can open `.md` and `.markdown` files with the file picker or drag and drop. The desktop app can also open Markdown files through native file dialogs and command-line file arguments.
+You can use a modern browser, install the PWA where the browser supports it, self-host the static application, run the Docker image, or use/build the Neutralino desktop application. Exact behavior still depends on browser, webview, operating system, GPU, audio, print engine, and network support.
 
-### How do I organize documents?
+## Workspace and Storage
 
-Use the Explorer to create nested folders inside Workspace or the password-protected Secret Workspace. Drag files between locations or use **Move to…**. Ctrl/Cmd-click selects separate items, while Shift-click or Shift+Arrow selects a range for bulk open, move, or delete actions.
+### Where are my Documents stored?
 
-## Privacy and Data
+Normal Workspace state is stored in browser `localStorage`. The desktop application mirrors selected values into Neutralino storage. Markdown Viewer is not a synchronized cloud Workspace.
 
-### Does my Markdown leave my device?
+### How many Documents can I keep?
 
-Normal typing, previewing, local file import, tab autosave, and most exports happen on your device. Content can leave your device when you use explicit network features:
+The implemented limit is 50 Documents across normal Workspace, locked Secret Workspace counts, and temporary Share Snapshot/Live Share tabs.
 
-- GitHub import contacts GitHub.
-- Remote diagram renderers can receive diagram source.
-- Pasting, dropping, or uploading a device image, animated GIF, or supported video sends a managed copy to public media storage after first-use consent.
-- Large Share Snapshot links upload a temporary copy to Cloudflare KV.
-- Live Share relays real-time updates through Cloudflare Durable Objects.
-- External images, links, map tiles, and CDN libraries can be requested by the browser.
+### What is the difference between closing and deleting a Document?
 
-### Do you collect analytics or telemetry?
+Closing removes the open tab but keeps the Document in the Workspace. Deleting removes the Document. Closing all tabs can leave the Workspace files available in Explorer.
 
-No analytics, telemetry, ads, tracking pixels, or app-specific cookies are implemented in the codebase.
+### What happens when I delete a Folder?
 
-### What does the app store locally?
+Markdown Viewer moves Documents from that Folder tree to the containing Workspace root, then removes the Folders. A multi-item delete can delete selected Documents while returning Documents from deleted Folders to the root; read the confirmation carefully.
 
-The app stores normal tabs and their review threads, nested folder organization, active tab id, untitled-tab counter, theme/direction/view settings, language selection, scroll sync state, and Find and Replace dock preference. Web storage uses browser `localStorage`; the desktop app mirrors selected values into Neutralino storage. Private mode clears document/workspace state and prevents those document-state keys from being written until it is turned off.
+### What is Secret Workspace?
 
-### Are comments and suggestions added to my Markdown?
+Secret Workspace encrypts stored file contents and Folder names on the device with a password-derived AES-GCM key. The password cannot be recovered. The protection applies to stored content, not to exports, unlocked sessions, or network features.
 
-No. Review threads are a separate feedback layer attached to rendered blocks. They are excluded from Markdown and document exports. Share Snapshot does not include them; an active Live Share room synchronizes them through its separate Review channel.
+### What does Private mode do?
+
+Private mode clears persisted Document-state keys, including the encrypted Secret Workspace payload, and blocks further Document-state writes while enabled. Current in-memory work can continue during that session but does not survive reload or exit.
+
+> **Warning:** Export needed Documents before enabling Private mode.
+
+### What does Reset workspace delete?
+
+It ends Live Share, deletes normal Documents, review data, and Secret Workspace storage, then restores the welcome Document. Markdown Viewer cannot undo this action.
+
+## Privacy and Security
+
+### Does Markdown leave my device?
+
+Normal editing, local import, Preview, Workspace storage, and most exports stay on the device. Data can leave when you use managed media, public GitHub import, remote diagram rendering, stored Share Snapshot, Live Share, external assets/map tiles, or uncached web libraries.
+
+See [Privacy and Security](Privacy-and-Security.md) for the complete table.
+
+### Does Markdown Viewer collect analytics?
+
+The application code does not implement analytics, telemetry, advertising, tracking pixels, or app-specific cookies. External services, hosting providers, and self-hosted servers can still process normal request logs.
+
+### Is rendered HTML sanitized?
+
+Yes. Preview HTML is sanitized with DOMPurify before insertion. Remote SVG output receives additional filtering. Sanitization reduces risk but is not a guarantee against every browser or third-party defect.
 
 ### Are Share Snapshot links private?
 
-They are bearer links. Anyone with the link can open the snapshot. Large stored snapshots expire after 90 days. The creator-side API response includes a separate deletion token that can be used to delete the stored record before expiry; it is not included in the share URL.
+No. They are bearer links. Anyone with the complete link can use its View only or Can edit capability. Stored snapshots expire after 90 days.
 
-Small snapshots keep compressed content inside the URL hash. Large snapshots use `/api/share`, which stores content, mode, title, creation time, and size in Cloudflare KV for 90 days. Editable snapshots are not collaborative; they only let the recipient edit their opened copy.
+### Can I delete a stored Share Snapshot early?
 
-### Are uploaded media links private?
+The API supports deletion with the token returned at creation. The current UI does not display that token or provide a Delete snapshot action, so normal UI-created snapshots remain until their 90-day expiry. See [Share Snapshot](Share-Snapshot.md).
 
-No. Still images are optimized; images, animated GIFs, and supported videos are uploaded only after first-use consent, then referenced by a short content-addressed HTTPS link. The id is difficult to guess, but anyone who receives the URL can retrieve the media for up to 90 days. Cloudflare KV deletes it after that TTL, so the link stops rendering. Duplicate content reuses the same link and refreshes its 90-day expiry; legacy inline raster data can be converted to managed links after the same consent. The duration is the same 90-day limit used by stored Share Snapshot links, but their storage records are separate.
+### Are managed-media URLs private?
 
-### Is Live Share saved permanently?
-
-No. Live Share uses a temporary Cloudflare Durable Object room as a relay. It does not write the live document to KV or a database. While active, the room relays document updates, review comments and suggestions, display names, presence, cursors, sync messages, leave messages, and session-end messages.
+No. They are content-addressed and difficult to guess, but anyone with the URL can retrieve the media until its 90-day expiry. There is no early-delete control.
 
 ### Is Live Share end-to-end encrypted?
 
-No end-to-end encryption is implemented. The room id and secret are included in the invite link, and the Cloudflare Durable Object relays messages. Treat Live Share links like private bearer links.
+No. Treat every invitation as a sensitive bearer link.
 
-### How do I clear local data?
+### Does Live Share store the Document?
 
-Use **Reset workspace** in Workspace settings to clear saved files and review data. Private mode also clears document/workspace state and prevents it from being saved. Clearing site data from browser settings/developer tools removes cached app assets and any saved settings for that origin.
+It does not persist Markdown or Review content server-side. Connected clients exchange it through a Durable Object WebSocket relay. The Durable Object does persist host/edit/view capability values and `createdAt` without an application TTL or deletion route.
 
-### What security protections are enabled?
+## Markdown, Renderers, and Editing
 
-Preview HTML is sanitized, exported HTML uses CSP/SRI protections, Cloudflare Pages sets security headers and hides sensitive paths, Share Snapshot CORS is restricted, Live Share validates origins and capabilities server-side, and the desktop build does not expose Neutralino's command-execution API by default. These protections reduce risk but do not make shared links private or Live Share end-to-end encrypted.
+### Which Markdown features are supported?
 
-## Editing and Rendering
+Markdown Viewer supports CommonMark-style Markdown, GFM tables/task lists/strikethrough/autolinks, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, frontmatter handling, math, and the rich fences listed in [Markdown Reference](Markdown-Reference.md).
 
-### What Markdown does it support?
+It is GFM-oriented, not guaranteed to match GitHub, Pandoc, Obsidian, Typora, or another parser byte for byte.
 
-It supports standard Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, footnotes, definition lists, superscript, subscript, highlight syntax, raw sanitized HTML, GitHub alerts, YAML frontmatter in exports, LaTeX math, Mermaid, PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
+### Which renderers send source over the network?
 
-### Why do some diagrams need the internet?
+PlantUML uses the PlantUML server with Kroki fallback. D2, Graphviz/DOT, Vega-Lite, and WaveDrom use Kroki. Some insertion previews use mermaid.ink or Kroki. Do not use those paths for sensitive source unless you trust the service.
 
-Mermaid, Markmap, maps, STL, ABC, and MathJax use client-side libraries. PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, and some insertion previews can use remote renderers such as PlantUML, Kroki, or mermaid.ink. Those remote services need network access and receive the diagram source.
+### Can I compare two Documents?
 
-### Why does the preview update in stages?
+Yes. Use **Open in split view** from a Document menu, then choose a second Document. A shared control switches both sides between Edit and Preview. This two-Document mode is separate from the single-Document Editor/Split view/Preview controls.
 
-Base Markdown renders first. Advanced content such as MathJax, diagrams, maps, STL, ABC, and remote renderers runs after the base HTML has been sanitized and inserted. On large documents the app may use a Web Worker and segmented DOM patching to keep typing responsive.
+### Does Find and Replace support regular expressions?
 
-### Why did a shared document open in a temporary tab?
-
-Share Snapshot and Live Share tabs are temporary by design. They are stripped from persistent tab storage so opening someone else's link does not silently save their document into your workspace.
-
-### Can I open two documents side by side?
-
-Yes. Choose **Open in split view** from a file menu and select the second file. A shared control switches both documents between Edit and Preview. Preview mode renders Markdown, math, Mermaid and remote diagrams, maps, STL models, and ABC notation. This is separate from the normal Editor/Split/Preview modes for one document.
+Yes. It supports regular expressions, capture replacements, preserve-case replacement, selection-only matching, selected syntax scopes, and a diff Preview. Scope detection is best-effort for unusual Markdown.
 
 ## Import and Export
 
-### Can I import local files?
+### Which local files can I import?
 
-Yes. Import `.md`, `.markdown`, or `text/markdown` files through the file picker or drag and drop. Dropping onto an Explorer folder imports there; untargeted drops use the Workspace root. The app scans the first 8 KB for null bytes and rejects likely binary files.
+`.md`, `.markdown`, and `text/markdown` files up to 10 MB. The application scans the first 8 KiB for null bytes and rejects likely binary content.
 
-### Can I import private GitHub repositories?
+### Can I import a private GitHub repository?
 
-No. The GitHub importer only uses public GitHub URLs and does not ask for tokens.
+No. The importer uses public GitHub URLs and does not request a token. Repository and Folder results show at most 30 Markdown files.
 
-### Why are only 30 GitHub files shown?
+### Which PDF option should I use?
 
-The importer limits repository/folder results to the first 30 Markdown files to keep the modal and network requests manageable. Imported files go into a repository-named folder and keep their nested GitHub directory paths.
+Use Browser Print for most long, text-heavy Documents and selectable text. Use Legacy Raster PDF when screenshot-style capture and its page-break planning are more important. Raster export consumes more memory and depends on browser canvas/CORS behavior.
 
-### Which PDF export should I use?
+### Why are images missing from PDF or PNG?
 
-Use Browser Print for most documents. It is faster and better for long text, and it always prepares a light print theme even if the app is currently in dark mode. Use Legacy Raster PDF when you need the app's page-break planning for images, tables, math, and diagrams, but expect higher memory use and possible browser canvas limits.
-
-### Why are images missing from PDF or PNG export?
-
-Canvas-based exports require images to be loaded and CORS-compatible. A remote image that blocks cross-origin canvas capture may not appear in raster PDF/PNG output.
-
-### Why does exported PDF differ from the preview?
-
-Browser Print depends on the browser print engine. Legacy Raster PDF captures an off-screen layout to canvas, applies page-break changes, scales some content, and may move blocks to avoid bad page cuts. That can differ from the live preview.
-
-Browser Print removes the app's dark-mode styling before printing and restores it afterward. It does not rewrite colors that were intentionally placed in your Markdown, embedded HTML, SVG, image files, or diagram source.
+Canvas-based exports need successfully loaded, CORS-compatible resources. A remote image that blocks cross-origin canvas access can be omitted. Wait for all assets/renderers, then see [Troubleshooting](Troubleshooting.md#pdf-or-png-export-is-missing-content).
 
 ## Installation and Offline Use
 
-### Can I run it offline?
-
-Yes, with limits.
-
-- The web/PWA build can work offline after the app shell and CDN libraries have been loaded and cached.
-- First use of CDN-based libraries still requires network access unless they are already cached.
-- The prepared desktop build bundles external libraries into `resources/libs` and points dynamic library loading there.
-- Features that inherently use the network, such as managed media upload, GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, and external images, still need connectivity.
-
 ### Can I open `index.html` directly?
 
-Use a local server instead. `file://` can block Web Workers and Service Workers, which breaks important rendering and offline behavior. Run `python -m http.server 8080` or `npx serve . -p 8080`.
+Use an HTTP server instead. `file://` can block Web Workers and Service Workers.
 
-### Why will the desktop app not launch on macOS?
+### Can the PWA work offline?
 
-The binaries are unsigned, so macOS may quarantine them. You can right-click and choose Open, or run:
+The application shell and previously fetched CDN libraries can work after a successful Service Worker installation and cache fill. First-use libraries and every network-backed feature still require connectivity.
 
-```bash
-xattr -d com.apple.quarantine markdown-viewer-mac_universal
-chmod +x markdown-viewer-mac_universal
-./markdown-viewer-mac_universal
-```
+### Does Docker include Share Snapshot and Live Share backends?
 
-## Troubleshooting
+No. The container is a static Nginx site. It does not provide Cloudflare KV or Durable Objects. The stock image also omits `preview-worker.js` and `sample.md`, which limits Worker and PWA/offline behavior. See [Docker Deployment](Docker-Deployment.md#known-stock-image-limitation).
 
-### The preview is blank. What should I check?
+## Help
 
-Check the browser console for blocked scripts or network errors, verify JavaScript is enabled, and hard refresh. If you are using `file://`, serve the app from localhost instead.
-
-### Math does not render. Why?
-
-MathJax loads when math markers are detected. Check your LaTeX syntax and network/cache state if this is the first time using math in the web build.
-
-### Mermaid or another diagram shows an error. What now?
-
-Check the fence language and diagram syntax. For remote diagram engines, also check network access to the renderer. Remote requests time out and retry, but they cannot render while the service is unreachable.
-
-### Live Share says the room expired.
-
-The room may have ended, the host may have left, the invite may be stale, or the participant may not have received initial sync within the join timeout. Ask the host to start a new session.
+For diagnostic steps, use [Troubleshooting](Troubleshooting.md). For an unresolved reproducible problem, search or open a [GitHub issue](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) without including confidential Documents, bearer links, secrets, capabilities, or tokens.

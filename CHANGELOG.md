@@ -47,8 +47,8 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 ## v3.9.0
 
 - **Description:** Introduced clearer sharing flows for Live Share and Share Snapshot, with fixes for shared Markdown rendering and desktop startup.
-  - **Live Share:** Live Share creates a temporary in-memory room for real-time collaboration. The document is synced only while the room is active, and the room is not saved as a permanent document store. Participants join through the invite link and can either edit or view only, depending on the access mode selected by the host.
-  - **Share Snapshot:** Share Snapshot creates a shareable read-only or editable snapshot link. Small documents stay encoded directly inside the URL hash. Larger documents are saved behind a generated `#share=` ID and kept temporarily for 90 days, so the recipient can open the shared document without it being stored on their own device.
+  - **Live Share:** Live Share introduced temporary real-time collaboration through a Cloudflare room. Markdown content is synchronized between active clients rather than stored as a permanent server-side Document. Participants join through the invite link with Can edit or View only access, depending on the mode selected by the host.
+  - **Share Snapshot:** Share Snapshot creates a point-in-time link with View only or Can edit access. Small documents stay encoded directly inside the `#share=...` URL hash. Larger documents are stored for 90 days and opened through a generated `#id=...` link; recipient tabs remain temporary rather than being added to the saved Workspace.
   - **Shared Rendering:** Fixed shared Snapshot and Live Share participant views so LaTeX, Mermaid, TopoJSON, and other advanced Markdown renderers complete after the shared document loads.
   - **Sharing UX:** The Live Share modal now shows only the display name, access mode, and start button before a room starts. Participant and invite-link sections appear only after the live room is active.
   - **Desktop Startup:** Fixed the Neutralino desktop build preparation so bundled resources load the generated application script instead of stalling on startup skeletons.
@@ -72,9 +72,9 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## v3.8.0
 
-- **Description:** Delivered substantial new feature expansions and reliability enhancements, including diagram insertion workflow with live card previews, client-side rendering engines (PlantUML, D2, Graphviz), interactive ABC notation playback sync, export quality boosts, desktop data persistence, and layout fixes for squished or overlapping diagrams.
+- **Description:** Delivered substantial new feature expansions and reliability enhancements, including diagram insertion with live card previews, PlantUML/D2/Graphviz renderer integrations, interactive ABC notation playback sync, export quality improvements, desktop data persistence, and layout fixes for squished or overlapping diagrams.
   - **Insert Diagram Modal:** Added an interactive "Insert Diagram" modal featuring high-fidelity static SVGs, actual live rendering of diagrams in split views, and a categorized search filter.
-  - **New Diagram Engines Support:** Integrated client-side rendering support for PlantUML, D2, Graphviz (DOT), Vega-Lite, Wavedrom, and Markmap diagrams via dynamic libraries and Kroki API fallbacks for browser/offline environments.
+  - **New Diagram Engines Support:** Added PlantUML, D2, Graphviz (DOT), Vega-Lite, WaveDrom, and Markmap integrations. The standard web paths use remote PlantUML/Kroki services for remote engines and client-side Markmap libraries.
   - **Interactive Diagram Toolbars:** Built interactive toolbar options (zoom, pan, copy SVG/PNG, reset, fit-to-view) for newly introduced engines.
   - **ABC Notation Enhancements:** Implemented synchronized playback cursor and note highlighting for synthesized audio playbacks and custom export actions.
   - **High-Definition Image Export:** Increased PNG export resolution to 3x for crisp, high-definition diagrams, and added solid backgrounds to transparent SVG renders to preserve visibility.
