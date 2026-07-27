@@ -2398,7 +2398,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function typesetMathJaxTargets(mathTargets, context) {
-    const runId = ++mathJaxTypesetRunId;
+    const usesMainPreviewGeneration = !context || typeof context.isCurrent !== 'function';
+    const runId = usesMainPreviewGeneration ? ++mathJaxTypesetRunId : null;
+    const isCurrent = function() {
+      return isPreviewRenderContextCurrent(context)
+        && (!usesMainPreviewGeneration || runId === mathJaxTypesetRunId);
+    };
     const mathJaxReady = MathJax.startup && MathJax.startup.promise
       ? MathJax.startup.promise
       : Promise.resolve();
@@ -2408,8 +2413,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }).then(function() {
       return mathJaxReady;
     }).then(function() {
-      if (runId !== mathJaxTypesetRunId) return null;
-      if (context.renderId !== previewRenderGeneration) return;
+      if (!isCurrent()) return null;
       if (typeof MathJax.typesetPromise !== 'function') {
         throw new Error('MathJax typesetPromise API is unavailable.');
       }
@@ -2419,8 +2423,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (connectedTargets.length === 0) return null;
       return MathJax.typesetPromise(connectedTargets);
     }).then(function() {
-      if (runId !== mathJaxTypesetRunId) return;
-      if (context.renderId !== previewRenderGeneration) return;
+      if (!isCurrent()) return;
       queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
         mjx.removeAttribute('tabindex');
       });
@@ -2483,6 +2486,22 @@ document.addEventListener("DOMContentLoaded", async function () {
         });
     }
     return mathJaxLoadPromise;
+  }
+
+  function renderMathJaxNodes(roots, rawVal, context, options) {
+    const hasMath = /\$\$|\$[^$]|\\\(|\\\[/.test(rawVal || '') || /```math\b/.test(rawVal || '');
+    if (!hasMath) return;
+    const mathTargets = getMathJaxTypesetTargets(roots);
+    if (options && options.snapshotReviewTargets) {
+      snapshotMathReviewTargetSources(mathTargets);
+    }
+    if (mathTargets.length === 0) return;
+    ensureMathJaxReady().then(function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      typesetMathJaxTargets(mathTargets, context);
+    }).catch(function(error) {
+      console.warn('Failed to load MathJax:', error);
+    });
   }
 
   function clearMathJaxPreviewState(container) {
@@ -3535,8 +3554,17 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function openMoveDocumentDialog(tabId) {
-    const tab = tabs.find(function(item) { return item.id === tabId; });
-    if (!tab || isTemporaryDocument(tab)) return;
+    openMoveDocumentsDialog([tabId]);
+  }
+
+  function openMoveDocumentsDialog(tabIds) {
+    const documents = Array.from(new Set(tabIds || [])).map(function(documentId) {
+      return tabs.find(function(item) { return item.id === documentId; });
+    }).filter(function(item) {
+      return item && !isTemporaryDocument(item);
+    });
+    if (documents.length === 0) return;
+    const tab = documents[0];
     const modal = document.getElementById('document-move-modal');
     const title = document.getElementById('document-move-modal-title');
     const select = document.getElementById('document-move-destination');
@@ -3546,6 +3574,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!modal || !select || !confirmButton || !cancelButton) return;
 
     title.textContent = 'Move “' + (tab.title || 'Untitled') + '”';
+    if (documents.length > 1) title.textContent = 'Move ' + documents.length + ' selected files';
     select.textContent = '';
     documentOrganization.workspaces.forEach(function(workspace) {
       const rootOption = document.createElement('option');
@@ -3582,7 +3611,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       const parts = String(select.value || '').split('|');
       cleanup();
       closeAppModal(modal);
-      await moveDocumentToLocation(tab.id, parts[0], parts[1] || null);
+      if (documents.length === 1) {
+        await moveDocumentToLocation(tab.id, parts[0], parts[1] || null);
+      } else {
+        await moveDocumentsToLocation(documents.map(function(item) { return item.id; }), parts[0], parts[1] || null);
+      }
     }
 
     confirmButton.addEventListener('click', move);
@@ -3998,16 +4031,73 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function getSelectedDocuments() {
+    const entities = getSelectedDocumentTreeEntities();
+    if (entities.length < 2 || entities.some(function(entity) { return entity.type !== 'document'; })) {
+      return [];
+    }
+    return entities.map(function(entity) { return entity.item; });
+  }
+
+  function openSelectedDocuments() {
+    const documents = getSelectedDocuments();
+    if (documents.length < 2) return;
+    const openedAt = Date.now();
+    documents.forEach(function(tab) {
+      tab.isOpen = true;
+      tab.lastOpenedAt = openedAt;
+    });
+    saveTabsToStorage(tabs);
+
+    const target = documents.find(function(tab) { return tab.id === activeTabId; }) || documents[0];
+    selectedDocumentId = target.id;
+    setSingleDocumentTreeSelection('document', target.id);
+    if (target.id !== activeTabId) {
+      switchTab(target.id);
+    } else {
+      updateNoOpenDocumentState();
+      renderTabBar(tabs, activeTabId);
+      renderDocumentSidebar();
+    }
+    closeDocumentSidebarOnMobile();
+    announceToScreenReader('Opened ' + documents.length + ' selected files.');
+  }
+
+  function openMoveSelectedDocumentsDialog() {
+    const documents = getSelectedDocuments();
+    if (documents.length < 2) return;
+    openMoveDocumentsDialog(documents.map(function(tab) { return tab.id; }));
+  }
+
   function getBulkDocumentTreeMenuActions() {
     const entities = getSelectedDocumentTreeEntities();
     if (entities.length < 2) return [];
-    return [{
+    const actions = [];
+    if (entities.every(function(entity) { return entity.type === 'document'; })) {
+      actions.push(
+        {
+          id: 'open-selected',
+          icon: 'lucide-files',
+          label: 'Open all',
+          run: openSelectedDocuments
+        },
+        {
+          id: 'move-selected',
+          icon: 'lucide-arrow-right-to-line',
+          label: 'Move to\u2026',
+          run: openMoveSelectedDocumentsDialog
+        },
+        { separator: true }
+      );
+    }
+    actions.push({
       id: 'delete-selected',
       icon: 'lucide-trash-2',
       label: 'Delete ' + entities.length + ' selected items',
       danger: true,
       run: deleteSelectedDocumentTreeItems
-    }];
+    });
+    return actions;
   }
 
   function openDocumentTreeContextMenu(row, event) {
@@ -4196,12 +4286,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     );
   }
 
-  async function moveDocumentToLocation(tabId, workspaceId, folderId) {
+  async function moveDocumentToLocation(tabId, workspaceId, folderId, options) {
+    const shouldAnnounce = !options || options.announce !== false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || isTemporaryDocument(tab)) return false;
     if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
       withUnlockedSecretWorkspace(function() {
-        moveDocumentToLocation(tabId, workspaceId, folderId);
+        moveDocumentToLocation(tabId, workspaceId, folderId, options);
       });
       return false;
     }
@@ -4209,7 +4300,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const previousWorkspaceId = tab.workspaceId || DEFAULT_WORKSPACE_ID;
     const previousFolderId = tab.folderId || null;
     if (previousWorkspaceId === workspaceId && previousFolderId === (folderId || null)) {
-      announceToScreenReader('File is already in that location.');
+      if (shouldAnnounce) announceToScreenReader('File is already in that location.');
       return true;
     }
     if (!setDocumentLocation(tab, workspaceId, folderId)) return false;
@@ -4235,7 +4326,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       return false;
     }
     renderTabBar(tabs, activeTabId);
-    announceToScreenReader('File moved to ' + getDocumentLocationLabel(tab) + '.');
+    if (shouldAnnounce) announceToScreenReader('File moved to ' + getDocumentLocationLabel(tab) + '.');
+    return true;
+  }
+
+  async function moveDocumentsToLocation(tabIds, workspaceId, folderId) {
+    const documents = Array.from(new Set(tabIds || [])).map(function(tabId) {
+      return tabs.find(function(item) { return item.id === tabId; });
+    }).filter(function(tab) {
+      return tab && !isTemporaryDocument(tab);
+    });
+    if (documents.length === 0) return false;
+    if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
+      withUnlockedSecretWorkspace(function() {
+        moveDocumentsToLocation(documents.map(function(tab) { return tab.id; }), workspaceId, folderId);
+      });
+      return false;
+    }
+
+    let movedCount = 0;
+    for (const tab of documents) {
+      const alreadyThere = (tab.workspaceId || DEFAULT_WORKSPACE_ID) === workspaceId
+        && (tab.folderId || null) === (folderId || null);
+      const moved = await moveDocumentToLocation(tab.id, workspaceId, folderId, { announce: false });
+      if (moved && !alreadyThere) movedCount += 1;
+    }
+    if (movedCount === 0) {
+      announceToScreenReader('Selected files are already in that location.');
+    } else {
+      announceToScreenReader('Moved ' + movedCount + ' selected file' + (movedCount === 1 ? '' : 's') + '.');
+    }
     return true;
   }
 
@@ -7266,7 +7386,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentSplitPreviewTabId === tab.id &&
       documentSplitPreviewContent === content &&
       documentSplitPreview.childNodes.length &&
-      !documentSplitPreview.querySelector('.diagram-viewer.is-loading')
+      !documentSplitPreview.querySelector('.diagram-viewer.is-loading') &&
+      !(hasRawMathText(documentSplitPreview) && !documentSplitPreview.querySelector('mjx-container'))
     ) {
       return;
     }
@@ -7299,6 +7420,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentSplitPreview
     );
     renderRemoteDiagramNodes([documentSplitPreview], context);
+    renderAbcNodes([documentSplitPreview], context);
+    renderMathJaxNodes([documentSplitPreview], content, context);
   }
 
   function syncDocumentSplitScroll(source, target) {
@@ -8571,7 +8694,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderAbcNotationNode(node, context) {
-    if (context.renderId !== previewRenderGeneration) return;
+    if (!isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
     if (!originalCode) return;
     const decodedCode = decodeURIComponent(originalCode);
@@ -8634,6 +8757,46 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (container) {
         setDiagramRenderState(container, 'error', 'ABC notation could not be rendered. Check the score syntax and retry.');
       }
+    }
+  }
+
+  function renderAbcNodes(roots, context) {
+    const abcNodes = queryPreviewRoots(roots, '.abc-notation');
+    if (abcNodes.length === 0) return;
+
+    const renderNodes = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      abcNodes.forEach(function(node) {
+        setTimeout(function() {
+          renderAbcNotationNode(node, context);
+        }, 0);
+      });
+    };
+    const loadAndRender = function() {
+      loadDiagramLibrary(CDN.abcjs).then(function() {
+        if (!isPreviewRenderContextCurrent(context)) return;
+        renderNodes();
+      }).catch(function(error) {
+        if (!isPreviewRenderContextCurrent(context)) return;
+        console.warn('Failed to load abcjs:', error);
+        abcNodes.forEach(function(node) {
+          const container = node.closest('.abc-container');
+          if (container) {
+            setDiagramRenderState(
+              container,
+              'error',
+              'ABC notation renderer is unavailable. Check your connection and retry.',
+              loadAndRender
+            );
+          }
+        });
+      });
+    };
+
+    if (typeof ABCJS === 'undefined') {
+      loadAndRender();
+    } else {
+      renderNodes();
     }
   }
 
@@ -9587,38 +9750,9 @@ ${selector} .arrowheadPath {
     }
 
     try {
-      const abcNodes = queryPreviewRoots(roots, '.abc-notation');
-      if (abcNodes.length > 0) {
-        const renderAbcNodes = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-
-          abcNodes.forEach(function(node) {
-            setTimeout(() => renderAbcNotationNode(node, context), 0);
-          });
-        };
-        
-        const loadAndRenderAbc = function() {
-          loadDiagramLibrary(CDN.abcjs).then(function() {
-            if (context.renderId !== previewRenderGeneration) return;
-            renderAbcNodes();
-          }).catch(function(e) {
-            console.warn('Failed to load abcjs:', e);
-            abcNodes.forEach(function(node) {
-              const container = node.closest('.abc-container');
-              if (container) {
-                setDiagramRenderState(container, 'error', 'ABC notation renderer is unavailable. Check your connection and retry.', loadAndRenderAbc);
-              }
-            });
-          });
-        };
-        if (typeof ABCJS === 'undefined') {
-          loadAndRenderAbc();
-        } else {
-          renderAbcNodes();
-        }
-      }
-    } catch (e) {
-      console.warn("ABC notation processing failed:", e);
+      renderAbcNodes(roots, context);
+    } catch (error) {
+      console.warn("ABC notation processing failed:", error);
     }
 
     try {
@@ -9724,19 +9858,7 @@ ${selector} .arrowheadPath {
       console.error('Diagram adapter processing failed', error);
     }
 
-    const hasMath = /\$\$|\$[^$]|\\\(|\\\[/.test(rawVal || '') || /```math\b/.test(rawVal || '');
-    if (hasMath) {
-      const mathTargets = getMathJaxTypesetTargets(roots);
-      snapshotMathReviewTargetSources(mathTargets);
-      if (mathTargets.length > 0) {
-        ensureMathJaxReady().then(function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          typesetMathJaxTargets(mathTargets, context);
-        }).catch(function(e) {
-          console.warn('Failed to load MathJax:', e);
-        });
-      }
-    }
+    renderMathJaxNodes(roots, rawVal, context, { snapshotReviewTargets: true });
 
     decorateReviewTargets();
     updateDocumentStats();
