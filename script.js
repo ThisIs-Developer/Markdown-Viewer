@@ -274,6 +274,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentSplitSyncReleaseTimeout = null;
   let documentSplitPreviewTabId = null;
   let documentSplitPreviewContent = null;
+  let documentSplitPreviewRenderGeneration = 0;
   const SCROLL_SYNC_DELAY = 10;
 
   // View Mode State - Story 1.1
@@ -7231,7 +7232,15 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renderDocumentSplitPreview(tab) {
     if (!documentSplitPreview || !tab) return;
     const content = tab.content || '';
-    if (documentSplitPreviewTabId === tab.id && documentSplitPreviewContent === content && documentSplitPreview.childNodes.length) return;
+    if (
+      documentSplitPreviewTabId === tab.id &&
+      documentSplitPreviewContent === content &&
+      documentSplitPreview.childNodes.length &&
+      !documentSplitPreview.querySelector('.mermaid-container.is-loading')
+    ) {
+      return;
+    }
+    const renderGeneration = ++documentSplitPreviewRenderGeneration;
     const parsed = parseFrontmatter(content);
     const tableHtml = parsed.frontmatter ? renderFrontmatterTable(parsed.frontmatter) : '';
     const referenceData = extractReferenceDefinitions(parsed.body);
@@ -7244,6 +7253,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     namespaceSplitPreviewIds(documentSplitPreview, tab.id);
     documentSplitPreviewTabId = tab.id;
     documentSplitPreviewContent = content;
+    const context = {
+      isCurrent: function() {
+        return (
+          renderGeneration === documentSplitPreviewRenderGeneration &&
+          documentSplitPreviewTabId === tab.id &&
+          documentSplitPreviewContent === content &&
+          documentSplitPreview.isConnected
+        );
+      }
+    };
+    renderMermaidNodes(
+      Array.from(documentSplitPreview.querySelectorAll('.mermaid')),
+      context,
+      documentSplitPreview
+    );
   }
 
   function syncDocumentSplitScroll(source, target) {
@@ -7325,6 +7349,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     secondarySplitTabId = null;
     documentSplitPreviewTabId = null;
     documentSplitPreviewContent = null;
+    documentSplitPreviewRenderGeneration += 1;
     documentSplitScrollSource = null;
     if (secondarySplitSaveTimeout) {
       clearTimeout(secondarySplitSaveTimeout);
@@ -8409,8 +8434,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
   }
 
+  function isMermaidRenderContextCurrent(context) {
+    if (!context) return true;
+    if (typeof context.isCurrent === 'function') return context.isCurrent();
+    return context.renderId === previewRenderGeneration;
+  }
+
   async function renderMermaidNode(node, context) {
-    if (!node || (context && context.renderId !== previewRenderGeneration)) return false;
+    if (!node || !isMermaidRenderContextCurrent(context)) return false;
     const container = node.closest('.mermaid-container');
     const code = getDiagramNodeSource(node);
     const renderId = `${node.id || 'mermaid-diagram'}-render-${Math.random().toString(36).slice(2)}`;
@@ -8421,7 +8452,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const result = await withMutedMermaidConsole(function() {
         return mermaid.render(renderId, code);
       });
-      if (context && context.renderId !== previewRenderGeneration) return false;
+      if (!isMermaidRenderContextCurrent(context)) return false;
       node.innerHTML = result.svg;
       if (typeof result.bindFunctions === 'function') {
         result.bindFunctions(node);
@@ -8429,7 +8460,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       setDiagramRenderState(container, 'ready');
       return true;
     } catch (error) {
-      if (context && context.renderId !== previewRenderGeneration) return false;
+      if (!isMermaidRenderContextCurrent(context)) return false;
       setDiagramRenderState(container, 'error', 'Mermaid could not be rendered. Check the diagram syntax and retry.', () => {
         renderMermaidNode(node, context);
       });
@@ -8437,14 +8468,61 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function renderMermaidNodeList(nodes, context) {
+  async function renderMermaidNodeList(nodes, context, toolbarRoot) {
     const results = [];
     for (const node of nodes) {
-      if (context && context.renderId !== previewRenderGeneration) return results;
+      if (!isMermaidRenderContextCurrent(context)) return results;
       results.push(await renderMermaidNode(node, context));
     }
-    addMermaidToolbars();
+    if (isMermaidRenderContextCurrent(context)) {
+      addMermaidToolbars(toolbarRoot);
+    }
     return results;
+  }
+
+  function renderMermaidNodes(nodes, context, toolbarRoot) {
+    if (!nodes || nodes.length === 0 || !isMermaidRenderContextCurrent(context)) {
+      return Promise.resolve([]);
+    }
+
+    const markRenderError = function(message) {
+      if (!isMermaidRenderContextCurrent(context)) return;
+      nodes.forEach(function(node) {
+        setDiagramRenderState(
+          node.closest('.mermaid-container'),
+          'error',
+          message,
+          () => renderMermaidNodes([node], context, toolbarRoot)
+        );
+      });
+    };
+
+    const renderLoadedNodes = function(forceInit) {
+      if (!isMermaidRenderContextCurrent(context)) return Promise.resolve([]);
+      initMermaid(forceInit);
+      return renderMermaidNodeList(nodes, context, toolbarRoot)
+        .catch(function(error) {
+          if (!isMermaidRenderContextCurrent(context)) return [];
+          console.warn('Mermaid rendering failed:', error);
+          markRenderError('Mermaid could not be rendered. Check the diagram syntax and retry.');
+          return [];
+        });
+    };
+
+    if (typeof mermaid === 'undefined') {
+      return loadDiagramLibrary(CDN.mermaid)
+        .then(function() {
+          return renderLoadedNodes(true);
+        })
+        .catch(function(error) {
+          if (!isMermaidRenderContextCurrent(context)) return [];
+          console.warn('Failed to load mermaid:', error);
+          markRenderError('Mermaid renderer is unavailable. Check your connection and retry.');
+          return [];
+        });
+    }
+
+    return renderLoadedNodes(false);
   }
 
   function parseAbcHeaders(abcString) {
@@ -9472,44 +9550,7 @@ ${selector} .arrowheadPath {
 
     try {
       const mermaidNodes = queryPreviewRoots(roots, '.mermaid');
-      if (mermaidNodes.length > 0) {
-        const renderMermaidNodes = function() {
-          if (context.renderId !== previewRenderGeneration) return;
-          initMermaid(false);
-          renderMermaidNodeList(mermaidNodes, context)
-            .catch((e) => {
-              if (context.renderId !== previewRenderGeneration) return;
-              console.warn("Mermaid rendering failed:", e);
-              mermaidNodes.forEach(function(node) {
-                setDiagramRenderState(
-                  node.closest('.mermaid-container'),
-                  'error',
-                  'Mermaid could not be rendered. Check the diagram syntax and retry.',
-                  () => renderMermaidNode(node, context)
-                );
-              });
-            });
-        };
-        if (typeof mermaid === 'undefined') {
-          loadDiagramLibrary(CDN.mermaid).then(function() {
-            if (context.renderId !== previewRenderGeneration) return;
-            initMermaid(true);
-            renderMermaidNodes();
-          }).catch(function(e) {
-            console.warn('Failed to load mermaid:', e);
-            mermaidNodes.forEach(function(node) {
-              setDiagramRenderState(
-                node.closest('.mermaid-container'),
-                'error',
-                'Mermaid renderer is unavailable. Check your connection and retry.',
-                () => renderMermaidNode(node, context)
-              );
-            });
-          });
-        } else {
-          renderMermaidNodes();
-        }
-      }
+      renderMermaidNodes(mermaidNodes, context, markdownPreview);
     } catch (e) {
       console.warn("Mermaid rendering failed:", e);
     }
@@ -22690,8 +22731,8 @@ ${selector} .arrowheadPath {
    * Adds the hover toolbar to every rendered Mermaid container.
    * Safe to call multiple times – existing toolbars are not duplicated.
    */
-  function addMermaidToolbars() {
-    markdownPreview.querySelectorAll('.mermaid-container').forEach(container => {
+  function addMermaidToolbars(root) {
+    (root || markdownPreview).querySelectorAll('.mermaid-container').forEach(container => {
       mountDiagramViewer(container, 'mermaid');
     });
   }
