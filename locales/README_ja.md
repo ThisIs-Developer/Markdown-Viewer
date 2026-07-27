@@ -133,7 +133,7 @@ Markdown Viewer を活用した以下のコミュニティプロジェクトは�
 
 - [**Markdown Desk**](https://github.com/jhrepo/markdown-desk)：Tauri で構築された macOS 向けネイティブラッパーです。ネイティブのファイルダイアログとファイルハンドラー、メニューバー連携、自動再読み込み、アプリ内更新を追加します。
 
-## 📈 開発の歩み
+## 開発の歩み
 
 Markdown Viewer は、PC 上の小さな個人プロジェクトとして始まりました。好奇心を出発点に、失敗と修正を重ね、多くの配慮を込めて作られたシンプルな Markdown ビューアーです。<a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">初期バージョン</a>は今も公開されており、プロジェクトの原点であり続けています。
 

@@ -133,7 +133,7 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 
 - [**Markdown Desk**](https://github.com/jhrepo/markdown-desk)：使用 Tauri 构建的原生 macOS 封装应用，增加了原生文件对话框与文件处理程序、菜单栏集成、自动重新加载和应用内更新功能。
 
-## 📈 开发历程
+## 开发历程
 
 Markdown Viewer 最初是 PC 上的一个小型个人项目：一款源于好奇心、经历过错误与修正，并倾注了许多心力的简单 Markdown 查看器。<a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">初始版本</a>目前仍可在线访问，也始终是这个项目的初心所在。
 

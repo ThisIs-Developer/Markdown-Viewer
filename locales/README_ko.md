@@ -133,7 +133,7 @@ Markdown Viewer를 활용한 다음 커뮤니티 프로젝트는 해당 개발�
 
 - [**Markdown Desk**](https://github.com/jhrepo/markdown-desk): Tauri로 만든 네이티브 macOS 래퍼입니다. 네이티브 파일 대화 상자와 파일 핸들러, 메뉴 막대 통합, 자동 다시 불러오기 및 앱 내 업데이트 기능을 추가합니다.
 
-## 📈 개발 여정
+## 개발 여정
 
 Markdown Viewer는 PC에서 시작한 작은 개인 프로젝트였습니다. 호기심에서 출발해 실수와 수정을 거치고 많은 정성을 담아 만든 단순한 Markdown 뷰어입니다. <a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">초기 버전</a>은 지금도 온라인에서 사용할 수 있으며 프로젝트의 중심으로 남아 있습니다.
 

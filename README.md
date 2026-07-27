@@ -133,7 +133,7 @@ The following community project builds on Markdown Viewer and is maintained inde
 
 - [**Markdown Desk**](https://github.com/jhrepo/markdown-desk): A native macOS wrapper built with Tauri that adds native file dialogs and handlers, menu-bar integration, automatic reloads, and in-app updates.
 
-## 📈 Development Journey
+## Development Journey
 
 Markdown Viewer started as a small personal project on a PC: a simple Markdown viewer built with curiosity, mistakes, fixes, and a lot of care. The <a href="https://a1b91221.markdownviewer.pages.dev/" target="_blank" rel="noopener noreferrer">original version</a> is still online and remains at the heart of the project.
 
