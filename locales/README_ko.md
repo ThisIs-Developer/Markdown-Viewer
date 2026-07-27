@@ -116,7 +116,7 @@ Share Snapshot 및 Live Share URL은 베어러 링크입니다. 유효한 링크
 | 설치 및 배포 | [Installation](../wiki/Installation.md) |
 | 문제 해결 | [Troubleshooting](../wiki/Troubleshooting.md)/[FAQ](../wiki/FAQ.md) |
 | 기여 | [Contributing](../wiki/Contributing.md) |
-| 다국어 용어 | [Terminology Glossary](../wiki/Terminology-Glossary.md) |
+| 다국어 용어 및 현지화 | [Localization and Terminology](../wiki/Localization.md) |
 
 ## 기여 및 라이선스
 

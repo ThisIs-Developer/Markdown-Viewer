@@ -20,10 +20,7 @@ Most editing and rendering happens on the device. Managed media, GitHub import, 
 | Build or operate the Neutralino application | [Desktop Application](Desktop-App.md) |
 | Fix a problem | [Troubleshooting](Troubleshooting.md) or [FAQ](FAQ.md) |
 | Contribute code, documentation, or a translation | [Contributing](Contributing.md) |
-| Maintain interface translations | [Localization](Localization.md) |
-| Use approved multilingual terms | [Terminology Glossary](Terminology-Glossary.md) |
-| Follow documentation conventions | [Documentation Style Guide](Documentation-Style-Guide.md) |
-| Review audit inventory and scores | [Documentation Audit](Documentation-Audit.md) |
+| Maintain interface translations and approved terms | [Localization and Terminology](Localization.md) |
 | Read project history and design context | [Development Journey](Development-Journey.md) |
 
 ## Quick Run

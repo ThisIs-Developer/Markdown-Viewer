@@ -103,7 +103,7 @@ Remote renderer services receive the source of the diagram they render. Do not s
 | Configure storage, renderers, and Cloudflare | [Configuration](wiki/Configuration.md) |
 | Resolve common problems | [Troubleshooting](wiki/Troubleshooting.md) and [FAQ](wiki/FAQ.md) |
 | Contribute code, documentation, or translations | [Contributing](wiki/Contributing.md) |
-| Use approved multilingual terms | [Terminology Glossary](wiki/Terminology-Glossary.md) |
+| Maintain translations and approved multilingual terms | [Localization and Terminology](wiki/Localization.md) |
 
 ## Important Limits
 

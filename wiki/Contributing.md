@@ -63,7 +63,7 @@ When changing managed media, snapshot, or live behavior, update the relevant fil
 
 ## Documentation Rules
 
-- Follow [Documentation Style Guide](Documentation-Style-Guide.md).
+- Use concise, direct, internationally readable language and the approved feature names in [Localization and Terminology](Localization.md).
 - Update the responsible Wiki page instead of creating a new page for a small addition.
 - Document user-facing behavior, limits, data handling, and privacy implications.
 - Keep wording simple and direct.
@@ -77,7 +77,7 @@ When changing managed media, snapshot, or live behavior, update the relevant fil
 ## Translation Contributions
 
 1. Finalize the English source.
-2. Review [Terminology Glossary](Terminology-Glossary.md).
+2. Review the terminology tables in [Localization and Terminology](Localization.md).
 3. Update the relevant localized README or interface catalog without translating code, commands, paths, URLs, routes, keys, library names, Markdown syntax, or branch names.
 4. Preserve Markdown structure, links, anchors, tables, and code fences.
 5. Compare the translation with the English source for technical meaning and omissions.
@@ -171,4 +171,4 @@ Include the affected version/commit, required preconditions, impact, minimal rep
 | `desktop-app/` | Neutralino desktop wrapper and build preparation. |
 | `wiki/` | Documentation source pages. |
 
-Related pages: [Installation](Installation.md), [Localization](Localization.md), [Documentation Style Guide](Documentation-Style-Guide.md), and [Troubleshooting](Troubleshooting.md).
+Related pages: [Installation](Installation.md), [Localization and Terminology](Localization.md), and [Troubleshooting](Troubleshooting.md).

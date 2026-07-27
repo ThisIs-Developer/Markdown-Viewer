@@ -116,7 +116,7 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 | 安裝與部署 | [Installation](../wiki/Installation.md) |
 | 疑難排解 | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
 | 參與貢獻 | [Contributing](../wiki/Contributing.md) |
-| 多語言術語 | [Terminology Glossary](../wiki/Terminology-Glossary.md) |
+| 多語言術語與在地化 | [Localization and Terminology](../wiki/Localization.md) |
 
 ## 參與貢獻與授權條款
 

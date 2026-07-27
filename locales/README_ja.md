@@ -116,7 +116,7 @@ Share Snapshot と Live Share の URL はベアラーリンクです。有効な
 | インストールとデプロイ | [Installation](../wiki/Installation.md) |
 | トラブルシューティング | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
 | コントリビューション | [Contributing](../wiki/Contributing.md) |
-| 多言語用語 | [Terminology Glossary](../wiki/Terminology-Glossary.md) |
+| 多言語用語とローカライズ | [Localization and Terminology](../wiki/Localization.md) |
 
 ## コントリビューションとライセンス
 
