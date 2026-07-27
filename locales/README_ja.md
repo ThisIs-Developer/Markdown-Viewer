@@ -46,9 +46,13 @@
 
 ## Markdown Viewer について
 
-Markdown Viewer は、開発者、ライター、学生、研究者などが `.md`／`.markdown` ファイルを扱うための、オープンソースでローカルファーストかつアカウント不要のワークスペースです。編集、サニタイズ済みプレビュー、複数文書管理、レビュー、ビジュアルレンダラー、エクスポート、Share Snapshot、Live Share をひとつにまとめています。
+Markdown Viewer は、開発者、ライター、学生、研究者など、`.md`／`.markdown` ファイルを扱うすべての人に向けたオープンソースのローカルファーストワークスペースです。単なるプレーンテキストにとどまりません。複数の文書を整理し、Markdown を変更せずにコメントや提案でレビューし、図表、地図、チャート、数式、3D モデル、音楽をひとつの集中できるワークスペースで描画できます。
 
-特長は、ホスト型 Web アプリ、インストール可能な PWA、セルフホスト型 Docker デプロイ、Neutralino デスクトップアプリケーションで一貫したインターフェースを利用できる点です。通常の編集は端末上で行われ、任意のネットワーク動作は明示して文書化されています。
+文書を Share Snapshot リンクにしてすばやく共有したり、アクセス制御付きの Live Share でリアルタイム共同編集、ライブカーソル、コメント、提案を利用したりできます。通常の編集は端末上で行われます。アカウントは不要で、アプリケーションには広告、分析、テレメトリ、サブスクリプションがありません。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Markdown Viewer のアプリケーション画面" width="90%" />
+</p>
 
 ## 主な機能
 
@@ -56,8 +60,21 @@ Markdown Viewer は、開発者、ライター、学生、研究者などが `.m
 - **編集とレビュー：** エディター、分割表示、プレビューを切り替えられます。書式設定ツール、独自の元に戻す／やり直す、検索と置換、LTR／RTL、コメント、提案を利用できます。
 - **Markdown 描画：** CommonMark 形式の基本構文、GitHub-Flavored Markdown（GFM）、表、タスクリスト、アラート、脚注、定義リスト、コードのシンタックスハイライト、サニタイズ済み HTML、MathJax に対応します。
 - **ビジュアルコンテンツ：** Mermaid、PlantUML、Graphviz／DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL、ABC 記譜を描画できます。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/57a015a4-621c-4da3-9825-604724f5966b" alt="図表挿入モジュール" width="90%" />
+  <img src="https://github.com/user-attachments/assets/e4560bc1-d6a7-409a-8a93-c054d0a853b3" alt="図表の描画例" width="90%" />
+  <img src="https://github.com/user-attachments/assets/d50d980d-1b40-43c7-b924-901c9413987d" alt="3D STL ビュー" width="90%" />
+  <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全画面の 3D STL ビュー" width="90%" />
+</p>
+
 - **インポートとエクスポート：** ローカルファイルや公開 GitHub コンテンツを開き、Markdown、単体 HTML、PNG、ブラウザー印刷／PDF 保存、従来のラスター PDF として出力できます。
 - **任意の共有機能：** 「表示のみ」または「編集可能」の Share Snapshot（スナップショットの共有）を作成したり、ホスト／編集可能／表示のみの権限を持つ一時的な Live Share（ライブシェア）ルームを開始したりできます。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live Share セッション" width="90%" />
+</p>
+
 - **複数の提供形態：** ホスト済み Web アプリ、PWA、静的ホスティング、Docker、Cloudflare、Neutralino デスクトップアプリケーションを利用できます。
 
 実装済みの動作と制限は、[機能リファレンス（英語）](../wiki/Features.md)を参照してください。

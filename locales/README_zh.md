@@ -46,9 +46,13 @@
 
 ## Markdown Viewer 简介
 
-Markdown Viewer 是一个开源、本地优先且无需账号的工作区，适合开发者、写作者、学生、研究人员以及所有使用 `.md` 或 `.markdown` 文件的用户。它将编辑、已清理的预览、多文档管理、审阅工具、可视化渲染器、导出、Share Snapshot 和 Live Share 集成在一起。
+Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、写作者、学生、研究人员以及所有使用 `.md` 或 `.markdown` 文件的用户。它不止于纯文本：在一个专注的工作区中整理多个文档，在不改动 Markdown 的情况下通过评论和建议进行审阅，并渲染图表、地图、数据图、数学公式、3D 模型和音乐。
 
-它的独特之处在于，托管 Web 应用、可安装的 PWA、自托管 Docker 部署和 Neutralino 桌面应用均提供一致的界面。日常编辑在设备上完成；可选的网络行为会得到明确说明和记录。
+将文档转换为 Share Snapshot 链接以便快速分享，或启动带访问控制的 Live Share，进行实时协同编辑并使用实时光标、评论和建议。日常编辑在设备上完成。无需账号，应用也不包含广告、分析、遥测或订阅。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Markdown Viewer 应用界面" width="90%" />
+</p>
 
 ## 核心功能
 
@@ -56,8 +60,21 @@ Markdown Viewer 是一个开源、本地优先且无需账号的工作区，适�
 - **编辑与审阅：** 在编辑器、分屏视图和预览之间切换，使用格式工具、自定义撤销/重做、查找和替换、LTR/RTL、评论与建议。
 - **Markdown 渲染：** 支持 CommonMark 风格基础语法、GitHub-Flavored Markdown（GFM）、表格、任务列表、提示块、脚注、定义列表、代码语法高亮、已清理的 HTML 和 MathJax。
 - **可视化内容：** 渲染 Mermaid、PlantUML、Graphviz/DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 和 ABC 记谱。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/57a015a4-621c-4da3-9825-604724f5966b" alt="图表插入模块" width="90%" />
+  <img src="https://github.com/user-attachments/assets/e4560bc1-d6a7-409a-8a93-c054d0a853b3" alt="图表渲染示例" width="90%" />
+  <img src="https://github.com/user-attachments/assets/d50d980d-1b40-43c7-b924-901c9413987d" alt="3D STL 视图" width="90%" />
+  <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全屏 3D STL 视图" width="90%" />
+</p>
+
 - **导入与导出：** 打开本地文件或公开 GitHub 内容，导出 Markdown、独立 HTML、PNG、浏览器打印/另存为 PDF 或旧版栅格 PDF。
 - **可选分享：** 创建“仅供查看”或“可以编辑”模式的 Share Snapshot（分享快照），或者启动具有主持人、可以编辑和仅供查看权限的临时 Live Share（实时共享）房间。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live Share 会话" width="90%" />
+</p>
+
 - **多种运行方式：** 使用托管 Web 应用、PWA、静态托管、Docker、Cloudflare 或 Neutralino 桌面应用。
 
 有关已实现的行为和限制，请参阅[功能参考（英文）](../wiki/Features.md)。

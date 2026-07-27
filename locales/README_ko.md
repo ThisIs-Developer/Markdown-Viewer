@@ -46,9 +46,13 @@
 
 ## Markdown Viewer 소개
 
-Markdown Viewer는 개발자, 작성자, 학생, 연구자 등 `.md` 또는 `.markdown` 파일을 사용하는 사람을 위한 오픈 소스, 로컬 우선, 계정 불필요 작업공간입니다. 편집, 정제된 미리보기, 다중 문서 관리, 리뷰 도구, 시각적 렌더러, 내보내기, Share Snapshot, Live Share를 하나로 제공합니다.
+Markdown Viewer는 개발자, 작성자, 학생, 연구자 등 `.md` 또는 `.markdown` 파일을 사용하는 모든 사람을 위한 오픈 소스 로컬 우선 작업공간입니다. 단순한 텍스트를 넘어 여러 문서를 정리하고, Markdown을 변경하지 않은 채 댓글과 제안으로 검토하며, 다이어그램, 지도, 차트, 수식, 3D 모델, 음악을 하나의 집중된 작업공간에서 렌더링할 수 있습니다.
 
-차별점은 호스팅 웹 앱, 설치형 PWA, 자체 호스팅 Docker 배포 및 Neutralino 데스크톱 애플리케이션에서 일관된 인터페이스를 제공한다는 점입니다. 일상적인 편집은 기기에서 처리되며, 선택적 네트워크 동작은 명확히 표시하고 문서화합니다.
+문서를 Share Snapshot 링크로 만들어 빠르게 공유하거나, 접근 권한이 제어되는 Live Share에서 실시간 공동 편집, 라이브 커서, 댓글, 제안을 사용할 수 있습니다. 일상적인 편집은 기기에서 처리됩니다. 계정이 필요 없으며 애플리케이션에는 광고, 분석, 원격 측정 또는 구독이 없습니다.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Markdown Viewer 애플리케이션 화면" width="90%" />
+</p>
 
 ## 주요 기능
 
@@ -56,8 +60,21 @@ Markdown Viewer는 개발자, 작성자, 학생, 연구자 등 `.md` 또는 `.ma
 - **편집 및 리뷰:** 편집기, 분할 보기, 미리보기 사이를 전환할 수 있습니다. 서식 도구, 사용자 지정 실행 취소/다시 실행, 찾기 및 바꾸기, LTR/RTL, 댓글과 제안을 사용할 수 있습니다.
 - **Markdown 렌더링:** CommonMark 스타일의 기본 구문, GitHub-Flavored Markdown(GFM), 표, 작업 목록, 알림, 각주, 정의 목록, 코드 구문 강조, 정제된 HTML, MathJax를 지원합니다.
 - **시각 콘텐츠:** Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, ABC 기보를 렌더링합니다.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/57a015a4-621c-4da3-9825-604724f5966b" alt="다이어그램 삽입 모듈" width="90%" />
+  <img src="https://github.com/user-attachments/assets/e4560bc1-d6a7-409a-8a93-c054d0a853b3" alt="다이어그램 렌더링 예시" width="90%" />
+  <img src="https://github.com/user-attachments/assets/d50d980d-1b40-43c7-b924-901c9413987d" alt="3D STL 보기" width="90%" />
+  <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="전체 화면 3D STL 보기" width="90%" />
+</p>
+
 - **가져오기 및 내보내기:** 로컬 파일이나 공개 GitHub 콘텐츠를 열고 Markdown, 독립 실행형 HTML, PNG, 브라우저 인쇄/PDF 저장, 레거시 래스터 PDF로 내보낼 수 있습니다.
 - **선택적 공유:** 보기 전용 또는 편집 가능 모드의 Share Snapshot(스냅샷 공유)을 만들거나, 호스트/편집 가능/보기 전용 권한을 사용하는 임시 Live Share(라이브 공유) 방을 시작할 수 있습니다.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live Share 세션" width="90%" />
+</p>
+
 - **다양한 실행 방식:** 호스팅 웹 앱, PWA, 정적 호스팅, Docker, Cloudflare 또는 Neutralino 데스크톱 애플리케이션을 사용할 수 있습니다.
 
 구현된 동작과 제한은 [기능 참고(영어)](../wiki/Features.md)를 확인하세요.

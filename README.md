@@ -46,9 +46,13 @@
 
 ## What Markdown Viewer Does
 
-Markdown Viewer is an open source, local-first, account-free workspace for developers, writers, students, researchers, and anyone working with `.md` or `.markdown` files. It combines editing, sanitized Preview, multi-document organization, review tools, rich visual renderers, exports, Share Snapshot, and Live Share.
+Markdown Viewer is an open source, local-first workspace for developers, writers, students, researchers, and anyone working with `.md` or `.markdown` files. Go beyond plain text. Organize multiple documents, review with comments and suggestions without changing the Markdown, and render diagrams, maps, charts, math, 3D models, and music—all in one focused workspace.
 
-What sets it apart is one consistent interface across the hosted web app, installable PWA, self-hosted Docker deployment, and Neutralino desktop application. Everyday editing stays on the device; optional network behavior is clearly identified and documented.
+Turn a document into a Share Snapshot link for quick handoffs, or start access-controlled Live Share for real-time co-editing, live cursors, comments, and suggestions. Everyday editing stays on your device. No account is required, and the application includes no ads, analytics, telemetry, or subscriptions.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Application UI" width="90%" />
+</p>
 
 ## Highlights
 
@@ -56,8 +60,22 @@ What sets it apart is one consistent interface across the hosted web app, instal
 - **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, custom undo/redo, Find and Replace, LTR/RTL direction, comments, and suggestions.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/57a015a4-621c-4da3-9825-604724f5966b" alt="Insert diagram module" width="90%" />
+  <img src="https://github.com/user-attachments/assets/e4560bc1-d6a7-409a-8a93-c054d0a853b3" alt="Diagrams" width="90%" />
+  <img src="https://github.com/user-attachments/assets/d50d980d-1b40-43c7-b924-901c9413987d" alt="3D STL" width="90%" />
+  <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="3D STL Full screen" width="90%" />
+</p>
+
 - **Import and export:** open local files or public GitHub content; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF.
+
 - **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live share" width="90%" />
+</p>
+
 - **Multiple delivery options:** use the hosted web app, install the PWA, self-host static files, run Docker, deploy on Cloudflare, or build the Neutralino desktop application.
 
 For verified behavior, limits, and implementation notes, read the [feature reference](wiki/Features.md).

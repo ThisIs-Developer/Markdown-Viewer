@@ -46,9 +46,13 @@
 
 ## Markdown Viewer 簡介
 
-Markdown Viewer 是一個開放原始碼、本機優先且無需帳號的工作區，適合開發人員、寫作者、學生、研究人員及所有使用 `.md` 或 `.markdown` 檔案的使用者。它將編輯、已清理的預覽、多文件管理、審閱工具、視覺化轉譯器、匯出、Share Snapshot 與 Live Share 整合在一起。
+Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開發人員、寫作者、學生、研究人員及所有使用 `.md` 或 `.markdown` 檔案的使用者。它不僅是純文字工具：在一個專注的工作區中整理多份文件，在不變更 Markdown 的情況下透過留言與建議進行審閱，並轉譯圖表、地圖、資料圖、數學公式、3D 模型及音樂。
 
-它的獨特之處在於，託管 Web 應用程式、可安裝的 PWA、自行託管的 Docker 部署及 Neutralino 桌面應用程式都提供一致的介面。日常編輯在裝置上完成；選用的網路行為會明確說明並記錄於文件中。
+將文件轉換為 Share Snapshot 連結以便快速分享，或啟動具備存取控制的 Live Share，進行即時共同編輯並使用即時游標、留言與建議。日常編輯在裝置上完成。無需帳號，應用程式也不包含廣告、分析、遙測或訂閱。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Markdown Viewer 應用程式介面" width="90%" />
+</p>
 
 ## 主要功能
 
@@ -56,8 +60,21 @@ Markdown Viewer 是一個開放原始碼、本機優先且無需帳號的工作�
 - **編輯與審閱：** 在編輯器、分割檢視與預覽之間切換，並使用格式工具、自訂復原／重做、尋找與取代、LTR／RTL、留言與建議。
 - **Markdown 轉譯：** 支援 CommonMark 風格基礎語法、GitHub-Flavored Markdown（GFM）、表格、工作清單、提示區塊、註腳、定義清單、程式碼語法醒目提示、已清理的 HTML 與 MathJax。
 - **視覺內容：** 轉譯 Mermaid、PlantUML、Graphviz／DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 與 ABC 記譜。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/57a015a4-621c-4da3-9825-604724f5966b" alt="圖表插入模組" width="90%" />
+  <img src="https://github.com/user-attachments/assets/e4560bc1-d6a7-409a-8a93-c054d0a853b3" alt="圖表轉譯範例" width="90%" />
+  <img src="https://github.com/user-attachments/assets/d50d980d-1b40-43c7-b924-901c9413987d" alt="3D STL 檢視" width="90%" />
+  <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全螢幕 3D STL 檢視" width="90%" />
+</p>
+
 - **導入與匯出：** 開啟本機檔案或公開 GitHub 內容，並匯出 Markdown、獨立 HTML、PNG、瀏覽器列印／另存為 PDF 或舊版點陣 PDF。
 - **選用分享功能：** 建立「僅供查看」或「可以編輯」模式的 Share Snapshot（分享快照），或啟動具有主持人、可以編輯與僅供查看權限的暫時 Live Share（即時共享）房間。
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live Share 工作階段" width="90%" />
+</p>
+
 - **多種執行方式：** 使用託管 Web 應用程式、PWA、靜態託管、Docker、Cloudflare 或 Neutralino 桌面應用程式。
 
 如需瞭解已實作的行為與限制，請參閱[功能參考（英文）](../wiki/Features.md)。
