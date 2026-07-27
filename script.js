@@ -2336,25 +2336,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function renderRemoteDiagramNode(node, engine, context) {
     const container = node.closest('[data-diagram-engine], .plantuml-container, .d2-container, .graphviz-container, .kroki-container, .markmap-container');
     const originalCode = node.getAttribute('data-original-code');
-    if (!container || !originalCode) return;
+    if (!container || !originalCode || !isPreviewRenderContextCurrent(context)) return;
     const source = decodeURIComponent(originalCode);
 
     setDiagramRenderState(container, 'loading', `Rendering ${REMOTE_DIAGRAM_ENGINES[engine].label}…`);
     try {
       if (engine === 'markmap') {
         await renderMarkmapIntoElement(node, source, false);
-        if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+        if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
         setDiagramRenderState(container, 'ready');
         mountDiagramViewer(container, engine);
         return;
       }
       const svgText = await renderDiagramThroughAdapter(engine, source);
-      if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+      if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
       importDiagramSvg(node, svgText, engine, source);
       setDiagramRenderState(container, 'ready');
       mountDiagramViewer(container, engine);
     } catch (error) {
-      if ((context && context.renderId !== previewRenderGeneration) || !document.body.contains(node)) return;
+      if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
       console.error('Diagram rendering failed', {
         engine,
         status: error.status || null,
@@ -2364,6 +2364,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       setDiagramRenderState(container, 'error', getDiagramFailureMessage(engine, error), () => {
         renderRemoteDiagramNode(node, engine, context);
       });
+    }
+  }
+
+  function renderRemoteDiagramNodes(roots, context) {
+    const adapterTargets = [
+      ['.plantuml-diagram', 'plantuml'],
+      ['.d2-diagram', 'd2'],
+      ['.graphviz-diagram', 'graphviz'],
+      ['.markmap-diagram', 'markmap'],
+      ['.kroki-diagram', null]
+    ];
+    const renderAdapterTargets = function() {
+      if (!isPreviewRenderContextCurrent(context)) return;
+      adapterTargets.forEach(([selector, fixedEngine]) => {
+        queryPreviewRoots(roots, selector).forEach(node => {
+          const engine = fixedEngine || node.closest('[data-diagram-engine]')?.dataset.diagramEngine;
+          if (engine && REMOTE_DIAGRAM_ENGINES[engine]) {
+            renderRemoteDiagramNode(node, engine, context);
+          }
+        });
+      });
+    };
+
+    if (typeof pako === 'undefined') {
+      loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
+        console.warn('Failed to load diagram encoder; POST fallbacks remain available', error);
+        renderAdapterTargets();
+      });
+    } else {
+      renderAdapterTargets();
     }
   }
 
@@ -7236,7 +7266,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentSplitPreviewTabId === tab.id &&
       documentSplitPreviewContent === content &&
       documentSplitPreview.childNodes.length &&
-      !documentSplitPreview.querySelector('.mermaid-container.is-loading')
+      !documentSplitPreview.querySelector('.diagram-viewer.is-loading')
     ) {
       return;
     }
@@ -7268,6 +7298,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       context,
       documentSplitPreview
     );
+    renderRemoteDiagramNodes([documentSplitPreview], context);
   }
 
   function syncDocumentSplitScroll(source, target) {
@@ -8434,14 +8465,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
   }
 
-  function isMermaidRenderContextCurrent(context) {
+  function isPreviewRenderContextCurrent(context) {
     if (!context) return true;
     if (typeof context.isCurrent === 'function') return context.isCurrent();
     return context.renderId === previewRenderGeneration;
   }
 
   async function renderMermaidNode(node, context) {
-    if (!node || !isMermaidRenderContextCurrent(context)) return false;
+    if (!node || !isPreviewRenderContextCurrent(context)) return false;
     const container = node.closest('.mermaid-container');
     const code = getDiagramNodeSource(node);
     const renderId = `${node.id || 'mermaid-diagram'}-render-${Math.random().toString(36).slice(2)}`;
@@ -8452,7 +8483,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const result = await withMutedMermaidConsole(function() {
         return mermaid.render(renderId, code);
       });
-      if (!isMermaidRenderContextCurrent(context)) return false;
+      if (!isPreviewRenderContextCurrent(context)) return false;
       node.innerHTML = result.svg;
       if (typeof result.bindFunctions === 'function') {
         result.bindFunctions(node);
@@ -8460,7 +8491,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       setDiagramRenderState(container, 'ready');
       return true;
     } catch (error) {
-      if (!isMermaidRenderContextCurrent(context)) return false;
+      if (!isPreviewRenderContextCurrent(context)) return false;
       setDiagramRenderState(container, 'error', 'Mermaid could not be rendered. Check the diagram syntax and retry.', () => {
         renderMermaidNode(node, context);
       });
@@ -8471,22 +8502,22 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function renderMermaidNodeList(nodes, context, toolbarRoot) {
     const results = [];
     for (const node of nodes) {
-      if (!isMermaidRenderContextCurrent(context)) return results;
+      if (!isPreviewRenderContextCurrent(context)) return results;
       results.push(await renderMermaidNode(node, context));
     }
-    if (isMermaidRenderContextCurrent(context)) {
+    if (isPreviewRenderContextCurrent(context)) {
       addMermaidToolbars(toolbarRoot);
     }
     return results;
   }
 
   function renderMermaidNodes(nodes, context, toolbarRoot) {
-    if (!nodes || nodes.length === 0 || !isMermaidRenderContextCurrent(context)) {
+    if (!nodes || nodes.length === 0 || !isPreviewRenderContextCurrent(context)) {
       return Promise.resolve([]);
     }
 
     const markRenderError = function(message) {
-      if (!isMermaidRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return;
       nodes.forEach(function(node) {
         setDiagramRenderState(
           node.closest('.mermaid-container'),
@@ -8498,11 +8529,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
 
     const renderLoadedNodes = function(forceInit) {
-      if (!isMermaidRenderContextCurrent(context)) return Promise.resolve([]);
+      if (!isPreviewRenderContextCurrent(context)) return Promise.resolve([]);
       initMermaid(forceInit);
       return renderMermaidNodeList(nodes, context, toolbarRoot)
         .catch(function(error) {
-          if (!isMermaidRenderContextCurrent(context)) return [];
+          if (!isPreviewRenderContextCurrent(context)) return [];
           console.warn('Mermaid rendering failed:', error);
           markRenderError('Mermaid could not be rendered. Check the diagram syntax and retry.');
           return [];
@@ -8515,7 +8546,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           return renderLoadedNodes(true);
         })
         .catch(function(error) {
-          if (!isMermaidRenderContextCurrent(context)) return [];
+          if (!isPreviewRenderContextCurrent(context)) return [];
           console.warn('Failed to load mermaid:', error);
           markRenderError('Mermaid renderer is unavailable. Check your connection and retry.');
           return [];
@@ -9688,33 +9719,7 @@ ${selector} .arrowheadPath {
     }
 
     try {
-      const adapterTargets = [
-        ['.plantuml-diagram', 'plantuml'],
-        ['.d2-diagram', 'd2'],
-        ['.graphviz-diagram', 'graphviz'],
-        ['.markmap-diagram', 'markmap'],
-        ['.kroki-diagram', null]
-      ];
-      const renderAdapterTargets = function() {
-        if (context.renderId !== previewRenderGeneration) return;
-        adapterTargets.forEach(([selector, fixedEngine]) => {
-          queryPreviewRoots(roots, selector).forEach(node => {
-            const engine = fixedEngine || node.closest('[data-diagram-engine]')?.dataset.diagramEngine;
-            if (engine && REMOTE_DIAGRAM_ENGINES[engine]) {
-              renderRemoteDiagramNode(node, engine, context);
-            }
-          });
-        });
-      };
-
-      if (typeof pako === 'undefined') {
-        loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
-          console.warn('Failed to load diagram encoder; POST fallbacks remain available', error);
-          renderAdapterTargets();
-        });
-      } else {
-        renderAdapterTargets();
-      }
+      renderRemoteDiagramNodes(roots, context);
     } catch (error) {
       console.error('Diagram adapter processing failed', error);
     }
