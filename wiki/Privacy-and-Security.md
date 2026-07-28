@@ -6,8 +6,8 @@ Markdown Viewer is local-first: normal editing, Preview rendering, local file im
 
 - No account or login is required.
 - The application code does not implement analytics, telemetry, advertising, tracking pixels, or app-specific cookies.
-- Normal documents are stored in browser `localStorage`; the desktop application mirrors selected values into Neutralino storage.
-- Private mode disables document-state persistence after clearing existing persisted document state.
+- Normal web documents are stored as per-document IndexedDB records; desktop documents are ordinary files in a durable vault.
+- Private mode disables new document-state persistence without deleting existing persisted documents.
 - Secret Workspace encrypts its stored files and folder names on the device.
 - Network-backed features send only the data needed for that feature, but the receiving service or deployment platform can log requests according to its own policy.
 - Share Snapshot and Live Share URLs are bearer links. Possession of a valid link grants the capability encoded in it.
@@ -19,9 +19,9 @@ Markdown Viewer is local-first: normal editing, Preview rendering, local file im
 
 | Data | Web location | Desktop behavior |
 | :--- | :--- | :--- |
-| Normal Workspace documents and review threads | `markdownViewerTabs` in `localStorage` | Mirrored to Neutralino storage |
-| Folder and Workspace organization | `markdownViewerDocumentOrganization` | Mirrored |
-| Encrypted Secret Workspace payload | `markdownViewerSecretWorkspace` | Mirrored |
+| Normal Workspace documents and review threads | Per-document `documents` and `contents` IndexedDB records | Individual `.md` files plus vault index metadata |
+| Folder and Workspace organization | `markdownViewerDocumentOrganization` plus document metadata | Vault index and app preferences |
+| Encrypted Secret Workspace payload | Per-document encrypted `secretRecords` plus a small manifest | Opaque `.mvault` objects under `Secret Workspace/objects` |
 | Active document and untitled counter | `markdownViewerActiveTab`, `markdownViewerUntitledCounter` | Mirrored |
 | Theme, direction, view, and related preferences | `markdownViewerGlobalState` | Mirrored |
 | Interface language | `app-lang` | Local browser value; restored in prepared desktop use where available |
@@ -32,18 +32,18 @@ Temporary Share Snapshot and Live Share participant tabs are removed before norm
 
 Browser storage quotas and user-cleared site data still apply. The application cannot recover data after the browser, operating system, user, or storage policy deletes it.
 
-## Private Mode, Reset Workspace, and Secret Workspace
+## Private Mode, Reset App State, and Secret Workspace
 
 These controls have different purposes:
 
 | Control | Effect | Important limitation |
 | :--- | :--- | :--- |
-| **Private mode** | Clears persisted document-state keys and blocks further writes while enabled | It also clears the persisted encrypted Secret Workspace payload. Current in-memory work can continue for the session, but it will not survive reload or exit. |
-| **Reset workspace** | Ends Live Share, removes normal documents and review data, deletes Secret Workspace storage, and restores the welcome document | The deleted content cannot be recovered by Markdown Viewer. |
+| **Private mode** | Pauses new document-state writes while enabled | Existing normal and Secret Workspace documents remain intact; session changes will not survive reload or exit. |
+| **Reset app state** | Ends the active session and restores layout defaults | Normal documents, review data, Secret Workspace, history, and trash remain stored. |
 | **Reset Secret Workspace** | Deletes every encrypted Secret Workspace file and folder | Irreversible; a confirmation is shown. |
 | Lock Secret Workspace | Removes the in-memory key and hides encrypted content | The encrypted payload remains stored locally. |
 
-> **Warning:** Export any document you need before enabling Private mode or selecting **Reset workspace**. Both paths remove persisted Secret Workspace data in the current implementation.
+Only **Reset Secret Workspace** is destructive to encrypted Secret Workspace content. The confirmation explicitly states that the access key and encrypted records cannot be recovered.
 
 Secret Workspace uses PBKDF2 with SHA-256, 250,000 iterations, a random salt, and AES-GCM with a 256-bit derived key. The key remains in memory only while the Workspace is unlocked. File contents and folder names are encrypted; item counts, salt, initialization vector, iteration count, and format version remain outside the ciphertext as metadata. A forgotten password cannot be recovered.
 
@@ -51,9 +51,9 @@ Secret Workspace protects the stored payload from casual inspection at rest. It 
 
 ### Clear Local Data
 
-Export needed Documents first. Use **Reset workspace** to remove the application's normal Document, review, Folder, and Secret Workspace state. Clearing site data in the browser also removes Markdown Viewer `localStorage`, preferences, the Service Worker, and cached assets for that origin. Browser-level clearing cannot be undone by Markdown Viewer.
+Clearing site data in the browser removes Markdown Viewer IndexedDB, `localStorage`, preferences, the Service Worker, and cached assets for that origin. Browser-level clearing cannot be undone by Markdown Viewer, so export important content separately.
 
-In the desktop application, use the in-application reset controls for known Markdown Viewer values. Removing application storage through the operating system or uninstall process can delete local data according to that platform's behavior.
+In the desktop application, replacing or deleting the binary does not remove `Documents/Markdown Viewer Vault`. A locator stored in Documents lets a new binary rediscover the vault; a non-default existing vault can also be selected from **Storage & recovery**. Users can back up the vault with normal filesystem tools.
 
 ## Data That Can Leave the Device
 
@@ -177,7 +177,7 @@ See [Contributing: Security Reports](Contributing.md#security-reports).
 - Live Share is not end-to-end encrypted and persists capability metadata without an application TTL.
 - The current Share Snapshot UI does not expose the early-deletion token.
 - Managed media has no early-delete control.
-- Private mode and Reset workspace delete persisted Secret Workspace data.
+- Private mode and Reset app state preserve persisted Secret Workspace data; Reset Secret Workspace is irreversible.
 - Security headers differ by deployment target and can be weakened by self-hosting changes.
 - Remote services and external assets operate under their own privacy, availability, and logging policies.
 - Browser storage, extensions, malware, a compromised device, and users with local profile access remain outside the application's protection boundary.

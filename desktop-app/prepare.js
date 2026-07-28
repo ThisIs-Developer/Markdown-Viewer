@@ -46,6 +46,9 @@ function copyDirSync(src, dest, excludePatterns) {
 fs.copyFileSync(path.join(ROOT_DIR, "script.js"), path.join(jsDest, "script.js"));
 console.log("✓ Copied script.js → resources/js/script.js");
 
+fs.copyFileSync(path.join(ROOT_DIR, "workspace-storage.js"), path.join(jsDest, "workspace-storage.js"));
+console.log("✓ Copied workspace-storage.js → resources/js/workspace-storage.js");
+
 fs.copyFileSync(path.join(ROOT_DIR, "preview-worker.js"), path.join(jsDest, "preview-worker.js"));
 console.log("Copied preview-worker.js to resources/js/preview-worker.js");
 
@@ -308,6 +311,7 @@ async function prepareOfflineDependencies() {
   // Fix relative assets
   html = html.replace(/href="assets\//g, 'href="/assets/');
   html = html.replace(/href="styles\.css"/g, 'href="/styles.css"');
+  html = html.replace(/href="workspace-storage\.js"/g, 'href="/js/workspace-storage.js"');
   html = html.replace(/href="script\.js"/g, 'href="/js/script.js"');
   
   // PERF-034: Strip web-specific SEO tags, canonical, hreflang, preconnect, manifest and JSON-LD structured data for desktop build
@@ -319,8 +323,8 @@ async function prepareOfflineDependencies() {
 
   // Inject Neutralino script tags
   html = html.replace(
-    /<script\s+src="script\.js"[^>]*><\/script>/i,
-    '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/script.js"></script>',
+    /<script\s+src="workspace-storage\.js"[^>]*><\/script>\s*<script\s+src="script\.js"[^>]*><\/script>/i,
+    '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/workspace-storage.js"></script>\n    <script src="/js/script.js"></script>',
   );
 
   // Inject app-info element

@@ -9,7 +9,7 @@ The app has seven main areas:
 | Area | What It Does |
 | :--- | :--- |
 | Header | Shows the app name and primary New, Export, Share, Live Share, Sync, Copy, About, and Workspace settings actions. |
-| Files sidebar | Organizes up to 50 stored Markdown files in fixed Workspace and Secret Workspace roots, with nested folders, All files, Recent, Favorites, and search. |
+| Files sidebar | Organizes stored Markdown files without an application count limit in fixed Workspace and Secret Workspace roots, with nested folders, All files, Recent, Favorites, and search. |
 | Tab bar | Preserves quick switching and drag-to-reorder for open documents. |
 | Formatting toolbar | Inserts Markdown syntax, opens helper modals, starts Find and Replace, toggles fullscreen, and switches review/view modes. |
 | Editor pane | Plain-text Markdown textarea with line numbers, custom undo/redo, list continuation, and find highlights. |
@@ -34,14 +34,15 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 - Deleting a folder tree moves all files inside it to the workspace root before removing the folders.
 - Dragging or selecting several local Markdown files shows a small import-progress popup at the bottom of the screen until processing finishes.
 - Closing the last normal tab resets to a clean document.
-- Normal tabs autosave to local browser storage or desktop storage.
-- The document limit is 50 stored files across creation, duplication, imports, Share Snapshot, Live Share joins, and locked Secret Workspace files.
+- Normal tabs autosave as independent browser records or desktop vault files. Only the opened document content is loaded.
+- Markdown Viewer does not impose a document-count limit; available browser quota or filesystem capacity is the practical limit.
 - Temporary Share Snapshot and Live Share tabs are not saved to the recipient's workspace.
-- Use **Private mode** from Workspace settings to clear existing Document state and prevent normal Document-state persistence while it is enabled. This also removes persisted Secret Workspace data.
-- Use **Reset workspace** from Workspace settings to remove normal files, review data, and Secret Workspace storage, end Live Share, and return to a clean Workspace.
+- Use **Private mode** from Workspace settings to pause normal Document-state persistence for the session. Existing normal and Secret Workspace documents remain intact.
+- Use **Reset app state** to end the current session and restore layout defaults without deleting documents, review data, Secret Workspace, history, or trash.
+- Use **Storage & recovery** to inspect browser quota/persistence or open and locate the desktop vault.
 - Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
 
-> **Warning:** Export needed Documents before enabling Private mode or selecting **Reset workspace**. Markdown Viewer cannot recover deleted storage.
+> **Backup:** Browser site-data clearing remains destructive. On desktop, back up the complete `Markdown Viewer Vault` folder with normal filesystem tools.
 
 Normal Workspace storage is local. Managed media, GitHub import, remote renderers, stored Share Snapshot, Live Share, external assets, map tiles, and uncached web libraries use the network.
 
@@ -70,7 +71,7 @@ Use Review when you want to leave structured feedback without editing the Markdo
 
 The panel toolbar can copy a Markdown summary, resolve all open items, or delete all feedback after confirmation. Review uses a side panel on desktop, a drawer on tablet, and a bottom sheet on mobile. Opening a new tab closes Review automatically.
 
-Review threads stay with normal local tabs and are excluded from document exports, duplicated tabs, and Share Snapshot links. Live Share synchronizes them while the room is active, including for view-only participants; Private mode and Reset workspace prevent or remove local persistence.
+Review threads stay with normal local tabs and are excluded from document exports, duplicated tabs, and Share Snapshot links. Live Share synchronizes them while the room is active, including for view-only participants; Private mode pauses new local persistence and Reset app state preserves existing review data.
 
 ## Find and Replace
 

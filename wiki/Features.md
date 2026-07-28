@@ -40,28 +40,31 @@ Users can work with multiple documents at once.
 - Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
 - Hovering a tab shows its containing folder path and filename. Files stored directly at the Workspace root show only their filename.
-- The app stores at most 50 documents across Workspace, Secret Workspace, and temporary shared/live tabs. New documents, duplication, local/GitHub imports, Share Snapshot, and Live Share joins all use this limit.
+- The app does not impose a document-count limit. Available browser quota or filesystem capacity is the practical limit.
 - Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, scroll position, view mode, local review threads, and creation time.
 - The active tab id and untitled-document counter are stored separately.
 - Temporary Share Snapshot and Live Share tabs are deliberately excluded from persistent tab storage.
-- **Reset workspace** clears normal files, review data, and Secret Workspace storage, ends Live Share, and returns the app to a clean starting state.
+- **Reset app state** ends the current Live Share/session state and restores layout defaults without deleting normal files, review data, Secret Workspace, history, or trash.
 
-Storage keys used by the current implementation include:
+Storage used by the current implementation includes:
 
 | Key | What It Stores |
 | :--- | :--- |
-| `markdownViewerTabs` | Normal Workspace tabs, including local comments and suggestions. Secret and temporary shared/live tabs are stripped before saving. |
+| IndexedDB `documents` | Lightweight metadata for each normal Workspace document. |
+| IndexedDB `contents` | One content record per normal document, loaded only when opened. |
+| IndexedDB `secretRecords` | One encrypted object per Secret Workspace document plus an encrypted folder record. |
+| IndexedDB `trash` | Local records retained when normal documents are deleted. |
 | `markdownViewerDocumentOrganization` | Fixed workspace state, non-secret folders, active sidebar filter, sidebar width/collapse state, and the last non-secret creation location. |
-| `markdownViewerSecretWorkspace` | Password-encrypted Secret Workspace files and folder names plus the PBKDF2 salt, AES-GCM IV, and non-sensitive item counts. |
+| IndexedDB `metadata` | Vault id, encrypted Secret Workspace manifest, and migration markers. |
 | `markdownViewerActiveTab` | The active tab id. |
 | `markdownViewerUntitledCounter` | Counter used for new Untitled tab names. |
 | `markdownViewerGlobalState` | Theme, direction, view preferences, scroll sync, and similar global UI state. |
 | `app-lang` | Selected interface language. |
 | `find-replace-docked` | Whether the Find and Replace panel is docked. |
 
-On the web, these values live in browser `localStorage`. In the desktop application, the code mirrors selected `localStorage` values into Neutralino storage, so preferences and Workspace state survive desktop restarts.
+On the web, document data lives in IndexedDB while small preferences remain in `localStorage`. Existing monolithic `markdownViewerTabs` data is migrated once. On desktop, normal content is stored as individual Markdown files in `Documents/Markdown Viewer Vault/Workspace` by default; metadata, history, trash, journals, settings, and encrypted Secret Workspace objects live under the same durable vault.
 
-Workspace settings includes **Private mode**, which removes saved document/workspace state and prevents normal document-state keys from being written while it is enabled. The cleared keys include the encrypted Secret Workspace payload. The private-mode preference itself remains so the behavior survives a reload. **Reset workspace** removes normal files, review data, and Secret Workspace storage before returning the application to a clean Workspace. Export needed Documents before either action; Markdown Viewer cannot recover deleted storage. The About dialog describes storage privacy but does not duplicate these controls.
+Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Reset app state** resets the session and layout while keeping all persisted content. **Reset Secret Workspace** remains a separate, destructive confirmation. **Storage & recovery** reports the backend, quota/persistence or desktop vault path, and recovery behavior.
 
 ## Comments and Suggestion Mode
 
@@ -77,7 +80,7 @@ User flow:
 
 Storage and sharing:
 
-- Review threads stay with normal local tabs and survive reloads. Private mode and Reset workspace cover the same stored data.
+- Review threads stay with normal local tabs and survive reloads. Private mode pauses new persistence; Reset app state keeps review data.
 - Feedback is excluded from Markdown, HTML, PDF, PNG, print, duplicated tabs, and Share Snapshot links.
 - If the related source block changes, the thread remains visible as unanchored feedback instead of moving to the wrong block.
 - Live Share synchronizes Review threads through a separate Yjs document. View-only participants can review without receiving Markdown edit permission.
@@ -484,7 +487,7 @@ Desktop-specific behavior:
 - Uses one-time token security.
 - Logging is disabled in the current config.
 - Native APIs are allowlisted instead of fully open.
-- Allowed APIs include app exit, open/save dialogs, message boxes, external URL opening, tray setup, file read/write, and Neutralino storage get/set. `os.execCommand` is intentionally not in the default allowlist.
+- Allowed APIs include app exit, open/save/folder dialogs, system path lookup, external URL opening, tray setup, restricted vault filesystem operations, and Neutralino storage access. `os.execCommand` is intentionally not in the default allowlist.
 - Local imports and exports use native open/save dialogs.
 - External Markdown file paths passed at launch can be loaded into the editor.
 - Closing the desktop window asks for confirmation before exiting.
@@ -495,7 +498,7 @@ Desktop-specific behavior:
 
 Privacy:
 
-- Desktop documents are stored on the local machine through localStorage and Neutralino storage.
+- Desktop documents are stored as ordinary Markdown files in the durable Markdown Viewer Vault; only small interface preferences use Neutralino storage.
 - Native file reads/writes happen only through user actions or explicit file arguments.
 - Share Snapshot, Live Share, GitHub import, remote diagram fallbacks, and external links still use the network when used.
 
@@ -511,7 +514,7 @@ Important protections:
 - Canvas exports use `allowTaint: false`.
 - STL rendering validates source size, finite vertex coordinates, and geometry vertex count before creating a WebGL view.
 - The desktop native API allowlist follows least privilege for the app's current features.
-- Private mode and Reset workspace provide explicit controls over local document persistence, but both delete persisted Secret Workspace content in the current implementation.
+- Private mode pauses local document persistence without deleting existing data. Reset app state preserves the vault; resetting Secret Workspace is the separate destructive operation.
 - Share and live endpoints return no-store responses for dynamic content.
 - The app does not include analytics, telemetry scripts, ad pixels, accounts, cookies, or subscription code.
 
@@ -528,10 +531,10 @@ Security limitations:
 
 | Feature | Leaves Device? | Stored Where | Notes |
 | :--- | :--- | :--- | :--- |
-| Typing and local preview | No | Browser memory and saved tabs | Sanitized before preview insertion. |
-| Normal tab autosave | No | `localStorage` or desktop storage mirror | Cleared with site/app data or Reset. |
-| Comments and suggestions | Only during Live Share | Normal saved tabs plus temporary Live Share relay state | Excluded from document exports and Share Snapshot; synchronized between active Live Share participants. |
-| Private mode | No | No document-state persistence | Clears existing document state, including Secret Workspace storage, when enabled and prevents normal document-state writes until disabled. |
+| Typing and local preview | No | Browser memory and per-document storage | Sanitized before preview insertion. |
+| Normal tab autosave | No | Per-document IndexedDB records or desktop vault `.md` files | Content is written independently rather than serializing the whole Workspace. |
+| Comments and suggestions | Only during Live Share | Normal document metadata plus temporary Live Share relay state | Excluded from document exports and Share Snapshot; synchronized between active Live Share participants. |
+| Private mode | No | No new document-state persistence during the session | Existing saved documents and Secret Workspace remain intact. |
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
@@ -542,12 +545,12 @@ Security limitations:
 | Share Snapshot hash link | Only when user sends the link | Inside URL hash | Small documents are not uploaded by generation. |
 | Stored Share Snapshot | Yes | Cloudflare KV for 90 days | Content, mode, title, createdAt, and size. |
 | Live Share | Yes | Client/WebSocket relay state plus Durable Object capability storage | Markdown and Review content are not persisted server-side; role capabilities and `createdAt` are stored without an application TTL. |
-| Desktop native storage | No | Local app storage | Mirrors app state for restart persistence. |
+| Desktop native storage | No | `Documents/Markdown Viewer Vault` by default | Ordinary `.md` files plus internal metadata, encrypted records, history, trash, and crash journal. |
 
 ## Known Technical Limits
 
 - Browser storage quotas can reject very large saved workspaces.
-- The workspace can contain at most 50 documents, including locked Secret Workspace counts and temporary shared/live tabs.
+- Markdown Viewer does not impose a document-count limit; available storage and operating-system/filesystem constraints still apply.
 - An individual local Markdown import is limited to 10 MB.
 - The GitHub importer shows a maximum of 30 Markdown files.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.

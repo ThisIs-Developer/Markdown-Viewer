@@ -88,7 +88,7 @@ const CURATED_OVERRIDES = {
     'View': '檢視', 'Split': '分割', 'Actions': '操作', 'New': '新增', 'New document': '新增文件',
     'From files': '從檔案', 'From GitHub': '從 GitHub', 'Export': '匯出', 'Live Share': '即時共享',
     'Report': '回報問題', 'Theme': '外觀', 'Light mode': '淺色模式', 'Use light mode': '使用淺色模式',
-    'Private mode': '隱私模式', 'Reset workspace': '重設工作區', 'Explorer': '檔案總管',
+    'Private mode': '隱私模式', 'Reset app state': '重設應用程式狀態', 'Explorer': '檔案總管',
     'Choose an alert style to insert into the document.': '選擇要插入文件的提示樣式。',
     'Recent files': '最近使用的檔案', 'Favorites': '我的最愛',
     'No documents to show.': '沒有可顯示的文件。', 'No favorite documents yet.': '尚無最愛文件。',
@@ -143,12 +143,13 @@ const EXTRA_STRINGS = [
   'Open comments and suggestions', 'Close comments and suggestions',
   'Add feedback', 'Edit feedback', 'Delete feedback', 'Resolve feedback',
   'Workspace menu', 'Document tools', 'Sync scrolling', 'Copy Markdown', 'Review mode',
-  'Light mode', 'Dark mode', 'Private mode', 'Reset workspace', 'Share Snapshot',
+  'Light mode', 'Dark mode', 'Private mode', 'Reset app state', 'Storage & recovery', 'Share Snapshot',
   'Live Share', 'Report an issue', 'About Markdown Viewer', 'Workspace settings',
   'file', 'files', 'folder', 'folders', 'item', 'items', 'selected', 'of', 'match',
   'matches', 'open review item', 'open review items', 'No results', 'No documents open',
   'Delete {{0}} selected items?', 'Delete “{{0}}”?', '{{0}} of {{1}} files',
   '{{0}} file selected', '{{0}} files selected', '{{0}} words', '{{0}} characters',
+  'Show {{0}} more',
   '{{0}} Min Read', 'Welcome, {{0}}', 'Importing {{0}}', '{{0}} imported',
   'Failed to import {{0}}', 'Move {{0}} selected items', 'Rename {{0}}',
   'Close {{0}}', 'Download {{0}}', 'Duplicate {{0}}',
@@ -193,7 +194,7 @@ const EXTRA_STRINGS = [
   'No Markdown files were found at that GitHub location.',
   'The provided URL does not point to a Markdown file.',
   'Please enter a GitHub URL.', 'Please enter a valid GitHub URL.',
-  'Please select at least one file to import.', 'Maximum document limit reached',
+  'Please select at least one file to import.',
   'GitHub import finished.', 'Your file is ready.', 'Your files are ready.', 'Save changes'
 ];
 

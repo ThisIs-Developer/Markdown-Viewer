@@ -487,12 +487,36 @@ body {
   padding-inline-start: calc(var(--tree-depth) * 12px);
   border-radius: 4px;
   cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--document-sidebar-row-height);
   touch-action: manipulation;
   transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .document-tree-row:focus {
   outline: none;
+}
+
+.document-tree-load-more {
+  width: calc(100% - 12px);
+  min-height: 30px;
+  margin: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--button-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.document-tree-load-more:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 40%, var(--border-color));
+  background: var(--button-hover);
+  color: var(--text-color);
+}
+
+.document-tree-load-more:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
 }
 
 .document-tree-row:focus-visible {
@@ -9815,6 +9839,67 @@ html[data-theme="dark"] .mermaid svg {
 
 .app-modal-box > .modal-header + .reset-modal-actions {
   border-top: 0;
+}
+
+.storage-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.storage-status-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+}
+
+.storage-status-list > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.35fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 11px;
+}
+
+.storage-status-list > div + div {
+  border-top: 1px solid var(--border-color);
+}
+
+.storage-status-list dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.storage-status-list dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.storage-recovery-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 30%, var(--border-color));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent-color) 6%, transparent);
+}
+
+.storage-recovery-note i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--accent-color);
+}
+
+.storage-recovery-note p {
+  margin: 0;
+}
+
+.storage-settings-actions {
+  flex-wrap: wrap;
 }
 
 .pdf-progress-modal {

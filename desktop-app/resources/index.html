@@ -6,6 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME=' 'sha256-NnbK2LG1LUwYyZ1xgJN7k3oK4oTvHY4o9852VxwNA/o='; script-src-attr 'none'; worker-src 'self'; connect-src 'self' https://markdownviewer.pages.dev https://api.github.com https://raw.githubusercontent.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://kroki.io https://www.plantuml.com https://mermaid.ink https://paulrosen.github.io wss://markdownviewer.pages.dev ws://localhost:* ws://127.0.0.1:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'unsafe-inline'; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data: https:; manifest-src 'self'; frame-src 'none'; upgrade-insecure-requests">
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
     <link rel="preload" href="/styles.css" as="style">
+    <link rel="preload" href="/js/workspace-storage.js" as="script">
     <link rel="preload" href="/js/script.js" as="script">
 
     <!-- PWA Web Manifest -->
@@ -129,9 +130,12 @@
                             <button id="private-mode-toggle" class="settings-menu-item app-menu-item settings-menu-item--toggle" type="button" aria-pressed="false" title="Toggle private mode">
                                 <i class="lucide lucide-hat-glasses" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Private mode</span><span id="private-mode-description" class="app-menu-description">Data is stored locally</span></span><span class="settings-switch" aria-hidden="true"><span></span></span>
                             </button>
+                            <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and recovery">
+                                <i class="lucide lucide-hard-drive" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage &amp; recovery</span><span class="app-menu-description">Vault, usage, and persistence</span></span>
+                            </button>
                             <div class="settings-menu-divider" role="separator"></div>
-                            <button class="settings-menu-item app-menu-item settings-menu-reset" id="tab-reset-btn" type="button" title="Reset all files" aria-label="Reset all files">
-                                <i class="lucide lucide-power" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Reset workspace</span><span class="app-menu-description">Remove all files and review data</span></span>
+                            <button class="settings-menu-item app-menu-item settings-menu-reset" id="tab-reset-btn" type="button" title="Reset application state" aria-label="Reset application state">
+                                <i class="lucide lucide-power" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Reset app state</span><span class="app-menu-description">Keep documents and reset the session</span></span>
                             </button>
                         </div>
                     </div>
@@ -280,8 +284,11 @@
                                         <button id="mobile-private-mode-toggle" class="mobile-menu-item mobile-settings-item mobile-settings-toggle" type="button" aria-pressed="false" title="Turn private mode on">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-hat-glasses" aria-hidden="true"></i><span>Private mode</span></span><span class="settings-switch" aria-hidden="true"><span></span></span>
                                         </button>
-                                        <button id="mobile-tab-reset-btn" class="mobile-menu-item mobile-menu-reset" title="Reset workspace" aria-label="Reset workspace">
-                                            <span class="mobile-menu-item-label"><i class="lucide lucide-power" aria-hidden="true"></i><span id="mobile-reset-label">Reset workspace</span></span>
+                                        <button id="mobile-storage-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Storage and recovery">
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-hard-drive" aria-hidden="true"></i><span>Storage &amp; recovery</span></span>
+                                        </button>
+                                        <button id="mobile-tab-reset-btn" class="mobile-menu-item mobile-menu-reset" title="Reset application state" aria-label="Reset application state">
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-power" aria-hidden="true"></i><span id="mobile-reset-label">Reset app state</span></span>
                                         </button>
                                     </div>
                                 </section>
@@ -347,7 +354,7 @@
             <div id="document-tree" class="document-tree" role="tree" aria-multiselectable="true" aria-label="Workspaces, folders, and Markdown files" tabindex="0"></div>
 
             <div class="document-sidebar-footer">
-              <span id="document-sidebar-count">0 of 50 files</span>
+              <span id="document-sidebar-count">0 files</span>
             </div>
             <div id="document-sidebar-resizer" class="document-sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Resize document sidebar" aria-valuemin="220" aria-valuemax="420" tabindex="0">
               <div class="resize-divider-handle" aria-hidden="true"></div>
@@ -464,17 +471,50 @@
         <div id="reset-confirm-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title" aria-describedby="reset-modal-description" aria-hidden="true" style="display:none;">
           <div class="reset-modal-box app-modal-box modal-box">
             <div class="modal-header">
-              <p id="reset-modal-title" class="reset-modal-message">Reset all files?</p>
+              <p id="reset-modal-title" class="reset-modal-message">Reset application state?</p>
               <button type="button" class="modal-close-btn" id="reset-modal-close" aria-label="Close reset confirmation dialog">
                 <i class="lucide lucide-x" aria-hidden="true"></i>
               </button>
             </div>
             <div class="modal-body">
-              <p id="reset-modal-description" class="modal-subtext">This will remove all files and review items. Unsaved changes cannot be recovered.</p>
+              <p id="reset-modal-description" class="modal-subtext">This closes the current session and restores the default layout. Documents, review data, Secret Workspace, history, and trash remain safe.</p>
             </div>
             <div class="reset-modal-actions">
               <button type="button" class="reset-modal-btn reset-modal-cancel" id="reset-modal-cancel">Cancel</button>
-              <button type="button" class="reset-modal-btn reset-modal-confirm" id="reset-modal-confirm">Reset all</button>
+              <button type="button" class="reset-modal-btn reset-modal-confirm" id="reset-modal-confirm">Reset state</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage & Recovery Modal -->
+        <div id="storage-settings-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="storage-settings-title" aria-describedby="storage-settings-description" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box">
+            <div class="modal-header">
+              <p id="storage-settings-title" class="reset-modal-message">Storage &amp; recovery</p>
+              <button type="button" class="modal-close-btn" id="storage-settings-close-icon" aria-label="Close storage settings">
+                <i class="lucide lucide-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="modal-body storage-settings-body">
+              <p id="storage-settings-description" class="modal-subtext">Documents are stored individually and loaded only when opened. The application does not impose a document-count limit.</p>
+              <dl class="storage-status-list">
+                <div><dt>Storage</dt><dd id="storage-backend-value">Checking…</dd></div>
+                <div><dt>Documents</dt><dd id="storage-document-count-value">Checking…</dd></div>
+                <div><dt>Location</dt><dd id="storage-location-value">Checking…</dd></div>
+                <div><dt>Usage</dt><dd id="storage-usage-value">Checking…</dd></div>
+                <div><dt>Persistence</dt><dd id="storage-persistence-value">Checking…</dd></div>
+              </dl>
+              <div class="storage-recovery-note">
+                <i class="lucide lucide-shield-check" aria-hidden="true"></i>
+                <p id="storage-recovery-note">Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.</p>
+              </div>
+              <p id="storage-settings-error" class="document-modal-error" role="alert" hidden></p>
+            </div>
+            <div class="reset-modal-actions storage-settings-actions">
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-request-persistence">Keep browser data</button>
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-locate-vault">Locate vault</button>
+              <button type="button" class="reset-modal-btn reset-modal-confirm" id="storage-open-vault">Open vault folder</button>
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-settings-close">Close</button>
             </div>
           </div>
         </div>
@@ -1789,6 +1829,7 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="/libs/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
     <script src="/js/neutralino.js"></script>
     <script src="/js/main.js"></script>
+    <script src="/js/workspace-storage.js"></script>
     <script src="/js/script.js"></script>
     <!-- Screen reader dynamic accessibility announcer -->
     <div id="app-accessibility-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>

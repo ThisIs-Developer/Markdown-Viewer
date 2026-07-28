@@ -5,6 +5,7 @@ const CACHE_NAME = 'markdown-viewer-cache-v3.9.4';
 const CRITICAL_ASSETS = [
   './',
   './index.html',
+  './workspace-storage.js',
   './script.js',
   './preview-worker.js',
   './styles.css',
@@ -24,6 +25,7 @@ const CDN_ORIGINS = [
 const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/',
   '/index.html',
+  '/workspace-storage.js',
   '/script.js',
   '/preview-worker.js',
   '/styles.css',

@@ -56,7 +56,7 @@ Markdown Viewer는 개발자, 작성자, 학생, 연구자 등 `.md` 또는 `.ma
 
 ## 주요 기능
 
-- **작업공간 및 문서:** 중첩 폴더에서 최대 50개 문서를 정리할 수 있습니다. 최근 파일, 즐겨찾기, 검색, 탭, 일괄 작업, 암호화된 Secret Workspace(비밀 작업 공간)를 지원합니다.
+- **작업공간 및 문서:** 앱의 문서 수 제한 없이 중첩 폴더에서 문서를 정리할 수 있습니다. 실제 한도는 사용 가능한 저장 공간입니다. 최근 파일, 즐겨찾기, 검색, 탭, 일괄 작업, 암호화된 Secret Workspace(비밀 작업 공간)를 지원합니다.
 - **편집 및 리뷰:** 편집기, 분할 보기, 미리보기 사이를 전환할 수 있습니다. 서식 도구, 사용자 지정 실행 취소/다시 실행, 찾기 및 바꾸기, LTR/RTL, 댓글과 제안을 사용할 수 있습니다.
 - **Markdown 렌더링:** CommonMark 스타일의 기본 구문, GitHub-Flavored Markdown(GFM), 표, 작업 목록, 알림, 각주, 정의 목록, 코드 구문 강조, 정제된 HTML, MathJax를 지원합니다.
 - **시각 콘텐츠:** Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, ABC 기보를 렌더링합니다.
@@ -125,7 +125,7 @@ Share Snapshot 및 Live Share URL은 베어러 링크입니다. 유효한 링크
 
 ## 주요 제한
 
-- 작업공간에는 최대 50개 문서를 둘 수 있습니다. 잠긴 Secret Workspace 수와 임시 Share Snapshot/Live Share 탭도 포함됩니다.
+- Markdown Viewer는 문서 수 제한을 두지 않습니다. 실제 한도는 브라우저 할당량 또는 데스크톱 파일 시스템 용량입니다.
 - 로컬 Markdown 파일 하나의 최대 크기는 10 MB입니다.
 - GitHub 가져오기는 저장소/폴더 결과에서 Markdown 파일을 최대 30개까지 표시합니다.
 - 처리 전 미디어 원본은 25 MiB까지입니다. 저장 한도는 정지 이미지 300 KiB, GIF 5 MiB, 동영상 10 MiB입니다.

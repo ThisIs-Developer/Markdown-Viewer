@@ -1,6 +1,6 @@
 # Markdown Viewer Desktop Application
 
-This folder contains the Neutralinojs desktop wrapper for Markdown Viewer. It turns the browser-based Markdown editor and viewer into a lightweight desktop build for opening local `.md` files, using Split view and live Preview, exporting Documents, and working with native file dialogs. It reuses the root web app and adds window lifecycle handling, desktop storage mirroring, and prepared local renderer assets.
+This folder contains the Neutralinojs desktop wrapper for Markdown Viewer. It turns the browser-based Markdown editor and viewer into a lightweight desktop build for opening local `.md` files, using Split view and live Preview, exporting Documents, and working with native file dialogs. It reuses the root web app and adds window lifecycle handling, a durable document vault, and prepared local renderer assets.
 
 For complete product behavior, see [Features](../wiki/Features.md). For storage and network boundaries, see [Privacy and Security](../wiki/Privacy-and-Security.md).
 
@@ -27,12 +27,15 @@ Desktop-only files:
 
 - Local editing, preview, document tabs, exports, and settings stay on the local machine.
 - Comments and suggestions stay with normal local tabs and are excluded from document exports and Share Snapshot links.
-- Normal app state is stored in localStorage and mirrored to Neutralino storage.
+- Normal documents are stored as individual `.md` files in `Documents/Markdown Viewer Vault/Workspace` by default. Metadata, recent history, trash, crash-recovery journals, and encrypted Secret Workspace objects live under the same vault.
+- The vault is outside the executable and is rediscovered from a portable locator, so replacing or deleting the binary does not delete documents.
+- Document metadata loads at startup; Markdown content loads only when a document is opened and is kept in a bounded in-memory cache.
 - Native Markdown/HTML save and Markdown open flows use Neutralino dialogs and filesystem APIs.
 - A Markdown file passed as a launch argument is loaded into the editor.
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
-- Private mode and **Reset workspace** clear persisted normal and Secret Workspace Document data. Export needed Documents before using either control.
+- Private mode pauses document-state persistence for the current session without deleting the vault. **Reset app state** closes the session and restores layout defaults while keeping normal documents, review data, Secret Workspace, history, and trash.
+- **Storage & recovery** shows the active vault, opens it in the file manager, and can locate an existing vault after an app reinstall.
 
 Network features still use the network when invoked: managed media upload, GitHub import, stored Share Snapshot, Live Share, remote diagram rendering, external images, and external links.
 
@@ -67,7 +70,7 @@ Seven self-contained executables are written to `desktop-app/dist/markdown-viewe
 
 | Setting | Value |
 | :--- | :--- |
-| Application id | `com.markdownviewer.desktop` |
+| Application id | `com.markdownviewer.desktop` (stable across updates) |
 | Document root | `/resources/` |
 | Default window | 1280 x 720 |
 | Minimum window | 400 x 200 |
@@ -75,7 +78,7 @@ Seven self-contained executables are written to `desktop-app/dist/markdown-viewe
 | Token security | One-time |
 | Logging | Disabled |
 
-Native APIs are intentionally allowlisted: app exit, open/save dialogs, message boxes, external URL open, tray setup, file read/write, and storage get/set. Command execution is not part of the default allowlist.
+Native APIs are intentionally allowlisted: app exit, open/save dialogs, message boxes, external URL/folder open, tray setup, scoped file and folder operations, path lookup, and storage get/set/remove. Command execution is not part of the default allowlist.
 
 ## Local Renderer Security
 

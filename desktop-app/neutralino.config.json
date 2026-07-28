@@ -9,6 +9,8 @@
   "enableServer": true,
   "enableNativeAPI": true,
   "tokenSecurity": "one-time",
+  "dataLocation": "system",
+  "storageLocation": "system",
   "logging": {
     "enabled": false,
     "writeToLogFile": false
@@ -18,12 +20,22 @@
     "os.showOpenDialog",
     "os.showSaveDialog",
     "os.showMessageBox",
+    "os.showFolderDialog",
+    "os.getPath",
     "os.open",
     "os.setTray",
+    "filesystem.createDirectory",
+    "filesystem.readDirectory",
     "filesystem.readFile",
     "filesystem.writeFile",
+    "filesystem.getStats",
+    "filesystem.getJoinedPath",
+    "filesystem.copy",
+    "filesystem.move",
+    "filesystem.remove",
     "storage.setData",
-    "storage.getData"
+    "storage.getData",
+    "storage.removeData"
   ],
   "globalVariables": {},
   "modes": {

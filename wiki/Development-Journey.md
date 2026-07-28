@@ -86,7 +86,7 @@ The changelog records many small fixes. The recurring themes are:
 - Temporary shared/live tabs are excluded from saved workspaces.
 - Small snapshot links keep content in the URL hash.
 - Stored snapshot links use Cloudflare KV for 90 days.
-- Private mode prevents normal Document-state persistence after clearing it, and Reset workspace removes normal files, review data, and Secret Workspace storage.
+- Private mode now pauses Document-state persistence without deleting saved content, and Reset app state preserves normal files, review data, Secret Workspace, history, and trash.
 - Live Share uses Cloudflare Durable Objects as temporary relays.
 - Remote renderer and import features send only the data needed for that feature.
 

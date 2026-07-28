@@ -56,7 +56,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 ## Highlights
 
-- **Workspace and documents:** organize up to 50 documents in nested folders; use Recent, Favorites, search, tabs, bulk actions, and an encrypted Secret Workspace.
+- **Workspace and documents:** organize as many documents as available device storage permits in nested folders; use Recent, Favorites, search, tabs, bulk actions, and an encrypted Secret Workspace.
 - **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, custom undo/redo, Find and Replace, LTR/RTL direction, comments, and suggestions.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
@@ -152,7 +152,9 @@ Remote renderer services receive the source of the diagram they render. Do not s
 
 ## Important Limits
 
-- The Workspace limit is 50 documents, including locked Secret Workspace counts and temporary Share Snapshot or Live Share tabs.
+- Markdown Viewer does not impose a document-count limit. The practical limit is available browser or filesystem storage.
+- Browser documents use per-document IndexedDB records and load content on demand. Use **Storage & recovery** to inspect quota and request persistent storage.
+- Desktop documents live as ordinary `.md` files under `Documents/Markdown Viewer Vault` by default. App upgrades and executable replacement do not remove that vault.
 - A local Markdown file larger than 10 MB is rejected.
 - The public GitHub importer shows at most 30 Markdown files for a repository or folder result.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.

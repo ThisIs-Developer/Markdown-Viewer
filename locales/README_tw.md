@@ -56,7 +56,7 @@ Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開�
 
 ## 主要功能
 
-- **工作區與文件：** 在巢狀資料夾中整理最多 50 份文件，並使用最近使用、我的最愛、搜尋、分頁、批次操作及加密的 Secret Workspace（秘密工作區）。
+- **工作區與文件：** 在巢狀資料夾中整理文件，應用程式不設定文件數量上限；實際上限取決於可用儲存空間。並可使用最近使用、我的最愛、搜尋、分頁、批次操作及加密的 Secret Workspace（秘密工作區）。
 - **編輯與審閱：** 在編輯器、分割檢視與預覽之間切換，並使用格式工具、自訂復原／重做、尋找與取代、LTR／RTL、留言與建議。
 - **Markdown 轉譯：** 支援 CommonMark 風格基礎語法、GitHub-Flavored Markdown（GFM）、表格、工作清單、提示區塊、註腳、定義清單、程式碼語法醒目提示、已清理的 HTML 與 MathJax。
 - **視覺內容：** 轉譯 Mermaid、PlantUML、Graphviz／DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 與 ABC 記譜。
@@ -125,7 +125,7 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 
 ## 主要限制
 
-- 工作區最多可包含 50 份文件，其中包括已鎖定 Secret Workspace 的計數及暫時 Share Snapshot／Live Share 分頁。
+- Markdown Viewer 不設定文件數量上限；實際上限取決於瀏覽器配額或桌面檔案系統容量。
 - 單一本機 Markdown 檔案的大小上限為 10 MB。
 - GitHub 導入器在每個儲存庫／資料夾結果中最多顯示 30 個 Markdown 檔案。
 - 處理前的媒體來源檔案上限為 25 MiB；儲存上限為靜態圖片 300 KiB、GIF 5 MiB、影片 10 MiB。
