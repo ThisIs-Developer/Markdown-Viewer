@@ -3,6 +3,19 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## v3.9.5-beta.1
+
+- **Description:** Added complete workspace backup, encrypted restoration, and destructive reset workflows across the web and desktop applications.
+  - **Storage and Backup:** Renamed the settings module, fixed its missing icon, added exact workspace usage and total file counts, and added ZIP backup/import with folder-structure preservation.
+  - **Encrypted Backups:** Added an opt-in control that includes Secret Workspace files as their existing AES-GCM ciphertext. Backups never decrypt secure content, and restored content still requires the original access key.
+  - **Reset Safety:** Reset now permanently clears documents, folders, preferences, Secret Workspace data, history, and trash. The confirmation provides a direct Backup route, disables repeated submission, and uses the application loading spinner.
+  - **Performance:** The ZIP engine remains lazy-loaded, while documents continue to use per-document storage, on-demand content loading, and the bounded 20-document in-memory cache.
+  - **Desktop:** Added offline JSZip packaging, binary ZIP filesystem permissions, seven-platform preview builds, SHA-256 checksums, and prerelease publishing.
+- **Date:** 2026-07-29
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.1
+
+---
+
 ## v3.9.4
 
 - **Description:** Expanded Markdown Viewer with durable media workflows, stronger document organization, reliable two-document split previews, and broader deployment and documentation coverage.

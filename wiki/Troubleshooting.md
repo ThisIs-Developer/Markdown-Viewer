@@ -203,12 +203,13 @@ See [Live Share](Live-Share-Cloudflare.md).
 
 ## Documents Are Missing After an Update or Restart
 
-Private mode and **Reset app state** do not delete existing documents. Private-session changes are deliberately not written, so changes made after Private mode was enabled will not survive reload or exit.
+Private mode does not delete existing documents, but **Reset workspace** permanently does. Private-session changes are deliberately not written, so changes made after Private mode was enabled will not survive reload or exit.
 
 Check:
 
 - a previously exported `.md` file;
-- **Storage & recovery** for the current backend or vault location;
+- a ZIP previously exported from **Storage and Backup**;
+- **Storage and Backup** for the current backend or vault location;
 - browser/profile backups or whether site data was cleared;
 - `Documents/Markdown Viewer Vault/Workspace`, `.markdown-viewer/history`, and `.markdown-viewer/trash` on desktop;
 - use **Locate vault** if the desktop app is pointing at a different vault; or

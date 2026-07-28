@@ -131,10 +131,10 @@ chmod +x markdown-viewer-mac_universal
 
 - Normal documents are ordinary `.md` files under `Documents/Markdown Viewer Vault/Workspace` by default.
 - Vault metadata, recent history, trash, recovery journals, settings, and opaque encrypted Secret Workspace records are kept under the same vault.
-- A portable locator in Documents lets replacement binaries rediscover the vault. Use **Storage & recovery** to open or locate it.
+- A portable locator in Documents lets replacement binaries rediscover the vault. Use **Storage and Backup** to inspect, back up, import, open, or locate it.
 - Native file access happens through explicit open/save actions or launch arguments.
 - The app does not include analytics or telemetry.
 - Sharing/import/remote-rendering features use the same network behavior as the web app.
-- Private mode pauses new persistence without deleting saved content. **Reset app state** preserves normal documents, review data, Secret Workspace, history, and trash.
+- Private mode pauses new persistence without deleting saved content. **Reset workspace** permanently deletes the vault content and application preferences after confirmation.
 
 Related pages: [Installation](Installation.md), [Configuration](Configuration.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md#the-desktop-application-does-not-start).

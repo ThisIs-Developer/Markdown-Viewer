@@ -153,8 +153,9 @@ Remote renderer services receive the source of the diagram they render. Do not s
 ## Important Limits
 
 - Markdown Viewer does not impose a document-count limit. The practical limit is available browser or filesystem storage.
-- Browser documents use per-document IndexedDB records and load content on demand. Use **Storage & recovery** to inspect quota and request persistent storage.
+- Browser documents use per-document IndexedDB records and load content on demand. Use **Storage and Backup** to inspect exact workspace usage, request persistent storage, export a complete ZIP backup, or restore one.
 - Desktop documents live as ordinary `.md` files under `Documents/Markdown Viewer Vault` by default. App upgrades and executable replacement do not remove that vault.
+- Workspace backup ZIPs preserve folders and can include Secret Workspace ciphertext. Secure files remain encrypted and require the original access key after import.
 - A local Markdown file larger than 10 MB is rejected.
 - The public GitHub importer shows at most 30 Markdown files for a repository or folder result.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.

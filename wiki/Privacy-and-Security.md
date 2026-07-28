@@ -32,18 +32,18 @@ Temporary Share Snapshot and Live Share participant tabs are removed before norm
 
 Browser storage quotas and user-cleared site data still apply. The application cannot recover data after the browser, operating system, user, or storage policy deletes it.
 
-## Private Mode, Reset App State, and Secret Workspace
+## Private Mode, Reset Workspace, and Secret Workspace
 
 These controls have different purposes:
 
 | Control | Effect | Important limitation |
 | :--- | :--- | :--- |
 | **Private mode** | Pauses new document-state writes while enabled | Existing normal and Secret Workspace documents remain intact; session changes will not survive reload or exit. |
-| **Reset app state** | Ends the active session and restores layout defaults | Normal documents, review data, Secret Workspace, history, and trash remain stored. |
+| **Reset workspace** | Permanently deletes files, folders, review data, settings, Secret Workspace, history, and trash | Irreversible after confirmation; create a backup first if data must be retained. |
 | **Reset Secret Workspace** | Deletes every encrypted Secret Workspace file and folder | Irreversible; a confirmation is shown. |
 | Lock Secret Workspace | Removes the in-memory key and hides encrypted content | The encrypted payload remains stored locally. |
 
-Only **Reset Secret Workspace** is destructive to encrypted Secret Workspace content. The confirmation explicitly states that the access key and encrypted records cannot be recovered.
+Both **Reset workspace** and **Reset Secret Workspace** are destructive to encrypted content. Reset workspace clears everything; Reset Secret Workspace targets only the encrypted area.
 
 Secret Workspace uses PBKDF2 with SHA-256, 250,000 iterations, a random salt, and AES-GCM with a 256-bit derived key. The key remains in memory only while the Workspace is unlocked. File contents and folder names are encrypted; item counts, salt, initialization vector, iteration count, and format version remain outside the ciphertext as metadata. A forgotten password cannot be recovered.
 
@@ -53,7 +53,7 @@ Secret Workspace protects the stored payload from casual inspection at rest. It 
 
 Clearing site data in the browser removes Markdown Viewer IndexedDB, `localStorage`, preferences, the Service Worker, and cached assets for that origin. Browser-level clearing cannot be undone by Markdown Viewer, so export important content separately.
 
-In the desktop application, replacing or deleting the binary does not remove `Documents/Markdown Viewer Vault`. A locator stored in Documents lets a new binary rediscover the vault; a non-default existing vault can also be selected from **Storage & recovery**. Users can back up the vault with normal filesystem tools.
+In the desktop application, replacing or deleting the binary does not remove `Documents/Markdown Viewer Vault`. A locator stored in Documents lets a new binary rediscover the vault; a non-default existing vault can also be selected from **Storage and Backup**. Its Backup action creates a portable ZIP, or users can copy the vault with normal filesystem tools.
 
 ## Data That Can Leave the Device
 
@@ -177,7 +177,7 @@ See [Contributing: Security Reports](Contributing.md#security-reports).
 - Live Share is not end-to-end encrypted and persists capability metadata without an application TTL.
 - The current Share Snapshot UI does not expose the early-deletion token.
 - Managed media has no early-delete control.
-- Private mode and Reset app state preserve persisted Secret Workspace data; Reset Secret Workspace is irreversible.
+- Private mode preserves persisted Secret Workspace data. Reset workspace and Reset Secret Workspace are irreversible after confirmation.
 - Security headers differ by deployment target and can be weakened by self-hosting changes.
 - Remote services and external assets operate under their own privacy, availability, and logging policies.
 - Browser storage, extensions, malware, a compromised device, and users with local profile access remain outside the application's protection boundary.

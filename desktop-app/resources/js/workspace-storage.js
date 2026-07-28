@@ -73,6 +73,10 @@
     }
   }
 
+  function utf8ByteLength(value) {
+    return new TextEncoder().encode(String(value == null ? '' : value)).byteLength;
+  }
+
   function requestToPromise(request) {
     return new Promise(function (resolve, reject) {
       request.onsuccess = function () { resolve(request.result); };
@@ -515,6 +519,18 @@
       return normalizePathSeparators(segments.join('/'));
     }
 
+    async _backupDocumentRelativePath(tab, organization) {
+      const storedPath = normalizePathSeparators(tab && (tab.vaultRelativePath || tab._vaultRelativePath));
+      if (
+        storedPath &&
+        storedPath.startsWith('Workspace/') &&
+        !storedPath.split('/').some(function(segment) { return segment === '.' || segment === '..'; })
+      ) {
+        return storedPath;
+      }
+      return this._desktopDocumentRelativePath(tab, organization);
+    }
+
     async _desktopEnsureOrganizationFolders(organization) {
       if (!organization || !Array.isArray(organization.folders)) return;
       for (const folder of organization.folders) {
@@ -658,13 +674,15 @@
       const contents = transaction.objectStore('contents');
       const trash = transaction.objectStore('trash');
       selected.forEach((tab) => {
-        documents.put(metadataFromTab(tab));
+        const metadata = metadataFromTab(tab);
         if (settings.forceContent || tab.contentLoaded !== false) {
           const content = typeof tab.content === 'string' ? tab.content : '';
+          metadata.contentSize = utf8ByteLength(content);
           contents.put({ id: tab.id, content: content, updatedAt: Date.now() });
           tab._persistedContent = content;
           this._cacheContent(tab.id, content);
         }
+        documents.put(metadata);
       });
       if (settings.fullSnapshot) {
         const currentIds = new Set(source.map(function (tab) { return tab.id; }));
@@ -888,6 +906,212 @@
       await this.setSecretManifest(null);
     }
 
+    async getWorkspaceUsage() {
+      if (this.desktop) {
+        let total = 0;
+        const walk = async (directory) => {
+          let entries = [];
+          try {
+            entries = await Neutralino.filesystem.readDirectory(directory);
+          } catch (_) {
+            return;
+          }
+          for (const entry of entries) {
+            if (!entry || !entry.entry) continue;
+            const path = await this._pathJoin(directory, entry.entry);
+            if (entry.type === 'DIRECTORY') {
+              await walk(path);
+            } else if (entry.type === 'FILE') {
+              try {
+                const stats = await Neutralino.filesystem.getStats(path);
+                total += Number(stats && stats.size) || 0;
+              } catch (_) {}
+            }
+          }
+        };
+        await walk(this.vaultPath);
+        return total;
+      }
+
+      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash'];
+      let total = 0;
+      for (const storeName of storeNames) {
+        const transaction = this.db.transaction(storeName, 'readonly');
+        const completion = transactionToPromise(transaction);
+        const store = transaction.objectStore(storeName);
+        await new Promise(function(resolve, reject) {
+          const request = store.openCursor();
+          request.onsuccess = function() {
+            const cursor = request.result;
+            if (!cursor) {
+              resolve();
+              return;
+            }
+            total += utf8ByteLength(JSON.stringify(cursor.value));
+            cursor.continue();
+          };
+          request.onerror = function() {
+            reject(request.error || new Error('Unable to calculate workspace storage usage.'));
+          };
+        });
+        await completion;
+      }
+      return total;
+    }
+
+    async createBackupData(options) {
+      const settings = options || {};
+      const includeSecure = settings.includeSecure === true;
+      const onProgress = typeof settings.onProgress === 'function' ? settings.onProgress : function() {};
+      const organization = cloneJson(settings.organization, null) || await this.getDocumentOrganization() || {
+        version: 1,
+        workspaces: [],
+        folders: [],
+        ui: {}
+      };
+      const storedMetadata = await this.listDocumentMetadata();
+      const overrideDocuments = Array.isArray(settings.documentOverrides)
+        ? settings.documentOverrides.filter(function(item) {
+          return item && item.id && item.temporary !== true && item.kind !== 'share-snapshot' && item.workspaceId !== 'workspace_secret';
+        })
+        : [];
+      const overridesById = new Map(overrideDocuments.map(function(item) { return [item.id, item]; }));
+      const metadataById = new Map(storedMetadata.map(function(item) { return [item.id, item]; }));
+      overrideDocuments.forEach(function(item) {
+        const existing = metadataById.get(item.id) || {};
+        metadataById.set(item.id, Object.assign({}, existing, item));
+      });
+      const metadata = Array.from(metadataById.values());
+      const secretRecords = includeSecure ? await this.listSecretRecords() : [];
+      const total = metadata.length + secretRecords.length;
+      const documents = [];
+      let processed = 0;
+
+      for (const item of metadata) {
+        const override = overridesById.get(item.id);
+        const content = override && override.contentLoaded !== false && typeof override.content === 'string'
+          ? override.content
+          : await this.loadDocumentContent(item.id);
+        documents.push({
+          metadata: metadataFromTab(override ? Object.assign({}, item, override) : item),
+          path: await this._backupDocumentRelativePath(item, organization),
+          content: content
+        });
+        processed += 1;
+        onProgress(processed, total, item.title || 'Untitled');
+      }
+
+      const secure = [];
+      for (const record of secretRecords) {
+        secure.push({
+          id: record.id,
+          envelope: cloneJson(record.envelope, null)
+        });
+        processed += 1;
+        onProgress(processed, total, 'Encrypted Secret Workspace record');
+      }
+
+      return {
+        organization: cloneJson(organization, {}),
+        documents: documents,
+        secretManifest: includeSecure ? cloneJson(await this.getSecretManifest(), null) : null,
+        secretRecords: secure,
+        includesSecureWorkspace: includeSecure,
+        totalEntries: total
+      };
+    }
+
+    async restoreBackupData(backup, options) {
+      const source = backup && typeof backup === 'object' ? backup : {};
+      const settings = options || {};
+      const onProgress = typeof settings.onProgress === 'function' ? settings.onProgress : function() {};
+      const organization = cloneJson(source.organization, {
+        version: 1,
+        workspaces: [],
+        folders: [],
+        ui: {}
+      });
+      const documents = Array.isArray(source.documents) ? source.documents : [];
+      const secretRecords = Array.isArray(source.secretRecords) ? source.secretRecords : [];
+      const total = documents.length + secretRecords.length;
+      let processed = 0;
+
+      await this.saveDocumentOrganization(organization);
+      const tabs = documents.map(function(item) {
+        const metadata = item && item.metadata && typeof item.metadata === 'object'
+          ? cloneJson(item.metadata, {})
+          : {};
+        metadata.content = typeof item.content === 'string' ? item.content : '';
+        metadata.contentLoaded = true;
+        return metadata;
+      });
+      await this.saveDocuments(tabs, organization, {
+        fullSnapshot: true,
+        forceContent: true
+      });
+      for (const item of documents) {
+        processed += 1;
+        onProgress(processed, total, item && item.metadata && item.metadata.title || 'Untitled');
+      }
+
+      await this.clearSecretRecords();
+      for (const record of secretRecords) {
+        if (!record || !record.id || !record.envelope) continue;
+        await this.saveSecretRecord(record.id, record.envelope);
+        processed += 1;
+        onProgress(processed, total, 'Encrypted Secret Workspace record');
+      }
+      await this.setSecretManifest(source.secretManifest || null);
+      return {
+        normalDocumentCount: tabs.length,
+        secretRecordCount: secretRecords.length
+      };
+    }
+
+    async resetAllData() {
+      this._normalContentCache.clear();
+      if (this.desktop) {
+        const manifestPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'vault.json');
+        const manifest = await this._readJsonFile(manifestPath, null);
+        if (!manifest || manifest.format !== 'markdown-viewer-vault') {
+          throw new Error('The active folder is not a valid Markdown Viewer Vault.');
+        }
+        const ownedPaths = [
+          await this._pathJoin(this.vaultPath, 'Workspace'),
+          await this._pathJoin(this.vaultPath, 'Secret Workspace'),
+          await this._pathJoin(this.vaultPath, INTERNAL_DIR)
+        ];
+        const normalizedVault = normalizePathSeparators(this.vaultPath).toLowerCase().replace(/\/+$/, '') + '/';
+        for (const path of ownedPaths) {
+          const normalizedPath = normalizePathSeparators(path).toLowerCase();
+          if (!normalizedPath.startsWith(normalizedVault)) {
+            throw new Error('Refusing to reset a path outside the active vault.');
+          }
+          if (await this._pathExists(path)) await Neutralino.filesystem.remove(path);
+        }
+        const currentVaultPath = this.vaultPath;
+        this.ready = false;
+        this.vaultId = '';
+        this.vaultIndex = { version: VAULT_FORMAT_VERSION, documents: [], updatedAt: 0 };
+        this.vaultOrganization = null;
+        this.desktopSettings = {};
+        this._organizationSnapshot = '';
+        await this._initDesktop(currentVaultPath);
+        this.ready = true;
+        return;
+      }
+
+      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash'];
+      const transaction = this.db.transaction(storeNames, 'readwrite');
+      storeNames.forEach(function(storeName) {
+        transaction.objectStore(storeName).clear();
+      });
+      await transactionToPromise(transaction);
+      this.vaultId = randomId('vault');
+      this._organizationSnapshot = '';
+      await this.setMetadata('vaultId', this.vaultId);
+    }
+
     async requestPersistentStorage() {
       if (this.desktop) return true;
       if (!navigator.storage || typeof navigator.storage.persist !== 'function') return false;
@@ -896,7 +1120,7 @@
 
     async getStorageEstimate() {
       if (this.desktop) {
-        return { usage: null, quota: null, persistent: true };
+        return { usage: await this.getWorkspaceUsage(), quota: null, persistent: true };
       }
       let estimate = {};
       let persistent = false;

@@ -6563,6 +6563,14 @@ a:focus {
   min-width: 108px;
 }
 
+#reset-modal-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 126px;
+}
+
 .live-share-start-spinner {
   display: none;
   width: 13px;
@@ -6573,7 +6581,8 @@ a:focus {
   border-radius: 50%;
 }
 
-#live-share-start-btn.is-loading .live-share-start-spinner {
+#live-share-start-btn.is-loading .live-share-start-spinner,
+#reset-modal-confirm.is-loading .live-share-start-spinner {
   display: inline-block;
   animation: live-share-start-spin 0.8s linear infinite;
 }
@@ -6583,7 +6592,8 @@ a:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #live-share-start-btn.is-loading .live-share-start-spinner {
+  #live-share-start-btn.is-loading .live-share-start-spinner,
+  #reset-modal-confirm.is-loading .live-share-start-spinner {
     animation: none;
   }
 }
@@ -9898,8 +9908,50 @@ html[data-theme="dark"] .mermaid svg {
   margin: 0;
 }
 
+.storage-secure-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-color);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.storage-secure-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-color);
+}
+
+.storage-secure-note {
+  margin: -7px 0 0 25px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .storage-settings-actions {
   flex-wrap: wrap;
+}
+
+.storage-settings-actions .reset-modal-btn,
+#reset-modal-backup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.storage-primary-action {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.storage-primary-action:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 82%, #000);
+  background: color-mix(in srgb, var(--accent-color) 82%, #000);
 }
 
 .pdf-progress-modal {

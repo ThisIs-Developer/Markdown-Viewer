@@ -62,7 +62,8 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 
 - Web documents are local per-document IndexedDB records; desktop documents are ordinary `.md` files in a durable vault.
 - Private mode pauses new Document-state persistence while keeping existing normal and Secret Workspace data.
-- **Reset app state** keeps documents and restores session/layout defaults. Reset Secret Workspace is the separate irreversible action.
+- **Storage and Backup** exports or restores a folder-preserving ZIP and can retain Secret Workspace ciphertext.
+- **Reset workspace** permanently deletes all local workspace data and preferences after confirmation; use its Backup route first when needed.
 - Managed media is public-by-link and expires 90 days after the most recent upload of identical content.
 - Stored Share Snapshot content remains in Cloudflare KV for 90 days.
 - Live Share does not persist Markdown/Review content server-side, but its Durable Object stores role capability metadata without an application TTL.

@@ -279,6 +279,11 @@ async function prepareOfflineDependencies() {
       hash: null
     },
     {
+      url: "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",
+      dest: path.join(LIBS_DIR, "jszip.min.js"),
+      hash: "sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
+    },
+    {
       url: "https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js",
       dest: path.join(LIBS_DIR, "joypixels.min.js"),
       hash: null

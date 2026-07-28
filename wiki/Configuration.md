@@ -24,7 +24,7 @@ Temporary shared content is intentionally not persisted:
 - Share Snapshot tabs have `kind: "share-snapshot"`.
 - Live Share participant tabs use `kind: "live-share"` plus `temporary: true`; host documents are restored when leaving the session.
 
-Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Reset app state** ends the current session and restores layout defaults while preserving persisted content. **Storage & recovery** reports browser quota/persistence or the desktop vault path. **Reset Secret Workspace** is the separate destructive encrypted-data operation.
+Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Storage and Backup** reports exact workspace usage and file counts, manages browser persistence or the desktop vault path, and exports/imports folder-preserving ZIP backups. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
 
 ## Client Libraries
 
@@ -45,6 +45,7 @@ The web build loads core libraries from CDN with Subresource Integrity where che
 | jsPDF | CDN or prepared desktop copy | Legacy raster PDF | Lazy |
 | html2canvas | CDN or prepared desktop copy | PDF/PNG capture | Lazy |
 | Pako | CDN or prepared desktop copy | Share compression, diagram encoding | Lazy |
+| JSZip | CDN or prepared desktop copy | Workspace ZIP backup and import | Lazy |
 | JoyPixels / emoji-toolkit | CDN or prepared desktop copy | Emoji shortcodes | Lazy |
 | ABCJS | CDN or prepared desktop copy | ABC notation and playback | Lazy |
 | Leaflet | CDN or prepared desktop copy | GeoJSON/TopoJSON maps | Lazy |

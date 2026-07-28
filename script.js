@@ -105,7 +105,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js': 'sha384-wagZhIFgY4hD+7awjQjR4e2E294y6J2HSnd8eTNc15ZubTeQeVRZwhQJ+W6hnBsf',
     'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js': 'sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i',
     'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js': 'sha384-ZlXKtR0wcZqxEYI8i3TPFFiOJR1MEdIzdVvnhSOonCrPsBup4dnkRw49FeYhfsHF',
-    'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js': 'sha384-p+gyhsDIg0RmvIKRr9BBGSyJ9NDDkiFsbilRwdZd20Q8mUL2v7e8+orY4pvTV52w'
+    'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js': 'sha384-p+gyhsDIg0RmvIKRr9BBGSyJ9NDDkiFsbilRwdZd20Q8mUL2v7e8+orY4pvTV52w',
+    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js': 'sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=='
   });
 
   const _loadedScripts = new Set();
@@ -182,6 +183,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     d3: 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
     markmapLib: 'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js',
     markmapView: 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js',
+    jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
     yjs: 'https://esm.sh/yjs@13.6.10/es2022/yjs.mjs'
   };
 
@@ -204,6 +206,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     CDN.d3 = '/libs/d3.min.js';
     CDN.markmapLib = '/libs/markmap-lib.iife.js';
     CDN.markmapView = '/libs/markmap-view.js';
+    CDN.jszip = '/libs/jszip.min.js';
   }
 
   // Active WebGL / Three.js 3D STL renderers Map for memory cleanup
@@ -285,7 +288,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const APP_VERSION = '3.9.4';
+  const APP_VERSION = '3.9.5-beta.1';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -569,6 +572,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storageSettingsModal = document.getElementById("storage-settings-modal");
   const storageSettingsClose = document.getElementById("storage-settings-close");
   const storageSettingsCloseIcon = document.getElementById("storage-settings-close-icon");
+  const storageBackupButton = document.getElementById("storage-backup-button");
+  const storageImportButton = document.getElementById("storage-import-button");
+  const storageBackupFileInput = document.getElementById("storage-backup-file-input");
+  const storageIncludeSecure = document.getElementById("storage-include-secure");
   const storageOpenVault = document.getElementById("storage-open-vault");
   const storageLocateVault = document.getElementById("storage-locate-vault");
   const storageRequestPersistence = document.getElementById("storage-request-persistence");
@@ -767,10 +774,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       return record.id !== window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID;
     }).length;
     const estimate = results[2];
+    const workspaceUsage = status.desktop
+      ? estimate.usage
+      : await workspaceStorage.getWorkspaceUsage();
     if (storageBackendValue) storageBackendValue.textContent = status.backend;
     if (storageDocumentCountValue) {
-      storageDocumentCountValue.textContent = normalDocuments.length.toLocaleString() +
-        ' normal, ' + secretDocumentCount.toLocaleString() + ' secret';
+      const totalFiles = normalDocuments.length + secretDocumentCount;
+      storageDocumentCountValue.textContent = totalFiles.toLocaleString() + ' total (' +
+        normalDocuments.length.toLocaleString() + ' normal, ' +
+        secretDocumentCount.toLocaleString() + ' secure)';
     }
     if (storageLocationValue) {
       storageLocationValue.textContent = status.desktop
@@ -780,9 +792,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (storageUsageValue) {
       storageUsageValue.textContent = status.desktop
-        ? 'Managed by the operating system'
-        : formatStorageBytes(estimate.usage) + (
-          Number.isFinite(estimate.quota) ? ' of ' + formatStorageBytes(estimate.quota) : ''
+        ? formatStorageBytes(workspaceUsage)
+        : formatStorageBytes(workspaceUsage) + ' workspace' + (
+          Number.isFinite(estimate.quota)
+            ? ' (browser quota ' + formatStorageBytes(estimate.usage) + ' of ' + formatStorageBytes(estimate.quota) + ')'
+            : ''
         );
     }
     if (storagePersistenceValue) {
@@ -814,6 +828,442 @@ document.addEventListener("DOMContentLoaded", async function () {
       setStorageSettingsError(error && error.message ? error.message : 'Unable to load storage settings.');
     }
   }
+
+  const WORKSPACE_BACKUP_FORMAT = 'markdown-viewer-backup';
+  const WORKSPACE_BACKUP_VERSION = 1;
+  const WORKSPACE_BACKUP_MANIFEST = 'markdown-viewer-backup.json';
+  const WORKSPACE_BACKUP_INTERNAL = '.markdown-viewer/';
+  const WORKSPACE_PREFERENCE_KEYS = [
+    'markdownViewerGlobalState',
+    'markdownViewerActiveTab',
+    'markdownViewerUntitledCounter',
+    'markdownViewerPrivateMode',
+    'markdownViewerAllowLocalDiagramCommands',
+    'find-replace-docked',
+    'app-lang'
+  ];
+
+  async function ensureJsZip() {
+    if (!window.JSZip) await loadScript(CDN.jszip);
+    if (!window.JSZip) throw new Error('The backup ZIP engine could not be loaded.');
+    return window.JSZip;
+  }
+
+  function getWorkspaceBackupFilename() {
+    return 'markdown-viewer-backup-' + new Date().toISOString().slice(0, 10) + '.zip';
+  }
+
+  function getBackupPreferences() {
+    const preferences = {};
+    WORKSPACE_PREFERENCE_KEYS.forEach(function(key) {
+      try {
+        const value = localStorage.getItem(key);
+        if (value !== null) preferences[key] = value;
+      } catch (_) {}
+    });
+    return preferences;
+  }
+
+  function sanitizeBackupPathSegment(value, fallback) {
+    let segment = String(value || '')
+      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/[. ]+$/g, '');
+    if (!segment) segment = fallback || 'Untitled';
+    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(segment)) segment = '_' + segment;
+    return segment.slice(0, 120);
+  }
+
+  function normalizeTrustedBackupPath(value, requiredPrefix) {
+    const path = String(value || '').replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
+    const segments = path.split('/');
+    if (
+      !path ||
+      /^[a-z]:/i.test(path) ||
+      segments.some(function(segment) { return !segment || segment === '.' || segment === '..'; }) ||
+      (requiredPrefix && !path.startsWith(requiredPrefix))
+    ) {
+      throw new Error('The backup contains an unsafe or invalid file path.');
+    }
+    return path;
+  }
+
+  function addOrganizationFoldersToZip(zip, organization) {
+    const folders = organization && Array.isArray(organization.folders) ? organization.folders : [];
+    const byId = new Map(folders.map(function(folder) { return [folder.id, folder]; }));
+    folders.forEach(function(folder) {
+      if (!folder || folder.workspaceId === 'workspace_secret') return;
+      const names = [];
+      const visited = new Set();
+      let current = folder;
+      while (current && !visited.has(current.id)) {
+        visited.add(current.id);
+        names.unshift(sanitizeBackupPathSegment(current.name, 'Folder'));
+        current = byId.get(current.parentFolderId);
+      }
+      zip.folder(['Workspace'].concat(names).join('/'));
+    });
+  }
+
+  async function createPrivateSecretBackupSnapshot(backupData) {
+    if (!isPrivateStorageMode() || !isSecretWorkspaceUnlocked()) return;
+    const payload = getSecretWorkspacePayload();
+    const records = [];
+    for (const tab of payload.documents) {
+      records.push({
+        id: tab.id,
+        envelope: await encryptSecretWorkspaceValue(getSecretDocumentStorageValue(tab), secretWorkspaceKey)
+      });
+    }
+    records.push({
+      id: window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__',
+      envelope: await encryptSecretWorkspaceValue(payload.folders, secretWorkspaceKey)
+    });
+    backupData.secretRecords = records;
+    backupData.secretManifest = {
+      version: SECRET_WORKSPACE_VERSION,
+      iterations: secretWorkspaceIterations,
+      salt: bytesToBase64(new Uint8Array(secretWorkspaceSalt)),
+      documentCount: payload.documents.length,
+      folderCount: payload.folders.length,
+      updatedAt: Date.now()
+    };
+    backupData.totalEntries = backupData.documents.length + records.length;
+  }
+
+  async function buildWorkspaceBackupZip(includeSecure, onProgress) {
+    const JSZip = await ensureJsZip();
+    saveCurrentTabState();
+    if (!isPrivateStorageMode()) {
+      const normalSaved = await _flushTabsToStorage(tabs);
+      if (!normalSaved) throw new Error('The current workspace could not be saved before backup.');
+      if (includeSecure && isSecretWorkspaceUnlocked()) await flushSecretWorkspaceToStorage();
+    }
+    const backupData = await workspaceStorage.createBackupData({
+      includeSecure: includeSecure,
+      documentOverrides: getTabsForStorage(tabs),
+      organization: documentOrganization,
+      onProgress: onProgress
+    });
+    if (includeSecure) await createPrivateSecretBackupSnapshot(backupData);
+
+    const zip = new JSZip();
+    const createdAt = new Date().toISOString();
+    const documentIndex = [];
+    const secureIndex = [];
+    const hasSecureWorkspace = Boolean(includeSecure && backupData.secretManifest);
+    addOrganizationFoldersToZip(zip, backupData.organization);
+
+    backupData.documents.forEach(function(item) {
+      const path = normalizeTrustedBackupPath(item.path, 'Workspace/');
+      zip.file(path, typeof item.content === 'string' ? item.content : '');
+      documentIndex.push({
+        metadata: item.metadata,
+        path: path
+      });
+    });
+
+    if (hasSecureWorkspace) {
+      backupData.secretRecords.forEach(function(record, index) {
+        const filename = String(index + 1).padStart(6, '0') + '-' +
+          sanitizeBackupPathSegment(record.id, 'secret') + '.mvault';
+        const path = 'Secret Workspace/objects/' + filename;
+        zip.file(path, JSON.stringify(record.envelope, null, 2));
+        secureIndex.push({ id: record.id, path: path });
+      });
+      zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json', JSON.stringify(backupData.secretManifest, null, 2));
+      zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-records.json', JSON.stringify(secureIndex, null, 2));
+    }
+
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'documents.json', JSON.stringify(documentIndex, null, 2));
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'organization.json', JSON.stringify(backupData.organization, null, 2));
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'preferences.json', JSON.stringify(getBackupPreferences(), null, 2));
+    zip.file('README.txt',
+      'Markdown Viewer workspace backup\n\n' +
+      'Restore this ZIP from Settings > Storage and Backup > Import Backup.\n' +
+      'Files under Secret Workspace are encrypted ciphertext and cannot be opened outside Markdown Viewer.\n'
+    );
+    zip.file(WORKSPACE_BACKUP_MANIFEST, JSON.stringify({
+      format: WORKSPACE_BACKUP_FORMAT,
+      version: WORKSPACE_BACKUP_VERSION,
+      appVersion: APP_VERSION,
+      createdAt: createdAt,
+      includesSecureWorkspace: hasSecureWorkspace,
+      normalDocumentCount: documentIndex.length,
+      secureRecordCount: secureIndex.length
+    }, null, 2));
+    return zip;
+  }
+
+  async function saveWorkspaceBackup() {
+    if (!workspaceStorage || !storageBackupButton) return;
+    const includeSecure = Boolean(storageIncludeSecure && storageIncludeSecure.checked);
+    let desktopDestination = '';
+    if (isNeutralinoRuntimeAvailable()) {
+      desktopDestination = await Neutralino.os.showSaveDialog('Save workspace backup', {
+        defaultPath: getWorkspaceBackupFilename(),
+        filters: [{ name: 'ZIP archives (*.zip)', extensions: ['zip'] }]
+      });
+      if (!desktopDestination) return;
+    }
+
+    closeStorageSettings();
+    showImportProgress(100, {
+      title: 'Creating workspace backup',
+      detail: 'Collecting workspace files…'
+    });
+    try {
+      const zip = await buildWorkspaceBackupZip(includeSecure, function(processed, total, label) {
+        const percent = total ? Math.max(1, Math.round((processed / total) * 55)) : 10;
+        updateImportProgress(percent, 100, 'Adding ' + label + '…');
+      });
+      if (isNeutralinoRuntimeAvailable()) {
+        const bytes = await zip.generateAsync({
+          type: 'arraybuffer',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
+        }, function(metadata) {
+          updateImportProgress(55 + Math.round(metadata.percent * 0.45), 100, 'Compressing workspace…');
+        });
+        await Neutralino.filesystem.writeBinaryFile(desktopDestination, bytes);
+      } else {
+        const blob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
+        }, function(metadata) {
+          updateImportProgress(55 + Math.round(metadata.percent * 0.45), 100, 'Compressing workspace…');
+        });
+        saveAs(blob, getWorkspaceBackupFilename());
+      }
+      finishImportProgress(100, 100, {
+        title: 'Backup complete',
+        countText: 'Workspace backed up',
+        detail: includeSecure
+          ? 'The ZIP includes encrypted Secret Workspace files.'
+          : 'The workspace ZIP is ready.'
+      });
+      await refreshStorageSettings();
+    } catch (error) {
+      console.error('Workspace backup failed:', error);
+      finishImportProgress(0, 100, {
+        success: false,
+        title: 'Backup failed',
+        countText: 'Backup not created',
+        detail: error && error.message ? error.message : 'The workspace backup could not be created.'
+      });
+    }
+  }
+
+  async function readBackupJson(zip, path, required) {
+    const entry = zip.file(path);
+    if (!entry) {
+      if (required) throw new Error('The backup is missing ' + path + '.');
+      return null;
+    }
+    try {
+      return JSON.parse(await entry.async('string'));
+    } catch (_) {
+      throw new Error('The backup contains invalid JSON in ' + path + '.');
+    }
+  }
+
+  function sanitizeImportedMetadata(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('The backup contains invalid document metadata.');
+    }
+    const safe = {};
+    Object.keys(value).forEach(function(key) {
+      if (key !== '__proto__' && key !== 'constructor' && key !== 'prototype') safe[key] = value[key];
+    });
+    if (!safe.id || typeof safe.id !== 'string') throw new Error('A backed-up document has no valid ID.');
+    return safe;
+  }
+
+  async function parseWorkspaceBackup(input) {
+    const JSZip = await ensureJsZip();
+    const zip = await JSZip.loadAsync(input, { createFolders: true });
+    const manifest = await readBackupJson(zip, WORKSPACE_BACKUP_MANIFEST, true);
+    if (
+      !manifest ||
+      manifest.format !== WORKSPACE_BACKUP_FORMAT ||
+      Number(manifest.version) !== WORKSPACE_BACKUP_VERSION
+    ) {
+      throw new Error('This is not a supported Markdown Viewer backup.');
+    }
+
+    const organization = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'organization.json', true);
+    const documentIndex = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'documents.json', true);
+    const preferences = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'preferences.json', false) || {};
+    if (!organization || typeof organization !== 'object' || !Array.isArray(documentIndex)) {
+      throw new Error('The backup workspace index is invalid.');
+    }
+    if (Number(manifest.normalDocumentCount) !== documentIndex.length) {
+      throw new Error('The backup document count does not match its workspace index.');
+    }
+
+    const documents = [];
+    const seenDocumentIds = new Set();
+    const seenDocumentPaths = new Set();
+    for (let index = 0; index < documentIndex.length; index += 1) {
+      const item = documentIndex[index];
+      const metadata = sanitizeImportedMetadata(item && item.metadata);
+      if (seenDocumentIds.has(metadata.id)) throw new Error('The backup contains duplicate document IDs.');
+      seenDocumentIds.add(metadata.id);
+      const path = normalizeTrustedBackupPath(item && item.path, 'Workspace/');
+      if (seenDocumentPaths.has(path)) throw new Error('The backup contains duplicate document paths.');
+      seenDocumentPaths.add(path);
+      const entry = zip.file(path);
+      if (!entry || entry.dir) throw new Error('The backup is missing document file ' + path + '.');
+      documents.push({
+        metadata: metadata,
+        path: path,
+        content: await entry.async('string')
+      });
+      updateImportProgress(index + 1, Math.max(1, documentIndex.length), 'Reading ' + (metadata.title || 'document') + '…');
+    }
+
+    const secretRecords = [];
+    let secretManifest = null;
+    if (manifest.includesSecureWorkspace) {
+      const secretIndex = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'secret-records.json', true);
+      secretManifest = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json', true);
+      if (!Array.isArray(secretIndex) || !secretManifest || typeof secretManifest !== 'object') {
+        throw new Error('The encrypted Secret Workspace backup index is invalid.');
+      }
+      if (Number(manifest.secureRecordCount) !== secretIndex.length) {
+        throw new Error('The encrypted backup count does not match its index.');
+      }
+      const seenSecretIds = new Set();
+      const seenSecretPaths = new Set();
+      for (const item of secretIndex) {
+        if (!item || typeof item.id !== 'string' || !item.id || seenSecretIds.has(item.id)) {
+          throw new Error('The backup contains an invalid encrypted record.');
+        }
+        seenSecretIds.add(item.id);
+        const path = normalizeTrustedBackupPath(item.path, 'Secret Workspace/objects/');
+        if (seenSecretPaths.has(path)) throw new Error('The backup contains duplicate encrypted record paths.');
+        seenSecretPaths.add(path);
+        const envelope = await readBackupJson(zip, path, true);
+        if (!envelope || typeof envelope.iv !== 'string' || typeof envelope.ciphertext !== 'string') {
+          throw new Error('An encrypted Secret Workspace record is invalid.');
+        }
+        secretRecords.push({ id: item.id, envelope: envelope });
+      }
+    }
+    return {
+      manifest: manifest,
+      organization: organization,
+      documents: documents,
+      secretManifest: secretManifest,
+      secretRecords: secretRecords,
+      preferences: preferences
+    };
+  }
+
+  async function clearApplicationPreferences() {
+    try {
+      localStorage.clear();
+    } catch (_) {}
+    if (isNeutralinoRuntimeAvailable() && Neutralino.storage && Neutralino.storage.clear) {
+      try {
+        await Neutralino.storage.clear();
+      } catch (error) {
+        console.warn('Unable to clear desktop preferences:', error);
+      }
+    }
+  }
+
+  async function restoreBackupPreferences(preferences) {
+    if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) return;
+    for (const key of WORKSPACE_PREFERENCE_KEYS) {
+      if (typeof preferences[key] !== 'string') continue;
+      localStorage.setItem(key, preferences[key]);
+      if (isNeutralinoRuntimeAvailable()) await Neutralino.storage.setData(key, preferences[key]);
+    }
+  }
+
+  async function importWorkspaceBackup(input) {
+    closeStorageSettings();
+    showImportProgress(100, {
+      title: 'Importing workspace backup',
+      detail: 'Validating backup…'
+    });
+    let replacementStarted = false;
+    try {
+      const backup = await parseWorkspaceBackup(input);
+      suspendWorkspacePersistence = true;
+      clearTimeout(saveTabStateTimeout);
+      clearTimeout(secretWorkspaceSaveTimeout);
+      await Promise.all([
+        workspacePersistenceChain.catch(function() {}),
+        secretWorkspaceSaveChain.catch(function() {})
+      ]);
+      updateImportProgress(45, 100, 'Clearing the current workspace…');
+      await clearApplicationPreferences();
+      replacementStarted = true;
+      await workspaceStorage.resetAllData();
+      const restoreTotal = Math.max(1, backup.documents.length + backup.secretRecords.length);
+      await workspaceStorage.restoreBackupData(backup, {
+        onProgress: function(processed, total, label) {
+          updateImportProgress(
+            45 + Math.round((processed / Math.max(1, total || restoreTotal)) * 50),
+            100,
+            'Restoring ' + label + '…'
+          );
+        }
+      });
+      await restoreBackupPreferences(backup.preferences);
+      updateImportProgress(100, 100, 'Reloading restored workspace…');
+      finishImportProgress(100, 100, {
+        title: 'Import complete',
+        countText: backup.documents.length.toLocaleString() + ' files restored',
+        detail: backup.secretRecords.length
+          ? 'Encrypted Secret Workspace files were restored without decrypting them.'
+          : 'The workspace was restored successfully.'
+      });
+      window.setTimeout(function() { window.location.reload(); }, 1100);
+    } catch (error) {
+      if (!replacementStarted) suspendWorkspacePersistence = false;
+      console.error('Workspace backup import failed:', error);
+      finishImportProgress(0, 100, {
+        success: false,
+        title: 'Import failed',
+        countText: 'Workspace not restored',
+        detail: error && error.message ? error.message : 'The backup could not be imported.'
+      });
+      if (replacementStarted) {
+        window.setTimeout(function() { window.location.reload(); }, 1800);
+      }
+    }
+  }
+
+  async function selectWorkspaceBackup() {
+    let input = null;
+    if (isNeutralinoRuntimeAvailable()) {
+      const paths = await Neutralino.os.showOpenDialog('Import workspace backup', {
+        filters: [{ name: 'ZIP archives (*.zip)', extensions: ['zip'] }],
+        multiSelections: false
+      });
+      if (!paths || !paths.length) return;
+      input = await Neutralino.filesystem.readBinaryFile(paths[0]);
+    } else {
+      if (storageBackupFileInput) storageBackupFileInput.click();
+      return;
+    }
+    const accepted = await showAppToastConfirmation(
+      'Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.',
+      {
+        title: 'Replace current workspace?',
+        confirmLabel: 'Import Backup',
+        tone: 'warning',
+        dedupeKey: 'confirm-workspace-backup-import'
+      }
+    );
+    if (accepted) await importWorkspaceBackup(input);
+  }
+
   // Check dark mode preference first for proper initialization
   const prefersDarkMode =
     window.matchMedia &&
@@ -2664,6 +3114,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let workspacePersistenceChain = Promise.resolve();
   let pendingWorkspacePersistAll = false;
   let pendingWorkspacePersistIds = new Set();
+  let suspendWorkspacePersistence = false;
   let secretWorkspaceEnvelopeCache = null;
   const LIVE_EDIT_ORIGIN = Symbol("markdown-viewer-live-local-edit");
   const LIVE_RELAY_ORIGIN = Symbol("markdown-viewer-live-relay");
@@ -2957,6 +3408,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function enqueueSecretWorkspaceSave() {
+    if (suspendWorkspacePersistence) return Promise.resolve(false);
     if (!isSecretWorkspaceUnlocked()) return Promise.resolve(false);
     if (isPrivateStorageMode()) return Promise.resolve(false);
     const key = secretWorkspaceKey;
@@ -6848,6 +7300,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function _flushTabsToStorage(tabsArr, options) {
     clearTimeout(saveTabStateTimeout);
+    if (suspendWorkspacePersistence) {
+      pendingWorkspacePersistAll = false;
+      pendingWorkspacePersistIds.clear();
+      return true;
+    }
     const settings = options || {};
     const hasQueuedIds = pendingWorkspacePersistIds.size > 0;
     const hasExplicitIds = Array.isArray(settings.changedIds);
@@ -8316,83 +8773,94 @@ document.addEventListener("DOMContentLoaded", async function () {
     const confirmBtn = document.getElementById('reset-modal-confirm');
     const cancelBtn = document.getElementById('reset-modal-cancel');
     const closeBtn = document.getElementById('reset-modal-close');
+    const backupBtn = document.getElementById('reset-modal-backup');
     const description = document.getElementById('reset-modal-description');
     if (!modal || !confirmBtn || !cancelBtn) return;
+    let isResetting = false;
 
     if (description) {
-      description.textContent = 'This closes the current session and restores the default layout. Documents, review data, Secret Workspace, history, and trash remain safe.';
+      description.textContent = 'This permanently deletes all documents, folders, settings, Secret Workspace files, history, trash, and other workspace data. This action cannot be undone.';
     }
 
     async function doReset() {
-      closeAppModal(modal);
-      cleanup();
-      closeReviewComposer();
-      clearReviewDecorations();
-      disconnectLiveCollaboration({ restoreOriginal: false, silent: true });
-      applyShareSnapshotAccessMode('edit');
-      resetShareSnapshotLink();
-      if (isSecretWorkspaceUnlocked()) await lockSecretWorkspace();
-      closeDocumentSplitView({ silent: true, renderTabs: false });
-      selectedDocumentTreeIds.clear();
-      documentTreeSelectionAnchor = null;
-      documentSidebarSearch = '';
-      documentOrganization.ui.filter = 'all';
-      documentOrganization.ui.collapsed = false;
-      documentOrganization.ui.width = 288;
-      documentOrganization.ui.lastWorkspaceId = DEFAULT_WORKSPACE_ID;
-      documentOrganization.ui.lastFolderId = null;
-      const defaultWorkspace = getWorkspaceById(DEFAULT_WORKSPACE_ID);
-      if (defaultWorkspace) defaultWorkspace.expanded = true;
-      saveDocumentOrganization();
-      const sidebarSearchInput = document.getElementById('document-sidebar-search');
-      const sidebarSearchClear = document.getElementById('document-sidebar-search-clear');
-      if (sidebarSearchInput) sidebarSearchInput.value = '';
-      if (sidebarSearchClear) sidebarSearchClear.hidden = true;
-      updateDocumentSidebarVisibility();
-      tabs.forEach(function(tab) {
-        if (!isTemporaryDocument(tab)) tab.isOpen = false;
+      if (isResetting) return;
+      isResetting = true;
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      if (backupBtn) backupBtn.disabled = true;
+      if (closeBtn) closeBtn.disabled = true;
+      confirmBtn.classList.add('is-loading');
+      confirmBtn.setAttribute('aria-busy', 'true');
+      suspendWorkspacePersistence = true;
+      clearTimeout(saveTabStateTimeout);
+      clearTimeout(secretWorkspaceSaveTimeout);
+      showImportProgress(100, {
+        title: 'Resetting workspace',
+        detail: 'Preparing a fresh workspace…'
       });
-      const nextTab = tabs.find(function(tab) { return !isTemporaryDocument(tab) && tab.workspaceId !== SECRET_WORKSPACE_ID; });
-      if (nextTab) {
-        nextTab.isOpen = true;
-        await ensureTabContent(nextTab);
-        activeTabId = nextTab.id;
-        selectedDocumentId = nextTab.id;
-        markdownEditor.value = nextTab.content || '';
-      } else {
-        activeTabId = null;
-        selectedDocumentId = null;
-        markdownEditor.value = '';
+      let resetStarted = false;
+      try {
+        await Promise.all([
+          workspacePersistenceChain.catch(function() {}),
+          secretWorkspaceSaveChain.catch(function() {})
+        ]);
+        updateImportProgress(25, 100, 'Clearing workspace settings…');
+        await clearApplicationPreferences();
+        updateImportProgress(55, 100, 'Permanently deleting workspace files…');
+        resetStarted = true;
+        await workspaceStorage.resetAllData();
+        updateImportProgress(100, 100, 'Opening a fresh workspace…');
+        finishImportProgress(100, 100, {
+          title: 'Workspace reset',
+          countText: 'All workspace data deleted',
+          detail: 'Markdown Viewer is ready for a fresh start.'
+        });
+        cleanup();
+        closeAppModal(modal);
+        window.setTimeout(function() { window.location.reload(); }, 700);
+      } catch (error) {
+        console.error('Workspace reset failed:', error);
+        finishImportProgress(0, 100, {
+          success: false,
+          title: 'Reset failed',
+          countText: 'Reset not completed',
+          detail: error && error.message ? error.message : 'The workspace could not be reset.'
+        });
+        confirmBtn.classList.remove('is-loading');
+        confirmBtn.removeAttribute('aria-busy');
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = resetStarted;
+        if (backupBtn) backupBtn.disabled = resetStarted;
+        if (closeBtn) closeBtn.disabled = resetStarted;
+        if (!resetStarted) suspendWorkspacePersistence = false;
+        isResetting = false;
       }
-      saveActiveTabId(activeTabId);
-      saveTabsToStorage(tabs);
-      initTabHistory(activeTabId, markdownEditor.value);
-      lastPushedValue = markdownEditor.value;
-      currentHistoryTabId = activeTabId;
-      updateNoOpenDocumentState();
-      updateUndoRedoButtons();
-      restoreViewMode('split');
-      refreshLiveEditorUi();
-      renderMarkdown();
-      renderTabBar(tabs, activeTabId);
-      closeReviewComposer();
-      renderReviewPanel();
     }
 
     function doCancel() {
+      if (isResetting) return;
       closeAppModal(modal);
       cleanup();
+    }
+
+    function doBackup() {
+      if (isResetting) return;
+      closeAppModal(modal);
+      cleanup();
+      openStorageSettings();
     }
 
     function cleanup() {
       confirmBtn.removeEventListener('click', doReset);
       cancelBtn.removeEventListener('click', doCancel);
       if (closeBtn) closeBtn.removeEventListener('click', doCancel);
+      if (backupBtn) backupBtn.removeEventListener('click', doBackup);
     }
 
     confirmBtn.addEventListener('click', doReset);
     cancelBtn.addEventListener('click', doCancel);
     if (closeBtn) closeBtn.addEventListener('click', doCancel);
+    if (backupBtn) backupBtn.addEventListener('click', doBackup);
 
     openAppModal(modal, {
       focusTarget: cancelBtn,
@@ -10573,12 +11041,12 @@ ${selector} .arrowheadPath {
     const detail = document.getElementById('import-progress-detail');
     const icon = document.getElementById('import-progress-icon');
     if (!toast || !title || !count) return;
-    updateImportProgress(total, total);
-    const completed = imported === total;
+    const completed = typeof settings.success === 'boolean' ? settings.success : imported === total;
+    updateImportProgress(completed ? total : imported, total);
     toast.dataset.state = completed ? 'complete' : 'partial';
     if (icon) icon.className = 'lucide ' + (completed ? 'lucide-check' : 'lucide-triangle-alert') + ' import-progress-icon';
     title.textContent = settings.title || (completed ? 'Import complete' : (imported ? 'Import finished with issues' : 'Import failed'));
-    count.textContent = imported + ' imported';
+    count.textContent = settings.countText || (imported + ' imported');
     if (detail) {
       detail.textContent = settings.detail || (completed
         ? (total === 1 ? 'Your file is ready.' : 'Your files are ready.')
@@ -16900,6 +17368,39 @@ ${selector} .arrowheadPath {
 
   if (storageSettingsClose) storageSettingsClose.addEventListener('click', closeStorageSettings);
   if (storageSettingsCloseIcon) storageSettingsCloseIcon.addEventListener('click', closeStorageSettings);
+  if (storageBackupButton) {
+    storageBackupButton.addEventListener('click', function() {
+      setStorageSettingsError('');
+      saveWorkspaceBackup().catch(function(error) {
+        setStorageSettingsError(error && error.message ? error.message : 'Unable to create the workspace backup.');
+      });
+    });
+  }
+  if (storageImportButton) {
+    storageImportButton.addEventListener('click', function() {
+      setStorageSettingsError('');
+      selectWorkspaceBackup().catch(function(error) {
+        setStorageSettingsError(error && error.message ? error.message : 'Unable to select the workspace backup.');
+      });
+    });
+  }
+  if (storageBackupFileInput) {
+    storageBackupFileInput.addEventListener('change', async function() {
+      const file = storageBackupFileInput.files && storageBackupFileInput.files[0];
+      storageBackupFileInput.value = '';
+      if (!file) return;
+      const accepted = await showAppToastConfirmation(
+        'Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.',
+        {
+          title: 'Replace current workspace?',
+          confirmLabel: 'Import Backup',
+          tone: 'warning',
+          dedupeKey: 'confirm-workspace-backup-import'
+        }
+      );
+      if (accepted) await importWorkspaceBackup(await file.arrayBuffer());
+    });
+  }
 
   if (storageOpenVault) {
     storageOpenVault.addEventListener('click', async function() {
@@ -24165,9 +24666,9 @@ ${selector} .arrowheadPath {
 
     // Document Reset
     const tabResetBtn = document.getElementById('tab-reset-btn');
-    if (tabResetBtn) updateMenuLabel(tabResetBtn, translateUiString('Reset app state'));
+    if (tabResetBtn) updateMenuLabel(tabResetBtn, translateUiString('Reset workspace'));
     const mTabResetLabel = document.getElementById('mobile-reset-label');
-    if (mTabResetLabel) mTabResetLabel.textContent = translateUiString('Reset app state');
+    if (mTabResetLabel) mTabResetLabel.textContent = translateUiString('Reset workspace');
 
     // View toggle buttons title tooltips
     document.querySelectorAll('[data-view-mode="editor"]').forEach(b => b.title = translateUiString('Edit Markdown'));

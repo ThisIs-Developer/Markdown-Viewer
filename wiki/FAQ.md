@@ -48,9 +48,9 @@ Secret Workspace encrypts stored file contents and Folder names on the device wi
 
 Private mode pauses new Document-state writes while enabled. Existing normal documents and encrypted Secret Workspace records remain safe. Current in-memory work can continue during that session but does not survive reload or exit.
 
-### What does Reset app state delete?
+### What does Reset workspace delete?
 
-It ends the current session and restores layout defaults, but does not delete Documents, review data, Secret Workspace, history, or trash. **Reset Secret Workspace** is the separate irreversible encrypted-data action.
+It permanently deletes all Documents, folders, review data, settings, Secret Workspace ciphertext, history, trash, and other local workspace data. Use the **Backup** button in the confirmation first if anything must be retained. **Reset Secret Workspace** remains available when only the encrypted area should be deleted.
 
 ## Privacy and Security
 

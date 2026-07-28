@@ -44,7 +44,7 @@ Users can work with multiple documents at once.
 - Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, scroll position, view mode, local review threads, and creation time.
 - The active tab id and untitled-document counter are stored separately.
 - Temporary Share Snapshot and Live Share tabs are deliberately excluded from persistent tab storage.
-- **Reset app state** ends the current Live Share/session state and restores layout defaults without deleting normal files, review data, Secret Workspace, history, or trash.
+- **Reset workspace** permanently deletes normal files, review data, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
 
 Storage used by the current implementation includes:
 
@@ -64,7 +64,7 @@ Storage used by the current implementation includes:
 
 On the web, document data lives in IndexedDB while small preferences remain in `localStorage`. Existing monolithic `markdownViewerTabs` data is migrated once. On desktop, normal content is stored as individual Markdown files in `Documents/Markdown Viewer Vault/Workspace` by default; metadata, history, trash, journals, settings, and encrypted Secret Workspace objects live under the same durable vault.
 
-Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Reset app state** resets the session and layout while keeping all persisted content. **Reset Secret Workspace** remains a separate, destructive confirmation. **Storage & recovery** reports the backend, quota/persistence or desktop vault path, and recovery behavior.
+Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Storage and Backup** reports exact usage and total file counts, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. **Reset workspace** permanently clears all local workspace data after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
 
 ## Comments and Suggestion Mode
 
@@ -80,7 +80,7 @@ User flow:
 
 Storage and sharing:
 
-- Review threads stay with normal local tabs and survive reloads. Private mode pauses new persistence; Reset app state keeps review data.
+- Review threads stay with normal local tabs and survive reloads. Private mode pauses new persistence; workspace backups retain review data, while Reset workspace deletes it.
 - Feedback is excluded from Markdown, HTML, PDF, PNG, print, duplicated tabs, and Share Snapshot links.
 - If the related source block changes, the thread remains visible as unanchored feedback instead of moving to the wrong block.
 - Live Share synchronizes Review threads through a separate Yjs document. View-only participants can review without receiving Markdown edit permission.
@@ -514,7 +514,7 @@ Important protections:
 - Canvas exports use `allowTaint: false`.
 - STL rendering validates source size, finite vertex coordinates, and geometry vertex count before creating a WebGL view.
 - The desktop native API allowlist follows least privilege for the app's current features.
-- Private mode pauses local document persistence without deleting existing data. Reset app state preserves the vault; resetting Secret Workspace is the separate destructive operation.
+- Private mode pauses local document persistence without deleting existing data. Reset workspace permanently clears the vault content and local preferences; resetting Secret Workspace deletes only the encrypted area.
 - Share and live endpoints return no-store responses for dynamic content.
 - The app does not include analytics, telemetry scripts, ad pixels, accounts, cookies, or subscription code.
 
