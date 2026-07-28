@@ -3,17 +3,28 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
-## Unreleased
+## v3.9.4
 
-- **Context menus:** Added Quick Start and document actions to workspace, editor, preview, and split-view menus. Tab tooltips now show folder paths.
-- **Explorer:** Added keyboard selection, Shift-range selection, folder-aware imports, hover expansion, edge scrolling, and clearer focus.
-- **Imports and media:** GitHub imports preserve nested folders. Drag-and-drop is simpler, and images, GIFs, and supported videos use 90-day managed links with clear progress and error messages.
+- **Description:** Expanded Markdown Viewer with durable media workflows, stronger document organization, reliable two-document split previews, and broader deployment and documentation coverage.
+  - **Images & Media:** Simplified file and image drag-and-drop, preserved pasted and dropped images across sessions and shared documents, added 90-day managed short links, and extended uploads to GIFs and supported videos with clearer progress and error feedback.
+  - **Files & Explorer:** Preserved nested folders during GitHub imports, improved keyboard focus and range selection, added workspace, editor, preview, and split-view context menus, and completed bulk document actions.
+  - **Split Preview & Diagrams:** Fixed Mermaid, remote diagram, map, and STL rendering in the two-document split view while keeping preview updates and workspace actions synchronized.
+  - **Deployment & Documentation:** Fixed Docker images so every required static asset is included, refreshed the bundled desktop resources, and expanded the product, privacy, sharing, troubleshooting, localization, and translated documentation.
+- **Date:** 2026-07-28
+- **Commits:** `714fe74d4d709bb6a12a8461e53228c203e79e4f` through `acb2f153240da6dbc804590ee28cc42181720732`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.4
+
+---
 
 ## v3.9.3
 
-- **Workspace:** Added the document Explorer, folders, favorites, recent files, Secret Workspace, bulk actions, drag-and-drop, GitHub imports, and separate tab/file deletion.
-- **Editing and UI:** Added synchronized two-document Edit/Preview modes, improved tab controls, toolbars, dialogs, icons, save feedback, empty states, and responsive mobile navigation.
-- **Localization and desktop:** Added 14 interface language catalogs and synchronized seven standalone Linux, macOS, and Windows desktop targets.
+- **Description:** Redesigned the Markdown Viewer workspace around a professional document Explorer, streamlined toolbar, responsive navigation, consistent icon system, and complete interface localization.
+  - **Explorer & Documents:** Added workspace, folder, file, favorite, recent-document, secret-workspace, drag-and-drop, multi-selection, context-menu, bulk-delete, and GitHub repository import workflows. Closing tabs remains separate from deleting documents, and repository imports are grouped into repository-named folders with background progress.
+  - **Tabs, Editing & Split View:** Added complete tab-closing commands, synchronized two-document split view, compact long-title handling, shared Edit or Preview modes, save-state feedback, and reliable empty-document behavior.
+  - **Toolbar, Icons & Overlays:** Reorganized document and formatting actions, standardized dropdowns, introduced a lightweight local Lucide icon subset with consistent 1.5px strokes, refined the empty state, and unified application dialogs and modal accessibility.
+  - **Responsive UI:** Replaced the mobile floating menu with a compact workspace drawer, aligned mobile toolbar and tab sizing with desktop, and improved responsive status, settings, and action layouts.
+  - **Localization:** Added complete interface catalogs for 14 languages, covering static and dynamic menus, dialogs, Explorer states, progress messages, validation feedback, titles, and accessibility labels while preserving user-authored Markdown and filenames.
+  - **Desktop:** Synchronized the Neutralino desktop application with the redesigned web interface and retained seven standalone Linux, macOS, and Windows release targets.
 - **Date:** 2026-07-20
 - **Commits:** `a7572d682db557563f24ff5f5873267639c19cc6` through `4c04ef7706bb356cecedd388c1c455c9a36f113e`
 - **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.3
@@ -22,8 +33,11 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## v3.9.2
 
-- **Review workflow:** Added responsive comments and suggestions with editing, follow-ups, lifecycle dates, open/resolved states, YAML support, preview markers, and copied summaries.
-- **Sharing and cleanup:** Synchronized review feedback during Live Share, allowed configured preview origins, improved workspace reset, and updated related documentation.
+- **Description:** Added a complete comments-and-suggestions review workflow with responsive controls, lifecycle tracking, and Live Share synchronization.
+  - **Comments & Suggestions UI:** Simplified the Review experience using existing design tokens. Review counts now appear inline, feedback controls are clearer, comments and suggestions can be edited, lifecycle dates are tracked, and summaries include open/resolved totals. The layout now adapts cleanly across desktop, tablet, and mobile, while keeping saved feedback visible above the composer.
+  - **Review Management:** Added follow-up feedback, in-place editing, clearer navigation between reviewed targets, separate read/add controls, lifecycle timestamps, and improved visibility for saved feedback.
+  - **Live Share:** Synchronized comments and suggestions during active Live Share rooms and allowed configured Cloudflare preview origins for snapshot and collaboration endpoints.
+  - **Reset & Documentation:** Improved the all-files reset confirmation and aligned the main, localized, desktop, configuration, FAQ, feature, collaboration, and usage documentation with the review workflow.
 - **Date:** 2026-07-14
 - **Commits:** `a36bd928150614b902f020305149cc7484b324af` through `75a64f562c8b7af05bb26f081ebabf44bfc7cec6`
 - **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.2
