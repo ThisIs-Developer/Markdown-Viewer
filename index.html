@@ -601,34 +601,21 @@
                 <div><dt>Persistence</dt><dd id="storage-persistence-value">Checking…</dd></div>
               </dl>
               <div class="storage-recovery-note">
-                <i class="lucide lucide-info" aria-hidden="true"></i>
+                <i class="lucide lucide-shield-check" aria-hidden="true"></i>
                 <p id="storage-recovery-note">Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.</p>
               </div>
-              <section class="storage-backup-options" aria-labelledby="storage-backup-options-title">
-                <div class="storage-backup-options-heading">
-                  <span class="storage-backup-options-icon" aria-hidden="true">
-                    <i class="lucide lucide-shield-check"></i>
-                  </span>
-                  <div>
-                    <p id="storage-backup-options-title" class="storage-backup-options-title">Backup contents</p>
-                    <p class="storage-backup-options-description">Choose whether the encrypted workspace is included in exported backups.</p>
-                  </div>
-                </div>
-                <label class="storage-secure-option" for="storage-include-secure">
-                  <input id="storage-include-secure" type="checkbox" checked aria-describedby="storage-secure-note">
-                  <span class="storage-secure-copy">
-                    <span class="storage-secure-label">Include secure workspace files</span>
-                    <span id="storage-secure-note" class="storage-secure-note">Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</span>
-                  </span>
-                </label>
-              </section>
+              <label class="storage-secure-option" for="storage-include-secure">
+                <input id="storage-include-secure" type="checkbox" checked aria-describedby="storage-secure-note">
+                <span>Include secure workspace files</span>
+              </label>
+              <p id="storage-secure-note" class="storage-secure-note">Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
               <p id="storage-settings-error" class="document-modal-error" role="alert" hidden></p>
             </div>
             <div class="reset-modal-actions storage-settings-actions">
               <button type="button" class="reset-modal-btn storage-primary-action" id="storage-backup-button"><i class="lucide lucide-download" aria-hidden="true"></i> Backup</button>
               <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-import-button"><i class="lucide lucide-upload" aria-hidden="true"></i> Import Backup</button>
-              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-open-vault"><i class="lucide lucide-folder-open" aria-hidden="true"></i> Open vault folder</button>
-              <button type="button" class="reset-modal-btn reset-modal-cancel storage-settings-close-action" id="storage-settings-close">Close</button>
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-open-vault">Open vault folder</button>
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-settings-close">Close</button>
             </div>
           </div>
         </div>

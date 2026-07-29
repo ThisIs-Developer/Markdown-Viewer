@@ -3,6 +3,17 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## v3.9.5-beta.3
+
+- **Description:** Restored the earlier compact Storage and Backup interface without reverting the new storage behavior.
+  - **Storage UI:** Returned to the simple status list, recovery note, and checkbox-with-helper-text layout while retaining Documents, Usage, web location, and read-only persistence information.
+  - **Behavior:** Kept unlimited document storage, ZIP backup/import, encrypted Secret Workspace handling, automatic best-effort browser storage, and the fixed desktop vault unchanged.
+  - **Responsive:** Prevented the status list from collapsing in short landscape windows so every row remains available through the modal's normal scrolling behavior.
+- **Date:** 2026-07-29
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.3
+
+---
+
 ## v3.9.5-beta.2
 
 - **Description:** Simplified Storage and Backup and made the desktop vault location deterministic.
