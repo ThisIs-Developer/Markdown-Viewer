@@ -539,7 +539,7 @@
                 <span>Include secure workspace files</span>
               </label>
               <div id="storage-secure-note" class="storage-secure-note">
-                <i class="lucide lucide-shield-check" aria-hidden="true"></i>
+                <i class="lucide lucide-database-x" aria-hidden="true"></i>
                 <p>Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
               </div>
               <p id="storage-backup-options-error" class="document-modal-error" role="alert" hidden></p>
@@ -547,6 +547,32 @@
             <div class="reset-modal-actions">
               <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-backup-options-cancel">Cancel</button>
               <button type="button" class="reset-modal-btn storage-primary-action" id="storage-backup-options-confirm"><i class="lucide lucide-download" aria-hidden="true"></i> Download Backup</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workspace Import Confirmation Modal -->
+        <div id="storage-import-confirm-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="storage-import-confirm-title" aria-describedby="storage-import-confirm-description" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box app-modal-box modal-box">
+            <div class="modal-header">
+              <p id="storage-import-confirm-title" class="reset-modal-message">Replace current workspace?</p>
+              <button type="button" class="modal-close-btn" id="storage-import-confirm-close" aria-label="Close import confirmation">
+                <i class="lucide lucide-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="storage-import-replace-note">
+                <i class="lucide lucide-triangle-alert" aria-hidden="true"></i>
+                <p id="storage-import-confirm-description">Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.</p>
+              </div>
+              <p id="storage-import-confirm-error" class="document-modal-error" role="alert" hidden></p>
+            </div>
+            <div class="reset-modal-actions">
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-import-confirm-cancel">Cancel</button>
+              <button type="button" class="reset-modal-btn reset-modal-confirm" id="storage-import-confirm-confirm">
+                <span class="live-share-start-spinner" aria-hidden="true"></span>
+                <span>Import Backup</span>
+              </button>
             </div>
           </div>
         </div>

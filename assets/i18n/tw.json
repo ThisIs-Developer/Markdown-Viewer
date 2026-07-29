@@ -1118,7 +1118,10 @@
   "Create workspace backup": "建立工作區備份",
   "Download Backup": "下載備份",
   "3.9.5-beta.4": "3.9.5-beta.4",
+  "Clearing this site's browser data will delete local documents.": "清除本網站的瀏覽器資料將刪除本機文件。",
+  "Close import confirmation": "關閉導入確認",
+  "Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.": "匯入此備份將永久取代目前工作區，包括其檔案、資料夾、設定和秘密工作區資料。",
+  "Unable to read the workspace backup.": "無法讀取工作區備份。",
   "Mermaid diagram": "美人魚圖",
-  "Mermaid diagram actions": "人魚圖動作",
-  "Clearing this site's browser data will delete local documents.": "清除本網站的瀏覽器資料將刪除本機文件。"
+  "Mermaid diagram actions": "人魚圖動作"
 }

@@ -6598,7 +6598,8 @@ a:focus {
 }
 
 #live-share-start-btn.is-loading .live-share-start-spinner,
-#reset-modal-confirm.is-loading .live-share-start-spinner {
+#reset-modal-confirm.is-loading .live-share-start-spinner,
+#storage-import-confirm-confirm.is-loading .live-share-start-spinner {
   display: inline-block;
   animation: live-share-start-spin 0.8s linear infinite;
 }
@@ -6609,7 +6610,8 @@ a:focus {
 
 @media (prefers-reduced-motion: reduce) {
   #live-share-start-btn.is-loading .live-share-start-spinner,
-  #reset-modal-confirm.is-loading .live-share-start-spinner {
+  #reset-modal-confirm.is-loading .live-share-start-spinner,
+  #storage-import-confirm-confirm.is-loading .live-share-start-spinner {
     animation: none;
   }
 }
@@ -9733,7 +9735,8 @@ html[data-theme="dark"] .mermaid svg {
   max-width: 880px;
 }
 
-#storage-backup-options-modal .reset-modal-box {
+#storage-backup-options-modal .reset-modal-box,
+#storage-import-confirm-modal .reset-modal-box {
   width: min(92vw, 420px);
   max-width: 420px;
 }
@@ -9911,7 +9914,8 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .storage-recovery-note,
-.storage-secure-note {
+.storage-secure-note,
+.storage-import-replace-note {
   display: flex;
   align-items: flex-start;
   gap: 9px;
@@ -9923,7 +9927,8 @@ html[data-theme="dark"] .mermaid svg {
   line-height: 1.45;
 }
 
-.storage-recovery-note {
+.storage-recovery-note,
+.storage-import-replace-note {
   border-color: var(--warning-note-border);
   background: var(--warning-note-bg);
   color: var(--warning-note-text);
@@ -9936,12 +9941,14 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .storage-recovery-note i,
-.storage-secure-note i {
+.storage-secure-note i,
+.storage-import-replace-note i {
   flex: 0 0 auto;
   margin-top: 2px;
 }
 
-.storage-recovery-note i {
+.storage-recovery-note i,
+.storage-import-replace-note i {
   color: var(--warning-note-icon);
 }
 
@@ -9950,7 +9957,8 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .storage-recovery-note p,
-.storage-secure-note p {
+.storage-secure-note p,
+.storage-import-replace-note p {
   margin: 0;
 }
 
@@ -9980,7 +9988,8 @@ html[data-theme="dark"] .mermaid svg {
   margin: 0;
 }
 
-#storage-backup-options-confirm {
+#storage-backup-options-confirm,
+#storage-import-confirm-confirm {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10556,7 +10565,8 @@ html[data-theme="dark"] .mermaid svg {
     padding: 14px;
   }
 
-  #storage-backup-options-modal .reset-modal-box {
+  #storage-backup-options-modal .reset-modal-box,
+  #storage-import-confirm-modal .reset-modal-box {
     width: 100%;
     max-width: 100%;
   }

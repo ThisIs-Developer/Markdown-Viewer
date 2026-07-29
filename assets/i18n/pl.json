@@ -1118,7 +1118,10 @@
   "Create workspace backup": "Utwórz kopię zapasową obszaru roboczego",
   "Download Backup": "Pobierz kopię zapasową",
   "3.9.5-beta.4": "3.9.5-beta.4",
+  "Clearing this site's browser data will delete local documents.": "Wyczyszczenie danych przeglądarki tej witryny spowoduje usunięcie dokumentów lokalnych.",
+  "Close import confirmation": "Zamknij potwierdzenie importu",
+  "Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.": "Importowanie tej kopii zapasowej trwale zastępuje bieżący obszar roboczy, w tym jego pliki, foldery, ustawienia i dane tajnego obszaru roboczego.",
+  "Unable to read the workspace backup.": "Nie można odczytać kopii zapasowej obszaru roboczego.",
   "Mermaid diagram": "Schemat syreny",
-  "Mermaid diagram actions": "Działania na diagramie syreny",
-  "Clearing this site's browser data will delete local documents.": "Wyczyszczenie danych przeglądarki tej witryny spowoduje usunięcie dokumentów lokalnych."
+  "Mermaid diagram actions": "Działania na diagramie syreny"
 }

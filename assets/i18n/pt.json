@@ -1118,7 +1118,10 @@
   "Create workspace backup": "Criar backup do espaço de trabalho",
   "Download Backup": "Baixar backup",
   "3.9.5-beta.4": "3.9.5-beta.4",
+  "Clearing this site's browser data will delete local documents.": "Limpar os dados do navegador deste site excluirá os documentos locais.",
+  "Close import confirmation": "Fechar confirmação de importação",
+  "Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.": "A importação deste backup substitui permanentemente o espaço de trabalho atual, incluindo seus arquivos, pastas, configurações e dados do espaço de trabalho secreto.",
+  "Unable to read the workspace backup.": "Não é possível ler o backup do espaço de trabalho.",
   "Mermaid diagram": "Diagrama de sereia",
-  "Mermaid diagram actions": "Ações do diagrama sereia",
-  "Clearing this site's browser data will delete local documents.": "Limpar os dados do navegador deste site excluirá os documentos locais."
+  "Mermaid diagram actions": "Ações do diagrama sereia"
 }

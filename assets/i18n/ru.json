@@ -1118,7 +1118,10 @@
   "Create workspace backup": "Создать резервную копию рабочей области",
   "Download Backup": "Скачать резервную копию",
   "3.9.5-beta.4": "3.9.5-бета.4",
+  "Clearing this site's browser data will delete local documents.": "Очистка данных браузера этого сайта приведет к удалению локальных документов.",
+  "Close import confirmation": "Закрыть подтверждение импорта",
+  "Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.": "Импорт этой резервной копии навсегда заменяет текущую рабочую область, включая ее файлы, папки, настройки и данные секретной рабочей области.",
+  "Unable to read the workspace backup.": "Невозможно прочитать резервную копию рабочей области.",
   "Mermaid diagram": "Схема русалки",
-  "Mermaid diagram actions": "Действия на диаграмме русалки",
-  "Clearing this site's browser data will delete local documents.": "Очистка данных браузера этого сайта приведет к удалению локальных документов."
+  "Mermaid diagram actions": "Действия на диаграмме русалки"
 }

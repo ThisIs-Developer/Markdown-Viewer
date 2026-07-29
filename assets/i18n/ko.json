@@ -1118,7 +1118,10 @@
   "Create workspace backup": "워크스페이스 백업 생성",
   "Download Backup": "백업 다운로드",
   "3.9.5-beta.4": "3.9.5-beta.4",
+  "Clearing this site's browser data will delete local documents.": "이 사이트의 브라우저 데이터를 지우면 로컬 문서가 삭제됩니다.",
+  "Close import confirmation": "가져오기 확인 닫기",
+  "Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.": "이 백업을 가져오면 파일, 폴더, 설정 및 비밀 작업 공간 데이터를 포함하여 현재 작업 공간이 영구적으로 대체됩니다.",
+  "Unable to read the workspace backup.": "작업공간 백업을 읽을 수 없습니다.",
   "Mermaid diagram": "인어 다이어그램",
-  "Mermaid diagram actions": "인어 다이어그램 액션",
-  "Clearing this site's browser data will delete local documents.": "이 사이트의 브라우저 데이터를 지우면 로컬 문서가 삭제됩니다."
+  "Mermaid diagram actions": "인어 다이어그램 액션"
 }

@@ -1118,7 +1118,10 @@
   "Create workspace backup": "Arbeitsbereich-Backup erstellen",
   "Download Backup": "Backup herunterladen",
   "3.9.5-beta.4": "3.9.5-beta.4",
+  "Clearing this site's browser data will delete local documents.": "Durch das Löschen der Browserdaten dieser Website werden lokale Dokumente gelöscht.",
+  "Close import confirmation": "Importbestätigung schließen",
+  "Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.": "Durch das Importieren dieser Sicherung wird der aktuelle Arbeitsbereich, einschließlich seiner Dateien, Ordner, Einstellungen und geheimen Arbeitsbereichsdaten, dauerhaft ersetzt.",
+  "Unable to read the workspace backup.": "Die Sicherung des Arbeitsbereichs kann nicht gelesen werden.",
   "Mermaid diagram": "Meerjungfrau-Diagramm",
-  "Mermaid diagram actions": "Meerjungfrau-Diagrammaktionen",
-  "Clearing this site's browser data will delete local documents.": "Durch das Löschen der Browserdaten dieser Website werden lokale Dokumente gelöscht."
+  "Mermaid diagram actions": "Meerjungfrau-Diagrammaktionen"
 }

@@ -298,6 +298,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let activeReviewAnchor = null;
   let activeReviewEditId = null;
   let pendingReviewDelete = null;
+  let pendingWorkspaceBackupInput = null;
   let reviewPinsResizeObserver = null;
   let reviewPinsLayoutFrame = null;
   let reviewTargetSourceSnapshots = new WeakMap();
@@ -581,6 +582,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storageBackupOptionsConfirm = document.getElementById("storage-backup-options-confirm");
   const storageBackupOptionsError = document.getElementById("storage-backup-options-error");
   const storageIncludeSecure = document.getElementById("storage-include-secure");
+  const storageImportConfirmModal = document.getElementById("storage-import-confirm-modal");
+  const storageImportConfirmClose = document.getElementById("storage-import-confirm-close");
+  const storageImportConfirmCancel = document.getElementById("storage-import-confirm-cancel");
+  const storageImportConfirmConfirm = document.getElementById("storage-import-confirm-confirm");
+  const storageImportConfirmError = document.getElementById("storage-import-confirm-error");
   const storageOpenVault = document.getElementById("storage-open-vault");
   const storageBackendValue = document.getElementById("storage-backend-value");
   const storageDocumentCountValue = document.getElementById("storage-document-count-value");
@@ -1251,16 +1257,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (storageBackupFileInput) storageBackupFileInput.click();
       return;
     }
-    const accepted = await showAppToastConfirmation(
-      'Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.',
-      {
-        title: 'Replace current workspace?',
-        confirmLabel: 'Import Backup',
-        tone: 'warning',
-        dedupeKey: 'confirm-workspace-backup-import'
-      }
-    );
-    if (accepted) await importWorkspaceBackup(input);
+    openStorageImportConfirm(input);
   }
 
   // Check dark mode preference first for proper initialization
@@ -17389,6 +17386,55 @@ ${selector} .arrowheadPath {
     });
   }
 
+  function setStorageImportConfirmError(message) {
+    if (!storageImportConfirmError) return;
+    storageImportConfirmError.textContent = message || '';
+    storageImportConfirmError.hidden = !message;
+  }
+
+  function reopenStorageSettingsAfterImportConfirm() {
+    pendingWorkspaceBackupInput = null;
+    setStorageImportConfirmError('');
+    if (storageImportConfirmModal) closeAppModal(storageImportConfirmModal);
+    window.setTimeout(function() {
+      openStorageSettings();
+    }, 210);
+  }
+
+  function openStorageImportConfirm(input) {
+    if (!storageImportConfirmModal || !input) return;
+    pendingWorkspaceBackupInput = input;
+    setStorageImportConfirmError('');
+    openAppModal(storageImportConfirmModal, {
+      focusTarget: storageImportConfirmCancel || storageImportConfirmConfirm,
+      returnFocus: storageImportButton,
+      onClose: reopenStorageSettingsAfterImportConfirm
+    });
+  }
+
+  async function confirmStorageImport() {
+    if (!storageImportConfirmConfirm || storageImportConfirmConfirm.disabled || !pendingWorkspaceBackupInput) return;
+    storageImportConfirmConfirm.disabled = true;
+    storageImportConfirmConfirm.classList.add('is-loading');
+    storageImportConfirmConfirm.setAttribute('aria-busy', 'true');
+    setStorageImportConfirmError('');
+    try {
+      const selectedInput = pendingWorkspaceBackupInput;
+      const importInput = selectedInput && typeof selectedInput.arrayBuffer === 'function'
+        ? await selectedInput.arrayBuffer()
+        : selectedInput;
+      pendingWorkspaceBackupInput = null;
+      closeAppModal(storageImportConfirmModal);
+      await importWorkspaceBackup(importInput);
+    } catch (error) {
+      setStorageImportConfirmError(error && error.message ? error.message : 'Unable to read the workspace backup.');
+    } finally {
+      storageImportConfirmConfirm.disabled = false;
+      storageImportConfirmConfirm.classList.remove('is-loading');
+      storageImportConfirmConfirm.removeAttribute('aria-busy');
+    }
+  }
+
   if (storageSettingsClose) storageSettingsClose.addEventListener('click', closeStorageSettings);
   if (storageSettingsCloseIcon) storageSettingsCloseIcon.addEventListener('click', closeStorageSettings);
   if (storageBackupButton) {
@@ -17417,6 +17463,15 @@ ${selector} .arrowheadPath {
       }
     });
   }
+  if (storageImportConfirmClose) {
+    storageImportConfirmClose.addEventListener('click', reopenStorageSettingsAfterImportConfirm);
+  }
+  if (storageImportConfirmCancel) {
+    storageImportConfirmCancel.addEventListener('click', reopenStorageSettingsAfterImportConfirm);
+  }
+  if (storageImportConfirmConfirm) {
+    storageImportConfirmConfirm.addEventListener('click', confirmStorageImport);
+  }
   if (storageImportButton) {
     storageImportButton.addEventListener('click', function() {
       setStorageSettingsError('');
@@ -17430,16 +17485,7 @@ ${selector} .arrowheadPath {
       const file = storageBackupFileInput.files && storageBackupFileInput.files[0];
       storageBackupFileInput.value = '';
       if (!file) return;
-      const accepted = await showAppToastConfirmation(
-        'Importing this backup permanently replaces the current workspace, including its files, folders, settings, and Secret Workspace data.',
-        {
-          title: 'Replace current workspace?',
-          confirmLabel: 'Import Backup',
-          tone: 'warning',
-          dedupeKey: 'confirm-workspace-backup-import'
-        }
-      );
-      if (accepted) await importWorkspaceBackup(await file.arrayBuffer());
+      openStorageImportConfirm(file);
     });
   }
 
