@@ -26,11 +26,11 @@ You can use a modern browser, install the PWA where the browser supports it, sel
 
 ### Where are my Documents stored?
 
-Normal Workspace state is stored in browser `localStorage`. The desktop application mirrors selected values into Neutralino storage. Markdown Viewer is not a synchronized cloud Workspace.
+Web documents use per-document IndexedDB records. Desktop normal documents are ordinary `.md` files in `Documents/Markdown Viewer Vault` by default, with internal metadata, history, trash, and encrypted Secret Workspace objects stored alongside them. Markdown Viewer is not a synchronized cloud Workspace.
 
 ### How many Documents can I keep?
 
-The implemented limit is 50 Documents across normal Workspace, locked Secret Workspace counts, and temporary Share Snapshot/Live Share tabs.
+Markdown Viewer does not impose a document-count limit. Browser quota or available desktop filesystem capacity is the practical limit.
 
 ### What is the difference between closing and deleting a Document?
 
@@ -46,13 +46,11 @@ Secret Workspace encrypts stored file contents and Folder names on the device wi
 
 ### What does Private mode do?
 
-Private mode clears persisted Document-state keys, including the encrypted Secret Workspace payload, and blocks further Document-state writes while enabled. Current in-memory work can continue during that session but does not survive reload or exit.
-
-> **Warning:** Export needed Documents before enabling Private mode.
+Private mode pauses new Document-state writes while enabled. Existing normal documents and encrypted Secret Workspace records remain safe. Current in-memory work can continue during that session but does not survive reload or exit.
 
 ### What does Reset workspace delete?
 
-It ends Live Share, deletes normal Documents, review data, and Secret Workspace storage, then restores the welcome Document. Markdown Viewer cannot undo this action.
+It permanently deletes all Documents, folders, review data, settings, Secret Workspace ciphertext, history, trash, and other local workspace data. Use the **Backup** button in the confirmation first if anything must be retained. **Reset Secret Workspace** remains available when only the encrypted area should be deleted.
 
 ## Privacy and Security
 

@@ -33,6 +33,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     );
   }
 
+  const workspaceStorage = typeof window.MarkdownWorkspaceStorage === 'function'
+    ? new window.MarkdownWorkspaceStorage()
+    : null;
+
   async function syncStorageFromNeutralino() {
     if (!isNeutralinoRuntimeAvailable()) return;
     const keys = [
@@ -101,7 +105,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js': 'sha384-wagZhIFgY4hD+7awjQjR4e2E294y6J2HSnd8eTNc15ZubTeQeVRZwhQJ+W6hnBsf',
     'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js': 'sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i',
     'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js': 'sha384-ZlXKtR0wcZqxEYI8i3TPFFiOJR1MEdIzdVvnhSOonCrPsBup4dnkRw49FeYhfsHF',
-    'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js': 'sha384-p+gyhsDIg0RmvIKRr9BBGSyJ9NDDkiFsbilRwdZd20Q8mUL2v7e8+orY4pvTV52w'
+    'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js': 'sha384-p+gyhsDIg0RmvIKRr9BBGSyJ9NDDkiFsbilRwdZd20Q8mUL2v7e8+orY4pvTV52w',
+    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js': 'sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=='
   });
 
   const _loadedScripts = new Set();
@@ -178,6 +183,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     d3: 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
     markmapLib: 'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js',
     markmapView: 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js',
+    jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
     yjs: 'https://esm.sh/yjs@13.6.10/es2022/yjs.mjs'
   };
 
@@ -200,6 +206,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     CDN.d3 = '/libs/d3.min.js';
     CDN.markmapLib = '/libs/markmap-lib.iife.js';
     CDN.markmapView = '/libs/markmap-view.js';
+    CDN.jszip = '/libs/jszip.min.js';
   }
 
   // Active WebGL / Three.js 3D STL renderers Map for memory cleanup
@@ -281,7 +288,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const APP_VERSION = '3.9.4';
+  const APP_VERSION = '3.9.5-beta.4';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -291,6 +298,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let activeReviewAnchor = null;
   let activeReviewEditId = null;
   let pendingReviewDelete = null;
+  let pendingWorkspaceBackupInput = null;
   let reviewPinsResizeObserver = null;
   let reviewPinsLayoutFrame = null;
   let reviewTargetSourceSnapshots = new WeakMap();
@@ -511,6 +519,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const mobileThemeIcon = document.getElementById("mobile-theme-icon");
   const mobileThemeStatus = document.getElementById("mobile-theme-status");
   const mobilePrivateModeToggle = document.getElementById("mobile-private-mode-toggle");
+  const mobileStorageSettingsButton = document.getElementById("mobile-storage-settings-button");
   const mobileToggleSyncButton = document.getElementById("mobile-toggle-sync");
   const mobileSyncStatus = document.getElementById("mobile-sync-status");
   const mobileCopyMarkdownButton = document.getElementById("mobile-copy-markdown");
@@ -560,6 +569,32 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutModalCloseIcon = document.getElementById("about-modal-close-icon");
   const aboutVersion = document.getElementById("about-version");
   const privateModeToggle = document.getElementById("private-mode-toggle");
+  const storageSettingsButton = document.getElementById("storage-settings-button");
+  const storageSettingsModal = document.getElementById("storage-settings-modal");
+  const storageSettingsClose = document.getElementById("storage-settings-close");
+  const storageSettingsCloseIcon = document.getElementById("storage-settings-close-icon");
+  const storageBackupButton = document.getElementById("storage-backup-button");
+  const storageImportButton = document.getElementById("storage-import-button");
+  const storageBackupFileInput = document.getElementById("storage-backup-file-input");
+  const storageBackupOptionsModal = document.getElementById("storage-backup-options-modal");
+  const storageBackupOptionsClose = document.getElementById("storage-backup-options-close");
+  const storageBackupOptionsCancel = document.getElementById("storage-backup-options-cancel");
+  const storageBackupOptionsConfirm = document.getElementById("storage-backup-options-confirm");
+  const storageBackupOptionsError = document.getElementById("storage-backup-options-error");
+  const storageIncludeSecure = document.getElementById("storage-include-secure");
+  const storageImportConfirmModal = document.getElementById("storage-import-confirm-modal");
+  const storageImportConfirmClose = document.getElementById("storage-import-confirm-close");
+  const storageImportConfirmCancel = document.getElementById("storage-import-confirm-cancel");
+  const storageImportConfirmConfirm = document.getElementById("storage-import-confirm-confirm");
+  const storageImportConfirmError = document.getElementById("storage-import-confirm-error");
+  const storageOpenVault = document.getElementById("storage-open-vault");
+  const storageBackendValue = document.getElementById("storage-backend-value");
+  const storageDocumentCountValue = document.getElementById("storage-document-count-value");
+  const storageLocationValue = document.getElementById("storage-location-value");
+  const storageUsageValue = document.getElementById("storage-usage-value");
+  const storagePersistenceValue = document.getElementById("storage-persistence-value");
+  const storageRecoveryNote = document.getElementById("storage-recovery-note");
+  const storageSettingsError = document.getElementById("storage-settings-error");
   const saveStatus = document.getElementById("save-status");
   const saveStatusIcon = document.getElementById("save-status-icon");
   const saveStatusText = document.getElementById("save-status-text");
@@ -680,8 +715,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     const description = document.getElementById('private-mode-description');
     if (description) {
       description.textContent = enabled
-        ? 'No data is stored'
-        : 'Data is stored locally';
+        ? 'Session activity is not persisted'
+        : 'Documents are stored locally';
     }
     if (mobilePrivateModeToggle) {
       mobilePrivateModeToggle.classList.toggle('is-active', enabled);
@@ -691,38 +726,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function clearDocumentStorage() {
-    DOCUMENT_STORAGE_KEYS.forEach(function(key) {
-      try {
-        localStorage.removeItem(key);
-      } catch (_) {}
-    });
-    _globalStateCache = {};
-    if (isNeutralinoRuntimeAvailable()) {
-      const neutralinoValues = {
-        markdownViewerGlobalState: '{}',
-        markdownViewerTabs: '[]',
-        markdownViewerActiveTab: '',
-        markdownViewerUntitledCounter: '0',
-        markdownViewerDocumentOrganization: '{}',
-        markdownViewerSecretWorkspace: ''
-      };
-      await Promise.all(Object.keys(neutralinoValues).map(function(key) {
-        return Neutralino.storage.setData(key, neutralinoValues[key]).catch(function(err) {
-          console.warn('Failed to clear Neutralino storage key:', key, err);
-        });
-      }));
-    }
-  }
-
   async function setPrivateStorageMode(enabled) {
     try {
       localStorage.setItem(PRIVATE_MODE_KEY, enabled ? 'true' : 'false');
     } catch (_) {}
-    if (enabled) {
-      await clearDocumentStorage();
-    }
     updatePrivateModeButton();
+    if (enabled) {
+      showAppToast('Private mode is on. Existing documents remain safe; new session changes are not persisted.', {
+        tone: 'info',
+        title: 'Private session'
+      });
+    }
   }
 
   updatePrivateModeButton();
@@ -733,6 +747,519 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     });
   }
+
+  function formatStorageBytes(value) {
+    if (!Number.isFinite(value) || value < 0) return 'Managed by the operating system';
+    if (value === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const unitIndex = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+    const amount = value / Math.pow(1024, unitIndex);
+    return amount.toLocaleString(undefined, {
+      maximumFractionDigits: unitIndex > 1 ? 1 : 0
+    }) + ' ' + units[unitIndex];
+  }
+
+  function setStorageSettingsError(message) {
+    if (!storageSettingsError) return;
+    storageSettingsError.textContent = message || '';
+    storageSettingsError.hidden = !message;
+  }
+
+  async function refreshStorageSettings() {
+    if (!workspaceStorage) {
+      setStorageSettingsError('Workspace storage is unavailable.');
+      return;
+    }
+    setStorageSettingsError('');
+    await workspaceStorage.init();
+    const status = workspaceStorage.getStatus();
+    const results = await Promise.all([
+      workspaceStorage.listDocumentMetadata(),
+      workspaceStorage.listSecretRecords(),
+      workspaceStorage.getStorageEstimate()
+    ]);
+    const normalDocuments = results[0];
+    const secretDocumentCount = results[1].filter(function(record) {
+      return record.id !== window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID;
+    }).length;
+    const estimate = results[2];
+    const workspaceUsage = status.desktop
+      ? estimate.usage
+      : await workspaceStorage.getWorkspaceUsage();
+    if (storageBackendValue) storageBackendValue.textContent = status.backend;
+    if (storageDocumentCountValue) {
+      storageDocumentCountValue.textContent =
+        normalDocuments.length.toLocaleString() + ' normal, ' +
+        secretDocumentCount.toLocaleString() + ' secret';
+    }
+    if (storageLocationValue) {
+      storageLocationValue.textContent = status.desktop
+        ? status.vaultPath
+        : 'Browser profile · IndexedDB';
+      storageLocationValue.title = storageLocationValue.textContent;
+    }
+    if (storageUsageValue) {
+      storageUsageValue.textContent = status.desktop
+        ? formatStorageBytes(workspaceUsage) + ' used in vault'
+        : formatStorageBytes(workspaceUsage) + ' used locally';
+    }
+    if (storagePersistenceValue) {
+      storagePersistenceValue.textContent = status.desktop
+        ? 'Durable vault outside the application binary'
+        : (estimate.persistent ? 'Browser persistence granted' : 'Best-effort browser storage');
+    }
+    if (storageRecoveryNote) {
+      storageRecoveryNote.textContent = status.desktop
+        ? 'Workspace files stay in this vault when the application binary is replaced or removed.'
+        : "Clearing this site's browser data will delete local documents.";
+    }
+    if (storageOpenVault) storageOpenVault.hidden = !status.desktop;
+  }
+
+  async function openStorageSettings() {
+    if (!storageSettingsModal) return;
+    const opener = document.activeElement;
+    openAppModal(storageSettingsModal, {
+      focusTarget: storageSettingsClose,
+      returnFocus: opener
+    });
+    try {
+      await refreshStorageSettings();
+    } catch (error) {
+      console.error('Unable to load storage settings:', error);
+      setStorageSettingsError(error && error.message ? error.message : 'Unable to load storage settings.');
+    }
+  }
+
+  const WORKSPACE_BACKUP_FORMAT = 'markdown-viewer-backup';
+  const WORKSPACE_BACKUP_VERSION = 1;
+  const WORKSPACE_BACKUP_MANIFEST = 'markdown-viewer-backup.json';
+  const WORKSPACE_BACKUP_INTERNAL = '.markdown-viewer/';
+  const WORKSPACE_PREFERENCE_KEYS = [
+    'markdownViewerGlobalState',
+    'markdownViewerActiveTab',
+    'markdownViewerUntitledCounter',
+    'markdownViewerPrivateMode',
+    'markdownViewerAllowLocalDiagramCommands',
+    'find-replace-docked',
+    'app-lang'
+  ];
+
+  async function ensureJsZip() {
+    if (!window.JSZip) await loadScript(CDN.jszip);
+    if (!window.JSZip) throw new Error('The backup ZIP engine could not be loaded.');
+    return window.JSZip;
+  }
+
+  function getWorkspaceBackupFilename() {
+    return 'markdown-viewer-backup-' + new Date().toISOString().slice(0, 10) + '.zip';
+  }
+
+  function getBackupPreferences() {
+    const preferences = {};
+    WORKSPACE_PREFERENCE_KEYS.forEach(function(key) {
+      try {
+        const value = localStorage.getItem(key);
+        if (value !== null) preferences[key] = value;
+      } catch (_) {}
+    });
+    return preferences;
+  }
+
+  function sanitizeBackupPathSegment(value, fallback) {
+    let segment = String(value || '')
+      .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/[. ]+$/g, '');
+    if (!segment) segment = fallback || 'Untitled';
+    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(segment)) segment = '_' + segment;
+    return segment.slice(0, 120);
+  }
+
+  function normalizeTrustedBackupPath(value, requiredPrefix) {
+    const path = String(value || '').replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '');
+    const segments = path.split('/');
+    if (
+      !path ||
+      /^[a-z]:/i.test(path) ||
+      segments.some(function(segment) { return !segment || segment === '.' || segment === '..'; }) ||
+      (requiredPrefix && !path.startsWith(requiredPrefix))
+    ) {
+      throw new Error('The backup contains an unsafe or invalid file path.');
+    }
+    return path;
+  }
+
+  function addOrganizationFoldersToZip(zip, organization) {
+    const folders = organization && Array.isArray(organization.folders) ? organization.folders : [];
+    const byId = new Map(folders.map(function(folder) { return [folder.id, folder]; }));
+    folders.forEach(function(folder) {
+      if (!folder || folder.workspaceId === 'workspace_secret') return;
+      const names = [];
+      const visited = new Set();
+      let current = folder;
+      while (current && !visited.has(current.id)) {
+        visited.add(current.id);
+        names.unshift(sanitizeBackupPathSegment(current.name, 'Folder'));
+        current = byId.get(current.parentFolderId);
+      }
+      zip.folder(['Workspace'].concat(names).join('/'));
+    });
+  }
+
+  async function createPrivateSecretBackupSnapshot(backupData) {
+    if (!isPrivateStorageMode() || !isSecretWorkspaceUnlocked()) return;
+    const payload = getSecretWorkspacePayload();
+    const records = [];
+    for (const tab of payload.documents) {
+      records.push({
+        id: tab.id,
+        envelope: await encryptSecretWorkspaceValue(getSecretDocumentStorageValue(tab), secretWorkspaceKey)
+      });
+    }
+    records.push({
+      id: window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__',
+      envelope: await encryptSecretWorkspaceValue(payload.folders, secretWorkspaceKey)
+    });
+    backupData.secretRecords = records;
+    backupData.secretManifest = {
+      version: SECRET_WORKSPACE_VERSION,
+      iterations: secretWorkspaceIterations,
+      salt: bytesToBase64(new Uint8Array(secretWorkspaceSalt)),
+      documentCount: payload.documents.length,
+      folderCount: payload.folders.length,
+      updatedAt: Date.now()
+    };
+    backupData.totalEntries = backupData.documents.length + records.length;
+  }
+
+  async function buildWorkspaceBackupZip(includeSecure, onProgress) {
+    const JSZip = await ensureJsZip();
+    saveCurrentTabState();
+    if (!isPrivateStorageMode()) {
+      const normalSaved = await _flushTabsToStorage(tabs);
+      if (!normalSaved) throw new Error('The current workspace could not be saved before backup.');
+      if (includeSecure && isSecretWorkspaceUnlocked()) await flushSecretWorkspaceToStorage();
+    }
+    const backupData = await workspaceStorage.createBackupData({
+      includeSecure: includeSecure,
+      documentOverrides: getTabsForStorage(tabs),
+      organization: documentOrganization,
+      onProgress: onProgress
+    });
+    if (includeSecure) await createPrivateSecretBackupSnapshot(backupData);
+
+    const zip = new JSZip();
+    const createdAt = new Date().toISOString();
+    const documentIndex = [];
+    const secureIndex = [];
+    const hasSecureWorkspace = Boolean(includeSecure && backupData.secretManifest);
+    addOrganizationFoldersToZip(zip, backupData.organization);
+
+    backupData.documents.forEach(function(item) {
+      const path = normalizeTrustedBackupPath(item.path, 'Workspace/');
+      zip.file(path, typeof item.content === 'string' ? item.content : '');
+      documentIndex.push({
+        metadata: item.metadata,
+        path: path
+      });
+    });
+
+    if (hasSecureWorkspace) {
+      backupData.secretRecords.forEach(function(record, index) {
+        const filename = String(index + 1).padStart(6, '0') + '-' +
+          sanitizeBackupPathSegment(record.id, 'secret') + '.mvault';
+        const path = 'Secret Workspace/objects/' + filename;
+        zip.file(path, JSON.stringify(record.envelope, null, 2));
+        secureIndex.push({ id: record.id, path: path });
+      });
+      zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json', JSON.stringify(backupData.secretManifest, null, 2));
+      zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-records.json', JSON.stringify(secureIndex, null, 2));
+    }
+
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'documents.json', JSON.stringify(documentIndex, null, 2));
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'organization.json', JSON.stringify(backupData.organization, null, 2));
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'preferences.json', JSON.stringify(getBackupPreferences(), null, 2));
+    zip.file('README.txt',
+      'Markdown Viewer workspace backup\n\n' +
+      'Restore this ZIP from Settings > Storage and Backup > Import Backup.\n' +
+      'Files under Secret Workspace are encrypted ciphertext and cannot be opened outside Markdown Viewer.\n'
+    );
+    zip.file(WORKSPACE_BACKUP_MANIFEST, JSON.stringify({
+      format: WORKSPACE_BACKUP_FORMAT,
+      version: WORKSPACE_BACKUP_VERSION,
+      appVersion: APP_VERSION,
+      createdAt: createdAt,
+      includesSecureWorkspace: hasSecureWorkspace,
+      normalDocumentCount: documentIndex.length,
+      secureRecordCount: secureIndex.length
+    }, null, 2));
+    return zip;
+  }
+
+  async function saveWorkspaceBackup(includeSecure) {
+    if (!workspaceStorage) return;
+    let desktopDestination = '';
+    if (isNeutralinoRuntimeAvailable()) {
+      desktopDestination = await Neutralino.os.showSaveDialog('Save workspace backup', {
+        defaultPath: getWorkspaceBackupFilename(),
+        filters: [{ name: 'ZIP archives (*.zip)', extensions: ['zip'] }]
+      });
+      if (!desktopDestination) return;
+    }
+
+    if (storageBackupOptionsModal && storageBackupOptionsModal.classList.contains('is-visible')) {
+      closeAppModal(storageBackupOptionsModal);
+    } else {
+      closeStorageSettings();
+    }
+    showImportProgress(100, {
+      title: 'Creating workspace backup',
+      detail: 'Collecting workspace files…'
+    });
+    try {
+      const zip = await buildWorkspaceBackupZip(includeSecure, function(processed, total, label) {
+        const percent = total ? Math.max(1, Math.round((processed / total) * 55)) : 10;
+        updateImportProgress(percent, 100, 'Adding ' + label + '…');
+      });
+      if (isNeutralinoRuntimeAvailable()) {
+        const bytes = await zip.generateAsync({
+          type: 'arraybuffer',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
+        }, function(metadata) {
+          updateImportProgress(55 + Math.round(metadata.percent * 0.45), 100, 'Compressing workspace…');
+        });
+        await Neutralino.filesystem.writeBinaryFile(desktopDestination, bytes);
+      } else {
+        const blob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
+        }, function(metadata) {
+          updateImportProgress(55 + Math.round(metadata.percent * 0.45), 100, 'Compressing workspace…');
+        });
+        saveAs(blob, getWorkspaceBackupFilename());
+      }
+      finishImportProgress(100, 100, {
+        title: 'Backup complete',
+        countText: 'Workspace backed up',
+        detail: includeSecure
+          ? 'The ZIP includes encrypted Secret Workspace files.'
+          : 'The workspace ZIP is ready.'
+      });
+      await refreshStorageSettings();
+    } catch (error) {
+      console.error('Workspace backup failed:', error);
+      finishImportProgress(0, 100, {
+        success: false,
+        title: 'Backup failed',
+        countText: 'Backup not created',
+        detail: error && error.message ? error.message : 'The workspace backup could not be created.'
+      });
+    }
+  }
+
+  async function readBackupJson(zip, path, required) {
+    const entry = zip.file(path);
+    if (!entry) {
+      if (required) throw new Error('The backup is missing ' + path + '.');
+      return null;
+    }
+    try {
+      return JSON.parse(await entry.async('string'));
+    } catch (_) {
+      throw new Error('The backup contains invalid JSON in ' + path + '.');
+    }
+  }
+
+  function sanitizeImportedMetadata(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new Error('The backup contains invalid document metadata.');
+    }
+    const safe = {};
+    Object.keys(value).forEach(function(key) {
+      if (key !== '__proto__' && key !== 'constructor' && key !== 'prototype') safe[key] = value[key];
+    });
+    if (!safe.id || typeof safe.id !== 'string') throw new Error('A backed-up document has no valid ID.');
+    return safe;
+  }
+
+  async function parseWorkspaceBackup(input) {
+    const JSZip = await ensureJsZip();
+    const zip = await JSZip.loadAsync(input, { createFolders: true });
+    const manifest = await readBackupJson(zip, WORKSPACE_BACKUP_MANIFEST, true);
+    if (
+      !manifest ||
+      manifest.format !== WORKSPACE_BACKUP_FORMAT ||
+      Number(manifest.version) !== WORKSPACE_BACKUP_VERSION
+    ) {
+      throw new Error('This is not a supported Markdown Viewer backup.');
+    }
+
+    const organization = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'organization.json', true);
+    const documentIndex = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'documents.json', true);
+    const preferences = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'preferences.json', false) || {};
+    if (!organization || typeof organization !== 'object' || !Array.isArray(documentIndex)) {
+      throw new Error('The backup workspace index is invalid.');
+    }
+    if (Number(manifest.normalDocumentCount) !== documentIndex.length) {
+      throw new Error('The backup document count does not match its workspace index.');
+    }
+
+    const documents = [];
+    const seenDocumentIds = new Set();
+    const seenDocumentPaths = new Set();
+    for (let index = 0; index < documentIndex.length; index += 1) {
+      const item = documentIndex[index];
+      const metadata = sanitizeImportedMetadata(item && item.metadata);
+      if (seenDocumentIds.has(metadata.id)) throw new Error('The backup contains duplicate document IDs.');
+      seenDocumentIds.add(metadata.id);
+      const path = normalizeTrustedBackupPath(item && item.path, 'Workspace/');
+      if (seenDocumentPaths.has(path)) throw new Error('The backup contains duplicate document paths.');
+      seenDocumentPaths.add(path);
+      const entry = zip.file(path);
+      if (!entry || entry.dir) throw new Error('The backup is missing document file ' + path + '.');
+      documents.push({
+        metadata: metadata,
+        path: path,
+        content: await entry.async('string')
+      });
+      updateImportProgress(index + 1, Math.max(1, documentIndex.length), 'Reading ' + (metadata.title || 'document') + '…');
+    }
+
+    const secretRecords = [];
+    let secretManifest = null;
+    if (manifest.includesSecureWorkspace) {
+      const secretIndex = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'secret-records.json', true);
+      secretManifest = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json', true);
+      if (!Array.isArray(secretIndex) || !secretManifest || typeof secretManifest !== 'object') {
+        throw new Error('The encrypted Secret Workspace backup index is invalid.');
+      }
+      if (Number(manifest.secureRecordCount) !== secretIndex.length) {
+        throw new Error('The encrypted backup count does not match its index.');
+      }
+      const seenSecretIds = new Set();
+      const seenSecretPaths = new Set();
+      for (const item of secretIndex) {
+        if (!item || typeof item.id !== 'string' || !item.id || seenSecretIds.has(item.id)) {
+          throw new Error('The backup contains an invalid encrypted record.');
+        }
+        seenSecretIds.add(item.id);
+        const path = normalizeTrustedBackupPath(item.path, 'Secret Workspace/objects/');
+        if (seenSecretPaths.has(path)) throw new Error('The backup contains duplicate encrypted record paths.');
+        seenSecretPaths.add(path);
+        const envelope = await readBackupJson(zip, path, true);
+        if (!envelope || typeof envelope.iv !== 'string' || typeof envelope.ciphertext !== 'string') {
+          throw new Error('An encrypted Secret Workspace record is invalid.');
+        }
+        secretRecords.push({ id: item.id, envelope: envelope });
+      }
+    }
+    return {
+      manifest: manifest,
+      organization: organization,
+      documents: documents,
+      secretManifest: secretManifest,
+      secretRecords: secretRecords,
+      preferences: preferences
+    };
+  }
+
+  async function clearApplicationPreferences() {
+    try {
+      localStorage.clear();
+    } catch (_) {}
+    if (isNeutralinoRuntimeAvailable() && Neutralino.storage && Neutralino.storage.clear) {
+      try {
+        await Neutralino.storage.clear();
+      } catch (error) {
+        console.warn('Unable to clear desktop preferences:', error);
+      }
+    }
+  }
+
+  async function restoreBackupPreferences(preferences) {
+    if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) return;
+    for (const key of WORKSPACE_PREFERENCE_KEYS) {
+      if (typeof preferences[key] !== 'string') continue;
+      localStorage.setItem(key, preferences[key]);
+      if (isNeutralinoRuntimeAvailable()) await Neutralino.storage.setData(key, preferences[key]);
+    }
+  }
+
+  async function importWorkspaceBackup(input) {
+    closeStorageSettings();
+    showImportProgress(100, {
+      title: 'Importing workspace backup',
+      detail: 'Validating backup…'
+    });
+    let replacementStarted = false;
+    try {
+      const backup = await parseWorkspaceBackup(input);
+      suspendWorkspacePersistence = true;
+      clearTimeout(saveTabStateTimeout);
+      clearTimeout(secretWorkspaceSaveTimeout);
+      await Promise.all([
+        workspacePersistenceChain.catch(function() {}),
+        secretWorkspaceSaveChain.catch(function() {})
+      ]);
+      updateImportProgress(45, 100, 'Clearing the current workspace…');
+      await clearApplicationPreferences();
+      replacementStarted = true;
+      await workspaceStorage.resetAllData();
+      const restoreTotal = Math.max(1, backup.documents.length + backup.secretRecords.length);
+      await workspaceStorage.restoreBackupData(backup, {
+        onProgress: function(processed, total, label) {
+          updateImportProgress(
+            45 + Math.round((processed / Math.max(1, total || restoreTotal)) * 50),
+            100,
+            'Restoring ' + label + '…'
+          );
+        }
+      });
+      await restoreBackupPreferences(backup.preferences);
+      updateImportProgress(100, 100, 'Reloading restored workspace…');
+      finishImportProgress(100, 100, {
+        title: 'Import complete',
+        countText: backup.documents.length.toLocaleString() + ' files restored',
+        detail: backup.secretRecords.length
+          ? 'Encrypted Secret Workspace files were restored without decrypting them.'
+          : 'The workspace was restored successfully.'
+      });
+      window.setTimeout(function() { window.location.reload(); }, 1100);
+    } catch (error) {
+      if (!replacementStarted) suspendWorkspacePersistence = false;
+      console.error('Workspace backup import failed:', error);
+      finishImportProgress(0, 100, {
+        success: false,
+        title: 'Import failed',
+        countText: 'Workspace not restored',
+        detail: error && error.message ? error.message : 'The backup could not be imported.'
+      });
+      if (replacementStarted) {
+        window.setTimeout(function() { window.location.reload(); }, 1800);
+      }
+    }
+  }
+
+  async function selectWorkspaceBackup() {
+    let input = null;
+    if (isNeutralinoRuntimeAvailable()) {
+      const paths = await Neutralino.os.showOpenDialog('Import workspace backup', {
+        filters: [{ name: 'ZIP archives (*.zip)', extensions: ['zip'] }],
+        multiSelections: false
+      });
+      if (!paths || !paths.length) return;
+      input = await Neutralino.filesystem.readBinaryFile(paths[0]);
+    } else {
+      if (storageBackupFileInput) storageBackupFileInput.click();
+      return;
+    }
+    openStorageImportConfirm(input);
+  }
+
   // Check dark mode preference first for proper initialization
   const prefersDarkMode =
     window.matchMedia &&
@@ -2539,9 +3066,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const DOCUMENT_ORGANIZATION_KEY = 'markdownViewerDocumentOrganization';
   const SECRET_WORKSPACE_STORAGE_KEY = 'markdownViewerSecretWorkspace';
   const DOCUMENT_ORGANIZATION_VERSION = 3;
-  const SECRET_WORKSPACE_VERSION = 1;
+  const SECRET_WORKSPACE_VERSION = 2;
   const SECRET_KDF_ITERATIONS = 250000;
-  const MAX_DOCUMENTS = 50;
   const DEFAULT_WORKSPACE_ID = 'workspace_default';
   const SECRET_WORKSPACE_ID = 'workspace_secret';
   const SIDEBAR_MIN_WIDTH = 220;
@@ -2558,6 +3084,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let selectedDocumentTreeIds = new Set();
   let documentTreeSelectionAnchor = null;
   let documentSidebarSearch = '';
+  let documentSidebarRenderLimit = 250;
+  let documentSidebarRenderBudget = null;
   let documentSidebarInitialized = false;
   let isDocumentSidebarResizing = false;
   let draggedSidebarDocumentId = null;
@@ -2572,11 +3100,18 @@ document.addEventListener("DOMContentLoaded", async function () {
   let secretWorkspaceDocumentCount = 0;
   let secretWorkspaceSaveTimeout = null;
   let secretWorkspaceSaveChain = Promise.resolve();
+  let secretWorkspacePersistedFolders = '';
+  let secretWorkspaceStoredDocumentIds = new Set();
   let importProgressHideTimeout = null;
   let mediaProgressHideTimeout = null;
   let liveCollaboration = null;
   let liveShareUiReady = false;
   let liveCollaborationModulesPromise = null;
+  let workspacePersistenceChain = Promise.resolve();
+  let pendingWorkspacePersistAll = false;
+  let pendingWorkspacePersistIds = new Set();
+  let suspendWorkspacePersistence = false;
+  let secretWorkspaceEnvelopeCache = null;
   const LIVE_EDIT_ORIGIN = Symbol("markdown-viewer-live-local-edit");
   const LIVE_RELAY_ORIGIN = Symbol("markdown-viewer-live-relay");
   const LIVE_REVIEW_EDIT_ORIGIN = Symbol("markdown-viewer-live-review-local-edit");
@@ -2688,7 +3223,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
-  function loadDocumentOrganization() {
+  async function loadDocumentOrganization() {
+    if (workspaceStorage) {
+      try {
+        const storedOrganization = await workspaceStorage.getDocumentOrganization();
+        if (storedOrganization) return normalizeDocumentOrganization(storedOrganization);
+      } catch (error) {
+        console.warn('Failed to load stored document organization:', error);
+      }
+    }
     try {
       return normalizeDocumentOrganization(JSON.parse(localStorage.getItem(DOCUMENT_ORGANIZATION_KEY)) || {});
     } catch (_) {
@@ -2732,15 +3275,23 @@ document.addEventListener("DOMContentLoaded", async function () {
       })
     };
     saveStorageItem(DOCUMENT_ORGANIZATION_KEY, JSON.stringify(storageOrganization));
+    if (workspaceStorage && !isPrivateStorageMode()) {
+      workspaceStorage.saveDocumentOrganization(storageOrganization).catch(function(error) {
+        console.warn('Failed to save document organization:', error);
+      });
+    }
     scheduleSecretWorkspaceSave();
   }
 
   function getSecretWorkspaceEnvelope() {
+    if (secretWorkspaceEnvelopeCache) return secretWorkspaceEnvelopeCache;
     try {
       const raw = localStorage.getItem(SECRET_WORKSPACE_STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || parsed.version !== SECRET_WORKSPACE_VERSION || !parsed.salt || !parsed.iv || !parsed.ciphertext) return null;
+      if (!parsed || !parsed.salt) return null;
+      if (parsed.version === 1 && (!parsed.iv || !parsed.ciphertext)) return null;
+      secretWorkspaceEnvelopeCache = parsed;
       return parsed;
     } catch (_) {
       return null;
@@ -2750,16 +3301,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   function initializeSecretWorkspaceState() {
     const envelope = getSecretWorkspaceEnvelope();
     secretWorkspaceDocumentCount = envelope && Number.isFinite(Number(envelope.documentCount))
-      ? Math.min(MAX_DOCUMENTS, Math.max(0, Number(envelope.documentCount)))
+      ? Math.max(0, Number(envelope.documentCount))
       : 0;
   }
 
   function isSecretWorkspaceConfigured() {
-    try {
-      return Boolean(localStorage.getItem(SECRET_WORKSPACE_STORAGE_KEY));
-    } catch (_) {
-      return false;
-    }
+    return Boolean(getSecretWorkspaceEnvelope());
   }
 
   function isSecretWorkspaceUnlocked() {
@@ -2822,31 +3369,82 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
-  function enqueueSecretWorkspaceSave() {
-    if (!isSecretWorkspaceUnlocked()) return Promise.resolve(false);
+  function getSecretDocumentStorageValue(tab) {
+    const value = {};
+    Object.keys(tab || {}).forEach(function(key) {
+      if (key === 'contentLoaded' || key.charAt(0) === '_') return;
+      value[key] = tab[key];
+    });
+    return value;
+  }
+
+  async function encryptSecretWorkspaceValue(value, key) {
     const cryptoApi = getWebCrypto();
+    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+    const encrypted = await cryptoApi.subtle.encrypt(
+      { name: 'AES-GCM', iv: iv },
+      key,
+      new TextEncoder().encode(JSON.stringify(value))
+    );
+    return {
+      version: SECRET_WORKSPACE_VERSION,
+      iv: bytesToBase64(iv),
+      ciphertext: bytesToBase64(new Uint8Array(encrypted)),
+      updatedAt: Date.now()
+    };
+  }
+
+  async function decryptSecretWorkspaceValue(envelope, key) {
+    const decrypted = await getWebCrypto().subtle.decrypt(
+      { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) },
+      key,
+      base64ToBytes(envelope.ciphertext)
+    );
+    return JSON.parse(new TextDecoder().decode(decrypted));
+  }
+
+  function enqueueSecretWorkspaceSave() {
+    if (suspendWorkspacePersistence) return Promise.resolve(false);
+    if (!isSecretWorkspaceUnlocked()) return Promise.resolve(false);
+    if (isPrivateStorageMode()) return Promise.resolve(false);
     const key = secretWorkspaceKey;
     const salt = new Uint8Array(secretWorkspaceSalt);
     const payload = getSecretWorkspacePayload();
-    const payloadText = JSON.stringify(payload);
     secretWorkspaceDocumentCount = payload.documents.length;
     secretWorkspaceSaveChain = secretWorkspaceSaveChain.catch(function() {}).then(async function() {
-      const iv = cryptoApi.getRandomValues(new Uint8Array(12));
-      const encrypted = await cryptoApi.subtle.encrypt(
-        { name: 'AES-GCM', iv: iv },
-        key,
-        new TextEncoder().encode(payloadText)
-      );
-      saveStorageItem(SECRET_WORKSPACE_STORAGE_KEY, JSON.stringify({
+      if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
+      const currentIds = new Set();
+      for (const tab of payload.documents) {
+        const value = getSecretDocumentStorageValue(tab);
+        const snapshot = JSON.stringify(value);
+        currentIds.add(tab.id);
+        if (tab._secretPersistedSnapshot !== snapshot || !secretWorkspaceStoredDocumentIds.has(tab.id)) {
+          await workspaceStorage.saveSecretRecord(tab.id, await encryptSecretWorkspaceValue(value, key));
+          tab._secretPersistedSnapshot = snapshot;
+        }
+      }
+      for (const storedId of Array.from(secretWorkspaceStoredDocumentIds)) {
+        if (!currentIds.has(storedId)) await workspaceStorage.deleteSecretRecord(storedId);
+      }
+      secretWorkspaceStoredDocumentIds = currentIds;
+
+      const folderSnapshot = JSON.stringify(payload.folders);
+      if (secretWorkspacePersistedFolders !== folderSnapshot) {
+        await workspaceStorage.saveSecretRecord(
+          window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__',
+          await encryptSecretWorkspaceValue(payload.folders, key)
+        );
+        secretWorkspacePersistedFolders = folderSnapshot;
+      }
+      secretWorkspaceEnvelopeCache = {
         version: SECRET_WORKSPACE_VERSION,
         iterations: secretWorkspaceIterations,
         salt: bytesToBase64(salt),
-        iv: bytesToBase64(iv),
-        ciphertext: bytesToBase64(new Uint8Array(encrypted)),
         documentCount: payload.documents.length,
         folderCount: payload.folders.length,
         updatedAt: Date.now()
-      }));
+      };
+      await workspaceStorage.setSecretManifest(secretWorkspaceEnvelopeCache);
       return true;
     });
     return secretWorkspaceSaveChain;
@@ -2873,12 +3471,32 @@ document.addEventListener("DOMContentLoaded", async function () {
     const salt = base64ToBytes(envelope.salt);
     const iterations = Number(envelope.iterations) || SECRET_KDF_ITERATIONS;
     const key = await deriveSecretWorkspaceKey(password, salt, iterations);
-    const decrypted = await getWebCrypto().subtle.decrypt(
-      { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) },
-      key,
-      base64ToBytes(envelope.ciphertext)
-    );
-    const payload = JSON.parse(new TextDecoder().decode(decrypted));
+    let payload;
+    if (Number(envelope.version) === 1) {
+      payload = await decryptSecretWorkspaceValue(envelope, key);
+      secretWorkspaceStoredDocumentIds = new Set();
+      secretWorkspacePersistedFolders = '';
+    } else {
+      if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
+      const records = await workspaceStorage.listSecretRecords();
+      const documents = [];
+      let folders = [];
+      secretWorkspaceStoredDocumentIds = new Set();
+      for (const record of records) {
+        const value = await decryptSecretWorkspaceValue(record.envelope, key);
+        if (record.id === (window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__')) {
+          folders = Array.isArray(value) ? value : [];
+          secretWorkspacePersistedFolders = JSON.stringify(folders);
+        } else {
+          if (value && typeof value === 'object') {
+            value._secretPersistedSnapshot = JSON.stringify(value);
+            documents.push(value);
+            secretWorkspaceStoredDocumentIds.add(record.id);
+          }
+        }
+      }
+      payload = { version: SECRET_WORKSPACE_VERSION, folders: folders, documents: documents };
+    }
     return { payload: payload, key: key, salt: salt, iterations: iterations };
   }
 
@@ -2932,7 +3550,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.workspaceId = SECRET_WORKSPACE_ID;
       tab.folderId = secretFolderIds.has(tab.folderId) ? tab.folderId : null;
       tab.reviewThreads = normalizeReviewThreads(tab.reviewThreads);
+      tab.contentLoaded = true;
       normalizeTabDocumentMetadata(tab, { allowSecret: true });
+      if (!tab._secretPersistedSnapshot) {
+        tab._secretPersistedSnapshot = JSON.stringify(getSecretDocumentStorageValue(tab));
+      }
       tabs.push(tab);
       existingTabIds.add(tab.id);
     });
@@ -3018,6 +3640,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     secretWorkspaceDocumentCount = 0;
     clearTimeout(secretWorkspaceSaveTimeout);
     await secretWorkspaceSaveChain.catch(function() {});
+    if (workspaceStorage) await workspaceStorage.clearSecretRecords();
+    secretWorkspaceEnvelopeCache = null;
+    secretWorkspaceStoredDocumentIds.clear();
+    secretWorkspacePersistedFolders = '';
     removeStorageItem(SECRET_WORKSPACE_STORAGE_KEY);
     const workspace = getWorkspaceById(SECRET_WORKSPACE_ID);
     if (workspace) workspace.expanded = false;
@@ -3145,6 +3771,8 @@ document.addEventListener("DOMContentLoaded", async function () {
           secretWorkspaceSalt = null;
           secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
           secretWorkspaceDocumentCount = 0;
+          secretWorkspaceEnvelopeCache = null;
+          if (workspaceStorage) await workspaceStorage.clearSecretRecords().catch(function() {});
           removeStorageItem(SECRET_WORKSPACE_STORAGE_KEY);
         }
         error.textContent = setupMode
@@ -3171,7 +3799,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       openDocumentConfirmation({
         title: 'Reset Secret Workspace?',
         description: 'This permanently deletes every encrypted file and folder in Secret Workspace. The content cannot be recovered.',
-        confirmText: 'Reset workspace',
+        confirmText: 'Reset Secret Workspace',
         onConfirm: function() {
           resetSecretWorkspaceData().then(function() {
             announceToScreenReader('Secret Workspace reset.');
@@ -3205,13 +3833,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getDocumentCountForLimit() {
     return tabs.length + (isSecretWorkspaceUnlocked() ? 0 : secretWorkspaceDocumentCount);
-  }
-
-  function hasDocumentCapacity() {
-    if (getDocumentCountForLimit() < MAX_DOCUMENTS) return true;
-    alert('Maximum of ' + MAX_DOCUMENTS + ' documents reached. Delete an existing document to create or import another.');
-    announceToScreenReader('Maximum document limit reached.');
-    return false;
   }
 
   function getWorkspaceById(workspaceId) {
@@ -3546,7 +4167,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         documentOrganization.folders = documentOrganization.folders.filter(function(item) { return !folderIds.has(item.id); });
         if (folderIds.has(documentOrganization.ui.lastFolderId)) documentOrganization.ui.lastFolderId = null;
         saveDocumentOrganization();
-        saveTabsToStorage(tabs);
+        if (documents.length) {
+          saveTabsToStorage(tabs, documents.map(function(tab) { return tab.id; }));
+        }
         renderTabBar(tabs, activeTabId);
         announceToScreenReader('Folder deleted. Documents moved to the workspace root.');
       }
@@ -3628,7 +4251,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || isTemporaryDocument(tab)) return;
     tab.favorite = !tab.favorite;
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, [tab.id]);
     renderTabBar(tabs, activeTabId);
     announceToScreenReader(tab.favorite ? 'Document added to favorites.' : 'Document removed from favorites.');
   }
@@ -3737,7 +4360,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization.ui.lastWorkspaceId = tab.workspaceId || DEFAULT_WORKSPACE_ID;
       documentOrganization.ui.lastFolderId = tab.folderId || null;
       saveDocumentOrganization();
-      saveTabsToStorage(tabs);
+      saveTabsToStorage(tabs, [tab.id]);
     }
     if (tabId !== activeTabId) {
       switchTab(tabId);
@@ -4047,7 +4670,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.isOpen = true;
       tab.lastOpenedAt = openedAt;
     });
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, documents.map(function(tab) { return tab.id; }));
 
     const target = documents.find(function(tab) { return tab.id === activeTabId; }) || documents[0];
     selectedDocumentId = target.id;
@@ -4308,9 +4931,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     try {
       if (workspaceId === SECRET_WORKSPACE_ID) {
         await flushSecretWorkspaceToStorage();
-        if (!_flushTabsToStorage(tabs)) throw new Error('Normal workspace storage failed.');
+        if (!(await _flushTabsToStorage(tabs))) throw new Error('Normal workspace storage failed.');
       } else {
-        if (!_flushTabsToStorage(tabs)) throw new Error('Normal workspace storage failed.');
+        if (!(await _flushTabsToStorage(tabs))) throw new Error('Normal workspace storage failed.');
         if (previousWorkspaceId === SECRET_WORKSPACE_ID) await flushSecretWorkspaceToStorage();
       }
     } catch (error) {
@@ -4654,6 +5277,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function appendDocumentTreeItem(container, tab, depth, meta) {
+    const isActiveDocument = tab.id === activeTabId;
+    const consumesRenderBudget = documentSidebarRenderBudget && documentSidebarRenderBudget.remaining > 0;
+    if (documentSidebarRenderBudget && documentSidebarRenderBudget.remaining <= 0 && !isActiveDocument) {
+      return false;
+    }
     const row = createDocumentTreeRow({
       type: 'document',
       id: tab.id,
@@ -4671,6 +5299,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     });
     container.appendChild(row);
+    if (consumesRenderBudget) {
+      documentSidebarRenderBudget.remaining = Math.max(0, documentSidebarRenderBudget.remaining - 1);
+    }
+    return true;
   }
 
   function getDocumentLocationLabel(tab) {
@@ -4703,8 +5335,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     } else {
       documents = documents.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
     }
-    documents.forEach(function(tab) { appendDocumentTreeItem(tree, tab, 0, getDocumentLocationLabel(tab)); });
-    return documents.length;
+    let renderedDocuments = 0;
+    documents.forEach(function(tab) {
+      if (appendDocumentTreeItem(tree, tab, 0, getDocumentLocationLabel(tab))) renderedDocuments++;
+    });
+    return renderedDocuments;
   }
 
   function renderWorkspaceTree(tree) {
@@ -4716,9 +5351,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       temporaryLabel.textContent = 'Temporary';
       tree.appendChild(temporaryLabel);
       temporaryTabs.forEach(function(tab) {
-        appendDocumentTreeItem(tree, tab, 0, tab.kind === SHARE_SNAPSHOT_TAB_KIND ? 'Snapshot' : 'Live Share');
+        if (appendDocumentTreeItem(tree, tab, 0, tab.kind === SHARE_SNAPSHOT_TAB_KIND ? 'Snapshot' : 'Live Share')) {
+          renderedDocuments++;
+        }
       });
-      renderedDocuments += temporaryTabs.length;
     }
 
     documentOrganization.workspaces.forEach(function(workspace) {
@@ -4729,6 +5365,18 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
       const folders = documentOrganization.folders.filter(function(folder) { return folder.workspaceId === workspace.id; });
       const matchingDocuments = workspaceDocuments.filter(documentMatchesSidebarSearch);
+      const documentsByFolder = new Map();
+      const matchingDocumentsByFolder = new Map();
+      workspaceDocuments.forEach(function(tab) {
+        const folderKey = tab.folderId || null;
+        if (!documentsByFolder.has(folderKey)) documentsByFolder.set(folderKey, []);
+        documentsByFolder.get(folderKey).push(tab);
+      });
+      matchingDocuments.forEach(function(tab) {
+        const folderKey = tab.folderId || null;
+        if (!matchingDocumentsByFolder.has(folderKey)) matchingDocumentsByFolder.set(folderKey, []);
+        matchingDocumentsByFolder.get(folderKey).push(tab);
+      });
       const workspaceMatchesSearch = !documentSidebarSearch || workspace.name.toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase());
       if (documentSidebarSearch && !workspaceMatchesSearch && !matchingDocuments.length && !folders.some(function(folder) {
         return folder.name.toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase());
@@ -4778,15 +5426,25 @@ document.addEventListener("DOMContentLoaded", async function () {
       workspaceGroup.hidden = !expanded;
 
       const sortedFolders = folders.sort(function(left, right) { return left.createdAt - right.createdAt || left.name.localeCompare(right.name); });
+      const foldersByParent = new Map();
+      sortedFolders.forEach(function(folder) {
+        const parentKey = folder.parentFolderId || null;
+        if (!foldersByParent.has(parentKey)) foldersByParent.set(parentKey, []);
+        foldersByParent.get(parentKey).push(folder);
+      });
+      const folderMatchCache = new Map();
       const folderSubtreeMatches = function(folder) {
-        const folderDocuments = matchingDocuments.filter(function(tab) { return tab.folderId === folder.id; });
-        if (!documentSidebarSearch || folder.name.toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase()) || folderDocuments.length) return true;
-        return sortedFolders.some(function(child) {
-          return child.parentFolderId === folder.id && folderSubtreeMatches(child);
-        });
+        if (folderMatchCache.has(folder.id)) return folderMatchCache.get(folder.id);
+        const folderDocuments = matchingDocumentsByFolder.get(folder.id) || [];
+        const matches = !documentSidebarSearch ||
+          folder.name.toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase()) ||
+          folderDocuments.length > 0 ||
+          (foldersByParent.get(folder.id) || []).some(folderSubtreeMatches);
+        folderMatchCache.set(folder.id, matches);
+        return matches;
       };
       const appendFolderBranch = function(folder, container, depth) {
-        const folderDocuments = matchingDocuments.filter(function(tab) { return tab.folderId === folder.id; });
+        const folderDocuments = matchingDocumentsByFolder.get(folder.id) || [];
         if (!folderSubtreeMatches(folder)) return;
         const folderExpanded = documentSidebarSearch ? true : folder.expanded !== false;
         const folderRow = createDocumentTreeRow({
@@ -4796,7 +5454,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           icon: folderExpanded ? 'lucide-folder-open' : 'lucide-folder',
           depth: depth,
           expanded: folderExpanded,
-          meta: String(workspaceDocuments.filter(function(tab) { return tab.folderId === folder.id; }).length),
+          meta: String((documentsByFolder.get(folder.id) || []).length),
           dropLocation: { workspaceId: workspace.id, folderId: folder.id },
           menuActions: getFolderMenuActions(folder),
           onToggle: function() {
@@ -4817,24 +5475,22 @@ document.addEventListener("DOMContentLoaded", async function () {
         folderGroup.className = 'document-tree-group document-tree-group--folder';
         folderGroup.setAttribute('role', 'group');
         folderGroup.hidden = !folderExpanded;
-        sortedFolders.filter(function(child) { return child.parentFolderId === folder.id; }).forEach(function(child) {
+        (foldersByParent.get(folder.id) || []).forEach(function(child) {
           appendFolderBranch(child, folderGroup, depth + 1);
         });
         folderDocuments.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); }).forEach(function(tab) {
-          appendDocumentTreeItem(folderGroup, tab, depth + 1);
-          renderedDocuments++;
+          if (appendDocumentTreeItem(folderGroup, tab, depth + 1)) renderedDocuments++;
         });
         container.appendChild(folderGroup);
       };
-      sortedFolders.filter(function(folder) { return !folder.parentFolderId; }).forEach(function(folder) {
+      (foldersByParent.get(null) || []).forEach(function(folder) {
         appendFolderBranch(folder, workspaceGroup, 1);
       });
 
-      matchingDocuments.filter(function(tab) { return !tab.folderId; }).sort(function(left, right) {
+      (matchingDocumentsByFolder.get(null) || []).sort(function(left, right) {
         return (left.title || '').localeCompare(right.title || '');
       }).forEach(function(tab) {
-        appendDocumentTreeItem(workspaceGroup, tab, 1);
-        renderedDocuments++;
+        if (appendDocumentTreeItem(workspaceGroup, tab, 1)) renderedDocuments++;
       });
       tree.appendChild(workspaceGroup);
     });
@@ -4847,7 +5503,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     removeDocumentSidebarMenus();
     tree.textContent = '';
     const filter = documentOrganization.ui.filter || 'all';
+    documentSidebarRenderBudget = { remaining: documentSidebarRenderLimit };
     let renderedCount = filter === 'all' ? renderWorkspaceTree(tree) : renderFlatDocumentView(tree, filter);
+    documentSidebarRenderBudget = null;
+    let visibleDocumentCount = tabs.filter(function(tab) {
+      if (filter !== 'all' && isTemporaryDocument(tab)) return false;
+      if (filter === 'favorites' && !tab.favorite) return false;
+      return documentMatchesSidebarSearch(tab);
+    }).length;
+    if (filter === 'recent') visibleDocumentCount = Math.min(30, visibleDocumentCount);
 
     const treeHeading = document.getElementById('document-tree-heading-label');
     const treeHint = document.getElementById('document-tree-heading-hint');
@@ -4866,12 +5530,26 @@ document.addEventListener("DOMContentLoaded", async function () {
         : (filter === 'favorites' ? 'No favorite documents yet.' : 'No documents to show.');
       tree.appendChild(empty);
     }
+    if (renderedCount < visibleDocumentCount) {
+      const loadMore = document.createElement('button');
+      loadMore.type = 'button';
+      loadMore.className = 'document-tree-load-more';
+      loadMore.textContent = 'Show ' + Math.min(500, visibleDocumentCount - renderedCount) + ' more';
+      loadMore.addEventListener('click', function() {
+        documentSidebarRenderLimit += 500;
+        renderDocumentSidebar();
+      });
+      tree.appendChild(loadMore);
+    }
 
     const count = document.getElementById('document-sidebar-count');
-    if (count) count.textContent = getDocumentCountForLimit() + ' of ' + MAX_DOCUMENTS + ' files';
+    if (count) count.textContent = getDocumentCountForLimit() + ' file' + (getDocumentCountForLimit() === 1 ? '' : 's');
     const status = document.getElementById('document-sidebar-status');
     if (status) {
-      status.textContent = documentSidebarSearch ? renderedCount + ' result' + (renderedCount === 1 ? '' : 's') : '';
+      status.textContent = documentSidebarSearch
+        ? renderedCount + (renderedCount < visibleDocumentCount ? ' of ' + visibleDocumentCount : '') +
+          ' result' + (visibleDocumentCount === 1 ? '' : 's')
+        : '';
     }
     document.querySelectorAll('.document-filter-btn').forEach(function(button) {
       const active = button.getAttribute('data-document-filter') === filter;
@@ -5114,6 +5792,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.querySelectorAll('.document-filter-btn').forEach(function(button) {
       button.addEventListener('click', function() {
         documentOrganization.ui.filter = button.getAttribute('data-document-filter') || 'all';
+        documentSidebarRenderLimit = 250;
         saveDocumentOrganization();
         renderDocumentSidebar();
       });
@@ -5122,6 +5801,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (search) {
       search.addEventListener('input', function() {
         documentSidebarSearch = search.value.trim();
+        documentSidebarRenderLimit = 250;
         if (clearSearch) clearSearch.hidden = !documentSidebarSearch;
         renderDocumentSidebar();
       });
@@ -5373,7 +6053,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tab) return;
 
     tab.reviewThreads = getLiveReviewMapThreads(liveCollaboration.reviewMap);
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, [tab.id]);
     if (tab.id === activeTabId) {
       if (activeReviewEditId && !tab.reviewThreads.some(function(thread) { return thread.id === activeReviewEditId; })) {
         closeReviewComposer();
@@ -6096,7 +6776,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function persistReviewThreads(message) {
     syncLiveReviewThreadsFromTab();
-    saveTabsToStorage(tabs);
+    if (activeTabId) saveTabsToStorage(tabs, [activeTabId]);
     decorateReviewTargets();
     renderReviewPanel();
     if (message) announceToScreenReader(message);
@@ -6545,27 +7225,45 @@ document.addEventListener("DOMContentLoaded", async function () {
     saveStatusText.textContent = presentation.text;
   }
 
-  function loadTabsFromStorage() {
+  async function loadTabsFromStorage() {
     try {
-      return stripTemporaryTabs(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []).map(function(tab) {
+      let storedTabs;
+      if (workspaceStorage) {
+        await workspaceStorage.init();
+        storedTabs = await workspaceStorage.listDocumentMetadata();
+      } else {
+        storedTabs = stripTemporaryTabs(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []);
+      }
+      return storedTabs.map(function(tab) {
         if (tab.workspaceId === SECRET_WORKSPACE_ID) {
           tab.workspaceId = DEFAULT_WORKSPACE_ID;
           tab.folderId = null;
         }
         tab.reviewThreads = normalizeReviewThreads(tab.reviewThreads);
-        return normalizeTabDocumentMetadata(tab);
+        const normalized = normalizeTabDocumentMetadata(tab);
+        if (workspaceStorage) {
+          normalized.contentLoaded = false;
+          normalized.content = undefined;
+        }
+        return normalized;
       });
     } catch (e) {
+      console.warn('Failed to load workspace documents:', e);
       return [];
     }
   }
 
-  function saveTabsToStorage(tabsArr) {
+  function saveTabsToStorage(tabsArr, changedIds) {
     // PERF-008: Debounce tab saves to reduce main thread blocking from JSON.stringify
     // on large document arrays. Immediate flush happens on visibilitychange/beforeunload.
     updateSaveStatus('saving');
     clearTimeout(saveTabStateTimeout);
     scheduleSecretWorkspaceSave();
+    if (Array.isArray(changedIds)) {
+      changedIds.forEach(function(id) { if (id) pendingWorkspacePersistIds.add(id); });
+    } else {
+      pendingWorkspacePersistAll = true;
+    }
     saveTabStateTimeout = setTimeout(function() {
       _flushTabsToStorage(tabsArr);
     }, 500);
@@ -6596,30 +7294,79 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  function _flushTabsToStorage(tabsArr) {
+  async function _flushTabsToStorage(tabsArr, options) {
     clearTimeout(saveTabStateTimeout);
+    if (suspendWorkspacePersistence) {
+      pendingWorkspacePersistAll = false;
+      pendingWorkspacePersistIds.clear();
+      return true;
+    }
+    const settings = options || {};
+    const hasQueuedIds = pendingWorkspacePersistIds.size > 0;
+    const hasExplicitIds = Array.isArray(settings.changedIds);
+    const fullSnapshot = settings.fullSnapshot === true
+      || pendingWorkspacePersistAll
+      || (!hasQueuedIds && !hasExplicitIds);
+    const changedIds = Array.isArray(settings.changedIds)
+      ? settings.changedIds.slice()
+      : Array.from(pendingWorkspacePersistIds);
+    pendingWorkspacePersistAll = false;
+    pendingWorkspacePersistIds.clear();
+    if (isPrivateStorageMode()) {
+      updateSaveStatus('saved');
+      return true;
+    }
     try {
-      saveStorageItem(STORAGE_KEY, JSON.stringify(getTabsForStorage(tabsArr)));
+      const storageTabs = getTabsForStorage(tabsArr);
+      if (workspaceStorage) {
+        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
+          return workspaceStorage.saveDocuments(storageTabs, documentOrganization, {
+            fullSnapshot: fullSnapshot,
+            changedIds: fullSnapshot ? null : changedIds
+          });
+        });
+        await workspacePersistenceChain;
+      } else {
+        saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
+      }
+      evictInactiveDocumentContent();
       updateSaveStatus('saved');
       return true;
     } catch (e) {
-      console.warn('Failed to save tabs to localStorage:', e);
+      console.warn('Failed to save workspace documents:', e);
       updateSaveStatus('error');
+      showAppToast('The workspace could not be saved. Existing saved documents were kept.', {
+        tone: 'error',
+        title: 'Changes not saved'
+      });
       return false;
     }
   }
 
-  // Ensure tabs are persisted before page close (PERF-008)
-  window.addEventListener('beforeunload', function() {
+  async function flushWorkspaceBeforeExit() {
     saveCurrentTabState();
-    _flushTabsToStorage(tabs);
-    if (isSecretWorkspaceUnlocked()) flushSecretWorkspaceToStorage().catch(function() {});
+    const normalSaved = await _flushTabsToStorage(tabs);
+    if (!normalSaved) throw new Error('The normal workspace could not be saved.');
+    if (isSecretWorkspaceUnlocked()) {
+      await flushSecretWorkspaceToStorage();
+    }
+    return true;
+  }
+
+  window.MarkdownViewerFlushWorkspace = flushWorkspaceBeforeExit;
+
+  // Browser lifecycle events cannot guarantee that asynchronous storage finishes,
+  // so ordinary edits are still debounced continuously. The desktop close handler
+  // explicitly awaits this hook before exiting.
+  window.addEventListener('beforeunload', function() {
+    flushWorkspaceBeforeExit().catch(function() {});
+  });
+  window.addEventListener('pagehide', function() {
+    flushWorkspaceBeforeExit().catch(function() {});
   });
   document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'hidden') {
-      saveCurrentTabState();
-      _flushTabsToStorage(tabs);
-      if (isSecretWorkspaceUnlocked()) flushSecretWorkspaceToStorage().catch(function() {});
+      flushWorkspaceBeforeExit().catch(function() {});
     }
   });
 
@@ -6628,6 +7375,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function saveActiveTabId(id) {
+    if (!id) {
+      removeStorageItem(ACTIVE_TAB_KEY);
+      return;
+    }
     if (isShareSnapshotTabId(id)) return;
     const tab = tabs.find(function(item) { return item.id === id; });
     if (tab && tab.workspaceId === SECRET_WORKSPACE_ID) return;
@@ -6666,6 +7417,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       lastEditedAt: createdAt,
       createdAt: createdAt
     };
+    tab.contentLoaded = true;
+    tab._persistedContent = undefined;
     const target = location || (documentOrganization ? getPreferredDocumentLocation() : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
     tab.workspaceId = target.workspaceId || DEFAULT_WORKSPACE_ID;
     tab.folderId = target.folderId || null;
@@ -6678,6 +7431,60 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getOpenTabs() {
     return tabs.filter(isTabOpen);
+  }
+
+  async function ensureTabContent(tab) {
+    if (!tab) return '';
+    if (tab.contentLoaded !== false && typeof tab.content === 'string') return tab.content;
+    if (!workspaceStorage || isTemporaryDocument(tab) || tab.workspaceId === SECRET_WORKSPACE_ID) {
+      tab.content = typeof tab.content === 'string' ? tab.content : '';
+      tab.contentLoaded = true;
+      return tab.content;
+    }
+    tab._storageLoading = true;
+    try {
+      tab.content = await workspaceStorage.loadDocumentContent(tab.id);
+      tab.contentLoaded = true;
+      tab._persistedContent = tab.content;
+      return tab.content;
+    } catch (error) {
+      console.warn('Failed to open document content:', error);
+      showAppToast('The document could not be read from local storage.', {
+        tone: 'error',
+        title: 'Document unavailable'
+      });
+      throw error;
+    } finally {
+      tab._storageLoading = false;
+    }
+  }
+
+  function evictInactiveDocumentContent() {
+    const maximumLoadedDocuments = 20;
+    const loaded = tabs.filter(function(tab) {
+      return tab &&
+        tab.contentLoaded !== false &&
+        typeof tab.content === 'string' &&
+        !isTemporaryDocument(tab) &&
+        tab.workspaceId !== SECRET_WORKSPACE_ID;
+    });
+    if (loaded.length <= maximumLoadedDocuments) return;
+    const protectedIds = new Set([activeTabId, secondarySplitTabId].filter(Boolean));
+    const evictable = loaded
+      .filter(function(tab) {
+        return !protectedIds.has(tab.id) && tab._persistedContent === tab.content;
+      })
+      .sort(function(a, b) {
+        return Number(a.lastOpenedAt || 0) - Number(b.lastOpenedAt || 0);
+      });
+    let loadedCount = loaded.length;
+    for (const tab of evictable) {
+      if (loadedCount <= maximumLoadedDocuments) break;
+      tab.content = undefined;
+      tab.contentLoaded = false;
+      delete tab._persistedContent;
+      loadedCount -= 1;
+    }
   }
 
   function getActiveOpenDocument() {
@@ -7338,6 +8145,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tab) return;
     const contentChanged = tab.content !== markdownEditor.value;
     tab.content = markdownEditor.value;
+    tab.contentLoaded = true;
     tab.scrollPos = markdownEditor.scrollTop;
     tab.viewMode = reviewModeActive && reviewPreviousViewModes.has(activeTabId)
       ? reviewPreviousViewModes.get(activeTabId)
@@ -7348,7 +8156,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (contentChanged && !isTemporaryDocument(tab)) {
       tab.lastEditedAt = Date.now();
     }
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, [tab.id]);
     if (contentChanged) renderDocumentSidebar();
   }
 
@@ -7358,10 +8166,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tab) return;
     const contentChanged = tab.content !== documentSplitEditor.value;
     tab.content = documentSplitEditor.value;
+    tab.contentLoaded = true;
     tab.splitScrollPos = documentSplitEditor.scrollTop;
     if (documentSplitPreview) tab.splitPreviewScrollPos = documentSplitPreview.scrollTop;
     if (contentChanged && !isTemporaryDocument(tab)) tab.lastEditedAt = Date.now();
-    if (contentChanged) saveTabsToStorage(tabs);
+    if (contentChanged) saveTabsToStorage(tabs, [tab.id]);
   }
 
   function namespaceSplitPreviewIds(container, tabId) {
@@ -7538,14 +8347,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!settings.silent) announceToScreenReader('Split view closed.');
   }
 
-  function openDocumentSplitView(sourceTabId, secondTabId) {
+  async function openDocumentSplitView(sourceTabId, secondTabId) {
     const sourceTab = tabs.find(function(item) { return item.id === sourceTabId; });
     const secondTab = tabs.find(function(item) { return item.id === secondTabId; });
     if (!sourceTab || !secondTab || sourceTab.id === secondTab.id) return;
+    try {
+      await Promise.all([ensureTabContent(sourceTab), ensureTabContent(secondTab)]);
+    } catch (_) {
+      return;
+    }
     sourceTab.isOpen = true;
     secondTab.isOpen = true;
     if (reviewModeActive) setReviewMode(false);
-    if (activeTabId !== sourceTab.id) switchTab(sourceTab.id);
+    if (activeTabId !== sourceTab.id) await switchTab(sourceTab.id);
     saveSecondarySplitState();
     secondarySplitTabId = secondTab.id;
     if (currentViewMode === 'split') setViewMode('editor');
@@ -7621,10 +8435,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!tab || documentSplitEditor.readOnly) return;
       updateSaveStatus('saving');
       tab.content = documentSplitEditor.value;
+      tab.contentLoaded = true;
       if (!isTemporaryDocument(tab)) tab.lastEditedAt = Date.now();
       clearTimeout(secondarySplitSaveTimeout);
       secondarySplitSaveTimeout = setTimeout(function() {
-        saveTabsToStorage(tabs);
+        saveTabsToStorage(tabs, [tab.id]);
         renderDocumentSidebar();
       }, 500);
     });
@@ -7650,10 +8465,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     setViewMode(mode || 'split');
   }
 
-  function switchTab(tabId) {
+  async function switchTab(tabId) {
     if (tabId === activeTabId) return;
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
+    try {
+      await ensureTabContent(tab);
+    } catch (_) {
+      return;
+    }
     tab.isOpen = true;
     const previousActiveTabId = activeTabId;
     const swapSplitPanes = tabId === secondarySplitTabId;
@@ -7678,7 +8498,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     selectedDocumentId = tabId;
     setSingleDocumentTreeSelection('document', tabId);
     tab.lastOpenedAt = Date.now();
-    if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs);
+    if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     markdownEditor.value = tab.content;
     
     initTabHistory(tabId, tab.content);
@@ -7691,6 +8511,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     renderMarkdown();
     renderReviewPanel();
     renderDocumentSplitView();
+    evictInactiveDocumentContent();
     requestAnimationFrame(function() {
       markdownEditor.scrollTop = tab.scrollPos || 0;
       updateLiveCursorPosition();
@@ -7707,7 +8528,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       withUnlockedSecretWorkspace(function() { newTab(content, title, targetLocation); });
       return false;
     }
-    if (!hasDocumentCapacity()) return false;
     if (reviewModeActive) setReviewMode(false);
     if (!title) title = nextUntitledTitle();
     const tab = createTab(content, title, 'split', targetLocation);
@@ -7798,7 +8618,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (wasSecondarySplit || wasPrimarySplit) closeDocumentSplitView({ silent: true, renderTabs: false });
 
     tab.isOpen = false;
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, [tab.id]);
 
     if (activeTabId === tabId) {
       const remainingOpenTabs = getOpenTabs();
@@ -7839,7 +8659,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) {
           syncLiveSessionTitle(newName);
         }
-        saveTabsToStorage(tabs);
+        saveTabsToStorage(tabs, [tab.id]);
         renderTabBar(tabs, activeTabId);
       }
       closeAppModal(modal);
@@ -7872,14 +8692,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     input.select();
   }
 
-  function duplicateTab(tabId) {
+  async function duplicateTab(tabId) {
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
     if (isShareSnapshotTab(tab)) {
       alert('Shared snapshot tabs are temporary and cannot be duplicated.');
       return;
     }
-    if (!hasDocumentCapacity()) return;
+    await ensureTabContent(tab);
     const shouldSwitchToDuplicate = tabId === activeTabId;
     saveCurrentTabState();
     const dupTitle = tab.title + ' (copy)';
@@ -7893,7 +8713,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       selectedDocumentId = dup.id;
       switchTab(dup.id);
     } else {
-      saveTabsToStorage(tabs);
+      saveTabsToStorage(tabs, [dup.id]);
       renderTabBar(tabs, activeTabId);
     }
   }
@@ -7905,6 +8725,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
+    await ensureTabContent(tab);
     if (isShareSnapshotTab(tab)) {
       alert('Shared snapshot tabs are temporary and cannot be downloaded.');
       return;
@@ -7948,93 +8769,94 @@ document.addEventListener("DOMContentLoaded", async function () {
     const confirmBtn = document.getElementById('reset-modal-confirm');
     const cancelBtn = document.getElementById('reset-modal-cancel');
     const closeBtn = document.getElementById('reset-modal-close');
+    const backupBtn = document.getElementById('reset-modal-backup');
     const description = document.getElementById('reset-modal-description');
     if (!modal || !confirmBtn || !cancelBtn) return;
+    let isResetting = false;
 
-    const fileCount = tabs.length;
-    const reviewCount = tabs.reduce(function(total, tab) {
-      return total + (Array.isArray(tab.reviewThreads) ? tab.reviewThreads.length : 0);
-    }, 0);
     if (description) {
-      const fillTemplate = function(source, values) {
-        return translateUiString(source).replace(/\{\{(\d+)\}\}/g, function(_, index) {
-          return values[Number(index)] ?? '';
-        });
-      };
-      const fileSummary = fillTemplate(fileCount === 1 ? '{{0}} file' : '{{0}} files', [fileCount]);
-      const reviewSummary = fillTemplate(reviewCount === 1 ? '{{0}} review item' : '{{0}} review items', [reviewCount]);
-      const removalSummary = reviewCount > 0
-        ? fillTemplate('{{0}} and {{1}}', [fileSummary, reviewSummary])
-        : fileSummary;
-      description.textContent = fillTemplate(
-        'This will remove {{0}} and end any active Live Share session. Unsaved changes cannot be recovered.',
-        [removalSummary]
-      );
+      description.textContent = 'This permanently deletes all documents, folders, settings, Secret Workspace files, history, trash, and other workspace data. This action cannot be undone.';
     }
 
     async function doReset() {
-      closeAppModal(modal);
-      cleanup();
-      closeReviewComposer();
-      clearReviewDecorations();
-      disconnectLiveCollaboration({ restoreOriginal: false, silent: true });
-      applyShareSnapshotAccessMode('edit');
-      resetShareSnapshotLink();
+      if (isResetting) return;
+      isResetting = true;
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      if (backupBtn) backupBtn.disabled = true;
+      if (closeBtn) closeBtn.disabled = true;
+      confirmBtn.classList.add('is-loading');
+      confirmBtn.setAttribute('aria-busy', 'true');
+      suspendWorkspacePersistence = true;
+      clearTimeout(saveTabStateTimeout);
       clearTimeout(secretWorkspaceSaveTimeout);
-      await secretWorkspaceSaveChain.catch(function() {});
-      removeStorageItem(SECRET_WORKSPACE_STORAGE_KEY);
-      secretWorkspaceKey = null;
-      secretWorkspaceSalt = null;
-      secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
-      secretWorkspaceDocumentCount = 0;
-      closeDocumentSplitView({ silent: true, renderTabs: false });
-      tabs = [];
-      selectedDocumentTreeIds.clear();
-      documentTreeSelectionAnchor = null;
-      documentOrganization = createDefaultDocumentOrganization();
-      documentSidebarSearch = '';
-      saveDocumentOrganization();
-      const sidebarSearchInput = document.getElementById('document-sidebar-search');
-      const sidebarSearchClear = document.getElementById('document-sidebar-search-clear');
-      if (sidebarSearchInput) sidebarSearchInput.value = '';
-      if (sidebarSearchClear) sidebarSearchClear.hidden = true;
-      updateDocumentSidebarVisibility();
-      untitledCounter = 0;
-      saveUntitledCounter(0);
-      const welcome = createTab(sampleMarkdown, 'Welcome to Markdown');
-      tabs.push(welcome);
-      activeTabId = welcome.id;
-      selectedDocumentId = welcome.id;
-      saveActiveTabId(activeTabId);
-      saveTabsToStorage(tabs);
-      markdownEditor.value = sampleMarkdown;
-      initTabHistory(activeTabId, sampleMarkdown);
-      lastPushedValue = sampleMarkdown;
-      currentHistoryTabId = activeTabId;
-      updateNoOpenDocumentState();
-      updateUndoRedoButtons();
-      restoreViewMode('split');
-      refreshLiveEditorUi();
-      renderMarkdown();
-      renderTabBar(tabs, activeTabId);
-      closeReviewComposer();
-      renderReviewPanel();
+      showImportProgress(100, {
+        title: 'Resetting workspace',
+        detail: 'Preparing a fresh workspace…'
+      });
+      let resetStarted = false;
+      try {
+        await Promise.all([
+          workspacePersistenceChain.catch(function() {}),
+          secretWorkspaceSaveChain.catch(function() {})
+        ]);
+        updateImportProgress(25, 100, 'Clearing workspace settings…');
+        await clearApplicationPreferences();
+        updateImportProgress(55, 100, 'Permanently deleting workspace files…');
+        resetStarted = true;
+        await workspaceStorage.resetAllData();
+        updateImportProgress(100, 100, 'Opening a fresh workspace…');
+        finishImportProgress(100, 100, {
+          title: 'Workspace reset',
+          countText: 'All workspace data deleted',
+          detail: 'Markdown Viewer is ready for a fresh start.'
+        });
+        cleanup();
+        closeAppModal(modal);
+        window.setTimeout(function() { window.location.reload(); }, 700);
+      } catch (error) {
+        console.error('Workspace reset failed:', error);
+        finishImportProgress(0, 100, {
+          success: false,
+          title: 'Reset failed',
+          countText: 'Reset not completed',
+          detail: error && error.message ? error.message : 'The workspace could not be reset.'
+        });
+        confirmBtn.classList.remove('is-loading');
+        confirmBtn.removeAttribute('aria-busy');
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = resetStarted;
+        if (backupBtn) backupBtn.disabled = resetStarted;
+        if (closeBtn) closeBtn.disabled = resetStarted;
+        if (!resetStarted) suspendWorkspacePersistence = false;
+        isResetting = false;
+      }
     }
 
     function doCancel() {
+      if (isResetting) return;
       closeAppModal(modal);
       cleanup();
+    }
+
+    function doBackup() {
+      if (isResetting) return;
+      closeAppModal(modal);
+      cleanup();
+      openStorageSettings();
     }
 
     function cleanup() {
       confirmBtn.removeEventListener('click', doReset);
       cancelBtn.removeEventListener('click', doCancel);
       if (closeBtn) closeBtn.removeEventListener('click', doCancel);
+      if (backupBtn) backupBtn.removeEventListener('click', doBackup);
     }
 
     confirmBtn.addEventListener('click', doReset);
     cancelBtn.addEventListener('click', doCancel);
     if (closeBtn) closeBtn.addEventListener('click', doCancel);
+    if (backupBtn) backupBtn.addEventListener('click', doBackup);
 
     openAppModal(modal, {
       focusTarget: cancelBtn,
@@ -8045,25 +8867,25 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, 0);
   }
 
-  function initTabs() {
+  async function initTabs() {
+    if (workspaceStorage) {
+      await workspaceStorage.init();
+      secretWorkspaceEnvelopeCache = await workspaceStorage.getSecretManifest();
+    }
     untitledCounter = loadUntitledCounter();
-    documentOrganization = loadDocumentOrganization();
+    documentOrganization = await loadDocumentOrganization();
     initializeSecretWorkspaceState();
-    tabs = loadTabsFromStorage();
+    tabs = await loadTabsFromStorage();
     activeTabId = loadActiveTabId();
 
     // Check if Neutralino passed an initial file via command line (early load)
     if (window.NL_INITIAL_FILE_CONTENT) {
       const initialFile = window.NL_INITIAL_FILE_CONTENT;
-      if (tabs.length < MAX_DOCUMENTS) {
-        const tab = createTab(initialFile.content, initialFile.name);
-        tabs.push(tab);
-        activeTabId = tab.id;
-        saveTabsToStorage(tabs);
-        saveActiveTabId(activeTabId);
-      } else {
-        alert('The command-line file could not be opened because the ' + MAX_DOCUMENTS + '-document limit has been reached.');
-      }
+      const tab = createTab(initialFile.content, initialFile.name);
+      tabs.push(tab);
+      activeTabId = tab.id;
+      saveTabsToStorage(tabs);
+      saveActiveTabId(activeTabId);
       delete window.NL_INITIAL_FILE_CONTENT;
     } else if (tabs.length === 0) {
       const tab = createTab(sampleMarkdown, 'Welcome to Markdown');
@@ -8082,6 +8904,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     selectedDocumentId = activeTabId;
     updateNoOpenDocumentState();
     if (activeTab) {
+      await ensureTabContent(activeTab);
       markdownEditor.value = activeTab.content;
       initTabHistory(activeTabId, activeTab.content);
       updateUndoRedoButtons();
@@ -10214,12 +11037,12 @@ ${selector} .arrowheadPath {
     const detail = document.getElementById('import-progress-detail');
     const icon = document.getElementById('import-progress-icon');
     if (!toast || !title || !count) return;
-    updateImportProgress(total, total);
-    const completed = imported === total;
+    const completed = typeof settings.success === 'boolean' ? settings.success : imported === total;
+    updateImportProgress(completed ? total : imported, total);
     toast.dataset.state = completed ? 'complete' : 'partial';
     if (icon) icon.className = 'lucide ' + (completed ? 'lucide-check' : 'lucide-triangle-alert') + ' import-progress-icon';
     title.textContent = settings.title || (completed ? 'Import complete' : (imported ? 'Import finished with issues' : 'Import failed'));
-    count.textContent = imported + ' imported';
+    count.textContent = settings.countText || (imported + ' imported');
     if (detail) {
       detail.textContent = settings.detail || (completed
         ? (total === 1 ? 'Your file is ready.' : 'Your files are ready.')
@@ -10334,15 +11157,7 @@ ${selector} .arrowheadPath {
       showUnsupportedFileToast('Some files were skipped. Choose Markdown files (.md or .markdown).');
     }
 
-    const remainingCapacity = Math.max(0, MAX_DOCUMENTS - getDocumentCountForLimit());
-    if (!remainingCapacity) {
-      hasDocumentCapacity();
-      return 0;
-    }
-    const filesToImport = markdownFiles.slice(0, remainingCapacity);
-    if (filesToImport.length < markdownFiles.length) {
-      alert('Only the first ' + filesToImport.length + ' file' + (filesToImport.length === 1 ? '' : 's') + ' will be imported because the ' + MAX_DOCUMENTS + '-document limit would be exceeded.');
-    }
+    const filesToImport = markdownFiles;
 
     let importedCount = 0;
     showImportProgress(filesToImport.length);
@@ -10735,15 +11550,6 @@ ${selector} .arrowheadPath {
         setGitHubImportMessage("Please select at least one file to import.");
         return;
       }
-      const remainingCapacity = Math.max(0, MAX_DOCUMENTS - getDocumentCountForLimit());
-      if (!remainingCapacity) {
-        hasDocumentCapacity();
-        return;
-      }
-      if (selectedPaths.length > remainingCapacity) {
-        setGitHubImportMessage('Select no more than ' + remainingCapacity + ' file' + (remainingCapacity === 1 ? '' : 's') + ' to stay within the ' + MAX_DOCUMENTS + '-document limit.');
-        return;
-      }
       announceToScreenReader("Importing selected files from GitHub...");
       startGitHubImport(owner, repo, ref, selectedPaths);
       return;
@@ -10769,7 +11575,6 @@ ${selector} .arrowheadPath {
         if (!isMarkdownPath(parsed.filePath)) {
           throw new Error("The provided URL does not point to a Markdown file.");
         }
-        if (!hasDocumentCapacity()) return;
         announceToScreenReader("Starting GitHub import...");
         startGitHubImport(parsed.owner, parsed.repo, parsed.ref, [parsed.filePath]);
         return;
@@ -10801,7 +11606,6 @@ ${selector} .arrowheadPath {
       const shownFiles = files.slice(0, MAX_GITHUB_FILES_SHOWN);
       if (files.length === 1) {
         const targetPath = files[0];
-        if (!hasDocumentCapacity()) return;
         announceToScreenReader("Starting GitHub import...");
         startGitHubImport(parsed.owner, parsed.repo, ref, [targetPath]);
         return;
@@ -11494,7 +12298,7 @@ ${selector} .arrowheadPath {
       await flushSecretWorkspaceToStorage();
       return true;
     }
-    return _flushTabsToStorage(tabs);
+    return await _flushTabsToStorage(tabs, { changedIds: [targetTabId] });
   }
 
   function restoreEditorAfterFailedImageInsertion(targetTabId, originalValue, selectionStart, selectionEnd) {
@@ -16536,8 +17340,166 @@ ${selector} .arrowheadPath {
       resetAllTabs();
     });
   }
-  
-  initTabs();
+
+  if (mobileStorageSettingsButton) {
+    mobileStorageSettingsButton.addEventListener('click', function() {
+      closeMobileMenu();
+      openStorageSettings();
+    });
+  }
+
+  if (storageSettingsButton) {
+    storageSettingsButton.addEventListener('click', function() {
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
+        bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
+      }
+      openStorageSettings();
+    });
+  }
+
+  function closeStorageSettings() {
+    if (storageSettingsModal) closeAppModal(storageSettingsModal);
+  }
+
+  function setStorageBackupOptionsError(message) {
+    if (!storageBackupOptionsError) return;
+    storageBackupOptionsError.textContent = message || '';
+    storageBackupOptionsError.hidden = !message;
+  }
+
+  function reopenStorageSettingsAfterBackupOptions() {
+    if (!storageBackupOptionsModal) return;
+    closeAppModal(storageBackupOptionsModal);
+    window.setTimeout(function() {
+      openStorageSettings();
+    }, 210);
+  }
+
+  function openStorageBackupOptions() {
+    if (!storageBackupOptionsModal) return;
+    setStorageBackupOptionsError('');
+    openAppModal(storageBackupOptionsModal, {
+      focusTarget: storageIncludeSecure || storageBackupOptionsConfirm,
+      returnFocus: storageBackupButton,
+      onClose: reopenStorageSettingsAfterBackupOptions
+    });
+  }
+
+  function setStorageImportConfirmError(message) {
+    if (!storageImportConfirmError) return;
+    storageImportConfirmError.textContent = message || '';
+    storageImportConfirmError.hidden = !message;
+  }
+
+  function reopenStorageSettingsAfterImportConfirm() {
+    pendingWorkspaceBackupInput = null;
+    setStorageImportConfirmError('');
+    if (storageImportConfirmModal) closeAppModal(storageImportConfirmModal);
+    window.setTimeout(function() {
+      openStorageSettings();
+    }, 210);
+  }
+
+  function openStorageImportConfirm(input) {
+    if (!storageImportConfirmModal || !input) return;
+    pendingWorkspaceBackupInput = input;
+    setStorageImportConfirmError('');
+    openAppModal(storageImportConfirmModal, {
+      focusTarget: storageImportConfirmCancel || storageImportConfirmConfirm,
+      returnFocus: storageImportButton,
+      onClose: reopenStorageSettingsAfterImportConfirm
+    });
+  }
+
+  async function confirmStorageImport() {
+    if (!storageImportConfirmConfirm || storageImportConfirmConfirm.disabled || !pendingWorkspaceBackupInput) return;
+    storageImportConfirmConfirm.disabled = true;
+    storageImportConfirmConfirm.classList.add('is-loading');
+    storageImportConfirmConfirm.setAttribute('aria-busy', 'true');
+    setStorageImportConfirmError('');
+    try {
+      const selectedInput = pendingWorkspaceBackupInput;
+      const importInput = selectedInput && typeof selectedInput.arrayBuffer === 'function'
+        ? await selectedInput.arrayBuffer()
+        : selectedInput;
+      pendingWorkspaceBackupInput = null;
+      closeAppModal(storageImportConfirmModal);
+      await importWorkspaceBackup(importInput);
+    } catch (error) {
+      setStorageImportConfirmError(error && error.message ? error.message : 'Unable to read the workspace backup.');
+    } finally {
+      storageImportConfirmConfirm.disabled = false;
+      storageImportConfirmConfirm.classList.remove('is-loading');
+      storageImportConfirmConfirm.removeAttribute('aria-busy');
+    }
+  }
+
+  if (storageSettingsClose) storageSettingsClose.addEventListener('click', closeStorageSettings);
+  if (storageSettingsCloseIcon) storageSettingsCloseIcon.addEventListener('click', closeStorageSettings);
+  if (storageBackupButton) {
+    storageBackupButton.addEventListener('click', function() {
+      setStorageSettingsError('');
+      openStorageBackupOptions();
+    });
+  }
+  if (storageBackupOptionsClose) {
+    storageBackupOptionsClose.addEventListener('click', reopenStorageSettingsAfterBackupOptions);
+  }
+  if (storageBackupOptionsCancel) {
+    storageBackupOptionsCancel.addEventListener('click', reopenStorageSettingsAfterBackupOptions);
+  }
+  if (storageBackupOptionsConfirm) {
+    storageBackupOptionsConfirm.addEventListener('click', async function() {
+      if (storageBackupOptionsConfirm.disabled) return;
+      storageBackupOptionsConfirm.disabled = true;
+      setStorageBackupOptionsError('');
+      try {
+        await saveWorkspaceBackup(Boolean(storageIncludeSecure && storageIncludeSecure.checked));
+      } catch (error) {
+        setStorageBackupOptionsError(error && error.message ? error.message : 'Unable to create the workspace backup.');
+      } finally {
+        storageBackupOptionsConfirm.disabled = false;
+      }
+    });
+  }
+  if (storageImportConfirmClose) {
+    storageImportConfirmClose.addEventListener('click', reopenStorageSettingsAfterImportConfirm);
+  }
+  if (storageImportConfirmCancel) {
+    storageImportConfirmCancel.addEventListener('click', reopenStorageSettingsAfterImportConfirm);
+  }
+  if (storageImportConfirmConfirm) {
+    storageImportConfirmConfirm.addEventListener('click', confirmStorageImport);
+  }
+  if (storageImportButton) {
+    storageImportButton.addEventListener('click', function() {
+      setStorageSettingsError('');
+      selectWorkspaceBackup().catch(function(error) {
+        setStorageSettingsError(error && error.message ? error.message : 'Unable to select the workspace backup.');
+      });
+    });
+  }
+  if (storageBackupFileInput) {
+    storageBackupFileInput.addEventListener('change', async function() {
+      const file = storageBackupFileInput.files && storageBackupFileInput.files[0];
+      storageBackupFileInput.value = '';
+      if (!file) return;
+      openStorageImportConfirm(file);
+    });
+  }
+
+  if (storageOpenVault) {
+    storageOpenVault.addEventListener('click', async function() {
+      try {
+        await workspaceStorage.openVaultFolder();
+      } catch (error) {
+        setStorageSettingsError(error && error.message ? error.message : 'Unable to open the vault folder.');
+      }
+    });
+  }
+
+  await initTabs();
   initReviewMode();
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();
   updateMobileStats();
@@ -16827,7 +17789,7 @@ ${selector} .arrowheadPath {
         if (activeTab) {
           activeTab.title = fileName;
           activeTab.content = content;
-          saveTabsToStorage(tabs);
+          saveTabsToStorage(tabs, [activeTab.id]);
           renderTabBar(tabs, activeTabId);
         }
       }
@@ -18997,19 +19959,15 @@ ${selector} .arrowheadPath {
     return cleanTitle || 'Shared Snapshot';
   }
 
-  function openShareSnapshotTab(content, title, mode) {
+  async function openShareSnapshotTab(content, title, mode) {
     const shareMode = mode === 'edit' ? 'edit' : 'view';
     const viewMode = shareMode === 'edit' ? 'split' : 'preview';
-    if (tabs.length >= MAX_DOCUMENTS) {
-      alert('The shared snapshot could not be opened because the ' + MAX_DOCUMENTS + '-document limit has been reached.');
-      return false;
-    }
     const snapshotTab = createTab(typeof content === 'string' ? content : '', getSafeShareSnapshotTitle(title), viewMode);
     snapshotTab.kind = SHARE_SNAPSHOT_TAB_KIND;
     snapshotTab.temporary = true;
     snapshotTab.shareSnapshotMode = shareMode;
     tabs.push(snapshotTab);
-    switchTab(snapshotTab.id);
+    await switchTab(snapshotTab.id);
     applyShareSnapshotAccessMode(shareMode);
     setViewMode(viewMode);
     saveCurrentTabState();
@@ -20024,7 +20982,7 @@ ${selector} .arrowheadPath {
       if (tab && tab.title !== safeTitle) {
         tab.title = safeTitle;
         renderTabBar(tabs, activeTabId);
-        saveTabsToStorage(tabs);
+        saveTabsToStorage(tabs, [tab.id]);
       }
     }
   }
@@ -20157,11 +21115,6 @@ ${selector} .arrowheadPath {
   function ensureLiveParticipantTab(markdown) {
     if (!liveCollaboration || liveCollaboration.tabId) return Boolean(liveCollaboration && liveCollaboration.tabId);
     if (!liveCollaboration.pendingJoinTab) return false;
-    if (tabs.length >= MAX_DOCUMENTS) {
-      showLiveShareExpiredModal('The Live Share room could not be opened because the ' + MAX_DOCUMENTS + '-document limit has been reached.');
-      leaveLiveSession({ restoreOriginal: false, silent: true });
-      return false;
-    }
 
     const liveTab = createTab(typeof markdown === 'string' ? markdown : '', getSafeLiveTitle(liveCollaboration.roomTitle), 'split');
     liveTab.kind = 'live-share';
@@ -20517,7 +21470,7 @@ ${selector} .arrowheadPath {
       });
     }
 
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, tab ? [tab.id] : []);
     renderTabBar(tabs, activeTabId);
   }
 
@@ -20578,7 +21531,7 @@ ${selector} .arrowheadPath {
     requestAnimationFrame(function() {
       markdownEditor.scrollTop = returnTab.scrollPos || 0;
     });
-    saveTabsToStorage(tabs);
+    saveTabsToStorage(tabs, returnTab ? [returnTab.id] : []);
     renderTabBar(tabs, activeTabId);
   }
 
@@ -20983,9 +21936,6 @@ ${selector} .arrowheadPath {
     const shouldDeferParticipantTab = !isHost && options.openInNewTab && yText.length === 0;
 
     if (!isHost && options.openInNewTab && !shouldDeferParticipantTab) {
-      if (tabs.length >= MAX_DOCUMENTS) {
-        throw new Error('Maximum document limit reached');
-      }
       returnTabId = options.returnTabId || activeTabId;
       const liveTabTitle = getSafeLiveTitle(sessionTitle);
       const liveTab = createTab(yText.toString(), liveTabTitle, 'split');
@@ -21426,7 +22376,7 @@ ${selector} .arrowheadPath {
       }
 
       const shareMode = payload && payload.mode === 'edit' ? 'edit' : 'view';
-      openShareSnapshotTab(
+      await openShareSnapshotTab(
         payload && typeof payload.content === 'string' ? payload.content : '',
         payload && payload.title,
         shareMode
@@ -21437,10 +22387,10 @@ ${selector} .arrowheadPath {
     }
   }
 
-  function loadFromShareHash() {
+  async function loadFromShareHash() {
     const hash = window.location.hash;
     if (hash.startsWith('#id=')) {
-      loadStoredShareHash(hash);
+      await loadStoredShareHash(hash);
       return;
     }
     if (!hash.startsWith('#share=')) return;
@@ -21470,7 +22420,7 @@ ${selector} .arrowheadPath {
     try {
       const decoded = decodeMarkdownFromShare(encoded);
       const shareMode = isEdit ? 'edit' : 'view';
-      openShareSnapshotTab(decoded, sharedTitle, shareMode);
+      await openShareSnapshotTab(decoded, sharedTitle, shareMode);
     } catch (e) {
       console.error("Failed to load shared content:", e);
       alert("The shared URL could not be decoded. It may be corrupted or incomplete.");

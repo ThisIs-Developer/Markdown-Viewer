@@ -36,7 +36,13 @@ function setTray() {
     This function performs different actions based on the clicked item's ID,
     such as displaying version information or exiting the application.
 */
-function onTrayMenuItemClicked(event) {
+async function flushWorkspaceBeforeDesktopExit() {
+  if (typeof window.MarkdownViewerFlushWorkspace === "function") {
+    await window.MarkdownViewerFlushWorkspace();
+  }
+}
+
+async function onTrayMenuItemClicked(event) {
   switch (event.detail.id) {
     case "VERSION":
       // Display version information
@@ -47,6 +53,18 @@ function onTrayMenuItemClicked(event) {
       break;
     case "QUIT":
       // Exit the application
+      try {
+        await flushWorkspaceBeforeDesktopExit();
+      } catch (e) {
+        console.warn("Failed to flush workspace before tray exit:", e);
+        await Neutralino.os.showMessageBox(
+          "Unable to exit safely",
+          "Markdown Viewer could not save the latest workspace changes. The application will remain open so you can retry.",
+          "OK",
+          "ERROR"
+        );
+        return;
+      }
       Neutralino.app.exit();
       break;
   }
@@ -61,6 +79,18 @@ async function onWindowClose() {
       "QUESTION"
     );
     if (response === "YES") {
+      try {
+        await flushWorkspaceBeforeDesktopExit();
+      } catch (e) {
+        console.warn("Failed to flush workspace before window exit:", e);
+        await Neutralino.os.showMessageBox(
+          "Unable to exit safely",
+          "Markdown Viewer could not save the latest workspace changes. The application will remain open so you can retry.",
+          "OK",
+          "ERROR"
+        );
+        return;
+      }
       Neutralino.app.exit();
     }
   } catch (e) {

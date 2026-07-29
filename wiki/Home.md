@@ -50,7 +50,7 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 
 | Area | Implemented behavior |
 | :--- | :--- |
-| Workspace | Up to 50 Documents, nested Folders, Recent, Favorites, search, tabs, bulk actions, and encrypted Secret Workspace |
+| Workspace | No application document-count limit, nested Folders, Recent, Favorites, search, tabs, bulk actions, and encrypted Secret Workspace |
 | Editing | Editor, Split view, Preview, formatting toolbar, custom undo/redo, Find and Replace, LTR/RTL, large-Document rendering paths |
 | Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
@@ -60,9 +60,10 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 
 ## Privacy at a Glance
 
-- Normal Workspace state is local to the browser profile or desktop storage.
-- Private mode clears persisted Document state, including Secret Workspace storage, and blocks further persistence while enabled.
-- **Reset workspace** deletes normal and Secret Workspace data and cannot be undone in Markdown Viewer.
+- Web documents are local per-document IndexedDB records; desktop documents are ordinary `.md` files in a durable vault.
+- Private mode pauses new Document-state persistence while keeping existing normal and Secret Workspace data.
+- **Storage and Backup** exports or restores a folder-preserving ZIP and can retain Secret Workspace ciphertext.
+- **Reset workspace** permanently deletes all local workspace data and preferences after confirmation; use its Backup route first when needed.
 - Managed media is public-by-link and expires 90 days after the most recent upload of identical content.
 - Stored Share Snapshot content remains in Cloudflare KV for 90 days.
 - Live Share does not persist Markdown/Review content server-side, but its Durable Object stores role capability metadata without an application TTL.

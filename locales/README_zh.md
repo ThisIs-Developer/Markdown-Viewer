@@ -56,7 +56,7 @@ Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、�
 
 ## 核心功能
 
-- **工作区与文档：** 在嵌套文件夹中整理最多 50 个文档，并使用最近使用、收藏夹、搜索、标签页、批量操作和加密的 Secret Workspace（秘密工作区）。
+- **工作区与文档：** 在嵌套文件夹中整理文档，应用不设置文档数量上限；实际上限取决于可用存储空间。并可使用最近使用、收藏夹、搜索、标签页、批量操作和加密的 Secret Workspace（秘密工作区）。
 - **编辑与审阅：** 在编辑器、分屏视图和预览之间切换，使用格式工具、自定义撤销/重做、查找和替换、LTR/RTL、评论与建议。
 - **Markdown 渲染：** 支持 CommonMark 风格基础语法、GitHub-Flavored Markdown（GFM）、表格、任务列表、提示块、脚注、定义列表、代码语法高亮、已清理的 HTML 和 MathJax。
 - **可视化内容：** 渲染 Mermaid、PlantUML、Graphviz/DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 和 ABC 记谱。
@@ -125,7 +125,7 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 
 ## 主要限制
 
-- 工作区最多包含 50 个文档，其中包括已锁定 Secret Workspace 的计数和临时 Share Snapshot/Live Share 标签页。
+- Markdown Viewer 不设置文档数量上限；实际上限取决于浏览器配额或桌面文件系统容量。
 - 单个本地 Markdown 文件最大为 10 MB。
 - GitHub 导入器在每个仓库/文件夹结果中最多显示 30 个 Markdown 文件。
 - 处理前的媒体源文件最大为 25 MiB；存储上限为静态图片 300 KiB、GIF 5 MiB、视频 10 MiB。

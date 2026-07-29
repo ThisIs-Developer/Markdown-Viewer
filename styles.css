@@ -40,6 +40,14 @@
   --scrollbar-track: #f1f1f1;
   --accent-color: #0366d6;
   --success-color: #116329;
+  --warning-note-bg: #fff8c5;
+  --warning-note-border: #d4a72c;
+  --warning-note-text: #633c01;
+  --warning-note-icon: #9a6700;
+  --info-note-bg: #ddf4ff;
+  --info-note-border: #54aeff;
+  --info-note-text: #0550ae;
+  --info-note-icon: #0969da;
   --mv-blue: #2563eb;
   --mv-border: #e4e9f0;
   --table-bg: #ffffff;
@@ -93,6 +101,14 @@
   --scrollbar-track: #21262d;
   --accent-color: #58a6ff;
   --success-color: #3fb950;
+  --warning-note-bg: #2d220c;
+  --warning-note-border: #9e6a03;
+  --warning-note-text: #f2cc60;
+  --warning-note-icon: #f2cc60;
+  --info-note-bg: #0c2d4a;
+  --info-note-border: #1f6feb;
+  --info-note-text: #a5d6ff;
+  --info-note-icon: #58a6ff;
   --table-bg: #161b22;
   /* Table background for dark mode */
   --code-bg: #161b22;
@@ -487,12 +503,36 @@ body {
   padding-inline-start: calc(var(--tree-depth) * 12px);
   border-radius: 4px;
   cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--document-sidebar-row-height);
   touch-action: manipulation;
   transition: background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .document-tree-row:focus {
   outline: none;
+}
+
+.document-tree-load-more {
+  width: calc(100% - 12px);
+  min-height: 30px;
+  margin: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--button-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.document-tree-load-more:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 40%, var(--border-color));
+  background: var(--button-hover);
+  color: var(--text-color);
+}
+
+.document-tree-load-more:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
 }
 
 .document-tree-row:focus-visible {
@@ -6539,6 +6579,14 @@ a:focus {
   min-width: 108px;
 }
 
+#reset-modal-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 126px;
+}
+
 .live-share-start-spinner {
   display: none;
   width: 13px;
@@ -6549,7 +6597,9 @@ a:focus {
   border-radius: 50%;
 }
 
-#live-share-start-btn.is-loading .live-share-start-spinner {
+#live-share-start-btn.is-loading .live-share-start-spinner,
+#reset-modal-confirm.is-loading .live-share-start-spinner,
+#storage-import-confirm-confirm.is-loading .live-share-start-spinner {
   display: inline-block;
   animation: live-share-start-spin 0.8s linear infinite;
 }
@@ -6559,7 +6609,9 @@ a:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #live-share-start-btn.is-loading .live-share-start-spinner {
+  #live-share-start-btn.is-loading .live-share-start-spinner,
+  #reset-modal-confirm.is-loading .live-share-start-spinner,
+  #storage-import-confirm-confirm.is-loading .live-share-start-spinner {
     animation: none;
   }
 }
@@ -9683,6 +9735,12 @@ html[data-theme="dark"] .mermaid svg {
   max-width: 880px;
 }
 
+#storage-backup-options-modal .reset-modal-box,
+#storage-import-confirm-modal .reset-modal-box {
+  width: min(92vw, 420px);
+  max-width: 420px;
+}
+
 .modal-header {
   min-height: 28px;
   gap: 10px;
@@ -9815,6 +9873,150 @@ html[data-theme="dark"] .mermaid svg {
 
 .app-modal-box > .modal-header + .reset-modal-actions {
   border-top: 0;
+}
+
+.storage-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.storage-status-list {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+}
+
+.storage-status-list > div {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.35fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 11px;
+}
+
+.storage-status-list > div + div {
+  border-top: 1px solid var(--border-color);
+}
+
+.storage-status-list dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.storage-status-list dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.storage-recovery-note,
+.storage-secure-note,
+.storage-import-replace-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.storage-recovery-note,
+.storage-import-replace-note {
+  border-color: var(--warning-note-border);
+  background: var(--warning-note-bg);
+  color: var(--warning-note-text);
+}
+
+.storage-secure-note {
+  border-color: var(--info-note-border);
+  background: var(--info-note-bg);
+  color: var(--info-note-text);
+}
+
+.storage-recovery-note i,
+.storage-secure-note i,
+.storage-import-replace-note i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.storage-recovery-note i,
+.storage-import-replace-note i {
+  color: var(--warning-note-icon);
+}
+
+.storage-secure-note i {
+  color: var(--info-note-icon);
+}
+
+.storage-recovery-note p,
+.storage-secure-note p,
+.storage-import-replace-note p {
+  margin: 0;
+}
+
+.storage-secure-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-color);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.storage-secure-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-color);
+}
+
+.storage-backup-options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.storage-backup-options-body .modal-subtext {
+  margin: 0;
+}
+
+#storage-backup-options-confirm,
+#storage-import-confirm-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.storage-settings-actions {
+  flex-wrap: wrap;
+}
+
+.storage-settings-actions .reset-modal-btn,
+#reset-modal-backup {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.storage-primary-action {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.storage-primary-action:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 82%, #000);
+  background: color-mix(in srgb, var(--accent-color) 82%, #000);
 }
 
 .pdf-progress-modal {
@@ -10361,6 +10563,12 @@ html[data-theme="dark"] .mermaid svg {
     max-width: 100%;
     max-height: calc(100dvh - 24px);
     padding: 14px;
+  }
+
+  #storage-backup-options-modal .reset-modal-box,
+  #storage-import-confirm-modal .reset-modal-box {
+    width: 100%;
+    max-width: 100%;
   }
 
   .app-modal-box,

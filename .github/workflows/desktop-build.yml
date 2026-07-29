@@ -68,4 +68,5 @@ jobs:
         with:
           name: "Markdown Viewer ${{ github.ref_name }}"
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: desktop-app/release-assets/*

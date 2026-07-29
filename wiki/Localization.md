@@ -127,7 +127,7 @@ Use these terms in Markdown Viewer documentation and translation reviews. The Ja
 | Bearer link | ベアラーリンク | 베어러 링크 | 持有者链接 | 持有者連結 |
 | Private mode | プライベートモード | 프라이빗 모드 | 隐私模式 | 隱私模式 |
 | Clear local data | ローカルデータを消去 | 로컬 데이터 지우기 | 清除本地数据 | 清除本機資料 |
-| Reset workspace | ワークスペースをリセット | 작업공간 재설정 | 重置工作区 | 重設工作區 |
+| Reset workspace | 作業領域をリセット | 작업 공간 재설정 | 重置工作区 | 重設工作區 |
 | Managed media | 管理対象メディア | 관리형 미디어 | 托管媒体 | 受管理媒體 |
 | Deletion token | 削除トークン | 삭제 토큰 | 删除令牌 | 刪除權杖 |
 | Expiration | 有効期限 | 만료 | 过期 | 到期 |

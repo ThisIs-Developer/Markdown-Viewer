@@ -70,7 +70,7 @@ Check:
 - the extension is `.md` or `.markdown`, or the file type is `text/markdown`;
 - the file is no larger than 10 MB;
 - the first 8 KiB does not contain a null byte, which makes the file look binary;
-- the 50-Document Workspace limit has not been reached; and
+- browser quota or desktop disk space is available; and
 - the browser or desktop application has permission to read the selected file.
 
 Extension matching is case-insensitive. Rename a plain-text file to `.md` only when it is actually Markdown text.
@@ -201,18 +201,21 @@ The Durable Object persists role capability metadata but not Markdown or Review 
 
 See [Live Share](Live-Share-Cloudflare.md).
 
-## Documents Disappeared After Private Mode or Reset
+## Documents Are Missing After an Update or Restart
 
-Private mode clears persisted document-state keys when enabled, including the encrypted Secret Workspace payload, then blocks further document-state writes. **Reset workspace** also deletes normal and Secret Workspace data before restoring the welcome Document.
+Private mode does not delete existing documents, but **Reset workspace** permanently does. Private-session changes are deliberately not written, so changes made after Private mode was enabled will not survive reload or exit.
 
-Markdown Viewer has no recovery mechanism for those deleted values. Check:
+Check:
 
 - a previously exported `.md` file;
-- browser/profile backups;
-- operating-system backups for the desktop profile; or
+- a ZIP previously exported from **Storage and Backup**;
+- **Storage and Backup** for the current backend or vault location;
+- browser/profile backups or whether site data was cleared;
+- `Documents/Markdown Viewer Vault/Workspace`, `.markdown-viewer/history`, and `.markdown-viewer/trash` on desktop;
+- verify the desktop app can access the fixed `Documents/Markdown Viewer Vault` path; or
 - a Share Snapshot that has not expired.
 
-Do not clear site data or reinstall the desktop application while investigating storage loss.
+Replacing the desktop binary does not remove the vault. Do not clear browser site data or manually delete the desktop vault while investigating storage loss.
 
 ## Secret Workspace Will Not Unlock
 

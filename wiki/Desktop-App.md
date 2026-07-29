@@ -8,7 +8,7 @@ The desktop application wraps Markdown Viewer in Neutralinojs for users who want
 - Uses native open/save dialogs for Markdown and HTML.
 - Can read a Markdown file path passed as a launch argument.
 - Asks for confirmation before closing.
-- Mirrors selected localStorage values into Neutralino storage for restart persistence.
+- Keeps small interface preferences in system-scoped Neutralino storage and documents in the durable Markdown Viewer Vault.
 - Uses a restricted native API allowlist.
 - Prepared builds load renderer libraries from local `/libs/...` files instead of CDNs.
 - The default configuration does not expose `os.execCommand`; Markdown preview cannot execute local shell commands through the standard desktop build.
@@ -129,10 +129,12 @@ chmod +x markdown-viewer-mac_universal
 
 ## Data Handling
 
-- Normal documents and settings are local to the machine.
+- Normal documents are ordinary `.md` files under the fixed `Documents/Markdown Viewer Vault/Workspace` path.
+- Vault metadata, recent history, trash, recovery journals, settings, and opaque encrypted Secret Workspace records are kept under the same vault.
+- Replacement binaries check the fixed vault path automatically. Use **Storage and Backup** to inspect, back up, import, or open it.
 - Native file access happens through explicit open/save actions or launch arguments.
 - The app does not include analytics or telemetry.
 - Sharing/import/remote-rendering features use the same network behavior as the web app.
-- Private mode and **Reset workspace** delete persisted Secret Workspace data as well as normal Document state.
+- Private mode pauses new persistence without deleting saved content. **Reset workspace** permanently deletes the vault content and application preferences after confirmation.
 
 Related pages: [Installation](Installation.md), [Configuration](Configuration.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md#the-desktop-application-does-not-start).

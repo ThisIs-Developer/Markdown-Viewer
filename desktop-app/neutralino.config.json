@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
   "applicationId": "com.markdownviewer.desktop",
-  "version": "3.9.4",
+  "version": "3.9.5-beta.4",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/resources/",
@@ -9,6 +9,8 @@
   "enableServer": true,
   "enableNativeAPI": true,
   "tokenSecurity": "one-time",
+  "dataLocation": "system",
+  "storageLocation": "system",
   "logging": {
     "enabled": false,
     "writeToLogFile": false
@@ -18,12 +20,24 @@
     "os.showOpenDialog",
     "os.showSaveDialog",
     "os.showMessageBox",
+    "os.getPath",
     "os.open",
     "os.setTray",
+    "filesystem.createDirectory",
+    "filesystem.readDirectory",
     "filesystem.readFile",
+    "filesystem.readBinaryFile",
     "filesystem.writeFile",
+    "filesystem.writeBinaryFile",
+    "filesystem.getStats",
+    "filesystem.getJoinedPath",
+    "filesystem.copy",
+    "filesystem.move",
+    "filesystem.remove",
     "storage.setData",
-    "storage.getData"
+    "storage.getData",
+    "storage.removeData",
+    "storage.clear"
   ],
   "globalVariables": {},
   "modes": {

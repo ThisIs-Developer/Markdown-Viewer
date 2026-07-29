@@ -6,24 +6,25 @@ This page documents the runtime, storage, dependency, Docker, Cloudflare, and de
 
 | Key | Location | Purpose |
 | :--- | :--- | :--- |
-| `markdownViewerTabs` | `localStorage`, mirrored to Neutralino storage in desktop | Normal Workspace tabs, including local review threads. Secret and temporary share/live tabs are excluded. |
-| `markdownViewerDocumentOrganization` | `localStorage`, mirrored to Neutralino storage in desktop | Fixed workspace expansion state, nested non-secret folders, sidebar filter, sidebar width/collapse state, and last non-secret creation location. |
-| `markdownViewerSecretWorkspace` | `localStorage`, mirrored to Neutralino storage in desktop | Secret Workspace files and folder names encrypted with AES-GCM using a PBKDF2-SHA-256 password-derived key. The salt, IV, and non-sensitive counts are stored with the ciphertext; the key is session-only. |
+| Normal Workspace documents | Per-document `documents` metadata and `contents` records in browser IndexedDB; individual `.md` files plus `.markdown-viewer/index.json` on desktop | Normal Workspace content and document metadata, including local review threads. Content is loaded on demand. Secret and temporary share/live tabs are excluded. |
+| `markdownViewerTabs` | Legacy `localStorage`/Neutralino value | Read once to migrate an older monolithic Workspace into per-document storage, then removed. |
+| `markdownViewerDocumentOrganization` | IndexedDB metadata on the web; `.markdown-viewer/organization.json` in the desktop vault; also retained as a small compatibility preference | Workspace expansion state, nested non-secret folders, sidebar filter, sidebar width/collapse state, and last non-secret creation location. |
+| `markdownViewerSecretWorkspace` | Small manifest in IndexedDB or `.markdown-viewer/secret-manifest.json`; encrypted records are stored separately | Secret Workspace files and folder names are encrypted per record with AES-GCM using a PBKDF2-SHA-256 password-derived key. The salt and non-sensitive counts are in the manifest; the key is session-only. |
 | `markdownViewerActiveTab` | `localStorage`, mirrored in desktop | Active tab id. |
 | `markdownViewerUntitledCounter` | `localStorage`, mirrored in desktop | Next Untitled document number. |
 | `markdownViewerGlobalState` | `localStorage`, mirrored in desktop | Theme, direction, view mode, scroll sync, and other global UI preferences. |
 | `app-lang` | `localStorage` | Selected UI language. |
 | `find-replace-docked` | `localStorage` | Find and Replace panel dock preference. |
-| `markdownViewerPrivateMode` | `localStorage` | Whether document-state persistence is disabled. This preference remains while document-state keys are cleared. |
+| `markdownViewerPrivateMode` | `localStorage` | Whether new document-state persistence is paused. Existing saved documents are preserved. |
 
-The desktop application starts by copying known Neutralino storage values back into `localStorage`, then writes through `saveStorageItem()` to keep both layers aligned.
+The desktop application keeps small interface preferences in system-scoped Neutralino storage. Durable workspace content is independent of the executable and lives at the fixed `Documents/Markdown Viewer Vault` path. Replacement binaries check this location automatically, and the application does not create a separate vault-locator file in Documents.
 
 Temporary shared content is intentionally not persisted:
 
 - Share Snapshot tabs have `kind: "share-snapshot"`.
 - Live Share participant tabs use `kind: "live-share"` plus `temporary: true`; host documents are restored when leaving the session.
 
-Private mode in Workspace settings clears the document-state keys (`markdownViewerTabs`, `markdownViewerDocumentOrganization`, `markdownViewerActiveTab`, `markdownViewerUntitledCounter`, `markdownViewerGlobalState`, and `markdownViewerSecretWorkspace`) when enabled and prevents them from being written until the mode is turned off. **Reset workspace** also removes normal files, review data, and Secret Workspace storage before recreating the welcome Document. Export needed content before either action.
+Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Storage and Backup** reports workspace usage, normal and secret document counts, the read-only browser persistence state or fixed desktop vault path, and exports/imports folder-preserving ZIP backups. Browser storage uses the browser's best-effort policy by default. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
 
 ## Client Libraries
 
@@ -44,6 +45,7 @@ The web build loads core libraries from CDN with Subresource Integrity where che
 | jsPDF | CDN or prepared desktop copy | Legacy raster PDF | Lazy |
 | html2canvas | CDN or prepared desktop copy | PDF/PNG capture | Lazy |
 | Pako | CDN or prepared desktop copy | Share compression, diagram encoding | Lazy |
+| JSZip | CDN or prepared desktop copy | Workspace ZIP backup and import | Lazy |
 | JoyPixels / emoji-toolkit | CDN or prepared desktop copy | Emoji shortcodes | Lazy |
 | ABCJS | CDN or prepared desktop copy | ABC notation and playback | Lazy |
 | Leaflet | CDN or prepared desktop copy | GeoJSON/TopoJSON maps | Lazy |
