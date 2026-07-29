@@ -1272,10 +1272,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   function updateThemeToggleUI(theme) {
     const useLightAppearance = theme === "dark";
     if (themeToggle) {
-      const icon = themeToggle.querySelector('i');
+      const icon = themeToggle.querySelector(':scope > i:first-child');
       const description = document.getElementById('theme-toggle-description');
       if (icon) icon.className = 'lucide lucide-' + (useLightAppearance ? 'sun' : 'moon');
       if (description) description.textContent = useLightAppearance ? 'Switch to light appearance' : 'Switch to dark appearance';
+      themeToggle.classList.toggle('is-dark', useLightAppearance);
+      themeToggle.setAttribute('aria-pressed', String(useLightAppearance));
       themeToggle.setAttribute('aria-label', useLightAppearance ? 'Use light appearance' : 'Use dark appearance');
       themeToggle.setAttribute('title', useLightAppearance ? 'Use light appearance' : 'Use dark appearance');
     }

@@ -102,8 +102,8 @@
                             <div class="settings-menu-header">
                                 <strong>Workspace settings</strong>
                             </div>
-                            <button id="theme-toggle" class="settings-menu-item app-menu-item" type="button" title="Toggle appearance">
-                                <i class="lucide lucide-moon" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Appearance</span><span id="theme-toggle-description" class="app-menu-description">Switch to dark appearance</span></span>
+                            <button id="theme-toggle" class="settings-menu-item app-menu-item" type="button" aria-pressed="false" title="Toggle appearance">
+                                <i class="lucide lucide-moon" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Appearance</span><span id="theme-toggle-description" class="app-menu-description">Switch to dark appearance</span></span><span class="appearance-toggle" aria-hidden="true"><span class="appearance-toggle-thumb"></span><span class="appearance-toggle-option appearance-toggle-light"><i class="lucide lucide-sun"></i></span><span class="appearance-toggle-option appearance-toggle-dark"><i class="lucide lucide-moon"></i></span></span>
                             </button>
                             <div class="dropdown dropstart settings-language-dropdown">
                                 <button class="settings-menu-item app-menu-item dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Switch language">
@@ -508,7 +508,7 @@
                 <div><dt>Persistence</dt><dd id="storage-persistence-value">Checking…</dd></div>
               </dl>
               <div class="storage-recovery-note">
-                <i class="lucide lucide-shield-check" aria-hidden="true"></i>
+                <i class="lucide lucide-database-x" aria-hidden="true"></i>
                 <p id="storage-recovery-note">Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.</p>
               </div>
               <p id="storage-settings-error" class="document-modal-error" role="alert" hidden></p>
@@ -539,7 +539,7 @@
                 <span>Include secure workspace files</span>
               </label>
               <div id="storage-secure-note" class="storage-secure-note">
-                <i class="lucide lucide-database-x" aria-hidden="true"></i>
+                <i class="lucide lucide-shield-check" aria-hidden="true"></i>
                 <p>Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
               </div>
               <p id="storage-backup-options-error" class="document-modal-error" role="alert" hidden></p>
