@@ -538,7 +538,10 @@
                 <input id="storage-include-secure" type="checkbox" checked aria-describedby="storage-secure-note">
                 <span>Include secure workspace files</span>
               </label>
-              <p id="storage-secure-note" class="storage-secure-note">Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
+              <div id="storage-secure-note" class="storage-secure-note">
+                <i class="lucide lucide-shield-check" aria-hidden="true"></i>
+                <p>Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
+              </div>
               <p id="storage-backup-options-error" class="document-modal-error" role="alert" hidden></p>
             </div>
             <div class="reset-modal-actions">

@@ -40,6 +40,10 @@
   --scrollbar-track: #f1f1f1;
   --accent-color: #0366d6;
   --success-color: #116329;
+  --warning-note-bg: #fff8c5;
+  --warning-note-border: #d4a72c;
+  --warning-note-text: #633c01;
+  --warning-note-icon: #9a6700;
   --mv-blue: #2563eb;
   --mv-border: #e4e9f0;
   --table-bg: #ffffff;
@@ -93,6 +97,10 @@
   --scrollbar-track: #21262d;
   --accent-color: #58a6ff;
   --success-color: #3fb950;
+  --warning-note-bg: #2d220c;
+  --warning-note-border: #9e6a03;
+  --warning-note-text: #f2cc60;
+  --warning-note-icon: #f2cc60;
   --table-bg: #161b22;
   /* Table background for dark mode */
   --code-bg: #161b22;
@@ -9717,6 +9725,11 @@ html[data-theme="dark"] .mermaid svg {
   max-width: 880px;
 }
 
+#storage-backup-options-modal .reset-modal-box {
+  width: min(92vw, 420px);
+  max-width: 420px;
+}
+
 .modal-header {
   min-height: 28px;
   gap: 10px;
@@ -9889,23 +9902,30 @@ html[data-theme="dark"] .mermaid svg {
   overflow-wrap: anywhere;
 }
 
-.storage-recovery-note {
+.storage-recovery-note,
+.storage-secure-note {
   display: flex;
   align-items: flex-start;
   gap: 9px;
+  margin: 0;
   padding: 10px 11px;
-  border: 1px solid color-mix(in srgb, var(--accent-color) 30%, var(--border-color));
+  border: 1px solid var(--warning-note-border);
   border-radius: 9px;
-  background: color-mix(in srgb, var(--accent-color) 6%, transparent);
+  background: var(--warning-note-bg);
+  color: var(--warning-note-text);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
-.storage-recovery-note i {
+.storage-recovery-note i,
+.storage-secure-note i {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: var(--accent-color);
+  color: var(--warning-note-icon);
 }
 
-.storage-recovery-note p {
+.storage-recovery-note p,
+.storage-secure-note p {
   margin: 0;
 }
 
@@ -9923,13 +9943,6 @@ html[data-theme="dark"] .mermaid svg {
   height: 16px;
   margin: 0;
   accent-color: var(--accent-color);
-}
-
-.storage-secure-note {
-  margin: -7px 0 0 25px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.45;
 }
 
 .storage-backup-options-body {
@@ -10516,6 +10529,11 @@ html[data-theme="dark"] .mermaid svg {
     max-width: 100%;
     max-height: calc(100dvh - 24px);
     padding: 14px;
+  }
+
+  #storage-backup-options-modal .reset-modal-box {
+    width: 100%;
+    max-width: 100%;
   }
 
   .app-modal-box,
