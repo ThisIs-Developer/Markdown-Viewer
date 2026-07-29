@@ -27,8 +27,8 @@ Desktop-only files:
 
 - Local editing, preview, document tabs, exports, and settings stay on the local machine.
 - Comments and suggestions stay with normal local tabs and are excluded from document exports and Share Snapshot links.
-- Normal documents are stored as individual `.md` files in `Documents/Markdown Viewer Vault/Workspace` by default. Metadata, recent history, trash, crash-recovery journals, and encrypted Secret Workspace objects live under the same vault.
-- The vault is outside the executable and is rediscovered from a portable locator, so replacing or deleting the binary does not delete documents.
+- Normal documents are stored as individual `.md` files in the fixed `Documents/Markdown Viewer Vault/Workspace` path. Metadata, recent history, trash, crash-recovery journals, and encrypted Secret Workspace objects live under the same vault.
+- The vault is outside the executable, and every binary checks the same fixed location at startup, so replacing or deleting the binary does not delete documents.
 - Document metadata loads at startup; Markdown content loads only when a document is opened and is kept in a bounded in-memory cache.
 - Native Markdown/HTML save and Markdown open flows use Neutralino dialogs and filesystem APIs.
 - A Markdown file passed as a launch argument is loaded into the editor.

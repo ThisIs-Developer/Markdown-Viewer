@@ -129,9 +129,9 @@ chmod +x markdown-viewer-mac_universal
 
 ## Data Handling
 
-- Normal documents are ordinary `.md` files under `Documents/Markdown Viewer Vault/Workspace` by default.
+- Normal documents are ordinary `.md` files under the fixed `Documents/Markdown Viewer Vault/Workspace` path.
 - Vault metadata, recent history, trash, recovery journals, settings, and opaque encrypted Secret Workspace records are kept under the same vault.
-- A portable locator in Documents lets replacement binaries rediscover the vault. Use **Storage and Backup** to inspect, back up, import, open, or locate it.
+- Replacement binaries check the fixed vault path automatically. Use **Storage and Backup** to inspect, back up, import, or open it.
 - Native file access happens through explicit open/save actions or launch arguments.
 - The app does not include analytics or telemetry.
 - Sharing/import/remote-rendering features use the same network behavior as the web app.

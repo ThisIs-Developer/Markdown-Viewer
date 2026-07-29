@@ -17,14 +17,14 @@ This page documents the runtime, storage, dependency, Docker, Cloudflare, and de
 | `find-replace-docked` | `localStorage` | Find and Replace panel dock preference. |
 | `markdownViewerPrivateMode` | `localStorage` | Whether new document-state persistence is paused. Existing saved documents are preserved. |
 
-The desktop application keeps small interface preferences in system-scoped Neutralino storage. Durable content is independent of the executable and lives in `Documents/Markdown Viewer Vault` by default; a portable locator file in Documents allows a replacement binary to rediscover that vault.
+The desktop application keeps small interface preferences in system-scoped Neutralino storage. Durable workspace content is independent of the executable and lives at the fixed `Documents/Markdown Viewer Vault` path. Replacement binaries check this location automatically, and the application does not create a separate vault-locator file in Documents.
 
 Temporary shared content is intentionally not persisted:
 
 - Share Snapshot tabs have `kind: "share-snapshot"`.
 - Live Share participant tabs use `kind: "live-share"` plus `temporary: true`; host documents are restored when leaving the session.
 
-Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Storage and Backup** reports exact workspace usage and file counts, manages browser persistence or the desktop vault path, and exports/imports folder-preserving ZIP backups. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
+Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Storage and Backup** reports workspace usage, normal and secret document counts, the read-only browser persistence state or fixed desktop vault path, and exports/imports folder-preserving ZIP backups. Browser storage uses the browser's best-effort policy by default. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
 
 ## Client Libraries
 

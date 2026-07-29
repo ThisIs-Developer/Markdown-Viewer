@@ -5,8 +5,8 @@
   const DATABASE_VERSION = 2;
   const VAULT_FORMAT_VERSION = 1;
   const VAULT_NAME = 'Markdown Viewer Vault';
-  const VAULT_LOCATOR_KEY = 'markdownViewerVaultLocator';
-  const PORTABLE_LOCATOR_FILE = '.markdown-viewer-vault-locator.json';
+  const LEGACY_VAULT_LOCATOR_KEY = 'markdownViewerVaultLocator';
+  const LEGACY_PORTABLE_LOCATOR_FILE = '.markdown-viewer-vault-locator.json';
   const LEGACY_TABS_KEY = 'markdownViewerTabs';
   const LEGACY_SECRET_KEY = 'markdownViewerSecretWorkspace';
   const INTERNAL_DIR = '.markdown-viewer';
@@ -99,7 +99,6 @@
       this.ready = false;
       this.vaultPath = '';
       this.vaultId = '';
-      this.locatorPath = '';
       this.vaultIndex = { version: VAULT_FORMAT_VERSION, documents: [], updatedAt: 0 };
       this.vaultOrganization = null;
       this.desktopSettings = {};
@@ -194,27 +193,24 @@
       await Neutralino.filesystem.writeFile(path, JSON.stringify(value, null, 2));
     }
 
-    async _initDesktop(explicitPath) {
-      const documentsPath = await Neutralino.os.getPath('documents');
-      this.locatorPath = await this._pathJoin(documentsPath, PORTABLE_LOCATOR_FILE);
-      let locator = null;
+    async _removeLegacyVaultLocator(documentsPath) {
       try {
-        locator = JSON.parse(await Neutralino.storage.getData(VAULT_LOCATOR_KEY));
+        await Neutralino.storage.removeData(LEGACY_VAULT_LOCATOR_KEY);
       } catch (_) {}
-      if (!locator) {
-        locator = await this._readJsonFile(this.locatorPath, null);
-      }
-
-      const defaultVaultPath = await this._pathJoin(documentsPath, VAULT_NAME);
-      let vaultPath = explicitPath || null;
-      if (!vaultPath && locator && locator.path) {
-        const locatedManifestPath = await this._pathJoin(locator.path, INTERNAL_DIR, 'vault.json');
-        const locatedManifest = await this._readJsonFile(locatedManifestPath, null);
-        if (locatedManifest && locatedManifest.format === 'markdown-viewer-vault') {
-          vaultPath = locator.path;
+      try {
+        const legacyLocatorPath = await this._pathJoin(documentsPath, LEGACY_PORTABLE_LOCATOR_FILE);
+        const stats = await this._pathExists(legacyLocatorPath);
+        if (stats && !stats.isDirectory) {
+          await Neutralino.filesystem.remove(legacyLocatorPath);
         }
-      }
-      if (!vaultPath) vaultPath = defaultVaultPath;
+      } catch (_) {}
+    }
+
+    async _initDesktop() {
+      const documentsPath = await Neutralino.os.getPath('documents');
+      // Cleanup from the preview locator design is non-blocking and never gates startup.
+      this._removeLegacyVaultLocator(documentsPath);
+      const vaultPath = await this._pathJoin(documentsPath, VAULT_NAME);
       this.vaultPath = vaultPath;
 
       const workspacePath = await this._pathJoin(vaultPath, 'Workspace');
@@ -271,14 +267,6 @@
           this._organizationSnapshot = JSON.stringify(this.vaultOrganization);
         }
       }
-      const locatorRecord = {
-        version: 1,
-        path: this.vaultPath,
-        vaultId: this.vaultId,
-        lastSeenAt: Date.now()
-      };
-      await Neutralino.storage.setData(VAULT_LOCATOR_KEY, JSON.stringify(locatorRecord));
-      await this._writeJsonFile(this.locatorPath, locatorRecord);
     }
 
     async _rebuildDesktopIndex(workspacePath) {
@@ -1089,14 +1077,13 @@
           }
           if (await this._pathExists(path)) await Neutralino.filesystem.remove(path);
         }
-        const currentVaultPath = this.vaultPath;
         this.ready = false;
         this.vaultId = '';
         this.vaultIndex = { version: VAULT_FORMAT_VERSION, documents: [], updatedAt: 0 };
         this.vaultOrganization = null;
         this.desktopSettings = {};
         this._organizationSnapshot = '';
-        await this._initDesktop(currentVaultPath);
+        await this._initDesktop();
         this.ready = true;
         return;
       }
@@ -1110,12 +1097,6 @@
       this.vaultId = randomId('vault');
       this._organizationSnapshot = '';
       await this.setMetadata('vaultId', this.vaultId);
-    }
-
-    async requestPersistentStorage() {
-      if (this.desktop) return true;
-      if (!navigator.storage || typeof navigator.storage.persist !== 'function') return false;
-      return navigator.storage.persist();
     }
 
     async getStorageEstimate() {
@@ -1141,32 +1122,6 @@
       if (!this.desktop || !this.vaultPath) return false;
       await Neutralino.os.open(this.vaultPath);
       return true;
-    }
-
-    async locateExistingVault() {
-      if (!this.desktop || typeof Neutralino.os.showFolderDialog !== 'function') return null;
-      const selected = await Neutralino.os.showFolderDialog('Locate Markdown Viewer Vault', {
-        defaultPath: this.vaultPath || undefined
-      });
-      if (!selected) return null;
-      const manifestPath = await this._pathJoin(selected, INTERNAL_DIR, 'vault.json');
-      const manifest = await this._readJsonFile(manifestPath, null);
-      if (!manifest || manifest.format !== 'markdown-viewer-vault') {
-        throw new Error('The selected folder is not a valid Markdown Viewer Vault.');
-      }
-      const locatorRecord = {
-        version: 1,
-        path: selected,
-        vaultId: manifest.id,
-        lastSeenAt: Date.now()
-      };
-      await Neutralino.storage.setData(VAULT_LOCATOR_KEY, JSON.stringify(locatorRecord));
-      if (!this.locatorPath) {
-        const documentsPath = await Neutralino.os.getPath('documents');
-        this.locatorPath = await this._pathJoin(documentsPath, PORTABLE_LOCATOR_FILE);
-      }
-      await this._writeJsonFile(this.locatorPath, locatorRecord);
-      return selected;
     }
 
     getStatus() {

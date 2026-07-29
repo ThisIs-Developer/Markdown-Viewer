@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const APP_VERSION = '3.9.5-beta.1';
+  const APP_VERSION = '3.9.5-beta.2';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -577,8 +577,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storageBackupFileInput = document.getElementById("storage-backup-file-input");
   const storageIncludeSecure = document.getElementById("storage-include-secure");
   const storageOpenVault = document.getElementById("storage-open-vault");
-  const storageLocateVault = document.getElementById("storage-locate-vault");
-  const storageRequestPersistence = document.getElementById("storage-request-persistence");
   const storageBackendValue = document.getElementById("storage-backend-value");
   const storageDocumentCountValue = document.getElementById("storage-document-count-value");
   const storageLocationValue = document.getElementById("storage-location-value");
@@ -779,23 +777,22 @@ document.addEventListener("DOMContentLoaded", async function () {
       : await workspaceStorage.getWorkspaceUsage();
     if (storageBackendValue) storageBackendValue.textContent = status.backend;
     if (storageDocumentCountValue) {
-      const totalFiles = normalDocuments.length + secretDocumentCount;
-      storageDocumentCountValue.textContent = totalFiles.toLocaleString() + ' total (' +
+      storageDocumentCountValue.textContent =
         normalDocuments.length.toLocaleString() + ' normal, ' +
-        secretDocumentCount.toLocaleString() + ' secure)';
+        secretDocumentCount.toLocaleString() + ' secret';
     }
     if (storageLocationValue) {
       storageLocationValue.textContent = status.desktop
         ? status.vaultPath
-        : 'This browser profile (IndexedDB)';
+        : 'Browser profile · IndexedDB';
       storageLocationValue.title = storageLocationValue.textContent;
     }
     if (storageUsageValue) {
       storageUsageValue.textContent = status.desktop
-        ? formatStorageBytes(workspaceUsage)
-        : formatStorageBytes(workspaceUsage) + ' workspace' + (
+        ? formatStorageBytes(workspaceUsage) + ' used in vault'
+        : formatStorageBytes(workspaceUsage) + ' used locally' + (
           Number.isFinite(estimate.quota)
-            ? ' (browser quota ' + formatStorageBytes(estimate.usage) + ' of ' + formatStorageBytes(estimate.quota) + ')'
+            ? ' · Browser quota: ' + formatStorageBytes(estimate.quota)
             : ''
         );
     }
@@ -806,12 +803,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (storageRecoveryNote) {
       storageRecoveryNote.textContent = status.desktop
-        ? 'Normal documents are ordinary Markdown files. Deleted files go to .markdown-viewer/trash and the latest 20 saved versions per document remain in history.'
-        : 'Deleted documents are retained in local browser trash. Export important documents as an additional backup because clearing browser site data removes local storage.';
+        ? 'Workspace files stay in this vault when the application binary is replaced or removed.'
+        : "Clearing this site's browser data will delete local documents.";
     }
     if (storageOpenVault) storageOpenVault.hidden = !status.desktop;
-    if (storageLocateVault) storageLocateVault.hidden = !status.desktop;
-    if (storageRequestPersistence) storageRequestPersistence.hidden = status.desktop;
   }
 
   async function openStorageSettings() {
@@ -17412,39 +17407,6 @@ ${selector} .arrowheadPath {
     });
   }
 
-  if (storageLocateVault) {
-    storageLocateVault.addEventListener('click', async function() {
-      try {
-        const selected = await workspaceStorage.locateExistingVault();
-        if (!selected) return;
-        showAppToast('Vault located. Restart Markdown Viewer to open it.', {
-          tone: 'success',
-          title: 'Vault location saved'
-        });
-        announceToScreenReader('Vault location saved. Restart Markdown Viewer to open it.');
-      } catch (error) {
-        setStorageSettingsError(error && error.message ? error.message : 'Unable to locate the vault.');
-      }
-    });
-  }
-
-  if (storageRequestPersistence) {
-    storageRequestPersistence.addEventListener('click', async function() {
-      try {
-        const granted = await workspaceStorage.requestPersistentStorage();
-        await refreshStorageSettings();
-        showAppToast(
-          granted
-            ? 'This browser granted persistent local storage.'
-            : 'Persistent storage was not granted. Export important documents as a backup.',
-          { tone: granted ? 'success' : 'info', title: 'Browser storage' }
-        );
-      } catch (error) {
-        setStorageSettingsError(error && error.message ? error.message : 'Unable to request persistent storage.');
-      }
-    });
-  }
-  
   await initTabs();
   initReviewMode();
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();

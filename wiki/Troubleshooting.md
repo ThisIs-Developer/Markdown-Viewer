@@ -212,7 +212,7 @@ Check:
 - **Storage and Backup** for the current backend or vault location;
 - browser/profile backups or whether site data was cleared;
 - `Documents/Markdown Viewer Vault/Workspace`, `.markdown-viewer/history`, and `.markdown-viewer/trash` on desktop;
-- use **Locate vault** if the desktop app is pointing at a different vault; or
+- verify the desktop app can access the fixed `Documents/Markdown Viewer Vault` path; or
 - a Share Snapshot that has not expired.
 
 Replacing the desktop binary does not remove the vault. Do not clear browser site data or manually delete the desktop vault while investigating storage loss.

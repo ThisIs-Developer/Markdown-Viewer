@@ -9854,7 +9854,7 @@ html[data-theme="dark"] .mermaid svg {
 .storage-settings-body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .storage-status-list {
@@ -9863,14 +9863,15 @@ html[data-theme="dark"] .mermaid svg {
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--border-color);
-  border-radius: 9px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--header-bg) 64%, transparent);
 }
 
 .storage-status-list > div {
   display: grid;
   grid-template-columns: minmax(100px, 0.35fr) minmax(0, 1fr);
   gap: 12px;
-  padding: 9px 11px;
+  padding: 10px 12px;
 }
 
 .storage-status-list > div + div {
@@ -9886,49 +9887,124 @@ html[data-theme="dark"] .mermaid svg {
   min-width: 0;
   margin: 0;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .storage-recovery-note {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  padding: 10px 11px;
-  border: 1px solid color-mix(in srgb, var(--accent-color) 30%, var(--border-color));
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--accent-color) 6%, transparent);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--favorite-color) 34%, var(--border-color));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--favorite-color) 7%, transparent);
 }
 
 .storage-recovery-note i {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: var(--accent-color);
+  color: color-mix(in srgb, var(--favorite-color) 82%, var(--text-color));
 }
 
 .storage-recovery-note p {
   margin: 0;
 }
 
-.storage-secure-option {
+.storage-backup-options {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-color);
+}
+
+.storage-backup-options-heading {
   display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--accent-color) 5%, var(--header-bg));
+}
+
+.storage-backup-options-heading > div {
+  min-width: 0;
+}
+
+.storage-backup-options-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 9px;
-  color: var(--text-color);
-  font-weight: 600;
-  cursor: pointer;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent-color) 13%, transparent);
+  color: var(--accent-color);
 }
 
-.storage-secure-option input {
-  width: 16px;
-  height: 16px;
+.storage-backup-options-icon i {
+  font-size: 17px;
+}
+
+.storage-backup-options-title,
+.storage-backup-options-description {
   margin: 0;
-  accent-color: var(--accent-color);
 }
 
-.storage-secure-note {
-  margin: -7px 0 0 25px;
+.storage-backup-options-title {
+  color: var(--text-color);
+  font-weight: 650;
+}
+
+.storage-backup-options-description {
+  margin-top: 2px;
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.storage-secure-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-height: 72px;
+  padding: 12px;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.storage-secure-option:hover {
+  background: color-mix(in srgb, var(--accent-color) 5%, transparent);
+}
+
+.storage-secure-option:focus-within {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.storage-secure-option input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--accent-color);
+}
+
+.storage-secure-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.storage-secure-label {
+  font-weight: 650;
+}
+
+.storage-secure-note {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .storage-settings-actions {
@@ -9943,6 +10019,14 @@ html[data-theme="dark"] .mermaid svg {
   gap: 7px;
 }
 
+.storage-settings-actions .reset-modal-btn {
+  min-height: 40px;
+}
+
+.storage-settings-close-action {
+  margin-left: auto;
+}
+
 .storage-primary-action {
   border-color: var(--accent-color);
   background: var(--accent-color);
@@ -9952,6 +10036,22 @@ html[data-theme="dark"] .mermaid svg {
 .storage-primary-action:hover {
   border-color: color-mix(in srgb, var(--accent-color) 82%, #000);
   background: color-mix(in srgb, var(--accent-color) 82%, #000);
+}
+
+@media (max-width: 480px) {
+  .storage-status-list > div {
+    grid-template-columns: minmax(82px, 0.32fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .storage-backup-options-heading,
+  .storage-secure-option {
+    padding: 11px;
+  }
+
+  .storage-settings-actions .reset-modal-btn {
+    min-height: 44px;
+  }
 }
 
 .pdf-progress-modal {

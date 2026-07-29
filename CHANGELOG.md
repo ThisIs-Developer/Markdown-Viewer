@@ -3,6 +3,18 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## v3.9.5-beta.2
+
+- **Description:** Simplified Storage and Backup and made the desktop vault location deterministic.
+  - **Storage UI:** Replaced total-file wording with separate normal and secret document counts, kept Usage visible, added a logical IndexedDB location on the web, and moved encrypted-backup inclusion into a full-width accessible option card.
+  - **Browser Storage:** Uses best-effort browser storage by default with read-only status; removed the persistence request button and shortened the site-data deletion warning.
+  - **Desktop Vault:** Removed vault relocation and its external locator file. App-managed workspace files now use the fixed `Documents/Markdown Viewer Vault` path, which replacement binaries check automatically.
+  - **Performance:** Storage measurements still run only when Storage and Backup is opened, so startup and document-opening paths are unchanged.
+- **Date:** 2026-07-29
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.2
+
+---
+
 ## v3.9.5-beta.1
 
 - **Description:** Added complete workspace backup, encrypted restoration, and destructive reset workflows across the web and desktop applications.
