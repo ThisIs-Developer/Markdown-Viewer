@@ -52,6 +52,10 @@ Private mode pauses new Document-state writes while enabled. Existing normal doc
 
 It permanently deletes all Documents, folders, review data, settings, Secret Workspace ciphertext, history, trash, and other local workspace data. Use the **Backup** button in the confirmation first if anything must be retained. **Reset Secret Workspace** remains available when only the encrypted area should be deleted.
 
+### What does a workspace backup include?
+
+A workspace ZIP contains normal Documents, folder organization, review data, selected preferences, and—when explicitly selected—encrypted Secret Workspace records. It does not include trash, desktop history, or recovery journals. Importing a backup permanently replaces the current workspace after confirmation.
+
 ## Privacy and Security
 
 ### Does Markdown leave my device?

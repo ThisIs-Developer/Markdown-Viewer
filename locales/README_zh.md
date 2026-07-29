@@ -57,6 +57,7 @@ Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、�
 ## 核心功能
 
 - **工作区与文档：** 在嵌套文件夹中整理文档，应用不设置文档数量上限；实际上限取决于可用存储空间。并可使用最近使用、收藏夹、搜索、标签页、批量操作和加密的 Secret Workspace（秘密工作区）。
+- **备份与恢复：** 导出或导入保留文件夹结构的工作区 ZIP。可以选择包含加密的 Secret Workspace 文件，但回收站和桌面历史记录不包含在备份中。
 - **编辑与审阅：** 在编辑器、分屏视图和预览之间切换，使用格式工具、自定义撤销/重做、查找和替换、LTR/RTL、评论与建议。
 - **Markdown 渲染：** 支持 CommonMark 风格基础语法、GitHub-Flavored Markdown（GFM）、表格、任务列表、提示块、脚注、定义列表、代码语法高亮、已清理的 HTML 和 MathJax。
 - **可视化内容：** 渲染 Mermaid、PlantUML、Graphviz/DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 和 ABC 记谱。
@@ -136,14 +137,15 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 
 ## 重要隐私说明
 
-- 常规工作区数据存储在浏览器配置文件或桌面本地存储中。
-- 启用隐私模式会清除已持久化的文档状态（包括 Secret Workspace 的加密数据），并停止后续持久化。
-- **重置工作区**会删除常规文档、审阅数据和 Secret Workspace 数据；Markdown Viewer 无法恢复这些内容。
+- 常规 Web 文档以独立的 IndexedDB 记录存储，桌面文档存储在固定的 `Documents/Markdown Viewer Vault` 中。
+- 启用隐私模式会暂停当前会话中新文档状态的持久化；现有常规文档和 Secret Workspace 数据不会被删除。
+- **重置工作区**会永久删除文档、文件夹、设置、审阅数据、Secret Workspace 数据、历史记录和回收站。
+- 通过**存储与备份**可以创建或导入保留文件夹结构的 ZIP。导入备份会在确认后完全替换当前工作区。
 - Live Share 不会在服务器端持久保存 Markdown/审阅内容，但会将各角色的持有者权限值和创建时间写入 Durable Object 存储；当前未实现应用级过期时间或删除路径。
 - Share Snapshot 创建 API 会返回删除令牌，但当前界面不会显示该令牌，也不提供提前删除操作。
 - 应用代码未实现账号、分析、遥测、广告、跟踪像素或应用专用 Cookie。外部服务和托管提供商仍可能处理常规请求日志。
 
-> **警告：** 启用隐私模式或选择**重置工作区**之前，请先将需要保留的文档导出为 Markdown。
+> **备份：** **重置工作区**会永久删除所有本地工作区数据。如需保留数据，请先通过**存储与备份**创建 ZIP 备份。
 
 ## 文档
 

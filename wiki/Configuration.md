@@ -24,7 +24,7 @@ Temporary shared content is intentionally not persisted:
 - Share Snapshot tabs have `kind: "share-snapshot"`.
 - Live Share participant tabs use `kind: "live-share"` plus `temporary: true`; host documents are restored when leaving the session.
 
-Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Storage and Backup** reports workspace usage, normal and secret document counts, the read-only browser persistence state or fixed desktop vault path, and exports/imports folder-preserving ZIP backups. Browser storage uses the browser's best-effort policy by default. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
+Private mode in Workspace settings pauses new document-state writes until the mode is turned off; it does not clear existing normal or Secret Workspace documents. **Storage and Backup** reports workspace usage, normal and secret document counts, the read-only browser persistence state or fixed desktop vault path, and exports/imports folder-preserving ZIP backups. Import replaces the current workspace after confirmation. Backups contain normal documents, organization, review data, selected preferences, and optional encrypted Secret Workspace records; trash, desktop history, and recovery journals remain outside the ZIP. Browser storage uses the browser's best-effort policy by default. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
 
 ## Client Libraries
 

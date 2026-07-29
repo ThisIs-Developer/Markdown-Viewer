@@ -111,12 +111,12 @@ Highlight.js colors known languages. Unknown languages fall back to plaintext.
 [GitHub with title](https://github.com "GitHub")
 [Reference link][repo]
 
-![Alt text](assets/icon.jpg)
-![Alt text with title](assets/icon.jpg "Logo")
+![Alt text](../assets/icon.jpg)
+![Alt text with title](../assets/icon.jpg "Logo")
 ![Reference image][logo]
 
 [repo]: https://github.com/ThisIs-Developer/Markdown-Viewer
-[logo]: assets/icon.jpg
+[logo]: ../assets/icon.jpg
 ```
 
 Links and images can request external resources when opened or rendered.

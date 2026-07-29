@@ -137,6 +137,9 @@ Use these terms in Markdown Viewer documentation and translation reviews. The Ja
 
 | English | Japanese | Korean | Simplified Chinese | Traditional Chinese |
 | :--- | :--- | :--- | :--- | :--- |
+| Storage and Backup | ストレージとバックアップ | 저장 및 백업 | 存储与备份 | 儲存與備份 |
+| Backup | バックアップ | 백업 | 备份 | 備份 |
+| Import Backup | インポートバックアップ | 백업 가져오기 | 导入备份 | 導入備份 |
 | Import | インポート | 가져오기 | 导入 | 導入 |
 | Export | エクスポート | 내보내기 | 导出 | 匯出 |
 | Markdown export | Markdown エクスポート | Markdown 내보내기 | Markdown 导出 | Markdown 匯出 |

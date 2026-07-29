@@ -53,7 +53,7 @@ Secret Workspace protects the stored payload from casual inspection at rest. It 
 
 Clearing site data in the browser removes Markdown Viewer IndexedDB, `localStorage`, preferences, the Service Worker, and cached assets for that origin. Browser-level clearing cannot be undone by Markdown Viewer, so export important content separately.
 
-In the desktop application, replacing or deleting the binary does not remove `Documents/Markdown Viewer Vault`. Every binary checks that fixed location at startup and restores the existing vault automatically. App-managed workspace files, metadata, encrypted records, history, and trash stay inside the vault; explicit user exports can still be saved to a user-selected destination. The Backup action creates a portable ZIP, or users can copy the vault with normal filesystem tools.
+In the desktop application, replacing or deleting the binary does not remove `Documents/Markdown Viewer Vault`. Every binary checks that fixed location at startup and restores the existing vault automatically. App-managed workspace files, metadata, encrypted records, history, and trash stay inside the vault; explicit user exports can still be saved to a user-selected destination. The Backup action creates a portable ZIP containing normal documents, organization, review data, selected preferences, and optional encrypted Secret Workspace records. Trash, desktop history, and recovery journals are not included. Importing a backup replaces the current workspace after confirmation. Users can also copy the complete vault with normal filesystem tools.
 
 ## Data That Can Leave the Device
 

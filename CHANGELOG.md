@@ -3,51 +3,36 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
-## v3.9.5-beta.4
+## Unreleased
 
-- **Description:** Refined the Storage and Backup experience so storage status stays compact and secure-file choices appear only when they are needed.
-  - **Backup:** Opening Backup now presents a focused confirmation modal with the **Include secure workspace files** choice and encrypted-file recovery guidance.
-  - **Usage:** Shows only the workspace's actual local storage usage; the browser quota estimate is no longer displayed.
-  - **Recovery guidance:** Warns that clearing this site's browser data deletes locally stored web documents.
-  - **Performance:** The backup ZIP library remains lazy-loaded only after confirmation, so application startup and document-opening paths are unchanged.
-- **Date:** 2026-07-29
-- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.4
+The following changes are implemented on `main` after `v3.9.4` but are not yet part of a published release.
 
----
+### Workspace Storage
 
-## v3.9.5-beta.3
+- Removed the application-level document-count limit. Available browser quota or desktop filesystem capacity is now the practical limit.
+- Replaced the monolithic browser document store with per-document IndexedDB metadata and content records.
+- Added one-time migration of existing browser and desktop workspace data into the new storage model.
+- Load document content only when it is opened and retain a bounded 20-document in-memory cache.
+- Keep browser storage under the browser's best-effort policy and show its persistence state as read-only information.
+- Store desktop documents as ordinary `.md` files in the fixed `Documents/Markdown Viewer Vault` location, which replacement binaries detect automatically.
 
-- **Description:** Restored the earlier compact Storage and Backup interface without reverting the new storage behavior.
-  - **Storage UI:** Returned to the simple status list, recovery note, and checkbox-with-helper-text layout while retaining Documents, Usage, web location, and read-only persistence information.
-  - **Behavior:** Kept unlimited document storage, ZIP backup/import, encrypted Secret Workspace handling, automatic best-effort browser storage, and the fixed desktop vault unchanged.
-  - **Responsive:** Prevented the status list from collapsing in short landscape windows so every row remains available through the modal's normal scrolling behavior.
-- **Date:** 2026-07-29
-- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.3
+### Backup, Import, and Reset
 
----
+- Added folder-preserving ZIP backup and import across the web and desktop applications.
+- Added an optional **Include secure workspace files** choice. Secret Workspace records remain AES-GCM ciphertext in the ZIP and still require the original access key after import.
+- Added a confirmation before import because restoring a backup permanently replaces the current workspace.
+- Added exact workspace usage and separate normal and secret document counts to **Storage and Backup**.
+- Added recovery guidance explaining that clearing browser site data deletes locally stored web documents.
+- Changed Private mode so it pauses new document-state persistence without deleting existing normal or Secret Workspace data.
+- Changed **Reset workspace** into a confirmed destructive action that deletes documents, folders, preferences, Secret Workspace data, history, and trash, with a direct route to Backup before confirmation.
 
-## v3.9.5-beta.2
+### Desktop and Interface
 
-- **Description:** Simplified Storage and Backup and made the desktop vault location deterministic.
-  - **Storage UI:** Replaced total-file wording with separate normal and secret document counts, kept Usage visible, added a logical IndexedDB location on the web, and moved encrypted-backup inclusion into a full-width accessible option card.
-  - **Browser Storage:** Uses best-effort browser storage by default with read-only status; removed the persistence request button and shortened the site-data deletion warning.
-  - **Desktop Vault:** Removed vault relocation and its external locator file. App-managed workspace files now use the fixed `Documents/Markdown Viewer Vault` path, which replacement binaries check automatically.
-  - **Performance:** Storage measurements still run only when Storage and Backup is opened, so startup and document-opening paths are unchanged.
-- **Date:** 2026-07-29
-- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.2
-
----
-
-## v3.9.5-beta.1
-
-- **Description:** Added complete workspace backup, encrypted restoration, and destructive reset workflows across the web and desktop applications.
-  - **Storage and Backup:** Renamed the settings module, fixed its missing icon, added exact workspace usage and total file counts, and added ZIP backup/import with folder-structure preservation.
-  - **Encrypted Backups:** Added an opt-in control that includes Secret Workspace files as their existing AES-GCM ciphertext. Backups never decrypt secure content, and restored content still requires the original access key.
-  - **Reset Safety:** Reset now permanently clears documents, folders, preferences, Secret Workspace data, history, and trash. The confirmation provides a direct Backup route, disables repeated submission, and uses the application loading spinner.
-  - **Performance:** The ZIP engine remains lazy-loaded, while documents continue to use per-document storage, on-demand content loading, and the bounded 20-document in-memory cache.
-  - **Desktop:** Added offline JSZip packaging, binary ZIP filesystem permissions, seven-platform preview builds, SHA-256 checksums, and prerelease publishing.
-- **Date:** 2026-07-29
-- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.1
+- Added offline JSZip packaging and the native filesystem permissions required for binary ZIP backup and restore.
+- Updated the desktop release workflow to prepare seven platform binaries, SHA-256 checksums, and prerelease metadata when a future prerelease tag is published.
+- Kept the Storage and Backup status layout compact and scrollable in short landscape windows.
+- Show secure-backup choices only when Backup is opened.
+- Load the ZIP engine and calculate detailed storage usage only when those features are requested, leaving startup and normal document-opening paths unchanged.
 
 ---
 

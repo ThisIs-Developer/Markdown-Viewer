@@ -38,11 +38,11 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 - Markdown Viewer does not impose a document-count limit; available browser quota or filesystem capacity is the practical limit.
 - Temporary Share Snapshot and Live Share tabs are not saved to the recipient's workspace.
 - Use **Private mode** from Workspace settings to pause normal Document-state persistence for the session. Existing normal and Secret Workspace documents remain intact.
-- Use **Storage and Backup** to inspect usage and file counts, export/import a folder-preserving ZIP, request browser persistence, or open and locate the desktop vault.
+- Use **Storage and Backup** to inspect usage and file counts, view the browser's read-only persistence status, export or import a folder-preserving ZIP, or open the fixed desktop vault.
 - Use **Reset workspace** only when you intend to permanently delete all workspace files, folders, settings, Secret Workspace data, history, and trash. The confirmation links directly to Backup.
 - Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
 
-> **Backup:** Browser site-data clearing remains destructive. Use **Storage and Backup** to export a portable ZIP. Secret Workspace records remain encrypted and still require the original access key after import.
+> **Backup:** Browser site-data clearing remains destructive. Use **Storage and Backup** to export a portable ZIP. Importing a ZIP permanently replaces the current workspace. Secret Workspace records remain encrypted and still require the original access key after import. Trash, desktop history, and recovery journals are not included.
 
 Normal Workspace storage is local. Managed media, GitHub import, remote renderers, stored Share Snapshot, Live Share, external assets, map tiles, and uncached web libraries use the network.
 
