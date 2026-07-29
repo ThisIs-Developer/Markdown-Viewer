@@ -1286,27 +1286,24 @@
         <main class="content-container">
             <div id="no-open-document" class="no-open-document" role="region" aria-labelledby="no-open-document-title" tabindex="0" hidden>
                 <div class="no-open-document-layout">
-                    <section class="no-open-document-intro">
+                    <header class="no-open-document-intro">
                         <span class="no-open-document-logo" aria-hidden="true">M</span>
                         <div class="no-open-document-intro-copy">
                             <span class="no-open-document-status">No file open</span>
                             <h2 id="no-open-document-title" class="no-open-document-title">Your workspace is ready</h2>
                             <p class="no-open-document-copy">Start with a blank document or bring Markdown in from somewhere else.</p>
                         </div>
-                    </section>
+                    </header>
 
                     <section class="no-open-document-start" aria-labelledby="no-open-document-start-title">
                         <div class="no-open-document-start-heading">
-                            <h3 id="no-open-document-start-title">Quick start</h3>
-                            <p>Choose how you want to begin.</p>
+                            <div>
+                                <h3 id="no-open-document-start-title">Quick start</h3>
+                                <p>Choose how you want to begin.</p>
+                            </div>
                         </div>
-                        <div class="no-open-document-actions">
-                            <button id="no-open-document-explorer" class="tool-button header-command-btn no-open-document-action" type="button" aria-controls="document-sidebar">
-                                <span class="no-open-document-action-icon"><i class="lucide lucide-panel-left-open" aria-hidden="true"></i></span>
-                                <span class="no-open-document-action-copy"><strong>Open Explorer</strong><small>Workspaces, folders, and Markdown files</small></span>
-                                <i class="lucide lucide-chevron-right no-open-document-action-arrow" aria-hidden="true"></i>
-                            </button>
-                            <button id="no-open-document-new" class="tool-button header-command-btn no-open-document-action" type="button">
+                        <div class="no-open-document-primary-actions">
+                            <button id="no-open-document-new" class="tool-button header-command-btn no-open-document-action no-open-document-action--primary" type="button">
                                 <span class="no-open-document-action-icon"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i></span>
                                 <span class="no-open-document-action-copy"><strong>New document</strong><small>Start with a clean Markdown file</small></span>
                                 <i class="lucide lucide-chevron-right no-open-document-action-arrow" aria-hidden="true"></i>
@@ -1316,15 +1313,19 @@
                                 <span class="no-open-document-action-copy"><strong>Open from device</strong><small>Choose one or more Markdown files</small></span>
                                 <i class="lucide lucide-chevron-right no-open-document-action-arrow" aria-hidden="true"></i>
                             </button>
+                        </div>
+                        <div class="no-open-document-secondary-actions">
+                            <button id="no-open-document-explorer" class="tool-button header-command-btn no-open-document-action" type="button" aria-controls="document-sidebar">
+                                <span class="no-open-document-action-icon"><i class="lucide lucide-panel-left-open" aria-hidden="true"></i></span>
+                                <span class="no-open-document-action-copy"><strong>Open Explorer</strong><small>Workspaces, folders, and Markdown files</small></span>
+                            </button>
                             <button id="no-open-document-github" class="tool-button header-command-btn no-open-document-action" type="button">
                                 <span class="no-open-document-action-icon no-open-document-action-icon--github"><i class="bi bi-github" aria-hidden="true"></i></span>
                                 <span class="no-open-document-action-copy"><strong>Import from GitHub</strong><small>Open a file or repository</small></span>
-                                <i class="lucide lucide-chevron-right no-open-document-action-arrow" aria-hidden="true"></i>
                             </button>
                             <button id="no-open-document-welcome" class="tool-button header-command-btn no-open-document-action" type="button">
                                 <span class="no-open-document-action-icon"><i class="lucide lucide-panels-top-left" aria-hidden="true"></i></span>
                                 <span class="no-open-document-action-copy"><strong>Welcome template</strong><small>Explore features with an example</small></span>
-                                <i class="lucide lucide-chevron-right no-open-document-action-arrow" aria-hidden="true"></i>
                             </button>
                         </div>
                     </section>

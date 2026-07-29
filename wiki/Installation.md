@@ -113,20 +113,20 @@ Then deploy the Pages project with `wrangler.toml` or your Cloudflare Pages conf
 
 ## Desktop Application
 
-### Download the v3.9.5-beta.4 preview
+### Download the latest stable desktop application
 
-The Storage and Backup preview binaries are published on the [v3.9.5-beta.4 release page](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.4):
+The current stable binaries are published on the [v3.9.4 release page](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.4):
 
 | Platform | Download |
 | :--- | :--- |
-| Windows x64 | [markdown-viewer-win_x64.exe](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-win_x64.exe) |
-| Linux x64 | [markdown-viewer-linux_x64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-linux_x64) |
-| Linux ARM64 | [markdown-viewer-linux_arm64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-linux_arm64) |
-| Linux ARMHF | [markdown-viewer-linux_armhf](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-linux_armhf) |
-| macOS universal | [markdown-viewer-mac_universal](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-mac_universal) |
-| macOS Apple Silicon | [markdown-viewer-mac_arm64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-mac_arm64) |
-| macOS Intel | [markdown-viewer-mac_x64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/markdown-viewer-mac_x64) |
-| SHA-256 checksums | [SHA256SUMS.txt](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.5-beta.4/SHA256SUMS.txt) |
+| Windows x64 | [markdown-viewer-win_x64.exe](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-win_x64.exe) |
+| Linux x64 | [markdown-viewer-linux_x64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-linux_x64) |
+| Linux ARM64 | [markdown-viewer-linux_arm64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-linux_arm64) |
+| Linux ARMHF | [markdown-viewer-linux_armhf](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-linux_armhf) |
+| macOS universal | [markdown-viewer-mac_universal](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-mac_universal) |
+| macOS Apple Silicon | [markdown-viewer-mac_arm64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-mac_arm64) |
+| macOS Intel | [markdown-viewer-mac_x64](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/markdown-viewer-mac_x64) |
+| SHA-256 checksums | [SHA256SUMS.txt](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/download/v3.9.4/SHA256SUMS.txt) |
 
 From `desktop-app/`:
 
