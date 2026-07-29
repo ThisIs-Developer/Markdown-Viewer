@@ -9932,6 +9932,23 @@ html[data-theme="dark"] .mermaid svg {
   line-height: 1.45;
 }
 
+.storage-backup-options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.storage-backup-options-body .modal-subtext {
+  margin: 0;
+}
+
+#storage-backup-options-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
 .storage-settings-actions {
   flex-wrap: wrap;
 }

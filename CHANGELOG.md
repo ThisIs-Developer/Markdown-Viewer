@@ -3,6 +3,18 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## v3.9.5-beta.4
+
+- **Description:** Refined the Storage and Backup experience so storage status stays compact and secure-file choices appear only when they are needed.
+  - **Backup:** Opening Backup now presents a focused confirmation modal with the **Include secure workspace files** choice and encrypted-file recovery guidance.
+  - **Usage:** Shows only the workspace's actual local storage usage; the browser quota estimate is no longer displayed.
+  - **Recovery guidance:** Warns that clearing this site's browser data deletes locally stored web documents.
+  - **Performance:** The backup ZIP library remains lazy-loaded only after confirmation, so application startup and document-opening paths are unchanged.
+- **Date:** 2026-07-29
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.9.5-beta.4
+
+---
+
 ## v3.9.5-beta.3
 
 - **Description:** Restored the earlier compact Storage and Backup interface without reverting the new storage behavior.

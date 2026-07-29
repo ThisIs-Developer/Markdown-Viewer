@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const APP_VERSION = '3.9.5-beta.3';
+  const APP_VERSION = '3.9.5-beta.4';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -575,6 +575,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storageBackupButton = document.getElementById("storage-backup-button");
   const storageImportButton = document.getElementById("storage-import-button");
   const storageBackupFileInput = document.getElementById("storage-backup-file-input");
+  const storageBackupOptionsModal = document.getElementById("storage-backup-options-modal");
+  const storageBackupOptionsClose = document.getElementById("storage-backup-options-close");
+  const storageBackupOptionsCancel = document.getElementById("storage-backup-options-cancel");
+  const storageBackupOptionsConfirm = document.getElementById("storage-backup-options-confirm");
+  const storageBackupOptionsError = document.getElementById("storage-backup-options-error");
   const storageIncludeSecure = document.getElementById("storage-include-secure");
   const storageOpenVault = document.getElementById("storage-open-vault");
   const storageBackendValue = document.getElementById("storage-backend-value");
@@ -790,11 +795,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (storageUsageValue) {
       storageUsageValue.textContent = status.desktop
         ? formatStorageBytes(workspaceUsage) + ' used in vault'
-        : formatStorageBytes(workspaceUsage) + ' used locally' + (
-          Number.isFinite(estimate.quota)
-            ? ' · Browser quota: ' + formatStorageBytes(estimate.quota)
-            : ''
-        );
+        : formatStorageBytes(workspaceUsage) + ' used locally';
     }
     if (storagePersistenceValue) {
       storagePersistenceValue.textContent = status.desktop
@@ -991,9 +992,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     return zip;
   }
 
-  async function saveWorkspaceBackup() {
-    if (!workspaceStorage || !storageBackupButton) return;
-    const includeSecure = Boolean(storageIncludeSecure && storageIncludeSecure.checked);
+  async function saveWorkspaceBackup(includeSecure) {
+    if (!workspaceStorage) return;
     let desktopDestination = '';
     if (isNeutralinoRuntimeAvailable()) {
       desktopDestination = await Neutralino.os.showSaveDialog('Save workspace backup', {
@@ -1003,7 +1003,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!desktopDestination) return;
     }
 
-    closeStorageSettings();
+    if (storageBackupOptionsModal && storageBackupOptionsModal.classList.contains('is-visible')) {
+      closeAppModal(storageBackupOptionsModal);
+    } else {
+      closeStorageSettings();
+    }
     showImportProgress(100, {
       title: 'Creating workspace backup',
       detail: 'Collecting workspace files…'
@@ -17361,14 +17365,56 @@ ${selector} .arrowheadPath {
     if (storageSettingsModal) closeAppModal(storageSettingsModal);
   }
 
+  function setStorageBackupOptionsError(message) {
+    if (!storageBackupOptionsError) return;
+    storageBackupOptionsError.textContent = message || '';
+    storageBackupOptionsError.hidden = !message;
+  }
+
+  function reopenStorageSettingsAfterBackupOptions() {
+    if (!storageBackupOptionsModal) return;
+    closeAppModal(storageBackupOptionsModal);
+    window.setTimeout(function() {
+      openStorageSettings();
+    }, 210);
+  }
+
+  function openStorageBackupOptions() {
+    if (!storageBackupOptionsModal) return;
+    setStorageBackupOptionsError('');
+    openAppModal(storageBackupOptionsModal, {
+      focusTarget: storageIncludeSecure || storageBackupOptionsConfirm,
+      returnFocus: storageBackupButton,
+      onClose: reopenStorageSettingsAfterBackupOptions
+    });
+  }
+
   if (storageSettingsClose) storageSettingsClose.addEventListener('click', closeStorageSettings);
   if (storageSettingsCloseIcon) storageSettingsCloseIcon.addEventListener('click', closeStorageSettings);
   if (storageBackupButton) {
     storageBackupButton.addEventListener('click', function() {
       setStorageSettingsError('');
-      saveWorkspaceBackup().catch(function(error) {
-        setStorageSettingsError(error && error.message ? error.message : 'Unable to create the workspace backup.');
-      });
+      openStorageBackupOptions();
+    });
+  }
+  if (storageBackupOptionsClose) {
+    storageBackupOptionsClose.addEventListener('click', reopenStorageSettingsAfterBackupOptions);
+  }
+  if (storageBackupOptionsCancel) {
+    storageBackupOptionsCancel.addEventListener('click', reopenStorageSettingsAfterBackupOptions);
+  }
+  if (storageBackupOptionsConfirm) {
+    storageBackupOptionsConfirm.addEventListener('click', async function() {
+      if (storageBackupOptionsConfirm.disabled) return;
+      storageBackupOptionsConfirm.disabled = true;
+      setStorageBackupOptionsError('');
+      try {
+        await saveWorkspaceBackup(Boolean(storageIncludeSecure && storageIncludeSecure.checked));
+      } catch (error) {
+        setStorageBackupOptionsError(error && error.message ? error.message : 'Unable to create the workspace backup.');
+      } finally {
+        storageBackupOptionsConfirm.disabled = false;
+      }
     });
   }
   if (storageImportButton) {

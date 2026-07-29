@@ -511,11 +511,6 @@
                 <i class="lucide lucide-shield-check" aria-hidden="true"></i>
                 <p id="storage-recovery-note">Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.</p>
               </div>
-              <label class="storage-secure-option" for="storage-include-secure">
-                <input id="storage-include-secure" type="checkbox" checked aria-describedby="storage-secure-note">
-                <span>Include secure workspace files</span>
-              </label>
-              <p id="storage-secure-note" class="storage-secure-note">Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
               <p id="storage-settings-error" class="document-modal-error" role="alert" hidden></p>
             </div>
             <div class="reset-modal-actions storage-settings-actions">
@@ -527,6 +522,31 @@
           </div>
         </div>
         <input id="storage-backup-file-input" type="file" accept=".zip,application/zip" hidden>
+
+        <!-- Workspace Backup Options Modal -->
+        <div id="storage-backup-options-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="storage-backup-options-title" aria-describedby="storage-backup-options-description" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box app-modal-box modal-box">
+            <div class="modal-header">
+              <p id="storage-backup-options-title" class="reset-modal-message">Create workspace backup</p>
+              <button type="button" class="modal-close-btn" id="storage-backup-options-close" aria-label="Close backup options">
+                <i class="lucide lucide-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="modal-body storage-backup-options-body">
+              <p id="storage-backup-options-description" class="modal-subtext">Choose what to include before downloading the ZIP file.</p>
+              <label class="storage-secure-option" for="storage-include-secure">
+                <input id="storage-include-secure" type="checkbox" checked aria-describedby="storage-secure-note">
+                <span>Include secure workspace files</span>
+              </label>
+              <p id="storage-secure-note" class="storage-secure-note">Secure workspace files will remain encrypted in the backup. They can only be accessed after importing the backup into Markdown Viewer and unlocking them with the correct password.</p>
+              <p id="storage-backup-options-error" class="document-modal-error" role="alert" hidden></p>
+            </div>
+            <div class="reset-modal-actions">
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-backup-options-cancel">Cancel</button>
+              <button type="button" class="reset-modal-btn storage-primary-action" id="storage-backup-options-confirm"><i class="lucide lucide-download" aria-hidden="true"></i> Download Backup</button>
+            </div>
+          </div>
+        </div>
 
         <!-- Review Delete Confirmation Modal -->
         <div id="review-delete-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="review-delete-title" aria-describedby="review-delete-description" aria-hidden="true" style="display:none;">
