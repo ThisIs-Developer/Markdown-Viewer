@@ -44,6 +44,10 @@
   --warning-note-border: #d4a72c;
   --warning-note-text: #633c01;
   --warning-note-icon: #9a6700;
+  --info-note-bg: #ddf4ff;
+  --info-note-border: #54aeff;
+  --info-note-text: #0550ae;
+  --info-note-icon: #0969da;
   --mv-blue: #2563eb;
   --mv-border: #e4e9f0;
   --table-bg: #ffffff;
@@ -101,6 +105,10 @@
   --warning-note-border: #9e6a03;
   --warning-note-text: #f2cc60;
   --warning-note-icon: #f2cc60;
+  --info-note-bg: #0c2d4a;
+  --info-note-border: #1f6feb;
+  --info-note-text: #a5d6ff;
+  --info-note-icon: #58a6ff;
   --table-bg: #161b22;
   /* Table background for dark mode */
   --code-bg: #161b22;
@@ -9909,19 +9917,36 @@ html[data-theme="dark"] .mermaid svg {
   gap: 9px;
   margin: 0;
   padding: 10px 11px;
-  border: 1px solid var(--warning-note-border);
+  border: 1px solid;
   border-radius: 9px;
-  background: var(--warning-note-bg);
-  color: var(--warning-note-text);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.storage-recovery-note {
+  border-color: var(--warning-note-border);
+  background: var(--warning-note-bg);
+  color: var(--warning-note-text);
+}
+
+.storage-secure-note {
+  border-color: var(--info-note-border);
+  background: var(--info-note-bg);
+  color: var(--info-note-text);
 }
 
 .storage-recovery-note i,
 .storage-secure-note i {
   flex: 0 0 auto;
   margin-top: 2px;
+}
+
+.storage-recovery-note i {
   color: var(--warning-note-icon);
+}
+
+.storage-secure-note i {
+  color: var(--info-note-icon);
 }
 
 .storage-recovery-note p,
