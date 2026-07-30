@@ -6020,8 +6020,8 @@ a:focus {
 .github-import-access-form[hidden],
 .github-import-remove-token-btn[hidden],
 .github-import-repository-context[hidden],
-.github-import-base-path[hidden],
-.github-import-access-status[hidden] {
+.github-import-ref[hidden],
+.github-import-base-path[hidden] {
   display: none !important;
 }
 
@@ -6146,6 +6146,16 @@ a:focus {
   gap: 10px;
 }
 
+.github-import-access-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.github-import-access-form-heading,
+.github-import-access-token-field,
+.github-import-access-form-footer {
+  grid-column: 1 / -1;
+}
+
 .github-import-access-form .reset-modal-label,
 .github-import-access-manage .reset-modal-label,
 .github-import-access-form-footer > button {
@@ -6177,11 +6187,19 @@ a:focus {
 }
 
 .github-import-toolbar-btn.tool-button {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
   padding: 0;
+  border-color: transparent;
   border-radius: 7px;
+  background: transparent;
+}
+
+.github-import-toolbar-btn.tool-button:hover,
+.github-import-toolbar-btn.tool-button:focus-visible {
+  border-color: transparent;
+  background: var(--toolbar-control-hover);
 }
 
 .github-import-toolbar-btn > .lucide {
@@ -6206,31 +6224,16 @@ a:focus {
   white-space: nowrap;
 }
 
+.github-import-optional-label {
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  font-weight: 400;
+}
+
 .github-import-access-form-footer .reset-modal-btn {
   min-height: 34px;
   padding: 7px 14px;
   font-size: var(--ui-font-md);
-}
-
-.github-import-access-status {
-  margin: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 7px;
-  background: var(--bg-color);
-  color: var(--text-secondary);
-  font-size: var(--ui-font-sm);
-  line-height: 1.4;
-}
-
-.github-import-access-status.is-success {
-  border-color: color-mix(in srgb, #1a7f37 34%, var(--border-color));
-  color: #1a7f37;
-}
-
-.github-import-access-status.is-error {
-  border-color: color-mix(in srgb, var(--color-danger-fg, #cf222e) 34%, var(--border-color));
-  color: var(--color-danger-fg, #cf222e);
 }
 
 .github-import-repository-context {
@@ -6264,9 +6267,12 @@ a:focus {
 }
 
 .github-import-repository-copy {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .github-import-repository-heading,
@@ -6278,6 +6284,7 @@ a:focus {
 }
 
 .github-import-repository-heading {
+  flex: 1 1 auto;
   gap: 8px;
   min-width: 0;
 }
@@ -6320,13 +6327,16 @@ a:focus {
 }
 
 .github-import-repository-meta {
+  flex: 0 1 auto;
   gap: 7px;
   min-width: 0;
   color: var(--text-secondary);
   font-size: var(--ui-font-sm);
+  white-space: nowrap;
 }
 
 .github-import-ref {
+  flex: 0 1 auto;
   gap: 4px;
   min-width: 0;
 }
@@ -6352,7 +6362,7 @@ a:focus {
 
 .github-import-selection-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(220px, 1fr) auto;
   align-items: center;
   gap: 8px;
 }
@@ -6398,24 +6408,31 @@ a:focus {
   outline-offset: 1px;
 }
 
-.github-import-selection-summary {
+.github-import-selection-actions {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
   min-width: max-content;
-  color: var(--text-secondary);
-  font-size: var(--ui-font-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 .github-import-selected-count {
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  margin: 0;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: var(--toolbar-control-hover);
   color: var(--text-color);
+  font-size: var(--ui-font-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .github-import-toolbar-btn[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--mv-blue) 14%, var(--mv-border));
+  border-color: transparent;
   color: var(--accent-color);
   background-color: rgba(3, 102, 214, 0.08);
 }
@@ -6620,8 +6637,13 @@ a:focus {
     min-width: 44px;
   }
 
-  .github-import-selection-summary {
-    justify-content: flex-start;
+  .github-import-selection-actions {
+    justify-content: space-between;
+  }
+
+  .github-import-selected-count {
+    min-height: 44px;
+    padding-inline: 10px;
   }
 
   .github-import-tree {
@@ -6649,6 +6671,12 @@ a:focus {
   #github-import-modal .reset-modal-btn {
     width: auto;
     min-height: 44px;
+  }
+}
+
+@media (max-width: 420px) {
+  .github-import-access-form {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

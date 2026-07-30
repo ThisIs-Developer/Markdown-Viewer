@@ -1325,6 +1325,10 @@
                       <input type="text" id="github-import-pat-name" class="rename-modal-input" maxlength="60" placeholder="My access token" autocomplete="off" spellcheck="false" />
                     </div>
                     <div class="github-import-access-field">
+                      <label class="reset-modal-label" for="github-import-pat-expiry">Expiry date <span class="github-import-optional-label">(optional)</span></label>
+                      <input type="datetime-local" id="github-import-pat-expiry" class="rename-modal-input" autocomplete="off" />
+                    </div>
+                    <div class="github-import-access-field github-import-access-token-field">
                       <label class="reset-modal-label" for="github-import-pat">Personal access token</label>
                       <input type="password" id="github-import-pat" class="rename-modal-input" autocomplete="off" spellcheck="false" />
                     </div>
@@ -1333,7 +1337,6 @@
                       <button type="button" id="github-import-pat-save" class="reset-modal-btn">Add access</button>
                     </div>
                   </div>
-                  <p id="github-import-access-status" class="github-import-access-status" role="status" aria-live="polite" hidden></p>
                 </div>
               </section>
               <select id="github-import-file-select" class="rename-modal-input" aria-label="Select Markdown files" style="display:none;"></select>
@@ -1344,7 +1347,7 @@
                     <strong id="github-import-repository-name"></strong>
                   </div>
                   <div class="github-import-repository-meta">
-                    <span class="github-import-ref"><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
+                    <span id="github-import-ref-item" class="github-import-ref"><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
                     <a id="github-import-commit-link" class="github-import-commit-link" target="_blank" rel="noopener noreferrer">
                       <i class="lucide lucide-git-commit-horizontal" aria-hidden="true"></i>
                       <span id="github-import-commit"></span>
@@ -1358,16 +1361,16 @@
                   <i class="lucide lucide-search" aria-hidden="true"></i>
                   <input type="search" id="github-import-search" placeholder="Search Markdown files" autocomplete="off" spellcheck="false" />
                 </label>
-                <div class="github-import-selection-summary" aria-live="polite">
-                  <span id="github-import-selected-count" class="github-import-selected-count">0 selected</span>
-                </div>
-                <div class="github-import-toolbar-actions" role="group" aria-label="File tree actions">
-                  <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-toggle-folders" aria-label="Collapse all folders" title="Collapse all folders">
-                    <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>
-                  </button>
-                  <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-select-all" aria-label="Select all files" title="Select all files">
-                    <i class="lucide lucide-check-check" aria-hidden="true"></i>
-                  </button>
+                <div class="github-import-selection-actions">
+                  <output id="github-import-selected-count" class="github-import-selected-count" aria-live="polite">0 selected</output>
+                  <div class="github-import-toolbar-actions" role="group" aria-label="File tree actions">
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-toggle-folders" aria-label="Collapse all folders" title="Collapse all folders">
+                      <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-select-all" aria-label="Select all files" title="Select all files">
+                      <i class="lucide lucide-check-check" aria-hidden="true"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div id="github-import-tree" class="github-import-tree" role="tree" aria-label="Markdown files in this GitHub location" style="display:none;"></div>

@@ -266,12 +266,12 @@ GitHub import:
 - Resolves default branches, explicit branches (including names containing `/`), tags, and commit references to an immutable commit SHA.
 - Direct Markdown file URLs import immediately.
 - Repository or folder URLs query GitHub's API to find Markdown files.
-- The URL step remains a compact 520px dialog. The 760px selection step shows repository context with branch and short commit side by side, a searchable and collapsible GitHub-style tree, a selected-file count, and matching icon controls for select/deselect all and collapse/expand all folders.
+- The URL step remains a compact 520px dialog. The 760px selection step keeps repository name and metadata on one line, shows a branch/ref only for explicit tree/blob URLs, always links the short commit, and provides a searchable GitHub-style tree with a selected-count badge plus matching borderless controls for select/deselect all and collapse/expand all folders.
 - Default-branch imports create a repository-named folder. Each selected file's nested GitHub directory path is reproduced inside it.
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually without a passphrase or unlock step.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session, can have an optional earlier expiry date, and can be removed individually without a passphrase or unlock step. Token results use application toasts instead of inline form status text.
 
 Limitations and privacy:
 
@@ -540,7 +540,7 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs; session-only in memory with individual removal. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs; session-only in memory with optional earlier expiry and individual removal. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |
