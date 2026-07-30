@@ -157,7 +157,7 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - Workspace backups do not include trash, desktop history, or crash-recovery journals.
 - A local Markdown file larger than 10 MB is rejected.
 - The searchable GitHub importer shows every Markdown file found in a repository or folder result and resolves branch, tag, and commit URLs to an immutable commit SHA.
-- Private repository access supports fine-grained PATs (recommended) and classic PATs as a broad-access compatibility fallback. Access is session-only by default; optional remembered access is passphrase-encrypted with AES-GCM, expires after 1, 7, or 30 days, and can be removed at any time.
+- Private repository access supports multiple named fine-grained PATs (recommended) or classic PATs. Add a token once, then select it by name; access is session-only by default, while optional remembered entries are passphrase-encrypted with AES-GCM, expire after 1, 7, or 30 days, and can be removed individually.
 - Imported Markdown files are saved to Explorer and remain closed until you choose one, preventing large imports from flooding the tab bar.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.
 - Stored Share Snapshot content is limited to 8,000,000 characters and expires after 90 days.

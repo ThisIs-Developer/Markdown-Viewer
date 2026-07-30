@@ -271,7 +271,7 @@ GitHub import:
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained PATs (recommended) for selected repositories under one owner and classic PATs as a broad-access compatibility fallback. It is session-only by default; optional 1-, 7-, or 30-day retention stores PBKDF2-derived AES-GCM ciphertext under a separate, non-stored passphrase. Expiry and manual removal delete the local record.
+- Optional private access supports multiple named fine-grained PATs (recommended) or classic PATs in a compact add-then-select flow. Session entries remain only in memory; optional 1-, 7-, or 30-day disposal stores PBKDF2-derived AES-GCM ciphertext under a separate, non-stored passphrase. Expiry and individual removal delete the local entry.
 
 Limitations and privacy:
 
@@ -540,7 +540,7 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Fine-grained PAT recommended; classic PAT available for compatibility. Session-only by default or passphrase-encrypted with local expiry/removal. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs; session-only or passphrase-encrypted with per-entry expiry and removal. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |

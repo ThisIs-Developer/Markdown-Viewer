@@ -1386,75 +1386,70 @@
                   <span class="github-import-access-icon" aria-hidden="true"><i class="lucide lucide-shield-check"></i></span>
                   <span class="github-import-access-copy">
                     <span id="github-import-access-title" class="github-import-access-title">Private repository access</span>
-                    <span id="github-import-access-summary" class="github-import-access-summary">No token stored · public repositories only</span>
+                    <span id="github-import-access-summary" class="github-import-access-summary">No access token added</span>
                   </span>
                   <i class="lucide lucide-chevron-down github-import-access-chevron" aria-hidden="true"></i>
                 </button>
                 <div id="github-import-access-panel" class="github-import-access-panel" hidden>
-                  <p id="github-import-access-intro" class="github-import-access-intro">Fine-grained tokens can cover multiple selected repositories under one owner. Grant <strong>Contents: Read-only</strong>.</p>
-                  <div id="github-import-access-unlock" class="github-import-access-unlock" hidden>
-                    <div class="github-import-access-saved">
-                      <i class="lucide lucide-lock-keyhole" aria-hidden="true"></i>
-                      <span id="github-import-access-saved-text">An encrypted token is saved on this device.</span>
+                  <div id="github-import-access-manage" class="github-import-access-manage" hidden>
+                    <label class="reset-modal-label" for="github-import-pat-select">Access token</label>
+                    <select id="github-import-pat-select" class="rename-modal-input"></select>
+                    <div class="github-import-access-selection-row">
+                      <span id="github-import-access-selected-meta" class="github-import-access-selected-meta"></span>
+                      <div class="github-import-access-actions">
+                        <button type="button" id="github-import-pat-add-another" class="github-import-access-secondary-btn">
+                          <i class="lucide lucide-plus" aria-hidden="true"></i>
+                          Add another
+                        </button>
+                        <button type="button" id="github-import-pat-remove" class="github-import-access-danger-btn">
+                          <i class="lucide lucide-trash-2" aria-hidden="true"></i>
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                    <label class="reset-modal-label" for="github-import-pat-unlock-passphrase">Protection passphrase</label>
-                    <div class="github-import-access-inline">
-                      <input type="password" id="github-import-pat-unlock-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" />
-                      <button type="button" id="github-import-pat-unlock" class="github-import-access-secondary-btn">Unlock</button>
+                    <div id="github-import-access-unlock" class="github-import-access-unlock" hidden>
+                      <label class="reset-modal-label" for="github-import-pat-unlock-passphrase">Protection passphrase</label>
+                      <div class="github-import-access-inline">
+                        <input type="password" id="github-import-pat-unlock-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" />
+                        <button type="button" id="github-import-pat-unlock" class="github-import-access-primary-btn">Unlock</button>
+                      </div>
                     </div>
                   </div>
                   <div id="github-import-access-form" class="github-import-access-form">
-                    <fieldset class="github-import-token-types">
-                      <legend class="reset-modal-label">Token type</legend>
-                      <div class="github-import-token-type-grid">
-                        <label class="github-import-token-type">
-                          <input type="radio" name="github-import-pat-type" value="fine-grained" checked />
-                          <span class="github-import-token-type-copy">
-                            <span class="github-import-token-type-heading">
-                              <strong>Fine-grained PAT</strong>
-                              <span class="github-import-recommended-badge">Recommended</span>
-                            </span>
-                            <span>Selected repositories or all repositories for one owner.</span>
-                          </span>
-                        </label>
-                        <label class="github-import-token-type">
-                          <input type="radio" name="github-import-pat-type" value="classic" />
-                          <span class="github-import-token-type-copy">
-                            <span class="github-import-token-type-heading">
-                              <strong>Personal access token (classic)</strong>
-                            </span>
-                            <span>Compatibility option with broader repository access.</span>
-                          </span>
-                        </label>
+                    <div class="github-import-access-form-heading">
+                      <strong>Add access token</strong>
+                      <button type="button" id="github-import-pat-add-cancel" class="github-import-access-text-btn" hidden>Cancel</button>
+                    </div>
+                    <div class="github-import-access-form-grid">
+                      <div class="github-import-access-field">
+                        <label class="reset-modal-label" for="github-import-pat-type">Token type</label>
+                        <select id="github-import-pat-type" class="rename-modal-input">
+                          <option value="fine-grained">Fine-grained (Recommended)</option>
+                          <option value="classic">Classic</option>
+                        </select>
                       </div>
-                    </fieldset>
-                    <label id="github-import-pat-label" class="reset-modal-label" for="github-import-pat">Fine-grained PAT</label>
-                    <input type="password" id="github-import-pat" class="rename-modal-input" autocomplete="off" spellcheck="false" aria-describedby="github-import-pat-help" />
-                    <label class="reset-modal-label" for="github-import-pat-retention">Keep access</label>
+                      <div class="github-import-access-field">
+                        <label class="reset-modal-label" for="github-import-pat-name">Token name</label>
+                        <input type="text" id="github-import-pat-name" class="rename-modal-input" maxlength="60" placeholder="My first access token" autocomplete="off" spellcheck="false" />
+                      </div>
+                    </div>
+                    <label class="reset-modal-label" for="github-import-pat">Personal access token</label>
+                    <input type="password" id="github-import-pat" class="rename-modal-input" autocomplete="off" spellcheck="false" />
+                    <label class="reset-modal-label" for="github-import-pat-retention">Disposal</label>
                     <select id="github-import-pat-retention" class="rename-modal-input">
-                      <option value="session">This session only (recommended)</option>
-                      <option value="1">Encrypted for 1 day</option>
-                      <option value="7">Encrypted for 7 days</option>
-                      <option value="30">Encrypted for 30 days</option>
+                      <option value="session">End of this session</option>
+                      <option value="1">After 1 day</option>
+                      <option value="7">After 7 days</option>
+                      <option value="30">After 30 days</option>
                     </select>
                     <div id="github-import-pat-protection" class="github-import-pat-protection" hidden>
                       <label class="reset-modal-label" for="github-import-pat-passphrase">Protection passphrase</label>
-                      <input type="password" id="github-import-pat-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" minlength="12" />
-                      <span class="github-import-field-note">At least 12 characters. This passphrase is never stored and cannot be recovered.</span>
+                      <input type="password" id="github-import-pat-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" minlength="12" placeholder="12+ characters" />
                     </div>
                     <div class="github-import-access-actions">
-                      <button type="button" id="github-import-pat-save" class="github-import-access-primary-btn">Use secure access</button>
-                      <button type="button" id="github-import-pat-remove" class="github-import-access-danger-btn" hidden>
-                        <i class="lucide lucide-trash-2" aria-hidden="true"></i>
-                        Remove access
-                      </button>
+                      <button type="button" id="github-import-pat-save" class="github-import-access-primary-btn">Add access</button>
                     </div>
                   </div>
-                  <p id="github-import-pat-help" class="github-import-access-help">
-                    <span id="github-import-pat-scope-note">Use selected repositories or all repositories for one owner.</span>
-                    The token is sent only to <code>api.github.com</code>. Local expiry removes the saved copy but does not revoke the token on GitHub.
-                    <a id="github-import-pat-create-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a fine-grained token</a>
-                  </p>
                   <p id="github-import-access-status" class="github-import-access-status" role="status" aria-live="polite" hidden></p>
                 </div>
               </section>

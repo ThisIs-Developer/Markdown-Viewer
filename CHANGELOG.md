@@ -41,6 +41,7 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 - Added branch, tag, and commit URL resolution, including branch names containing `/`, and pinned each import to the resolved immutable commit SHA.
 - Added optional private repository access with fine-grained PATs marked as recommended and classic PATs offered as a broad-access compatibility fallback.
 - Kept private access session-only by default, with passphrase-protected AES-GCM retention for 1, 7, or 30 days, automatic expiry, and manual removal.
+- Replaced the verbose single-token form with a compact add-then-select flow for multiple named tokens, including individual unlock, expiry, and removal controls.
 - Made the compact GitHub URL dialog body visibly scrollable so every private-access control remains reachable on short screens.
 - Restored the compact 520px GitHub URL step while keeping the searchable file picker at 760px, and added repository, ref, and short-commit context to the selection step.
 - Added file search, selected/total counts, an icon-based select-all toggle, and collapsible GitHub-style folder and file rows using the application typography scale.

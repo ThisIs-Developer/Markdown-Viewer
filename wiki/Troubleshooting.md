@@ -80,7 +80,7 @@ Extension matching is case-insensitive. Rename a plain-text file to `.md` only w
 - Use a public `github.com` repository, tree, blob, or `raw.githubusercontent.com` Markdown URL.
 - For a private repository, use a fine-grained PAT (recommended) with **Contents: Read-only** for the required repositories under one owner. Use a classic PAT only as a broad-access compatibility fallback. If an organization requires approval or SAML authorization, complete that step in GitHub.
 - Branch, tag, and commit URLs are supported. For branch names containing `/`, paste the complete GitHub tree or blob URL so the importer can resolve the longest matching ref.
-- If remembered private access will not unlock, check the protection passphrase. Expired access is deleted locally; create or add a token again if needed.
+- Select the intended named token before importing. If a remembered entry will not unlock, check its protection passphrase. If GitHub rejects it or reports that it cannot access the repository, replace the token or update its repository permissions. Expired entries are deleted locally.
 - Repository and folder results show every Markdown file found.
 - Check GitHub API rate-limit and network responses.
 - Confirm that CSP allows `api.github.com` and `raw.githubusercontent.com`.
