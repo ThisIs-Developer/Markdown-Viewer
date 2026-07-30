@@ -79,7 +79,7 @@ Extension matching is case-insensitive. Rename a plain-text file to `.md` only w
 
 - Use a public `github.com` repository, tree, blob, or `raw.githubusercontent.com` Markdown URL.
 - Private repositories are unsupported because Markdown Viewer does not request a token.
-- Repository and folder results show only the first 30 Markdown files.
+- Repository and folder results show every Markdown file found. Use the file filter in the importer to narrow large repository trees.
 - Check GitHub API rate-limit and network responses.
 - Confirm that CSP allows `api.github.com` and `raw.githubusercontent.com`.
 - For a direct file, verify that the URL returns text rather than a login or HTML error page.

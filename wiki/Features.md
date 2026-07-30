@@ -267,7 +267,7 @@ GitHub import:
 - Repository or folder URLs query GitHub's public API to find Markdown files.
 - The modal shows a tree and supports selecting multiple files.
 - Imports create a repository-named folder and reproduce each selected file's nested GitHub directory path inside it.
-- Only the first 30 Markdown files are shown if a repository contains more.
+- Every Markdown file found is shown, with a path filter for navigating large repositories.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Selected files are fetched as raw content and opened as separate tabs.
 
@@ -552,7 +552,7 @@ Security limitations:
 - Browser storage quotas can reject very large saved workspaces.
 - Markdown Viewer does not impose a document-count limit; available storage and operating-system/filesystem constraints still apply.
 - An individual local Markdown import is limited to 10 MB.
-- The GitHub importer shows a maximum of 30 Markdown files.
+- The GitHub importer shows every Markdown file found in the selected public repository or folder.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.
 - The current Share Snapshot UI does not expose its API deletion token, so UI-created stored snapshots normally remain until their 90-day expiry.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.

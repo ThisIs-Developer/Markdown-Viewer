@@ -34,6 +34,12 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 - Show secure-backup choices only when Backup is opened.
 - Load the ZIP engine and calculate detailed storage usage only when those features are requested, leaving startup and normal document-opening paths unchanged.
 
+### GitHub Import
+
+- Removed the 30-file display cap so repository and folder results expose every Markdown file found.
+- Added complete subtree traversal when GitHub marks a recursive repository tree response as truncated.
+- Expanded the file-selection modal with a searchable, responsive tree, full and filtered counts, and more visible space on desktop and mobile.
+
 ---
 
 ## v3.9.4

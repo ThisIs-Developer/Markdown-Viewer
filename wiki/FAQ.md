@@ -120,7 +120,7 @@ Yes. It supports regular expressions, capture replacements, preserve-case replac
 
 ### Can I import a private GitHub repository?
 
-No. The importer uses public GitHub URLs and does not request a token. Repository and Folder results show at most 30 Markdown files.
+No. The importer uses public GitHub URLs and does not request a token. Repository and folder results show every Markdown file found.
 
 ### Which PDF option should I use?
 

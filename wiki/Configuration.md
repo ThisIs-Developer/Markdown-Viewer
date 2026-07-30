@@ -72,7 +72,7 @@ When running inside Neutralino, dynamic library URLs are rewritten to local `/li
 | Minimum split pane width | 20% |
 | Line-height cache size | 5,000 entries |
 | Local Markdown import | 10 MB per file |
-| GitHub importer shown files | 30 |
+| GitHub importer shown files | All Markdown files found |
 | Share URL warning ceiling | 32,000 characters |
 | Legacy share URL ceiling | 4,096 characters |
 | Server share threshold | 3,000 bytes |
