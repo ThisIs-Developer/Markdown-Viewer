@@ -38,7 +38,6 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 
 - Removed the 30-file display cap so repository and folder results expose every Markdown file found.
 - Added complete subtree traversal when GitHub marks a recursive repository tree response as truncated.
-- Expanded the file-selection modal with a searchable, responsive tree, full and filtered counts, and more visible space on desktop and mobile.
 
 ---
 

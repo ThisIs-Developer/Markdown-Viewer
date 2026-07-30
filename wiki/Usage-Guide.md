@@ -119,7 +119,7 @@ Use Import > From GitHub and paste one of these URL types:
 - `https://github.com/owner/repo/blob/main/README.md`
 - `https://raw.githubusercontent.com/owner/repo/main/README.md`
 
-Direct Markdown file URLs import immediately. Repository and folder URLs query GitHub's public API, show a searchable tree containing every Markdown file found, and let you import selected files into separate tabs. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved.
+Direct Markdown file URLs import immediately. Repository and folder URLs query GitHub's public API, show a tree containing every Markdown file found, and let you import selected files into separate tabs. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved.
 
 GitHub import sends the repository/path request to GitHub and only works for public content. The app does not ask for GitHub credentials.
 

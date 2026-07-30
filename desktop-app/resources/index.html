@@ -1279,34 +1279,21 @@
         <div id="github-import-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="github-import-title" aria-hidden="true" style="display:none;">
           <div class="reset-modal-box github-import-modal-box app-modal-box modal-box">
             <div class="modal-header">
-              <span class="github-import-heading-icon" aria-hidden="true"><i class="bi bi-github"></i></span>
-              <div class="github-import-heading">
+              <div>
                 <p id="github-import-title" class="reset-modal-message">Import Markdown from GitHub</p>
-                <p id="github-import-subtitle" class="modal-subtext">Paste a GitHub file, folder, or repository URL.</p>
+                <p class="modal-subtext">Paste a GitHub file or repository URL.</p>
               </div>
               <button type="button" class="modal-close-btn" id="github-import-close" aria-label="Close GitHub import dialog"><i class="lucide lucide-x" aria-hidden="true"></i></button>
             </div>
             <div class="modal-body github-import-modal-body">
-              <div id="github-import-url-section" class="github-import-url-section">
-                <label class="reset-modal-label" id="github-import-url-label" for="github-import-url">GitHub URL</label>
-                <input type="url" id="github-import-url" class="rename-modal-input" placeholder="https://github.com/owner/repository" autocomplete="url" spellcheck="false" />
-                <p class="github-import-url-help">Public repositories are supported. You can import a single file or choose any Markdown files from a repository.</p>
-              </div>
+              <label class="reset-modal-label" id="github-import-url-label" for="github-import-url">GitHub URL</label>
+              <input type="url" id="github-import-url" class="rename-modal-input" placeholder="https://github.com/owner/repo/blob/main/README.md" autocomplete="url" spellcheck="false" />
               <select id="github-import-file-select" class="rename-modal-input" aria-label="Select Markdown files" style="display:none;"></select>
-              <div id="github-import-filter-row" class="github-import-filter-row" style="display:none;">
-                <i class="lucide lucide-search" aria-hidden="true"></i>
-                <label class="visually-hidden" for="github-import-filter">Filter Markdown files</label>
-                <input type="search" id="github-import-filter" class="rename-modal-input" placeholder="Filter files by name or path" autocomplete="off" spellcheck="false" />
-              </div>
               <div id="github-import-selection-toolbar" class="github-import-selection-toolbar" style="display:none;">
-                <div class="github-import-selection-summary" aria-live="polite">
-                  <span id="github-import-selected-count" class="github-import-selected-count">0 selected</span>
-                  <span class="github-import-summary-divider" aria-hidden="true"></span>
-                  <span id="github-import-available-count" class="github-import-available-count">0 files</span>
-                </div>
+                <span id="github-import-selected-count" class="github-import-selected-count">0 selected</span>
                 <button type="button" class="reset-modal-btn" id="github-import-select-all">Select all</button>
               </div>
-              <div id="github-import-tree" class="github-import-tree" role="group" aria-label="Markdown files in repository" style="display:none;"></div>
+              <div id="github-import-tree" class="github-import-tree" style="display:none;"></div>
               <p id="github-import-error" class="github-import-error" role="status" style="display:none;"></p>
             </div>
             <div class="reset-modal-actions">

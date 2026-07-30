@@ -534,16 +534,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   const mobileLiveShareParticipants = document.getElementById("mobile-live-share-participants");
   const githubImportModal = document.getElementById("github-import-modal");
   const githubImportTitle = document.getElementById("github-import-title");
-  const githubImportSubtitle = document.getElementById("github-import-subtitle");
-  const githubImportUrlSection = document.getElementById("github-import-url-section");
   const githubImportUrlInput = document.getElementById("github-import-url");
   const githubImportUrlLabel = document.getElementById("github-import-url-label");
   const githubImportFileSelect = document.getElementById("github-import-file-select");
-  const githubImportFilterRow = document.getElementById("github-import-filter-row");
-  const githubImportFilterInput = document.getElementById("github-import-filter");
   const githubImportSelectionToolbar = document.getElementById("github-import-selection-toolbar");
   const githubImportSelectedCount = document.getElementById("github-import-selected-count");
-  const githubImportAvailableCount = document.getElementById("github-import-available-count");
   const githubImportSelectAllBtn = document.getElementById("github-import-select-all");
   const githubImportTree = document.getElementById("github-import-tree");
   const githubImportError = document.getElementById("github-import-error");
@@ -11185,7 +11180,6 @@ ${selector} .arrowheadPath {
   }
   const GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS = 800;
   let lastGitHubImportRequestAt = 0;
-  let githubImportFilterFrame = 0;
   const selectedGitHubImportPaths = new Set();
   let availableGitHubImportPaths = [];
 
@@ -11421,16 +11415,7 @@ ${selector} .arrowheadPath {
   function updateGitHubImportSelectedCount() {
     if (!githubImportSelectedCount) return;
     const count = selectedGitHubImportPaths.size;
-    githubImportSelectedCount.textContent = `${count.toLocaleString()} selected`;
-  }
-
-  function updateGitHubImportAvailableCount(visibleCount) {
-    if (!githubImportAvailableCount) return;
-    const total = availableGitHubImportPaths.length;
-    const visible = typeof visibleCount === "number" ? visibleCount : total;
-    githubImportAvailableCount.textContent = visible === total
-      ? `${total.toLocaleString()} file${total === 1 ? "" : "s"}`
-      : `${visible.toLocaleString()} of ${total.toLocaleString()} files`;
+    githubImportSelectedCount.textContent = `${count} selected`;
   }
 
   function updateGitHubSelectAllButtonLabel() {
@@ -11471,40 +11456,18 @@ ${selector} .arrowheadPath {
 
   function renderGitHubImportTree(paths) {
     if (!githubImportTree || !githubImportFileSelect) return;
-    const visiblePaths = Array.from(paths || []);
-    updateGitHubImportAvailableCount(visiblePaths.length);
-    if (!visiblePaths.length) {
-      const emptyState = document.createElement("div");
-      emptyState.className = "github-import-empty-state";
-      const emptyIcon = document.createElement("i");
-      emptyIcon.className = "lucide lucide-search";
-      emptyIcon.setAttribute("aria-hidden", "true");
-      const emptyText = document.createElement("p");
-      emptyText.textContent = "No Markdown files match this filter.";
-      emptyState.append(emptyIcon, emptyText);
-      githubImportTree.replaceChildren(emptyState);
-      return;
-    }
-
+    githubImportTree.innerHTML = "";
     const tree = buildMarkdownFileTree(paths);
 
     const createTreeBranch = function(node, parentPath) {
       const list = document.createElement("ul");
-      list.setAttribute("role", "list");
       const folderNames = Object.keys(node.folders).sort((a, b) => a.localeCompare(b));
       folderNames.forEach((folderName) => {
         const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
         const item = document.createElement("li");
-        item.setAttribute("role", "listitem");
         const folderLabel = document.createElement("span");
         folderLabel.className = "github-tree-folder-label";
-        folderLabel.title = folderPath;
-        const folderIcon = document.createElement("i");
-        folderIcon.className = "lucide lucide-folder";
-        folderIcon.setAttribute("aria-hidden", "true");
-        const folderText = document.createElement("span");
-        folderText.textContent = folderName;
-        folderLabel.append(folderIcon, folderText);
+        folderLabel.textContent = `📁 ${folderName}`;
         item.appendChild(folderLabel);
         item.appendChild(createTreeBranch(node.folders[folderName], folderPath));
         list.appendChild(item);
@@ -11514,21 +11477,12 @@ ${selector} .arrowheadPath {
         .sort((a, b) => a.path.localeCompare(b.path))
         .forEach((file) => {
           const fileItem = document.createElement("li");
-          fileItem.setAttribute("role", "listitem");
           const fileButton = document.createElement("button");
           fileButton.type = "button";
           fileButton.className = "github-tree-file-btn";
           fileButton.dataset.path = file.path;
           fileButton.setAttribute("aria-pressed", "false");
-          fileButton.setAttribute("aria-label", file.path);
-          fileButton.title = file.path;
-          const fileIcon = document.createElement("i");
-          fileIcon.className = "lucide lucide-file-text";
-          fileIcon.setAttribute("aria-hidden", "true");
-          const fileName = document.createElement("span");
-          fileName.className = "github-tree-file-name";
-          fileName.textContent = file.name;
-          fileButton.append(fileIcon, fileName);
+          fileButton.textContent = `📄 ${file.name}`;
           fileButton.addEventListener("click", function() {
             toggleGitHubSelectedPath(file.path);
           });
@@ -11539,26 +11493,8 @@ ${selector} .arrowheadPath {
       return list;
     };
 
-    githubImportTree.replaceChildren(createTreeBranch(tree, ""));
+    githubImportTree.appendChild(createTreeBranch(tree, ""));
     syncGitHubSelectionToButtons();
-  }
-
-  function applyGitHubImportFilter() {
-    const query = githubImportFilterInput ? githubImportFilterInput.value.trim().toLocaleLowerCase() : "";
-    const filteredPaths = query
-      ? availableGitHubImportPaths.filter((path) => path.toLocaleLowerCase().includes(query))
-      : availableGitHubImportPaths;
-    renderGitHubImportTree(filteredPaths);
-  }
-
-  function scheduleGitHubImportFilter() {
-    if (githubImportFilterFrame) {
-      cancelAnimationFrame(githubImportFilterFrame);
-    }
-    githubImportFilterFrame = requestAnimationFrame(function() {
-      githubImportFilterFrame = 0;
-      applyGitHubImportFilter();
-    });
   }
 
   function setGitHubImportLoading(isLoading) {
@@ -11592,11 +11528,6 @@ ${selector} .arrowheadPath {
     if (githubImportTitle) {
       githubImportTitle.textContent = "Import Markdown from GitHub";
     }
-    if (githubImportSubtitle) {
-      githubImportSubtitle.textContent = "Paste a GitHub file, folder, or repository URL.";
-    }
-    githubImportModal.classList.remove("is-file-selection");
-    if (githubImportUrlSection) githubImportUrlSection.style.display = "flex";
     githubImportUrlInput.value = "";
     githubImportUrlInput.style.display = "block";
     if (githubImportUrlLabel) githubImportUrlLabel.style.display = "block";
@@ -11604,17 +11535,10 @@ ${selector} .arrowheadPath {
     githubImportFileSelect.innerHTML = "";
     githubImportFileSelect.style.display = "none";
     githubImportFileSelect.disabled = false;
-    if (githubImportFilterFrame) {
-      cancelAnimationFrame(githubImportFilterFrame);
-      githubImportFilterFrame = 0;
-    }
-    if (githubImportFilterInput) githubImportFilterInput.value = "";
-    if (githubImportFilterRow) githubImportFilterRow.style.display = "none";
     if (githubImportSelectionToolbar) {
       githubImportSelectionToolbar.style.display = "none";
     }
     availableGitHubImportPaths = [];
-    updateGitHubImportAvailableCount();
     setGitHubSelectedPaths([]);
     if (githubImportTree) {
       githubImportTree.innerHTML = "";
@@ -11700,7 +11624,6 @@ ${selector} .arrowheadPath {
 
       // Render hierarchical visual skeleton tree while the list is loading
       if (githubImportTree) {
-        githubImportModal.classList.add("is-file-selection");
         renderGitHubImportTreeSkeleton();
         githubImportTree.style.display = "block";
       }
@@ -11714,7 +11637,6 @@ ${selector} .arrowheadPath {
       });
 
       if (!files.length) {
-        githubImportModal.classList.remove("is-file-selection");
         if (githubImportTree) {
           githubImportTree.innerHTML = "";
           githubImportTree.style.display = "none";
@@ -11732,13 +11654,9 @@ ${selector} .arrowheadPath {
       }
 
       githubImportFileSelect.innerHTML = "";
-      if (githubImportUrlSection) githubImportUrlSection.style.display = "none";
       githubImportUrlInput.style.display = "none";
       if (githubImportUrlLabel) githubImportUrlLabel.style.display = "none";
       githubImportFileSelect.style.display = "none";
-      if (githubImportFilterRow) {
-        githubImportFilterRow.style.display = "flex";
-      }
       if (githubImportSelectionToolbar) {
         githubImportSelectionToolbar.style.display = "flex";
       }
@@ -11752,26 +11670,17 @@ ${selector} .arrowheadPath {
       // Announce load complete
       announceToScreenReader("GitHub files loaded. " + files.length + " files available in the tree.");
 
-      setGitHubImportMessage(`All ${files.length.toLocaleString()} Markdown files are available.`, { isError: false });
+      setGitHubImportMessage("");
       if (githubImportTitle) {
         githubImportTitle.textContent = "Select Markdown file(s) to import";
-      }
-      if (githubImportSubtitle) {
-        githubImportSubtitle.textContent = "Choose any files below. Repository folder paths will be preserved.";
       }
       githubImportSubmitBtn.dataset.step = "select";
       githubImportSubmitBtn.dataset.owner = parsed.owner;
       githubImportSubmitBtn.dataset.repo = parsed.repo;
       githubImportSubmitBtn.dataset.ref = ref;
       githubImportSubmitBtn.textContent = "Import Selected";
-      if (githubImportFilterInput) {
-        requestAnimationFrame(function() {
-          githubImportFilterInput.focus();
-        });
-      }
     } catch (error) {
       console.error("GitHub import failed:", error);
-      githubImportModal.classList.remove("is-file-selection");
       setGitHubImportMessage("GitHub import failed: " + error.message);
       announceToScreenReader("GitHub import failed.");
       if (githubImportTree) {
@@ -18000,19 +17909,6 @@ ${selector} .arrowheadPath {
   }
   if (githubImportFileSelect) {
     githubImportFileSelect.addEventListener("keydown", handleGitHubImportInputKeydown);
-  }
-  if (githubImportFilterInput) {
-    githubImportFilterInput.addEventListener("input", scheduleGitHubImportFilter);
-    githubImportFilterInput.addEventListener("keydown", function(e) {
-      if (e.key !== "Escape") return;
-      if (githubImportFilterInput.value) {
-        e.stopPropagation();
-        githubImportFilterInput.value = "";
-        applyGitHubImportFilter();
-      } else {
-        closeGitHubImportModal();
-      }
-    });
   }
   if (githubImportSelectAllBtn) {
     githubImportSelectAllBtn.addEventListener("click", function() {
