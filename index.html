@@ -1392,62 +1392,38 @@
                 </button>
                 <div id="github-import-access-panel" class="github-import-access-panel" hidden>
                   <div id="github-import-access-manage" class="github-import-access-manage" hidden>
-                    <label class="reset-modal-label" for="github-import-pat-select">Access token</label>
-                    <select id="github-import-pat-select" class="rename-modal-input"></select>
-                    <div class="github-import-access-selection-row">
-                      <span id="github-import-access-selected-meta" class="github-import-access-selected-meta"></span>
-                      <div class="github-import-access-actions">
-                        <button type="button" id="github-import-pat-add-another" class="github-import-access-secondary-btn">
+                    <div class="github-import-access-manage-header">
+                      <label class="reset-modal-label" for="github-import-pat-select">Access token</label>
+                      <div class="github-import-toolbar-actions" role="group" aria-label="Access token actions">
+                        <button type="button" id="github-import-pat-add-another" class="tool-button document-command-btn github-import-toolbar-btn" aria-label="Add another access token" title="Add another access token">
                           <i class="lucide lucide-plus" aria-hidden="true"></i>
-                          Add another
                         </button>
-                        <button type="button" id="github-import-pat-remove" class="github-import-access-danger-btn">
+                        <button type="button" id="github-import-pat-remove" class="tool-button document-command-btn github-import-toolbar-btn github-import-remove-token-btn" aria-label="Remove selected access token" title="Remove selected access token">
                           <i class="lucide lucide-trash-2" aria-hidden="true"></i>
-                          Remove
                         </button>
                       </div>
                     </div>
-                    <div id="github-import-access-unlock" class="github-import-access-unlock" hidden>
-                      <label class="reset-modal-label" for="github-import-pat-unlock-passphrase">Protection passphrase</label>
-                      <div class="github-import-access-inline">
-                        <input type="password" id="github-import-pat-unlock-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" />
-                        <button type="button" id="github-import-pat-unlock" class="github-import-access-primary-btn">Unlock</button>
-                      </div>
-                    </div>
+                    <select id="github-import-pat-select" class="rename-modal-input"></select>
+                    <span id="github-import-access-selected-meta" class="github-import-access-selected-meta"></span>
                   </div>
                   <div id="github-import-access-form" class="github-import-access-form">
                     <div class="github-import-access-form-heading">
                       <strong>Add access token</strong>
-                      <button type="button" id="github-import-pat-add-cancel" class="github-import-access-text-btn" hidden>Cancel</button>
+                      <button type="button" id="github-import-pat-add-cancel" class="tool-button document-command-btn github-import-toolbar-btn" aria-label="Cancel adding access token" title="Cancel" hidden>
+                        <i class="lucide lucide-x" aria-hidden="true"></i>
+                      </button>
                     </div>
-                    <div class="github-import-access-form-grid">
-                      <div class="github-import-access-field">
-                        <label class="reset-modal-label" for="github-import-pat-type">Token type</label>
-                        <select id="github-import-pat-type" class="rename-modal-input">
-                          <option value="fine-grained">Fine-grained (Recommended)</option>
-                          <option value="classic">Classic</option>
-                        </select>
-                      </div>
-                      <div class="github-import-access-field">
-                        <label class="reset-modal-label" for="github-import-pat-name">Token name</label>
-                        <input type="text" id="github-import-pat-name" class="rename-modal-input" maxlength="60" placeholder="My first access token" autocomplete="off" spellcheck="false" />
-                      </div>
+                    <div class="github-import-access-field">
+                      <label class="reset-modal-label" for="github-import-pat-name">Token name</label>
+                      <input type="text" id="github-import-pat-name" class="rename-modal-input" maxlength="60" placeholder="My access token" autocomplete="off" spellcheck="false" />
                     </div>
-                    <label class="reset-modal-label" for="github-import-pat">Personal access token</label>
-                    <input type="password" id="github-import-pat" class="rename-modal-input" autocomplete="off" spellcheck="false" />
-                    <label class="reset-modal-label" for="github-import-pat-retention">Disposal</label>
-                    <select id="github-import-pat-retention" class="rename-modal-input">
-                      <option value="session">End of this session</option>
-                      <option value="1">After 1 day</option>
-                      <option value="7">After 7 days</option>
-                      <option value="30">After 30 days</option>
-                    </select>
-                    <div id="github-import-pat-protection" class="github-import-pat-protection" hidden>
-                      <label class="reset-modal-label" for="github-import-pat-passphrase">Protection passphrase</label>
-                      <input type="password" id="github-import-pat-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" minlength="12" placeholder="12+ characters" />
+                    <div class="github-import-access-field">
+                      <label class="reset-modal-label" for="github-import-pat">Personal access token</label>
+                      <input type="password" id="github-import-pat" class="rename-modal-input" autocomplete="off" spellcheck="false" />
                     </div>
-                    <div class="github-import-access-actions">
-                      <button type="button" id="github-import-pat-save" class="github-import-access-primary-btn">Add access</button>
+                    <div class="github-import-access-form-footer">
+                      <span class="github-import-access-session-note">Available for this session</span>
+                      <button type="button" id="github-import-pat-save" class="reset-modal-btn">Add access</button>
                     </div>
                   </div>
                   <p id="github-import-access-status" class="github-import-access-status" role="status" aria-live="polite" hidden></p>
@@ -1459,13 +1435,13 @@
                 <div class="github-import-repository-copy">
                   <div class="github-import-repository-heading">
                     <strong id="github-import-repository-name"></strong>
+                  </div>
+                  <div class="github-import-repository-meta">
+                    <span class="github-import-ref"><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
                     <a id="github-import-commit-link" class="github-import-commit-link" target="_blank" rel="noopener noreferrer">
                       <i class="lucide lucide-git-commit-horizontal" aria-hidden="true"></i>
                       <span id="github-import-commit"></span>
                     </a>
-                  </div>
-                  <div class="github-import-repository-meta">
-                    <span class="github-import-ref"><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
                     <span id="github-import-base-path" class="github-import-base-path" hidden></span>
                   </div>
                 </div>
@@ -1477,12 +1453,15 @@
                 </label>
                 <div class="github-import-selection-summary" aria-live="polite">
                   <span id="github-import-selected-count" class="github-import-selected-count">0 selected</span>
-                  <span class="github-import-count-separator" aria-hidden="true">·</span>
-                  <span id="github-import-total-count" class="github-import-total-count">0 files</span>
                 </div>
-                <button type="button" class="github-import-select-all-btn" id="github-import-select-all" aria-label="Select all files" title="Select all files">
-                  <i class="lucide lucide-check-check" aria-hidden="true"></i>
-                </button>
+                <div class="github-import-toolbar-actions" role="group" aria-label="File tree actions">
+                  <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-toggle-folders" aria-label="Collapse all folders" title="Collapse all folders">
+                    <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>
+                  </button>
+                  <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-select-all" aria-label="Select all files" title="Select all files">
+                    <i class="lucide lucide-check-check" aria-hidden="true"></i>
+                  </button>
+                </div>
               </div>
               <div id="github-import-tree" class="github-import-tree" role="tree" aria-label="Markdown files in this GitHub location" style="display:none;"></div>
               <p id="github-import-error" class="github-import-error" role="status" style="display:none;"></p>

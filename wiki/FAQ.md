@@ -120,7 +120,7 @@ Yes. It supports regular expressions, capture replacements, preserve-case replac
 
 ### Can I import a private GitHub repository?
 
-Yes. Expand **Private repository access**, choose a token type, give the token a recognizable name, choose its disposal time, and select **Add access**. The form then collapses into a named-token selector; you can add, select, unlock, or remove entries individually. Fine-grained PATs are recommended, while classic PATs remain available for compatibility. Session-only entries are not written to storage. Remembered entries are AES-GCM encrypted under separate passphrases and expire after 1, 7, or 30 days. The app cannot revoke a PAT on GitHub; use GitHub settings to revoke or rotate it.
+Yes. Expand **Private repository access**, give the token a recognizable name, enter either a fine-grained or classic PAT, and select **Add access**. The app detects both formats automatically. The form then collapses into a named-token selector so you can add, select, or remove entries individually. Tokens remain in memory for the current session only and are not written to application storage, so no passphrase or unlock step is needed. The app cannot revoke a PAT on GitHub; use GitHub settings to revoke or rotate it.
 
 ### Which PDF option should I use?
 

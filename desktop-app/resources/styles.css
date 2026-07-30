@@ -6018,9 +6018,7 @@ a:focus {
 .github-import-access-panel[hidden],
 .github-import-access-manage[hidden],
 .github-import-access-form[hidden],
-.github-import-access-unlock[hidden],
-.github-import-pat-protection[hidden],
-.github-import-access-danger-btn[hidden],
+.github-import-remove-token-btn[hidden],
 .github-import-repository-context[hidden],
 .github-import-base-path[hidden],
 .github-import-access-status[hidden] {
@@ -6081,11 +6079,6 @@ a:focus {
   color: #1a7f37;
 }
 
-.github-import-access[data-state="locked"] .github-import-access-icon {
-  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
-  color: var(--accent-color);
-}
-
 .github-import-access-copy {
   display: grid;
   gap: 2px;
@@ -6124,11 +6117,12 @@ a:focus {
   gap: 10px;
   padding: 12px;
   border-top: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--button-bg) 55%, var(--bg-color));
+  background: var(--bg-color);
 }
 
 .github-import-access-form-heading,
-.github-import-access-selection-row {
+.github-import-access-manage-header,
+.github-import-access-form-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6140,53 +6134,32 @@ a:focus {
   font-size: var(--ui-font-md);
 }
 
-.github-import-access-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
 .github-import-access-field {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
 }
 
 .github-import-access-form,
-.github-import-access-manage,
-.github-import-access-unlock,
-.github-import-pat-protection {
+.github-import-access-manage {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .github-import-access-form .reset-modal-label,
 .github-import-access-manage .reset-modal-label,
-.github-import-pat-protection .reset-modal-label,
-.github-import-access-actions > button {
+.github-import-access-form-footer > button {
   white-space: nowrap;
 }
 
 .github-import-access-selected-meta {
+  display: block;
   min-width: 0;
   overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--ui-font-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.github-import-access-unlock {
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--accent-color) 26%, var(--border-color));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent-color) 6%, var(--bg-color));
-}
-
-.github-import-access-inline {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
 }
 
 .github-import-access-panel .rename-modal-input {
@@ -6196,87 +6169,47 @@ a:focus {
   font-size: var(--ui-font-md);
 }
 
-.github-import-access-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 2px;
-}
-
-.github-import-access-primary-btn,
-.github-import-access-secondary-btn,
-.github-import-access-danger-btn {
+.github-import-toolbar-actions {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 7px 11px;
-  border: 1px solid var(--border-color);
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.github-import-toolbar-btn.tool-button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
   border-radius: 7px;
-  background: var(--button-bg);
-  color: var(--text-color);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--ui-font-md);
-  font-weight: 650;
 }
 
-.github-import-access-primary-btn {
-  border-color: var(--accent-color);
-  background: var(--accent-color);
-  color: #fff;
+.github-import-toolbar-btn > .lucide {
+  width: 16px;
+  height: 16px;
 }
 
-.github-import-access-danger-btn {
+.github-import-remove-token-btn {
   color: var(--color-danger-fg, #cf222e);
 }
 
-.github-import-access-text-btn {
-  min-height: 28px;
-  padding: 3px 5px;
-  border: 0;
-  background: transparent;
+.github-import-access-form-footer {
+  padding-top: 2px;
+}
+
+.github-import-access-session-note {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-secondary);
-  cursor: pointer;
-  font: inherit;
   font-size: var(--ui-font-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.github-import-access-text-btn:hover {
-  color: var(--text-color);
-}
-
-.github-import-access-text-btn:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
-.github-import-access-secondary-btn > .lucide,
-.github-import-access-danger-btn > .lucide {
-  width: 14px;
-  height: 14px;
-}
-
-.github-import-access-primary-btn:hover,
-.github-import-access-secondary-btn:hover,
-.github-import-access-danger-btn:hover {
-  filter: brightness(0.97);
-}
-
-.github-import-access-primary-btn:focus-visible,
-.github-import-access-secondary-btn:focus-visible,
-.github-import-access-danger-btn:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
-.github-import-access-primary-btn:disabled,
-.github-import-access-secondary-btn:disabled,
-.github-import-access-danger-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
+.github-import-access-form-footer .reset-modal-btn {
+  min-height: 34px;
+  padding: 7px 14px;
+  font-size: var(--ui-font-md);
 }
 
 .github-import-access-status {
@@ -6419,7 +6352,7 @@ a:focus {
 
 .github-import-selection-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto 40px;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
   align-items: center;
   gap: 8px;
 }
@@ -6481,48 +6414,10 @@ a:focus {
   color: var(--text-color);
 }
 
-.github-import-count-separator {
-  color: color-mix(in srgb, var(--text-secondary) 66%, transparent);
-}
-
-.github-import-select-all-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--button-bg);
-  color: var(--text-color);
-  cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
-}
-
-.github-import-select-all-btn > .lucide {
-  width: 18px;
-  height: 18px;
-}
-
-.github-import-select-all-btn:hover {
-  border-color: color-mix(in srgb, var(--accent-color) 42%, var(--border-color));
-  background: var(--button-hover);
-}
-
-.github-import-select-all-btn:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
-.github-import-select-all-btn.is-deselect {
-  border-color: color-mix(in srgb, var(--accent-color) 46%, var(--border-color));
-  background: color-mix(in srgb, var(--accent-color) 12%, var(--button-bg));
+.github-import-toolbar-btn[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--mv-blue) 14%, var(--mv-border));
   color: var(--accent-color);
-}
-
-.github-import-select-all-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+  background-color: rgba(3, 102, 214, 0.08);
 }
 
 .github-import-tree ul {
@@ -6707,7 +6602,7 @@ a:focus {
   }
 
   .github-import-selection-toolbar {
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .github-import-search {
@@ -6715,13 +6610,14 @@ a:focus {
   }
 
   #github-import-search,
-  .github-import-select-all-btn {
+  .github-import-toolbar-btn.tool-button {
     min-height: 44px;
   }
 
-  .github-import-select-all-btn {
+  .github-import-toolbar-btn.tool-button {
     width: 44px;
     height: 44px;
+    min-width: 44px;
   }
 
   .github-import-selection-summary {
@@ -6738,9 +6634,6 @@ a:focus {
     min-height: 44px;
   }
 
-  .github-import-access-primary-btn,
-  .github-import-access-secondary-btn,
-  .github-import-access-danger-btn,
   .github-import-access-panel .rename-modal-input {
     min-height: 44px;
   }
@@ -6759,19 +6652,8 @@ a:focus {
   }
 }
 
-@media (max-width: 430px) {
-  .github-import-access-form-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .github-import-access-selection-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .github-import-select-all-btn,
+  .github-import-toolbar-btn,
   .github-import-access-chevron {
     transition: none;
   }
@@ -6779,15 +6661,16 @@ a:focus {
 
 @media (max-width: 900px) and (max-height: 500px) {
   #github-import-search,
-  .github-import-select-all-btn,
+  .github-import-toolbar-btn.tool-button,
   .github-tree-folder-label,
   .github-tree-file-btn {
     min-height: 44px;
   }
 
-  .github-import-select-all-btn {
+  .github-import-toolbar-btn.tool-button {
     width: 44px;
     height: 44px;
+    min-width: 44px;
   }
 }
 

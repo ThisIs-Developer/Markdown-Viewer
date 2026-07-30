@@ -60,7 +60,7 @@ In the desktop application, replacing or deleting the binary does not remove `Do
 | Feature | Data sent | Destination and retention | Access model |
 | :--- | :--- | :--- | :--- |
 | Web/PWA library loading | Library requests, IP and normal HTTP metadata | cdnjs, jsDelivr, or esm.sh; browser/Service Worker cache | Governed by the remote host |
-| GitHub import | Repository/path/ref request and selected content downloads; optional named PATs for private repositories | Public content: GitHub API and `raw.githubusercontent.com`; private content and PAT: `api.github.com` only | Session entries remain in memory; remembered entries are individually passphrase-encrypted with local expiry and removal |
+| GitHub import | Repository/path/ref request and selected content downloads; optional named PATs for private repositories | Public content: GitHub API and `raw.githubusercontent.com`; private content and PAT: `api.github.com` only | Fine-grained and classic PATs are accepted automatically, remain in memory for the current session, and are never written to application storage |
 | Emoji lookup | Emoji API request | GitHub API; response kept in memory/cache | Remote host |
 | Remote diagrams | Diagram source or encoded source | PlantUML, Kroki, or mermaid.ink; response can be browser-cached | Remote renderer receives the source |
 | GeoJSON/TopoJSON maps | Tile and external-asset requests | Configured map-tile or asset host | Remote host |

@@ -39,12 +39,11 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 - Removed the 30-file display cap so repository and folder results expose every Markdown file found.
 - Added complete subtree traversal when GitHub marks a recursive repository tree response as truncated.
 - Added branch, tag, and commit URL resolution, including branch names containing `/`, and pinned each import to the resolved immutable commit SHA.
-- Added optional private repository access with fine-grained PATs marked as recommended and classic PATs offered as a broad-access compatibility fallback.
-- Kept private access session-only by default, with passphrase-protected AES-GCM retention for 1, 7, or 30 days, automatic expiry, and manual removal.
-- Replaced the verbose single-token form with a compact add-then-select flow for multiple named tokens, including individual unlock, expiry, and removal controls.
-- Made the compact GitHub URL dialog body visibly scrollable so every private-access control remains reachable on short screens.
-- Restored the compact 520px GitHub URL step while keeping the searchable file picker at 760px, and added repository, ref, and short-commit context to the selection step.
-- Added file search, selected/total counts, an icon-based select-all toggle, and collapsible GitHub-style folder and file rows using the application typography scale.
+- Added optional private repository access that accepts fine-grained and classic PATs automatically.
+- Kept private access session-only: named tokens remain in memory, disappear on reload or app close, and can be removed individually without a passphrase or unlock step. Retired locally saved GitHub-access records are deleted during upgrade.
+- Replaced the verbose token form with a compact add-then-select flow whose add and remove actions use the same icon-button pattern as the rest of the application.
+- Restored the compact 520px GitHub URL step while keeping the searchable file picker at 760px, and placed repository branch and short-commit context together on the selection step.
+- Added file search, a selected count, matching icon controls for select/deselect all and collapse/expand all, and GitHub-style folder and file rows using the application typography scale.
 - Changed local, drag-and-drop, desktop, and GitHub Markdown imports to save documents in Explorer without opening every imported file as a tab.
 - Batched multi-tab close commands so closing hundreds of tabs performs one state update and render instead of repeatedly rebuilding the interface.
 

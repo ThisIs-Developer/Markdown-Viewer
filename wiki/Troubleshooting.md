@@ -78,9 +78,9 @@ Extension matching is case-insensitive. Rename a plain-text file to `.md` only w
 ## GitHub Import Fails or Shows Too Few Files
 
 - Use a public `github.com` repository, tree, blob, or `raw.githubusercontent.com` Markdown URL.
-- For a private repository, use a fine-grained PAT (recommended) with **Contents: Read-only** for the required repositories under one owner. Use a classic PAT only as a broad-access compatibility fallback. If an organization requires approval or SAML authorization, complete that step in GitHub.
+- For a private repository, add either a fine-grained or classic PAT with permission to read the required repository. The app detects both formats automatically. If an organization requires approval or SAML authorization, complete that step in GitHub.
 - Branch, tag, and commit URLs are supported. For branch names containing `/`, paste the complete GitHub tree or blob URL so the importer can resolve the longest matching ref.
-- Select the intended named token before importing. If a remembered entry will not unlock, check its protection passphrase. If GitHub rejects it or reports that it cannot access the repository, replace the token or update its repository permissions. Expired entries are deleted locally.
+- Select the intended named token before importing. If GitHub rejects it or reports that it cannot access the repository, replace the token or update its repository permissions. Tokens are session-only and must be added again after reload or app close.
 - Repository and folder results show every Markdown file found.
 - Check GitHub API rate-limit and network responses.
 - Confirm that CSP allows `api.github.com` and `raw.githubusercontent.com`.
