@@ -107,8 +107,6 @@ For documentation:
 - search for outdated terminology and unsupported claims; and
 - review `git diff --name-only` to confirm the intended scope.
 
-At commit `5511dc7`, the static validator includes a pre-existing reference to missing `functions/api/report-issue.js`. If that baseline remains, `npm run build` reports the missing asset before documentation changes. Record the baseline failure accurately; do not change product source in a documentation-only pull request.
-
 ## Issue Reports
 
 Search [existing issues](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) before opening a new one. Include:
