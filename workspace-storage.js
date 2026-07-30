@@ -817,6 +817,31 @@
       await transactionToPromise(transaction);
     }
 
+    async deleteMetadata(key) {
+      if (this.desktop) {
+        if (key === 'vaultSettings') {
+          this.desktopSettings = {};
+          const settingsPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'settings.json');
+          if (await this._pathExists(settingsPath)) await Neutralino.filesystem.remove(settingsPath);
+          return;
+        }
+        if (key === 'secretManifest') {
+          const manifestPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'secret-manifest.json');
+          if (await this._pathExists(manifestPath)) await Neutralino.filesystem.remove(manifestPath);
+          return;
+        }
+        if (Neutralino.storage.removeData) {
+          try {
+            await Neutralino.storage.removeData('markdownViewerMeta_' + key);
+          } catch (_) {}
+        }
+        return;
+      }
+      const transaction = this.db.transaction('metadata', 'readwrite');
+      transaction.objectStore('metadata').delete(key);
+      await transactionToPromise(transaction);
+    }
+
     async getSecretManifest() {
       const stored = await this.getMetadata('secretManifest');
       if (stored) return stored;

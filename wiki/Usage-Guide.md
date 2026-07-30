@@ -116,12 +116,16 @@ Use Import > From GitHub and paste one of these URL types:
 
 - `https://github.com/owner/repo`
 - `https://github.com/owner/repo/tree/main/docs`
+- `https://github.com/owner/repo/tree/release/2026/docs`
+- `https://github.com/owner/repo/tree/758cbeda07ac15093520c803c11140ae9b1f4a2c`
 - `https://github.com/owner/repo/blob/main/README.md`
 - `https://raw.githubusercontent.com/owner/repo/main/README.md`
 
-Direct Markdown file URLs import immediately into Explorer. Repository and folder URLs query GitHub's public API and show a searchable, collapsible tree containing every Markdown file found. The toolbar shows selected and total file counts and provides an icon that switches between select all and deselect all. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved, and remain closed until you select one in Explorer.
+Direct Markdown file URLs import immediately into Explorer. Repository and folder URLs resolve the default branch, an explicit branch (including names containing `/`), a tag, or a commit to an immutable commit SHA before listing files. The searchable, collapsible tree contains every Markdown file found, shows the repository, ref, and short commit, and uses the same compact type scale as other application modals. The toolbar shows selected and total file counts and provides an icon that switches between select all and deselect all. Default-branch imports use a repository-named Explorer folder; other refs include the short commit beside the repository name. Nested GitHub directory paths are preserved, and imported files remain closed until you select one in Explorer.
 
-GitHub import sends the repository/path request to GitHub and only works for public content. The app does not ask for GitHub credentials.
+Public repositories need no credentials. For a private repository, expand **Private repository access** and use a fine-grained PAT limited to the selected repository with **Contents: Read-only**. The importer first tries public access and sends the token only to `api.github.com` when authenticated access is needed. Private file content is downloaded through GitHub's Contents API rather than the raw-content host.
+
+**This session only** is the recommended default and never writes the PAT to application storage. The optional 1-, 7-, or 30-day choices require a separate 12-character protection passphrase and store only PBKDF2-derived, AES-GCM authenticated ciphertext. The passphrase is never stored. Expired access becomes unusable and is removed while the app is running or the next time it starts; **Remove access** deletes it immediately. Local removal does not revoke the PAT on GitHub, so revoke it separately in GitHub settings if it may have been exposed.
 
 ## Export Markdown to PDF, HTML, PNG, and MD
 

@@ -263,19 +263,21 @@ Application feedback:
 GitHub import:
 
 - Accepts `github.com/owner/repo`, `github.com/owner/repo/tree/ref/path`, `github.com/owner/repo/blob/ref/path`, and `raw.githubusercontent.com` file URLs.
+- Resolves default branches, explicit branches (including names containing `/`), tags, and commit references to an immutable commit SHA.
 - Direct Markdown file URLs import immediately.
-- Repository or folder URLs query GitHub's public API to find Markdown files.
-- The wider modal shows a searchable, collapsible GitHub-style tree, selected and total file counts, and an icon-based select-all or deselect-all control.
-- Imports create a repository-named folder and reproduce each selected file's nested GitHub directory path inside it.
+- Repository or folder URLs query GitHub's API to find Markdown files.
+- The URL step remains a compact 520px dialog. The 760px selection step shows repository/ref/short-commit context, a searchable and collapsible GitHub-style tree, selected and total file counts, and an icon-based select-all or deselect-all control.
+- Default-branch imports create a repository-named folder. Other refs place the short commit beside the repository name. Each selected file's nested GitHub directory path is reproduced inside it.
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
-- Selected files are fetched as raw content and saved to Explorer without opening new tabs.
+- Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
+- Optional private access accepts a fine-grained PAT limited to a selected repository with `Contents: Read-only`. It is session-only by default; optional 1-, 7-, or 30-day retention stores PBKDF2-derived AES-GCM ciphertext under a separate, non-stored passphrase. Expiry and manual removal delete the local record.
 
 Limitations and privacy:
 
 - Local file content is read in the browser or desktop application and is not uploaded by local import.
-- GitHub import sends repository and path information to GitHub and downloads public file contents from GitHub.
-- Private GitHub repositories are not supported because the app does not ask for tokens.
+- GitHub import sends repository, ref, and path information to GitHub. Public requests are anonymous unless GitHub requires authenticated access.
+- A private-repository PAT is attached only to `api.github.com` requests and is never sent to `raw.githubusercontent.com` or the Markdown Viewer backend. Local deletion does not revoke the token on GitHub.
 
 ## Export Markdown to PDF, HTML, PNG, and MD
 
@@ -538,7 +540,7 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | GitHub API/raw URLs | Public repos only; no token flow. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Optional fine-grained read-only PAT; session-only by default or passphrase-encrypted with local expiry/removal. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |
@@ -552,7 +554,7 @@ Security limitations:
 - Browser storage quotas can reject very large saved workspaces.
 - Markdown Viewer does not impose a document-count limit; available storage and operating-system/filesystem constraints still apply.
 - An individual local Markdown import is limited to 10 MB.
-- The GitHub importer shows every Markdown file found in the selected public repository or folder.
+- The GitHub importer shows every Markdown file found in the selected public or authorized private repository or folder.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.
 - The current Share Snapshot UI does not expose its API deletion token, so UI-created stored snapshots normally remain until their 90-day expiry.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.

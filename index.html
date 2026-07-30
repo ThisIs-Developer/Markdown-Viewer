@@ -1381,7 +1381,75 @@
             <div class="modal-body github-import-modal-body">
               <label class="reset-modal-label" id="github-import-url-label" for="github-import-url">GitHub URL</label>
               <input type="url" id="github-import-url" class="rename-modal-input" placeholder="https://github.com/owner/repo/blob/main/README.md" autocomplete="url" spellcheck="false" />
+              <section id="github-import-access" class="github-import-access" aria-labelledby="github-import-access-title">
+                <button type="button" id="github-import-access-toggle" class="github-import-access-toggle" aria-expanded="false" aria-controls="github-import-access-panel">
+                  <span class="github-import-access-icon" aria-hidden="true"><i class="lucide lucide-shield-check"></i></span>
+                  <span class="github-import-access-copy">
+                    <span id="github-import-access-title" class="github-import-access-title">Private repository access</span>
+                    <span id="github-import-access-summary" class="github-import-access-summary">No token stored · public repositories only</span>
+                  </span>
+                  <i class="lucide lucide-chevron-down github-import-access-chevron" aria-hidden="true"></i>
+                </button>
+                <div id="github-import-access-panel" class="github-import-access-panel" hidden>
+                  <p class="github-import-access-intro">Use a fine-grained personal access token limited to the selected repository with <strong>Contents: Read-only</strong>.</p>
+                  <div id="github-import-access-unlock" class="github-import-access-unlock" hidden>
+                    <div class="github-import-access-saved">
+                      <i class="lucide lucide-lock-keyhole" aria-hidden="true"></i>
+                      <span id="github-import-access-saved-text">An encrypted token is saved on this device.</span>
+                    </div>
+                    <label class="reset-modal-label" for="github-import-pat-unlock-passphrase">Protection passphrase</label>
+                    <div class="github-import-access-inline">
+                      <input type="password" id="github-import-pat-unlock-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" />
+                      <button type="button" id="github-import-pat-unlock" class="github-import-access-secondary-btn">Unlock</button>
+                    </div>
+                  </div>
+                  <div id="github-import-access-form" class="github-import-access-form">
+                    <label class="reset-modal-label" for="github-import-pat">Fine-grained PAT</label>
+                    <input type="password" id="github-import-pat" class="rename-modal-input" autocomplete="off" spellcheck="false" aria-describedby="github-import-pat-help" />
+                    <label class="reset-modal-label" for="github-import-pat-retention">Keep access</label>
+                    <select id="github-import-pat-retention" class="rename-modal-input">
+                      <option value="session">This session only (recommended)</option>
+                      <option value="1">Encrypted for 1 day</option>
+                      <option value="7">Encrypted for 7 days</option>
+                      <option value="30">Encrypted for 30 days</option>
+                    </select>
+                    <div id="github-import-pat-protection" class="github-import-pat-protection" hidden>
+                      <label class="reset-modal-label" for="github-import-pat-passphrase">Protection passphrase</label>
+                      <input type="password" id="github-import-pat-passphrase" class="rename-modal-input" autocomplete="off" spellcheck="false" minlength="12" />
+                      <span class="github-import-field-note">At least 12 characters. This passphrase is never stored and cannot be recovered.</span>
+                    </div>
+                    <div class="github-import-access-actions">
+                      <button type="button" id="github-import-pat-save" class="github-import-access-primary-btn">Use secure access</button>
+                      <button type="button" id="github-import-pat-remove" class="github-import-access-danger-btn" hidden>
+                        <i class="lucide lucide-trash-2" aria-hidden="true"></i>
+                        Remove access
+                      </button>
+                    </div>
+                  </div>
+                  <p id="github-import-pat-help" class="github-import-access-help">
+                    The token is sent only to <code>api.github.com</code>. Local expiry makes the saved copy unusable, removes it while the app is running or on the next launch, and does not revoke the token on GitHub.
+                    <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a fine-grained token</a>
+                  </p>
+                  <p id="github-import-access-status" class="github-import-access-status" role="status" aria-live="polite" hidden></p>
+                </div>
+              </section>
               <select id="github-import-file-select" class="rename-modal-input" aria-label="Select Markdown files" style="display:none;"></select>
+              <div id="github-import-repository-context" class="github-import-repository-context" hidden>
+                <span class="github-import-repository-icon" aria-hidden="true"><i class="bi bi-github"></i></span>
+                <div class="github-import-repository-copy">
+                  <div class="github-import-repository-heading">
+                    <strong id="github-import-repository-name"></strong>
+                    <a id="github-import-commit-link" class="github-import-commit-link" target="_blank" rel="noopener noreferrer">
+                      <i class="lucide lucide-git-commit-horizontal" aria-hidden="true"></i>
+                      <span id="github-import-commit"></span>
+                    </a>
+                  </div>
+                  <div class="github-import-repository-meta">
+                    <span class="github-import-ref"><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
+                    <span id="github-import-base-path" class="github-import-base-path" hidden></span>
+                  </div>
+                </div>
+              </div>
               <div id="github-import-selection-toolbar" class="github-import-selection-toolbar" style="display:none;">
                 <label class="github-import-search" for="github-import-search">
                   <i class="lucide lucide-search" aria-hidden="true"></i>

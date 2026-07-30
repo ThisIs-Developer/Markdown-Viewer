@@ -537,7 +537,28 @@ document.addEventListener("DOMContentLoaded", async function () {
   const githubImportSubtitle = document.getElementById("github-import-subtitle");
   const githubImportUrlInput = document.getElementById("github-import-url");
   const githubImportUrlLabel = document.getElementById("github-import-url-label");
+  const githubImportAccess = document.getElementById("github-import-access");
+  const githubImportAccessToggle = document.getElementById("github-import-access-toggle");
+  const githubImportAccessPanel = document.getElementById("github-import-access-panel");
+  const githubImportAccessSummary = document.getElementById("github-import-access-summary");
+  const githubImportAccessUnlock = document.getElementById("github-import-access-unlock");
+  const githubImportAccessSavedText = document.getElementById("github-import-access-saved-text");
+  const githubImportPatUnlockPassphrase = document.getElementById("github-import-pat-unlock-passphrase");
+  const githubImportPatUnlockBtn = document.getElementById("github-import-pat-unlock");
+  const githubImportPatInput = document.getElementById("github-import-pat");
+  const githubImportPatRetention = document.getElementById("github-import-pat-retention");
+  const githubImportPatProtection = document.getElementById("github-import-pat-protection");
+  const githubImportPatPassphrase = document.getElementById("github-import-pat-passphrase");
+  const githubImportPatSaveBtn = document.getElementById("github-import-pat-save");
+  const githubImportPatRemoveBtn = document.getElementById("github-import-pat-remove");
+  const githubImportAccessStatus = document.getElementById("github-import-access-status");
   const githubImportFileSelect = document.getElementById("github-import-file-select");
+  const githubImportRepositoryContext = document.getElementById("github-import-repository-context");
+  const githubImportRepositoryName = document.getElementById("github-import-repository-name");
+  const githubImportCommitLink = document.getElementById("github-import-commit-link");
+  const githubImportCommit = document.getElementById("github-import-commit");
+  const githubImportRef = document.getElementById("github-import-ref");
+  const githubImportBasePath = document.getElementById("github-import-base-path");
   const githubImportSelectionToolbar = document.getElementById("github-import-selection-toolbar");
   const githubImportSearchInput = document.getElementById("github-import-search");
   const githubImportSelectedCount = document.getElementById("github-import-selected-count");
@@ -11276,11 +11297,19 @@ ${selector} .arrowheadPath {
     return /\.(md|markdown)$/i.test(path || "");
   }
   const GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS = 800;
+  const GITHUB_API_VERSION = "2022-11-28";
+  const GITHUB_ACCESS_RECORD_NAME = "githubAccessRecordV1";
+  const GITHUB_PAT_VAULT_VERSION = 1;
+  const GITHUB_PAT_KDF_ITERATIONS = 250000;
   let lastGitHubImportRequestAt = 0;
   const selectedGitHubImportPaths = new Set();
   const collapsedGitHubImportFolders = new Set();
   let availableGitHubImportPaths = [];
   let githubImportSearchTimer = null;
+  let githubAccessToken = "";
+  let githubAccessTokenExpiresAt = 0;
+  let githubPatStoredRecord = null;
+  let githubPatExpiryTimer = null;
 
   function getFileName(path) {
     return (path || "").split("/").pop() || "document.md";
@@ -11304,11 +11333,37 @@ ${selector} .arrowheadPath {
     return parentFolder || repositoryFolder;
   }
 
-  async function importGitHubFilesInBackground(owner, repo, ref, filePaths) {
+  function encodeGitHubPath(path) {
+    return String(path || "")
+      .split("/")
+      .filter(Boolean)
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+  }
+
+  function getGitHubRepositoryFolderName(context) {
+    if (!context || !context.repo) return "GitHub import";
+    return context.isDefaultRef || !context.commitSha
+      ? context.repo
+      : `${context.repo} @ ${context.commitSha.slice(0, 7)}`;
+  }
+
+  async function fetchGitHubFileContent(context, filePath) {
+    if (context.isPrivate) {
+      const url = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repo)}/contents/${encodeGitHubPath(filePath)}?ref=${encodeURIComponent(context.commitSha)}`;
+      return fetchGitHubText(url, {
+        authenticated: true,
+        accept: "application/vnd.github.raw+json"
+      });
+    }
+    return fetchTextContent(buildRawGitHubUrl(context.owner, context.repo, context.commitSha, filePath));
+  }
+
+  async function importGitHubFilesInBackground(context, filePaths) {
     const paths = Array.from(filePaths || []).filter(Boolean);
     if (!paths.length) return 0;
 
-    const folder = ensureWorkspaceFolder(DEFAULT_WORKSPACE_ID, repo);
+    const folder = ensureWorkspaceFolder(DEFAULT_WORKSPACE_ID, getGitHubRepositoryFolderName(context));
     if (!folder) {
       showImportProgress(paths.length, { title: 'GitHub import', detail: 'Preparing repository folder…' });
       finishImportProgress(0, paths.length, { detail: 'The repository folder could not be created.' });
@@ -11327,7 +11382,7 @@ ${selector} .arrowheadPath {
       const filePath = paths[index];
       updateImportProgress(index, paths.length, 'Importing ' + getFileName(filePath));
       try {
-        const markdown = await fetchTextContent(buildRawGitHubUrl(owner, repo, ref, filePath));
+        const markdown = await fetchGitHubFileContent(context, filePath);
         const destinationFolder = ensureGitHubFolderPath(DEFAULT_WORKSPACE_ID, folder, filePath);
         const destination = { workspaceId: DEFAULT_WORKSPACE_ID, folderId: destinationFolder.id };
         const importedDocument = createImportedDocument(
@@ -11358,11 +11413,11 @@ ${selector} .arrowheadPath {
     return imported;
   }
 
-  function startGitHubImport(owner, repo, ref, filePaths) {
+  function startGitHubImport(context, filePaths) {
     const paths = Array.from(filePaths || []).filter(Boolean);
     closeGitHubImportModal();
     if (!paths.length) return;
-    void importGitHubFilesInBackground(owner, repo, ref, paths).catch(function(error) {
+    void importGitHubFilesInBackground(context, paths).catch(function(error) {
       console.error('GitHub import failed:', error);
       showImportProgress(paths.length, { title: 'GitHub import', detail: 'Unable to start import.' });
       finishImportProgress(0, paths.length, { detail: error && error.message ? error.message : 'GitHub import failed.' });
@@ -11370,7 +11425,70 @@ ${selector} .arrowheadPath {
     });
   }
 
-  async function fetchGitHubJson(url) {
+  class GitHubRequestError extends Error {
+    constructor(status, message) {
+      super(message || `GitHub API request failed (${status})`);
+      this.name = "GitHubRequestError";
+      this.status = status;
+    }
+  }
+
+  function clearExpiredGitHubAccessToken() {
+    if (!githubAccessTokenExpiresAt || Date.now() < githubAccessTokenExpiresAt) return;
+    githubAccessToken = "";
+    githubAccessTokenExpiresAt = 0;
+    githubPatStoredRecord = null;
+    if (workspaceStorage && typeof workspaceStorage.deleteMetadata === "function") {
+      void workspaceStorage.init()
+        .then(() => workspaceStorage.deleteMetadata(GITHUB_ACCESS_RECORD_NAME))
+        .catch(() => {});
+    }
+  }
+
+  function scheduleGitHubAccessExpiry(expiresAt) {
+    clearTimeout(githubPatExpiryTimer);
+    githubPatExpiryTimer = null;
+    if (!expiresAt) return;
+    const remaining = Number(expiresAt) - Date.now();
+    if (remaining <= 0) {
+      void removeGitHubAccess({ silent: true })
+        .then(function() {
+          setGitHubAccessStatus("Private repository access expired and was removed from this device.", "success");
+          announceToScreenReader("GitHub private repository access expired and was removed.");
+        })
+        .catch(() => {});
+      return;
+    }
+    githubPatExpiryTimer = setTimeout(function() {
+      scheduleGitHubAccessExpiry(expiresAt);
+    }, Math.min(remaining, 2147483647));
+  }
+
+  function getGitHubAccessToken() {
+    clearExpiredGitHubAccessToken();
+    return githubAccessToken;
+  }
+
+  function getGitHubApiHeaders(accept, authenticated) {
+    const headers = {
+      Accept: accept || "application/vnd.github+json",
+      "X-GitHub-Api-Version": GITHUB_API_VERSION
+    };
+    if (authenticated) {
+      const token = getGitHubAccessToken();
+      if (!token) {
+        throw new Error("Private repository access is locked or has expired.");
+      }
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
+  async function fetchGitHubResponse(url, options = {}) {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:" || parsedUrl.origin !== "https://api.github.com") {
+      throw new Error("Blocked an unsafe GitHub API destination.");
+    }
     const now = Date.now();
     const waitTime = GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS - (now - lastGitHubImportRequestAt);
     if (waitTime > 0) {
@@ -11378,22 +11496,53 @@ ${selector} .arrowheadPath {
     }
     lastGitHubImportRequestAt = Date.now();
     const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json"
-      }
+      headers: getGitHubApiHeaders(options.accept, options.authenticated === true),
+      redirect: "error",
+      cache: "no-store"
     });
     if (!response.ok) {
-      throw new Error(`GitHub API request failed (${response.status})`);
+      let message = `GitHub API request failed (${response.status})`;
+      if (response.status === 401) {
+        message = "GitHub rejected the token. Check that it is active and has read-only repository Contents access.";
+      } else if (response.status === 403) {
+        message = "GitHub denied this request. Check token permissions, organization approval, or API rate limits.";
+      }
+      throw new GitHubRequestError(response.status, message);
     }
+    return response;
+  }
+
+  async function fetchGitHubJson(url, options = {}) {
+    const response = await fetchGitHubResponse(url, options);
     return response.json();
   }
 
+  async function fetchGitHubText(url, options = {}) {
+    const response = await fetchGitHubResponse(url, options);
+    return response.text();
+  }
+
   async function fetchTextContent(url) {
-    const response = await fetch(url);
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:" || parsedUrl.origin !== "https://raw.githubusercontent.com") {
+      throw new Error("Blocked an unsafe GitHub content destination.");
+    }
+    const response = await fetch(url, {
+      redirect: "error",
+      cache: "no-store"
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch file (${response.status})`);
     }
     return response.text();
+  }
+
+  function decodeGitHubPathSegments(pathname) {
+    try {
+      return pathname.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+    } catch (_) {
+      return null;
+    }
   }
 
   function parseGitHubImportUrl(input) {
@@ -11404,14 +11553,22 @@ ${selector} .arrowheadPath {
       return null;
     }
 
+    if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password || parsedUrl.port) {
+      return null;
+    }
     const host = parsedUrl.hostname.replace(/^www\./, "");
-    const segments = parsedUrl.pathname.split("/").filter(Boolean);
+    const segments = decodeGitHubPathSegments(parsedUrl.pathname);
+    if (!segments) return null;
 
     if (host === "raw.githubusercontent.com") {
       if (segments.length < 4) return null;
-      const [owner, repo, ref, ...rest] = segments;
-      const filePath = rest.join("/");
-      return { owner, repo, ref, type: "file", filePath };
+      return {
+        owner: segments[0],
+        repo: segments[1].replace(/\.git$/i, ""),
+        type: "file",
+        locationSegments: segments.slice(2),
+        source: "raw"
+      };
     }
 
     if (host !== "github.com" || segments.length < 2) return null;
@@ -11428,8 +11585,8 @@ ${selector} .arrowheadPath {
         owner,
         repo,
         type: "file",
-        ref: segments[3],
-        filePath: segments.slice(4).join("/")
+        locationSegments: segments.slice(3),
+        source: "blob"
       };
     }
 
@@ -11438,17 +11595,351 @@ ${selector} .arrowheadPath {
         owner,
         repo,
         type: "tree",
-        ref: segments[3],
-        basePath: segments.slice(4).join("/")
+        locationSegments: segments.slice(3),
+        source: "tree"
       };
     }
 
     return { owner, repo, type: "repo" };
   }
 
-  async function getDefaultBranch(owner, repo) {
-    const repoInfo = await fetchGitHubJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
-    return repoInfo.default_branch;
+  async function getGitHubRepositoryInfo(owner, repo) {
+    const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+    try {
+      return {
+        info: await fetchGitHubJson(url),
+        authenticated: false
+      };
+    } catch (error) {
+      const canRetryWithToken = error instanceof GitHubRequestError
+        && (error.status === 403 || error.status === 404)
+        && Boolean(getGitHubAccessToken());
+      if (!canRetryWithToken) {
+        if (error instanceof GitHubRequestError && error.status === 404) {
+          throw new Error("Repository not found. If it is private, add secure private repository access and try again.");
+        }
+        throw error;
+      }
+      return {
+        info: await fetchGitHubJson(url, { authenticated: true }),
+        authenticated: true
+      };
+    }
+  }
+
+  async function resolveGitHubCommit(owner, repo, refName, authenticated) {
+    const commit = await fetchGitHubJson(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(refName)}`,
+      { authenticated }
+    );
+    if (!commit || !commit.sha) {
+      throw new Error("GitHub did not return a commit for this branch, tag, or commit reference.");
+    }
+    return commit;
+  }
+
+  async function resolveGitHubLocation(parsed) {
+    const repository = await getGitHubRepositoryInfo(parsed.owner, parsed.repo);
+    const repoInfo = repository.info || {};
+    const authenticated = Boolean(repository.authenticated || repoInfo.private);
+    const defaultBranch = repoInfo.default_branch || "main";
+    let refName = defaultBranch;
+    let commit = null;
+    let remainder = [];
+
+    if (parsed.type === "repo") {
+      commit = await resolveGitHubCommit(parsed.owner, parsed.repo, refName, authenticated);
+    } else {
+      const segments = Array.from(parsed.locationSegments || []).filter(Boolean);
+      const minimumRemainder = parsed.type === "file" ? 1 : 0;
+      const maximumRefSegments = segments.length - minimumRemainder;
+      for (let count = maximumRefSegments; count >= 1; count--) {
+        const candidate = segments.slice(0, count).join("/");
+        try {
+          commit = await resolveGitHubCommit(parsed.owner, parsed.repo, candidate, authenticated);
+          refName = candidate;
+          remainder = segments.slice(count);
+          break;
+        } catch (error) {
+          if (!(error instanceof GitHubRequestError) || error.status !== 404) throw error;
+        }
+      }
+      if (!commit) {
+        throw new Error("No matching branch, tag, or commit was found in this GitHub URL.");
+      }
+    }
+
+    return {
+      owner: parsed.owner,
+      repo: parsed.repo,
+      type: parsed.type,
+      refName,
+      commitSha: commit.sha,
+      defaultBranch,
+      isDefaultRef: refName === defaultBranch,
+      isPrivate: Boolean(repoInfo.private),
+      authenticated,
+      filePath: parsed.type === "file" ? remainder.join("/") : "",
+      basePath: parsed.type === "tree" ? remainder.join("/") : ""
+    };
+  }
+
+  function getGitHubPatAdditionalData(expiresAt) {
+    return new TextEncoder().encode(`markdown-viewer:${GITHUB_ACCESS_RECORD_NAME}:${expiresAt}`);
+  }
+
+  async function encryptGitHubAccessToken(token, passphrase, expiresAt) {
+    const cryptoApi = getWebCrypto();
+    if (!cryptoApi) throw new Error("Secure token encryption is unavailable in this browser.");
+    const salt = cryptoApi.getRandomValues(new Uint8Array(16));
+    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+    const key = await deriveSecretWorkspaceKey(passphrase, salt, GITHUB_PAT_KDF_ITERATIONS);
+    const payload = new TextEncoder().encode(JSON.stringify({
+      token,
+      expiresAt,
+      createdAt: Date.now()
+    }));
+    const ciphertext = await cryptoApi.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData: getGitHubPatAdditionalData(expiresAt),
+        tagLength: 128
+      },
+      key,
+      payload
+    );
+    return {
+      version: GITHUB_PAT_VAULT_VERSION,
+      algorithm: "AES-GCM",
+      kdf: "PBKDF2-SHA-256",
+      iterations: GITHUB_PAT_KDF_ITERATIONS,
+      salt: bytesToBase64(salt),
+      iv: bytesToBase64(iv),
+      ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
+      expiresAt,
+      createdAt: Date.now()
+    };
+  }
+
+  async function decryptGitHubAccessToken(record, passphrase) {
+    if (!record || record.version !== GITHUB_PAT_VAULT_VERSION) {
+      throw new Error("The saved GitHub access record is not supported.");
+    }
+    const expiresAt = Number(record.expiresAt);
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      throw new Error("The saved GitHub access has expired.");
+    }
+    const cryptoApi = getWebCrypto();
+    if (!cryptoApi) throw new Error("Secure token decryption is unavailable in this browser.");
+    const iterations = Number(record.iterations) || GITHUB_PAT_KDF_ITERATIONS;
+    const key = await deriveSecretWorkspaceKey(passphrase, base64ToBytes(record.salt), iterations);
+    const decrypted = await cryptoApi.subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: base64ToBytes(record.iv),
+        additionalData: getGitHubPatAdditionalData(expiresAt),
+        tagLength: 128
+      },
+      key,
+      base64ToBytes(record.ciphertext)
+    );
+    const payload = JSON.parse(new TextDecoder().decode(decrypted));
+    if (!payload || payload.expiresAt !== expiresAt || typeof payload.token !== "string") {
+      throw new Error("The saved GitHub access record failed its integrity check.");
+    }
+    return payload.token;
+  }
+
+  function formatGitHubAccessExpiry(expiresAt) {
+    if (!expiresAt) return "this session";
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(new Date(expiresAt));
+  }
+
+  function setGitHubAccessStatus(message, state) {
+    if (!githubImportAccessStatus) return;
+    githubImportAccessStatus.textContent = message || "";
+    githubImportAccessStatus.hidden = !message;
+    githubImportAccessStatus.classList.toggle("is-error", state === "error");
+    githubImportAccessStatus.classList.toggle("is-success", state === "success");
+  }
+
+  function renderGitHubAccessState() {
+    clearExpiredGitHubAccessToken();
+    const hasActiveToken = Boolean(getGitHubAccessToken());
+    const hasStoredRecord = Boolean(githubPatStoredRecord);
+    if (githubImportAccess) {
+      githubImportAccess.dataset.state = hasActiveToken ? "active" : hasStoredRecord ? "locked" : "empty";
+    }
+    if (githubImportAccessSummary) {
+      githubImportAccessSummary.textContent = hasActiveToken
+        ? `Access ready · ${githubAccessTokenExpiresAt ? "expires " + formatGitHubAccessExpiry(githubAccessTokenExpiresAt) : "session only"}`
+        : hasStoredRecord
+          ? `Encrypted token saved · expires ${formatGitHubAccessExpiry(githubPatStoredRecord.expiresAt)}`
+          : "No token stored · public repositories only";
+    }
+    if (githubImportAccessUnlock) {
+      githubImportAccessUnlock.hidden = !hasStoredRecord || hasActiveToken;
+    }
+    if (githubImportAccessSavedText && hasStoredRecord) {
+      githubImportAccessSavedText.textContent = `Encrypted access expires ${formatGitHubAccessExpiry(githubPatStoredRecord.expiresAt)}.`;
+    }
+    if (githubImportPatRemoveBtn) {
+      githubImportPatRemoveBtn.hidden = !hasActiveToken && !hasStoredRecord;
+    }
+  }
+
+  async function loadStoredGitHubAccess() {
+    githubPatStoredRecord = null;
+    if (!workspaceStorage) {
+      renderGitHubAccessState();
+      return;
+    }
+    try {
+      await workspaceStorage.init();
+      const record = await workspaceStorage.getMetadata(GITHUB_ACCESS_RECORD_NAME);
+      if (record && Number(record.expiresAt) <= Date.now()) {
+        if (typeof workspaceStorage.deleteMetadata === "function") {
+          await workspaceStorage.deleteMetadata(GITHUB_ACCESS_RECORD_NAME);
+        }
+        setGitHubAccessStatus("Expired private repository access was removed from this device.", "success");
+      } else if (record) {
+        githubPatStoredRecord = record;
+        scheduleGitHubAccessExpiry(record.expiresAt);
+      }
+    } catch (_) {
+      setGitHubAccessStatus("Saved private access could not be read. Session-only access is still available.", "error");
+    }
+    renderGitHubAccessState();
+  }
+
+  async function removeGitHubAccess(options = {}) {
+    clearTimeout(githubPatExpiryTimer);
+    githubPatExpiryTimer = null;
+    githubAccessToken = "";
+    githubAccessTokenExpiresAt = 0;
+    githubPatStoredRecord = null;
+    if (githubImportPatInput) githubImportPatInput.value = "";
+    if (githubImportPatPassphrase) githubImportPatPassphrase.value = "";
+    if (githubImportPatUnlockPassphrase) githubImportPatUnlockPassphrase.value = "";
+    if (workspaceStorage) {
+      await workspaceStorage.init();
+      if (typeof workspaceStorage.deleteMetadata === "function") {
+        await workspaceStorage.deleteMetadata(GITHUB_ACCESS_RECORD_NAME);
+      } else {
+        await workspaceStorage.setMetadata(GITHUB_ACCESS_RECORD_NAME, null);
+      }
+    }
+    renderGitHubAccessState();
+    if (!options.silent) {
+      setGitHubAccessStatus("Private repository access was removed from this device.", "success");
+      announceToScreenReader("GitHub private repository access removed.");
+    }
+  }
+
+  function validateGitHubPat(token) {
+    if (!token || token.length < 20 || /\s/.test(token)) {
+      throw new Error("Enter a valid personal access token without spaces.");
+    }
+  }
+
+  async function saveGitHubAccess() {
+    if (!githubImportPatInput || !githubImportPatRetention) return;
+    const token = githubImportPatInput.value;
+    validateGitHubPat(token);
+    const retention = githubImportPatRetention.value;
+    let expiresAt = 0;
+    let record = null;
+
+    if (retention !== "session") {
+      const days = Number(retention);
+      const passphrase = githubImportPatPassphrase ? githubImportPatPassphrase.value : "";
+      if (!Number.isFinite(days) || days < 1 || days > 30) {
+        throw new Error("Choose a supported access retention period.");
+      }
+      if (passphrase.length < 12) {
+        throw new Error("Use at least 12 characters for the protection passphrase.");
+      }
+      if (!workspaceStorage) {
+        throw new Error("Encrypted workspace storage is unavailable. Use session-only access instead.");
+      }
+      expiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
+      record = await encryptGitHubAccessToken(token, passphrase, expiresAt);
+      await workspaceStorage.init();
+      await workspaceStorage.setMetadata(GITHUB_ACCESS_RECORD_NAME, record);
+    } else if (workspaceStorage) {
+      await workspaceStorage.init();
+      if (typeof workspaceStorage.deleteMetadata === "function") {
+        await workspaceStorage.deleteMetadata(GITHUB_ACCESS_RECORD_NAME);
+      }
+    }
+
+    githubAccessToken = token;
+    githubAccessTokenExpiresAt = expiresAt;
+    githubPatStoredRecord = record;
+    scheduleGitHubAccessExpiry(expiresAt);
+    githubImportPatInput.value = "";
+    if (githubImportPatPassphrase) githubImportPatPassphrase.value = "";
+    renderGitHubAccessState();
+    setGitHubAccessStatus(
+      expiresAt
+        ? `Private access is ready and encrypted until ${formatGitHubAccessExpiry(expiresAt)}.`
+        : "Private access is ready for this session and was not written to storage.",
+      "success"
+    );
+    announceToScreenReader("GitHub private repository access is ready.");
+  }
+
+  async function unlockStoredGitHubAccess() {
+    if (!githubPatStoredRecord || !githubImportPatUnlockPassphrase) return;
+    const passphrase = githubImportPatUnlockPassphrase.value;
+    if (!passphrase) throw new Error("Enter the protection passphrase.");
+    try {
+      githubAccessToken = await decryptGitHubAccessToken(githubPatStoredRecord, passphrase);
+      githubAccessTokenExpiresAt = Number(githubPatStoredRecord.expiresAt);
+      scheduleGitHubAccessExpiry(githubAccessTokenExpiresAt);
+    } catch (error) {
+      if (Number(githubPatStoredRecord.expiresAt) <= Date.now()) {
+        await removeGitHubAccess({ silent: true });
+        throw new Error("The saved GitHub access expired and was removed.");
+      }
+      throw new Error("The token could not be unlocked. Check the protection passphrase.");
+    } finally {
+      githubImportPatUnlockPassphrase.value = "";
+    }
+    renderGitHubAccessState();
+    setGitHubAccessStatus("Encrypted private repository access is unlocked for this session.", "success");
+    announceToScreenReader("GitHub private repository access unlocked.");
+  }
+
+  function renderGitHubRepositoryContext(context) {
+    if (!githubImportRepositoryContext) return;
+    if (!context) {
+      githubImportRepositoryContext.hidden = true;
+      return;
+    }
+    githubImportRepositoryContext.hidden = false;
+    if (githubImportRepositoryName) {
+      githubImportRepositoryName.textContent = `${context.owner}/${context.repo}`;
+    }
+    if (githubImportCommit) {
+      githubImportCommit.textContent = context.commitSha.slice(0, 7);
+    }
+    if (githubImportCommitLink) {
+      githubImportCommitLink.href = `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repo)}/tree/${encodeURIComponent(context.commitSha)}`;
+      githubImportCommitLink.title = `Open commit ${context.commitSha} on GitHub`;
+      githubImportCommitLink.setAttribute("aria-label", `Open commit ${context.commitSha} on GitHub`);
+    }
+    if (githubImportRef) {
+      githubImportRef.textContent = context.refName;
+    }
+    if (githubImportBasePath) {
+      githubImportBasePath.textContent = context.basePath ? `/ ${context.basePath}` : "";
+      githubImportBasePath.hidden = !context.basePath;
+    }
   }
 
   function isPathInsideGitHubBase(path, normalizedBasePath) {
@@ -11462,13 +11953,16 @@ ${selector} .arrowheadPath {
       || path.startsWith(normalizedBasePath + "/");
   }
 
-  async function listMarkdownFilesFromGitHubSubtrees(owner, repo, ref, normalizedBasePath) {
+  async function listMarkdownFilesFromGitHubSubtrees(owner, repo, ref, normalizedBasePath, authenticated) {
     const pendingTrees = [{ path: "", ref }];
     const markdownPaths = new Set();
 
     for (let index = 0; index < pendingTrees.length; index++) {
       const currentTree = pendingTrees[index];
-      const treeResponse = await fetchGitHubJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(currentTree.ref)}`);
+      const treeResponse = await fetchGitHubJson(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(currentTree.ref)}`,
+        { authenticated }
+      );
 
       (treeResponse.tree || []).forEach((entry) => {
         const fullPath = currentTree.path ? `${currentTree.path}/${entry.path}` : entry.path;
@@ -11484,14 +11978,18 @@ ${selector} .arrowheadPath {
   }
 
   async function listMarkdownFiles(owner, repo, ref, basePath, options = {}) {
-    const treeResponse = await fetchGitHubJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
+    const authenticated = options.authenticated === true;
+    const treeResponse = await fetchGitHubJson(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
+      { authenticated }
+    );
     const normalizedBasePath = (basePath || "").replace(/^\/+|\/+$/g, "");
 
     if (treeResponse.truncated) {
       if (typeof options.onTruncatedTree === "function") {
         options.onTruncatedTree();
       }
-      return listMarkdownFilesFromGitHubSubtrees(owner, repo, ref, normalizedBasePath);
+      return listMarkdownFilesFromGitHubSubtrees(owner, repo, ref, normalizedBasePath, authenticated);
     }
 
     return (treeResponse.tree || [])
@@ -11724,6 +12222,7 @@ ${selector} .arrowheadPath {
 
   function resetGitHubImportModal() {
     if (!githubImportUrlInput || !githubImportFileSelect || !githubImportSubmitBtn) return;
+    if (githubImportModal) githubImportModal.classList.remove("is-selection-step");
     if (githubImportTitle) {
       githubImportTitle.textContent = "Import Markdown from GitHub";
     }
@@ -11733,6 +12232,16 @@ ${selector} .arrowheadPath {
     githubImportUrlInput.value = "";
     githubImportUrlInput.style.display = "block";
     if (githubImportUrlLabel) githubImportUrlLabel.style.display = "block";
+    if (githubImportAccess) githubImportAccess.hidden = false;
+    if (githubImportAccessToggle) githubImportAccessToggle.setAttribute("aria-expanded", "false");
+    if (githubImportAccessPanel) githubImportAccessPanel.hidden = true;
+    if (githubImportPatInput) githubImportPatInput.value = "";
+    if (githubImportPatRetention) githubImportPatRetention.value = "session";
+    if (githubImportPatProtection) githubImportPatProtection.hidden = true;
+    if (githubImportPatPassphrase) githubImportPatPassphrase.value = "";
+    if (githubImportPatUnlockPassphrase) githubImportPatUnlockPassphrase.value = "";
+    setGitHubAccessStatus("");
+    renderGitHubRepositoryContext(null);
     githubImportUrlInput.disabled = false;
     githubImportFileSelect.innerHTML = "";
     githubImportFileSelect.style.display = "none";
@@ -11758,8 +12267,10 @@ ${selector} .arrowheadPath {
     delete githubImportSubmitBtn.dataset.owner;
     delete githubImportSubmitBtn.dataset.repo;
     delete githubImportSubmitBtn.dataset.ref;
+    githubImportSubmitBtn._githubContext = null;
     githubImportSubmitBtn.textContent = "Import";
     setGitHubImportMessage("");
+    renderGitHubAccessState();
   }
 
   function openGitHubImportModal() {
@@ -11769,6 +12280,7 @@ ${selector} .arrowheadPath {
       focusTarget: githubImportUrlInput,
       onClose: closeGitHubImportModal
     });
+    void loadStoredGitHubAccess();
   }
 
   function closeGitHubImportModal() {
@@ -11790,19 +12302,29 @@ ${selector} .arrowheadPath {
       if (githubImportSearchInput) {
         githubImportSearchInput.disabled = disabled;
       }
+      [
+        githubImportAccessToggle,
+        githubImportPatUnlockPassphrase,
+        githubImportPatUnlockBtn,
+        githubImportPatInput,
+        githubImportPatRetention,
+        githubImportPatPassphrase,
+        githubImportPatSaveBtn,
+        githubImportPatRemoveBtn
+      ].forEach(function(control) {
+        if (control) control.disabled = disabled;
+      });
     };
     const step = githubImportSubmitBtn.dataset.step || "url";
     if (step === "select") {
       const selectedPaths = Array.from(selectedGitHubImportPaths);
-      const owner = githubImportSubmitBtn.dataset.owner;
-      const repo = githubImportSubmitBtn.dataset.repo;
-      const ref = githubImportSubmitBtn.dataset.ref;
-      if (!owner || !repo || !ref || !selectedPaths.length) {
+      const context = githubImportSubmitBtn._githubContext;
+      if (!context || !context.owner || !context.repo || !context.commitSha || !selectedPaths.length) {
         setGitHubImportMessage("Please select at least one file to import.");
         return;
       }
       announceToScreenReader("Importing selected files from GitHub...");
-      startGitHubImport(owner, repo, ref, selectedPaths);
+      startGitHubImport(context, selectedPaths);
       return;
     }
 
@@ -11822,12 +12344,13 @@ ${selector} .arrowheadPath {
     setGitHubImportLoading(true);
     setGitHubImportDialogDisabled(true);
     try {
-      if (parsed.type === "file") {
-        if (!isMarkdownPath(parsed.filePath)) {
+      const context = await resolveGitHubLocation(parsed);
+      if (context.type === "file") {
+        if (!isMarkdownPath(context.filePath)) {
           throw new Error("The provided URL does not point to a Markdown file.");
         }
         announceToScreenReader("Starting GitHub import...");
-        startGitHubImport(parsed.owner, parsed.repo, parsed.ref, [parsed.filePath]);
+        startGitHubImport(context, [context.filePath]);
         return;
       }
 
@@ -11841,8 +12364,8 @@ ${selector} .arrowheadPath {
         githubImportTree.style.display = "block";
       }
 
-      const ref = parsed.ref || await getDefaultBranch(parsed.owner, parsed.repo);
-      const files = await listMarkdownFiles(parsed.owner, parsed.repo, ref, parsed.basePath || "", {
+      const files = await listMarkdownFiles(context.owner, context.repo, context.commitSha, context.basePath, {
+        authenticated: context.authenticated,
         onTruncatedTree: function() {
           setGitHubImportMessage("GitHub returned a partial tree. Scanning every folder to find all Markdown files\u2026", { isError: false });
           announceToScreenReader("Large GitHub repository detected. Scanning every folder.");
@@ -11862,13 +12385,16 @@ ${selector} .arrowheadPath {
       if (files.length === 1) {
         const targetPath = files[0];
         announceToScreenReader("Starting GitHub import...");
-        startGitHubImport(parsed.owner, parsed.repo, ref, [targetPath]);
+        startGitHubImport(context, [targetPath]);
         return;
       }
 
       githubImportFileSelect.innerHTML = "";
+      if (githubImportModal) githubImportModal.classList.add("is-selection-step");
       githubImportUrlInput.style.display = "none";
       if (githubImportUrlLabel) githubImportUrlLabel.style.display = "none";
+      if (githubImportAccess) githubImportAccess.hidden = true;
+      renderGitHubRepositoryContext(context);
       githubImportFileSelect.style.display = "none";
       if (githubImportSelectionToolbar) {
         githubImportSelectionToolbar.style.display = "grid";
@@ -11892,9 +12418,10 @@ ${selector} .arrowheadPath {
         githubImportSubtitle.textContent = `${files.length.toLocaleString()} Markdown files found. Choose what to save to Explorer.`;
       }
       githubImportSubmitBtn.dataset.step = "select";
-      githubImportSubmitBtn.dataset.owner = parsed.owner;
-      githubImportSubmitBtn.dataset.repo = parsed.repo;
-      githubImportSubmitBtn.dataset.ref = ref;
+      githubImportSubmitBtn.dataset.owner = context.owner;
+      githubImportSubmitBtn.dataset.repo = context.repo;
+      githubImportSubmitBtn.dataset.ref = context.commitSha;
+      githubImportSubmitBtn._githubContext = context;
       githubImportSubmitBtn.textContent = "Import Selected";
       if (githubImportSearchInput) githubImportSearchInput.focus();
     } catch (error) {
@@ -18129,6 +18656,83 @@ ${selector} .arrowheadPath {
   if (githubImportCloseBtn) {
     githubImportCloseBtn.addEventListener("click", closeGitHubImportModal);
   }
+  if (githubImportAccessToggle && githubImportAccessPanel) {
+    githubImportAccessToggle.addEventListener("click", function() {
+      const expanded = githubImportAccessToggle.getAttribute("aria-expanded") === "true";
+      githubImportAccessToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+      githubImportAccessPanel.hidden = expanded;
+      if (!expanded) {
+        const target = githubPatStoredRecord && !getGitHubAccessToken()
+          ? githubImportPatUnlockPassphrase
+          : githubImportPatInput;
+        if (target) requestAnimationFrame(() => target.focus({ preventScroll: true }));
+      }
+    });
+  }
+  if (githubImportPatRetention) {
+    githubImportPatRetention.addEventListener("change", function() {
+      const needsPassphrase = githubImportPatRetention.value !== "session";
+      if (githubImportPatProtection) githubImportPatProtection.hidden = !needsPassphrase;
+      if (!needsPassphrase && githubImportPatPassphrase) githubImportPatPassphrase.value = "";
+    });
+  }
+  if (githubImportPatSaveBtn) {
+    githubImportPatSaveBtn.addEventListener("click", async function() {
+      const previousText = githubImportPatSaveBtn.textContent;
+      githubImportPatSaveBtn.disabled = true;
+      githubImportPatSaveBtn.textContent = "Securing…";
+      setGitHubAccessStatus("");
+      try {
+        await saveGitHubAccess();
+      } catch (error) {
+        setGitHubAccessStatus(error && error.message ? error.message : "Private access could not be saved.", "error");
+      } finally {
+        githubImportPatSaveBtn.disabled = false;
+        githubImportPatSaveBtn.textContent = previousText;
+      }
+    });
+  }
+  if (githubImportPatUnlockBtn) {
+    githubImportPatUnlockBtn.addEventListener("click", async function() {
+      const previousText = githubImportPatUnlockBtn.textContent;
+      githubImportPatUnlockBtn.disabled = true;
+      githubImportPatUnlockBtn.textContent = "Unlocking…";
+      setGitHubAccessStatus("");
+      try {
+        await unlockStoredGitHubAccess();
+      } catch (error) {
+        setGitHubAccessStatus(error && error.message ? error.message : "Private access could not be unlocked.", "error");
+      } finally {
+        githubImportPatUnlockBtn.disabled = false;
+        githubImportPatUnlockBtn.textContent = previousText;
+      }
+    });
+  }
+  if (githubImportPatRemoveBtn) {
+    githubImportPatRemoveBtn.addEventListener("click", async function() {
+      githubImportPatRemoveBtn.disabled = true;
+      setGitHubAccessStatus("");
+      try {
+        await removeGitHubAccess();
+      } catch (_) {
+        setGitHubAccessStatus("Private access could not be removed from device storage.", "error");
+      } finally {
+        githubImportPatRemoveBtn.disabled = false;
+      }
+    });
+  }
+  const bindGitHubAccessEnterAction = function(input, actionButton) {
+    if (!input || !actionButton) return;
+    input.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        actionButton.click();
+      }
+    });
+  };
+  bindGitHubAccessEnterAction(githubImportPatUnlockPassphrase, githubImportPatUnlockBtn);
+  bindGitHubAccessEnterAction(githubImportPatInput, githubImportPatSaveBtn);
+  void loadStoredGitHubAccess();
   const handleGitHubImportInputKeydown = function(e) {
     if (e.key === "Enter") {
       e.preventDefault();

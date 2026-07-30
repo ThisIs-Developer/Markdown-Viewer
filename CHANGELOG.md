@@ -38,7 +38,10 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 
 - Removed the 30-file display cap so repository and folder results expose every Markdown file found.
 - Added complete subtree traversal when GitHub marks a recursive repository tree response as truncated.
-- Widened the GitHub picker, added file search, selected/total counts, an icon-based select-all toggle, and collapsible GitHub-style folder and file rows.
+- Added branch, tag, and commit URL resolution, including branch names containing `/`, and pinned each import to the resolved immutable commit SHA.
+- Added optional private repository access with fine-grained read-only PATs, session-only storage by default, passphrase-protected AES-GCM retention for 1, 7, or 30 days, automatic expiry, and manual removal.
+- Restored the compact 520px GitHub URL step while keeping the searchable file picker at 760px, and added repository, ref, and short-commit context to the selection step.
+- Added file search, selected/total counts, an icon-based select-all toggle, and collapsible GitHub-style folder and file rows using the application typography scale.
 - Changed local, drag-and-drop, desktop, and GitHub Markdown imports to save documents in Explorer without opening every imported file as a tab.
 - Batched multi-tab close commands so closing hundreds of tabs performs one state update and render instead of repeatedly rebuilding the interface.
 
