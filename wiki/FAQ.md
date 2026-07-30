@@ -120,7 +120,7 @@ Yes. It supports regular expressions, capture replacements, preserve-case replac
 
 ### Can I import a private GitHub repository?
 
-Yes. Expand **Private repository access** in the GitHub URL dialog and provide a fine-grained PAT restricted to the selected repository with **Contents: Read-only**. Session-only access is recommended and is not written to storage. Remembered access is AES-GCM encrypted under a separate passphrase, expires after the chosen 1-, 7-, or 30-day period, and can be removed at any time. The app cannot revoke the PAT on GitHub; use GitHub settings to revoke or rotate it.
+Yes. Expand **Private repository access** in the GitHub URL dialog. A fine-grained PAT is recommended: it can cover multiple selected repositories, or all repositories, for one resource owner with **Contents: Read-only**. A classic PAT is available as a compatibility option, but its `repo` scope grants much broader repository access. Session-only access is recommended and is not written to storage. Remembered access is AES-GCM encrypted under a separate passphrase, expires after the chosen 1-, 7-, or 30-day period, and can be removed at any time. The app cannot revoke the PAT on GitHub; use GitHub settings to revoke or rotate it.
 
 ### Which PDF option should I use?
 

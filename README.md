@@ -110,7 +110,7 @@ Markdown Viewer is local-first, not network-free. The following table shows the 
 | :--- | :--- |
 | Editing, local imports, Preview, Workspace autosave, and most exports | On the device |
 | Web libraries and uncached renderer dependencies | CDN requests in the web/PWA build |
-| GitHub import and emoji lookup | Public content uses GitHub APIs and raw-content hosts; private content uses an optional fine-grained PAT only with `api.github.com` |
+| GitHub import and emoji lookup | Public content uses GitHub APIs and raw-content hosts; private content uses an optional PAT only with `api.github.com` |
 | PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, and some diagram previews | Diagram source can be sent to PlantUML, Kroki, or mermaid.ink |
 | Consented image, GIF, and video insertion | Public, content-addressed Cloudflare media storage for 90 days |
 | Large Share Snapshot | Cloudflare KV for 90 days |
@@ -157,7 +157,7 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - Workspace backups do not include trash, desktop history, or crash-recovery journals.
 - A local Markdown file larger than 10 MB is rejected.
 - The searchable GitHub importer shows every Markdown file found in a repository or folder result and resolves branch, tag, and commit URLs to an immutable commit SHA.
-- Private repository access is session-only by default. Optional remembered access is passphrase-encrypted with AES-GCM, expires after 1, 7, or 30 days, and can be removed at any time.
+- Private repository access supports fine-grained PATs (recommended) and classic PATs as a broad-access compatibility fallback. Access is session-only by default; optional remembered access is passphrase-encrypted with AES-GCM, expires after 1, 7, or 30 days, and can be removed at any time.
 - Imported Markdown files are saved to Explorer and remain closed until you choose one, preventing large imports from flooding the tab bar.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.
 - Stored Share Snapshot content is limited to 8,000,000 characters and expires after 90 days.
