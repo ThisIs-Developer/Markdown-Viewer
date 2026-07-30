@@ -6324,6 +6324,20 @@ a:focus {
   }
 }
 
+@media (max-width: 900px) and (max-height: 500px) {
+  #github-import-search,
+  .github-import-select-all-btn,
+  .github-tree-folder-label,
+  .github-tree-file-btn {
+    min-height: 44px;
+  }
+
+  .github-import-select-all-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .frontmatter-table {
   border-collapse: collapse;
   margin-bottom: 1.5em;
