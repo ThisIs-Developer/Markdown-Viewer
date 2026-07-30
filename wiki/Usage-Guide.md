@@ -96,7 +96,7 @@ Scope matching uses Marked's lexer and is best-effort for unusual Markdown.
 
 ### Local Files
 
-Use Import > From files, the mobile import button, or drag and drop to open local Markdown files. Dropping a file on an Explorer folder imports it there; dropping it elsewhere imports it at the default workspace root. Folders expand after a short drag hover, and the Explorer scrolls automatically near its top and bottom edges.
+Use Import > From files, the mobile import button, or drag and drop to save local Markdown files in Explorer. Imported documents remain closed until you select one in Explorer, so large imports do not fill the tab bar. Dropping a file on an Explorer folder imports it there; dropping it elsewhere imports it at the default workspace root. Folders expand after a short drag hover, and the Explorer scrolls automatically near its top and bottom edges.
 
 Paste an image or GIF from the clipboard, drop an image/GIF/video file, or use the media dialog to insert it at the current editor cursor. A progress toast shows preparation and upload status. Still images are optimized, animated GIFs retain their original animation, and MP4, WebM, or Ogg videos are inserted as playable HTML5 media. After first-use consent, the app uploads the file to managed public media storage and inserts a short HTTPS link. Anyone with that unguessable URL can retrieve the media for up to 90 days; after expiry the reference remains in Markdown but the media stops rendering. Documents containing older inline base64 raster images offer to convert them to short links without changing their alt text or title.
 
@@ -119,7 +119,7 @@ Use Import > From GitHub and paste one of these URL types:
 - `https://github.com/owner/repo/blob/main/README.md`
 - `https://raw.githubusercontent.com/owner/repo/main/README.md`
 
-Direct Markdown file URLs import immediately. Repository and folder URLs query GitHub's public API, show a tree containing every Markdown file found, and let you import selected files into separate tabs. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved.
+Direct Markdown file URLs import immediately into Explorer. Repository and folder URLs query GitHub's public API and show a searchable, collapsible tree containing every Markdown file found. The toolbar shows selected and total file counts and provides an icon that switches between select all and deselect all. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved, and remain closed until you select one in Explorer.
 
 GitHub import sends the repository/path request to GitHub and only works for public content. The app does not ask for GitHub credentials.
 

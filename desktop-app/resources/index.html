@@ -1281,7 +1281,7 @@
             <div class="modal-header">
               <div>
                 <p id="github-import-title" class="reset-modal-message">Import Markdown from GitHub</p>
-                <p class="modal-subtext">Paste a GitHub file or repository URL.</p>
+                <p id="github-import-subtitle" class="modal-subtext">Paste a GitHub file or repository URL.</p>
               </div>
               <button type="button" class="modal-close-btn" id="github-import-close" aria-label="Close GitHub import dialog"><i class="lucide lucide-x" aria-hidden="true"></i></button>
             </div>
@@ -1290,10 +1290,20 @@
               <input type="url" id="github-import-url" class="rename-modal-input" placeholder="https://github.com/owner/repo/blob/main/README.md" autocomplete="url" spellcheck="false" />
               <select id="github-import-file-select" class="rename-modal-input" aria-label="Select Markdown files" style="display:none;"></select>
               <div id="github-import-selection-toolbar" class="github-import-selection-toolbar" style="display:none;">
-                <span id="github-import-selected-count" class="github-import-selected-count">0 selected</span>
-                <button type="button" class="reset-modal-btn" id="github-import-select-all">Select all</button>
+                <label class="github-import-search" for="github-import-search">
+                  <i class="lucide lucide-search" aria-hidden="true"></i>
+                  <input type="search" id="github-import-search" placeholder="Search Markdown files" autocomplete="off" spellcheck="false" />
+                </label>
+                <div class="github-import-selection-summary" aria-live="polite">
+                  <span id="github-import-selected-count" class="github-import-selected-count">0 selected</span>
+                  <span class="github-import-count-separator" aria-hidden="true">·</span>
+                  <span id="github-import-total-count" class="github-import-total-count">0 files</span>
+                </div>
+                <button type="button" class="github-import-select-all-btn" id="github-import-select-all" aria-label="Select all files" title="Select all files">
+                  <i class="lucide lucide-check-check" aria-hidden="true"></i>
+                </button>
               </div>
-              <div id="github-import-tree" class="github-import-tree" style="display:none;"></div>
+              <div id="github-import-tree" class="github-import-tree" role="tree" aria-label="Markdown files in this GitHub location" style="display:none;"></div>
               <p id="github-import-error" class="github-import-error" role="status" style="display:none;"></p>
             </div>
             <div class="reset-modal-actions">

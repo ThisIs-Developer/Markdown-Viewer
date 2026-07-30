@@ -156,7 +156,8 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - Importing a workspace backup permanently replaces the current workspace after confirmation.
 - Workspace backups do not include trash, desktop history, or crash-recovery journals.
 - A local Markdown file larger than 10 MB is rejected.
-- The public GitHub importer shows every Markdown file found in a repository or folder result.
+- The searchable public GitHub importer shows every Markdown file found in a repository or folder result.
+- Imported Markdown files are saved to Explorer and remain closed until you choose one, preventing large imports from flooding the tab bar.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.
 - Stored Share Snapshot content is limited to 8,000,000 characters and expires after 90 days.
 - Live Share allows up to 64 WebSocket participants and 8 MB per live message.

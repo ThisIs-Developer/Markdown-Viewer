@@ -241,7 +241,7 @@ Local file import:
 - Rejects an individual Markdown file larger than 10 MB.
 - Dragging files over the app shows a compact drop notice. Explorer document drags use a Markdown file preview, folders expand on hover, and the Explorer scrolls near its top and bottom edges.
 - The first 8 KB of a file are scanned for null bytes to avoid loading binary files as text.
-- Imported local files open in the active tab or a new tab depending on the action.
+- Imported local files are saved to Explorer without opening new tabs. Select a saved file in Explorer when you want to edit it.
 
 Media insertion:
 
@@ -265,11 +265,11 @@ GitHub import:
 - Accepts `github.com/owner/repo`, `github.com/owner/repo/tree/ref/path`, `github.com/owner/repo/blob/ref/path`, and `raw.githubusercontent.com` file URLs.
 - Direct Markdown file URLs import immediately.
 - Repository or folder URLs query GitHub's public API to find Markdown files.
-- The modal shows a tree and supports selecting multiple files.
+- The wider modal shows a searchable, collapsible GitHub-style tree, selected and total file counts, and an icon-based select-all or deselect-all control.
 - Imports create a repository-named folder and reproduce each selected file's nested GitHub directory path inside it.
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
-- Selected files are fetched as raw content and opened as separate tabs.
+- Selected files are fetched as raw content and saved to Explorer without opening new tabs.
 
 Limitations and privacy:
 

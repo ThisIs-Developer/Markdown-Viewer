@@ -5943,8 +5943,8 @@ a:focus {
 }
 
 #github-import-modal .reset-modal-box {
-  width: min(92vw, 520px);
-  max-width: 520px;
+  width: min(94vw, 760px);
+  max-width: 760px;
   min-width: 0;
   padding: 0;
   gap: 0;
@@ -5965,9 +5965,9 @@ a:focus {
 .github-import-modal-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: min(56vh, 460px);
-  overflow: auto;
+  gap: 10px;
+  max-height: min(68vh, 620px);
+  overflow: hidden;
   padding: 16px;
 }
 
@@ -5983,73 +5983,272 @@ a:focus {
 }
 
 .github-import-tree {
-  max-height: 320px;
+  min-height: 240px;
+  max-height: min(48vh, 440px);
   overflow: auto;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: 8px;
+  padding: 0;
   background: var(--bg-color);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .github-import-selection-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.github-import-search {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
+  min-width: 0;
+  margin: 0;
+}
+
+.github-import-search > .lucide {
+  position: absolute;
+  left: 11px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+#github-import-search {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 12px 8px 36px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: var(--button-bg);
+  background: var(--bg-color);
+  color: var(--text-color);
+  font: inherit;
+  font-size: var(--ui-font-md);
+}
+
+#github-import-search::placeholder {
+  color: var(--text-secondary);
+}
+
+#github-import-search:focus-visible {
+  border-color: var(--accent-color);
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
+  outline-offset: 1px;
+}
+
+.github-import-selection-summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: max-content;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .github-import-selected-count {
-  font-size: var(--ui-font-md);
   font-weight: 600;
   color: var(--text-color);
+}
+
+.github-import-count-separator {
+  color: color-mix(in srgb, var(--text-secondary) 66%, transparent);
+}
+
+.github-import-select-all-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--button-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.github-import-select-all-btn > .lucide {
+  width: 18px;
+  height: 18px;
+}
+
+.github-import-select-all-btn:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 42%, var(--border-color));
+  background: var(--button-hover);
+}
+
+.github-import-select-all-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.github-import-select-all-btn.is-deselect {
+  border-color: color-mix(in srgb, var(--accent-color) 46%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-color) 12%, var(--button-bg));
+  color: var(--accent-color);
+}
+
+.github-import-select-all-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .github-import-tree ul {
   list-style: none;
   margin: 0;
-  padding-left: 18px;
+  padding-left: 24px;
 }
 
 .github-import-tree>ul {
-  padding-left: 4px;
+  padding-left: 0;
 }
 
 .github-import-tree li {
-  margin: 2px 0;
+  margin: 0;
 }
 
 .github-tree-folder-label {
-  display: inline-block;
-  font-size: 14px;
-  color: var(--text-secondary, #57606a);
-  margin-bottom: 4px;
-}
-
-.github-tree-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 7px 10px;
   border: 0;
+  border-bottom: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-color);
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
   text-align: left;
+  font: inherit;
+  font-size: 14px;
+}
+
+.github-tree-folder-label:hover,
+.github-tree-folder-label:focus-visible {
+  background: var(--button-hover);
+}
+
+.github-tree-folder-label:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.github-tree-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary, #57606a);
+  flex: 0 0 auto;
+}
+
+.github-tree-folder-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--accent-color);
+  flex: 0 0 auto;
+}
+
+.github-tree-folder-count {
+  min-width: 24px;
+  margin-left: auto;
+  padding: 1px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.github-tree-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  min-height: 40px;
+  padding: 7px 10px 7px 32px;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
   font-size: 14px;
 }
 
 .github-tree-file-btn:hover,
 .github-tree-file-btn:focus-visible {
   background: var(--button-hover);
-  outline: none;
+}
+
+.github-tree-file-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
 }
 
 .github-tree-file-btn.is-selected {
-  background: rgba(56, 139, 253, 0.14);
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
   color: var(--accent-color);
+}
+
+.github-tree-file-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+}
+
+.github-tree-file-btn.is-selected .github-tree-file-icon {
+  color: var(--accent-color);
+}
+
+.github-import-tree-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.github-tree-selection-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--accent-color);
+  flex: 0 0 auto;
+}
+
+.github-tree-selection-icon[hidden] {
+  display: none;
+}
+
+.github-import-tree-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 220px;
+  padding: 24px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: var(--ui-font-md);
+}
+
+.github-import-tree-empty > .lucide {
+  width: 24px;
+  height: 24px;
 }
 
 #github-import-modal .reset-modal-actions {
@@ -6074,8 +6273,35 @@ a:focus {
   }
 
   .github-import-selection-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) 44px;
+  }
+
+  .github-import-search {
+    grid-column: 1 / -1;
+  }
+
+  #github-import-search,
+  .github-import-select-all-btn {
+    min-height: 44px;
+  }
+
+  .github-import-select-all-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .github-import-selection-summary {
+    justify-content: flex-start;
+  }
+
+  .github-import-tree {
+    min-height: 220px;
+    max-height: min(46vh, 380px);
+  }
+
+  .github-tree-folder-label,
+  .github-tree-file-btn {
+    min-height: 44px;
   }
 
   #github-import-modal .reset-modal-message {
@@ -6089,6 +6315,12 @@ a:focus {
   #github-import-modal .reset-modal-btn {
     width: auto;
     min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .github-import-select-all-btn {
+    transition: none;
   }
 }
 
@@ -6214,11 +6446,32 @@ a:focus {
 
 [dir="rtl"] .github-import-tree ul {
   padding-left: 0;
-  padding-right: 18px;
+  padding-right: 24px;
 }
 
 [dir="rtl"] .github-import-tree>ul {
-  padding-right: 4px;
+  padding-right: 0;
+}
+
+[dir="rtl"] .github-import-search > .lucide {
+  right: 11px;
+  left: auto;
+}
+
+[dir="rtl"] #github-import-search {
+  padding-right: 36px;
+  padding-left: 12px;
+}
+
+[dir="rtl"] .github-tree-file-btn {
+  padding-right: 32px;
+  padding-left: 10px;
+}
+
+[dir="rtl"] .github-tree-folder-count,
+[dir="rtl"] .github-tree-selection-icon {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 [dir="rtl"] .markdown-body .markdown-alert,
