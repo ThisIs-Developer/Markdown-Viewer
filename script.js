@@ -11301,8 +11301,15 @@ ${selector} .arrowheadPath {
   }
   const GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS = 800;
   const GITHUB_API_VERSION = "2022-11-28";
-  const GITHUB_ACCESS_VAULT_NAME = "githubAccessVaultV2";
+  const GITHUB_ACCESS_VAULT_NAME = "githubAccessVaultV3";
+  const GITHUB_RETIRED_ACCESS_VAULT_NAME = "githubAccessVaultV2";
   const GITHUB_LEGACY_ACCESS_RECORD_NAME = "githubAccessRecordV1";
+  const GITHUB_ACCESS_VAULT_VERSION = 3;
+  const GITHUB_ACCESS_KEY_DATABASE_NAME = "markdownViewerCredentialKeys";
+  const GITHUB_ACCESS_KEY_DATABASE_VERSION = 1;
+  const GITHUB_ACCESS_KEY_STORE_NAME = "keys";
+  const GITHUB_ACCESS_KEY_ID = "githubAccessVaultKeyV1";
+  const GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME = "markdownViewerGithubAccessKeyV1";
   let lastGitHubImportRequestAt = 0;
   const selectedGitHubImportPaths = new Set();
   const collapsedGitHubImportFolders = new Set();
@@ -11313,6 +11320,7 @@ ${selector} .arrowheadPath {
   let githubAccessAdding = true;
   let githubAccessVaultLoaded = false;
   let githubAccessVaultLoadPromise = null;
+  let githubAccessVaultKeyPromise = null;
   const githubSessionAccessTokens = new Map();
 
   function getFileName(path) {
@@ -11719,10 +11727,16 @@ ${selector} .arrowheadPath {
   function renderGitHubTokenExpiration(entry) {
     if (!githubImportTokenExpiry || !githubImportTokenExpiryText) return;
     const expiresAt = Number(entry && entry.expiresAt) || null;
-    if (!entry || !expiresAt) {
+    if (!entry) {
       githubImportTokenExpiry.hidden = true;
       githubImportTokenExpiryText.textContent = "";
       githubImportTokenExpiry.removeAttribute("title");
+      return;
+    }
+    if (!expiresAt) {
+      githubImportTokenExpiryText.textContent = "Expiry unknown";
+      githubImportTokenExpiry.title = "GitHub did not make this token's expiration date available to the app.";
+      githubImportTokenExpiry.hidden = false;
       return;
     }
     githubImportTokenExpiryText.textContent = formatGitHubTokenExpiration(expiresAt);
@@ -11737,6 +11751,7 @@ ${selector} .arrowheadPath {
     if (!entry || entry.expiresAt === expiresAt) return;
     entry.expiresAt = expiresAt;
     if (accessId === githubSelectedAccessId) renderGitHubTokenExpiration(entry);
+    void persistGitHubAccessVault().catch(function() {});
   }
 
   function showGitHubAccessToast(message, options = {}) {
@@ -11821,6 +11836,262 @@ ${selector} .arrowheadPath {
     renderGitHubTokenExpiration(selectedEntry);
   }
 
+  function openGitHubAccessKeyDatabase() {
+    return new Promise(function(resolve, reject) {
+      if (!window.indexedDB) {
+        reject(new Error("Secure credential storage is unavailable in this browser."));
+        return;
+      }
+      const request = window.indexedDB.open(
+        GITHUB_ACCESS_KEY_DATABASE_NAME,
+        GITHUB_ACCESS_KEY_DATABASE_VERSION
+      );
+      request.onupgradeneeded = function() {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(GITHUB_ACCESS_KEY_STORE_NAME)) {
+          database.createObjectStore(GITHUB_ACCESS_KEY_STORE_NAME, { keyPath: "id" });
+        }
+      };
+      request.onsuccess = function() { resolve(request.result); };
+      request.onerror = function() {
+        reject(request.error || new Error("Secure credential storage could not be opened."));
+      };
+      request.onblocked = function() {
+        reject(new Error("Secure credential storage is busy. Close other app windows and try again."));
+      };
+    });
+  }
+
+  function completeGitHubAccessKeyTransaction(transaction) {
+    return new Promise(function(resolve, reject) {
+      transaction.oncomplete = function() { resolve(); };
+      transaction.onerror = function() {
+        reject(transaction.error || new Error("Secure credential storage failed."));
+      };
+      transaction.onabort = function() {
+        reject(transaction.error || new Error("Secure credential storage was interrupted."));
+      };
+    });
+  }
+
+  function requestGitHubAccessKey(request) {
+    return new Promise(function(resolve, reject) {
+      request.onsuccess = function() { resolve(request.result || null); };
+      request.onerror = function() {
+        reject(request.error || new Error("Secure credential storage failed."));
+      };
+    });
+  }
+
+  async function getGitHubAccessVaultKey() {
+    if (githubAccessVaultKeyPromise) return githubAccessVaultKeyPromise;
+    githubAccessVaultKeyPromise = (async function() {
+      const cryptoApi = getWebCrypto();
+      if (!cryptoApi) {
+        throw new Error("Encrypted credential storage is unavailable in this browser.");
+      }
+      if (typeof Neutralino !== "undefined" && Neutralino.storage) {
+        if (typeof Neutralino.storage.getKeys !== "function") {
+          throw new Error("Encrypted credential storage requires a newer desktop runtime.");
+        }
+        const storageKeys = await Neutralino.storage.getKeys();
+        let rawKey = null;
+        if (storageKeys.includes(GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME)) {
+          const storedKey = JSON.parse(
+            await Neutralino.storage.getData(GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME)
+          );
+          rawKey = storedKey && storedKey.version === 1 && typeof storedKey.key === "string"
+            ? base64ToBytes(storedKey.key)
+            : null;
+          if (!rawKey || rawKey.length !== 32) {
+            throw new Error("The desktop credential key is invalid. Clear app data before saving a new token.");
+          }
+        } else {
+          rawKey = cryptoApi.getRandomValues(new Uint8Array(32));
+          await Neutralino.storage.setData(
+            GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME,
+            JSON.stringify({ version: 1, key: bytesToBase64(rawKey) })
+          );
+        }
+        try {
+          return await cryptoApi.subtle.importKey(
+            "raw",
+            rawKey,
+            { name: "AES-GCM" },
+            false,
+            ["encrypt", "decrypt"]
+          );
+        } finally {
+          rawKey.fill(0);
+        }
+      }
+      const database = await openGitHubAccessKeyDatabase();
+      try {
+        const readTransaction = database.transaction(GITHUB_ACCESS_KEY_STORE_NAME, "readonly");
+        const storedRecord = await requestGitHubAccessKey(
+          readTransaction.objectStore(GITHUB_ACCESS_KEY_STORE_NAME).get(GITHUB_ACCESS_KEY_ID)
+        );
+        await completeGitHubAccessKeyTransaction(readTransaction);
+        if (storedRecord && storedRecord.key) return storedRecord.key;
+
+        const key = await cryptoApi.subtle.generateKey(
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+        const writeTransaction = database.transaction(GITHUB_ACCESS_KEY_STORE_NAME, "readwrite");
+        writeTransaction.objectStore(GITHUB_ACCESS_KEY_STORE_NAME).put({
+          id: GITHUB_ACCESS_KEY_ID,
+          key
+        });
+        await completeGitHubAccessKeyTransaction(writeTransaction);
+        return key;
+      } finally {
+        database.close();
+      }
+    })();
+    try {
+      return await githubAccessVaultKeyPromise;
+    } catch (error) {
+      githubAccessVaultKeyPromise = null;
+      throw error;
+    }
+  }
+
+  function getGitHubAccessAdditionalData(accessId) {
+    return new TextEncoder().encode(
+      `markdown-viewer:github-access-v${GITHUB_ACCESS_VAULT_VERSION}:${accessId}`
+    );
+  }
+
+  async function encryptGitHubAccessRecord(entry, token, key) {
+    const cryptoApi = getWebCrypto();
+    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+    const payload = {
+      name: entry.name,
+      token,
+      expiresAt: Number.isFinite(Number(entry.expiresAt)) ? Number(entry.expiresAt) : null
+    };
+    const encrypted = await cryptoApi.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData: getGitHubAccessAdditionalData(entry.id)
+      },
+      key,
+      new TextEncoder().encode(JSON.stringify(payload))
+    );
+    return {
+      id: entry.id,
+      iv: bytesToBase64(iv),
+      ciphertext: bytesToBase64(new Uint8Array(encrypted))
+    };
+  }
+
+  async function decryptGitHubAccessRecord(record, key) {
+    if (!record || typeof record.id !== "string" || record.id.length > 160
+      || typeof record.iv !== "string" || typeof record.ciphertext !== "string"
+      || record.ciphertext.length > 16384) {
+      throw new Error("Invalid encrypted GitHub access record.");
+    }
+    const decrypted = await getWebCrypto().subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: base64ToBytes(record.iv),
+        additionalData: getGitHubAccessAdditionalData(record.id)
+      },
+      key,
+      base64ToBytes(record.ciphertext)
+    );
+    const payload = JSON.parse(new TextDecoder().decode(decrypted));
+    const name = String(payload && payload.name || "").trim().replace(/\s+/g, " ");
+    const token = String(payload && payload.token || "");
+    if (!name || name.length > 60 || !token || token.length > 2048 || /\s/.test(token)) {
+      throw new Error("Invalid encrypted GitHub access payload.");
+    }
+    return {
+      entry: {
+        id: record.id,
+        name,
+        expiresAt: Number.isFinite(Number(payload.expiresAt)) ? Number(payload.expiresAt) : null
+      },
+      token
+    };
+  }
+
+  async function deleteGitHubAccessMetadata(key) {
+    if (!workspaceStorage) return;
+    if (typeof workspaceStorage.deleteMetadata === "function") {
+      await workspaceStorage.deleteMetadata(key);
+    } else {
+      await workspaceStorage.setMetadata(key, null);
+    }
+  }
+
+  async function persistGitHubAccessVault() {
+    if (!workspaceStorage) {
+      throw new Error("Encrypted credential storage is unavailable.");
+    }
+    await workspaceStorage.init();
+    if (!githubAccessEntries.length) {
+      await deleteGitHubAccessMetadata(GITHUB_ACCESS_VAULT_NAME);
+      return;
+    }
+    if (githubAccessEntries.length > 50) {
+      throw new Error("Up to 50 GitHub access tokens can be saved.");
+    }
+    const key = await getGitHubAccessVaultKey();
+    const encryptedEntries = [];
+    for (const entry of githubAccessEntries) {
+      const token = githubSessionAccessTokens.get(entry.id);
+      if (!token) throw new Error(`"${entry.name}" is unavailable. Add the token again.`);
+      encryptedEntries.push(await encryptGitHubAccessRecord(entry, token, key));
+    }
+    const selectedAccessId = githubAccessEntries.some(function(entry) {
+      return entry.id === githubSelectedAccessId;
+    }) ? githubSelectedAccessId : githubAccessEntries[0].id;
+    await workspaceStorage.setMetadata(GITHUB_ACCESS_VAULT_NAME, {
+      version: GITHUB_ACCESS_VAULT_VERSION,
+      selectedAccessId,
+      entries: encryptedEntries
+    });
+  }
+
+  async function restoreGitHubAccessVault(vault) {
+    if (!vault) return { restored: 0, skipped: 0 };
+    if (vault.version !== GITHUB_ACCESS_VAULT_VERSION || !Array.isArray(vault.entries)
+      || vault.entries.length > 50) {
+      throw new Error("The saved GitHub access vault is invalid.");
+    }
+    const key = await getGitHubAccessVaultKey();
+    const restoredEntries = [];
+    const restoredTokens = new Map();
+    const seenIds = new Set();
+    let skipped = 0;
+    for (const encryptedRecord of vault.entries) {
+      try {
+        const restored = await decryptGitHubAccessRecord(encryptedRecord, key);
+        if (seenIds.has(restored.entry.id)) throw new Error("Duplicate GitHub access record.");
+        seenIds.add(restored.entry.id);
+        restoredEntries.push(restored.entry);
+        restoredTokens.set(restored.entry.id, restored.token);
+      } catch (_) {
+        skipped++;
+      }
+    }
+    if (vault.entries.length && !restoredEntries.length) {
+      throw new Error("Saved GitHub access could not be decrypted on this device.");
+    }
+    githubAccessEntries = restoredEntries;
+    githubSessionAccessTokens.clear();
+    restoredTokens.forEach(function(token, id) { githubSessionAccessTokens.set(id, token); });
+    githubSelectedAccessId = restoredEntries.some(function(entry) {
+      return entry.id === vault.selectedAccessId;
+    }) ? vault.selectedAccessId : (restoredEntries[0] ? restoredEntries[0].id : "");
+    githubAccessAdding = !restoredEntries.length;
+    return { restored: restoredEntries.length, skipped };
+  }
+
   async function loadStoredGitHubAccess() {
     if (githubAccessVaultLoaded) {
       renderGitHubAccessState();
@@ -11836,27 +12107,50 @@ ${selector} .arrowheadPath {
         renderGitHubAccessState();
         return;
       }
+      let vault = null;
       try {
         await workspaceStorage.init();
-        const vault = await workspaceStorage.getMetadata(GITHUB_ACCESS_VAULT_NAME);
+        vault = await workspaceStorage.getMetadata(GITHUB_ACCESS_VAULT_NAME);
+        const retiredVault = await workspaceStorage.getMetadata(GITHUB_RETIRED_ACCESS_VAULT_NAME);
         const legacyRecord = await workspaceStorage.getMetadata(GITHUB_LEGACY_ACCESS_RECORD_NAME);
-        if (vault || legacyRecord) {
-          if (typeof workspaceStorage.deleteMetadata === "function") {
-            await workspaceStorage.deleteMetadata(GITHUB_ACCESS_VAULT_NAME);
-            await workspaceStorage.deleteMetadata(GITHUB_LEGACY_ACCESS_RECORD_NAME);
-          } else {
-            await workspaceStorage.setMetadata(GITHUB_ACCESS_VAULT_NAME, null);
-            await workspaceStorage.setMetadata(GITHUB_LEGACY_ACCESS_RECORD_NAME, null);
-          }
+        if (retiredVault) {
+          await deleteGitHubAccessMetadata(GITHUB_RETIRED_ACCESS_VAULT_NAME).catch(function() {});
+        }
+        if (legacyRecord) {
+          await deleteGitHubAccessMetadata(GITHUB_LEGACY_ACCESS_RECORD_NAME).catch(function() {});
+        }
+      } catch (error) {
+        githubAccessVaultLoaded = true;
+        renderGitHubAccessState();
+        showGitHubAccessToast("Saved GitHub access could not be opened on this device.", {
+          tone: "error",
+          title: "GitHub access unavailable"
+        });
+        return;
+      }
+      try {
+        const restored = await restoreGitHubAccessVault(vault);
+        if (restored.skipped) {
+          await persistGitHubAccessVault();
+          showGitHubAccessToast("Some damaged saved GitHub access entries were removed.", {
+            tone: "warning",
+            title: "GitHub access repaired"
+          });
         }
         githubAccessVaultLoaded = true;
         renderGitHubAccessState();
-      } catch (_) {
+      } catch (error) {
+        githubAccessEntries = [];
+        githubSessionAccessTokens.clear();
+        githubSelectedAccessId = "";
+        githubAccessAdding = true;
+        await deleteGitHubAccessMetadata(GITHUB_ACCESS_VAULT_NAME).catch(function() {});
         githubAccessVaultLoaded = true;
         renderGitHubAccessState();
-        showGitHubAccessToast("Old saved GitHub access could not be cleared.", {
+        showGitHubAccessToast(
+          error && error.message ? error.message : "Saved GitHub access could not be restored.", {
           tone: "error",
-          title: "GitHub access cleanup failed"
+          title: "GitHub access unavailable"
         });
       }
     })();
@@ -11868,13 +12162,28 @@ ${selector} .arrowheadPath {
   }
 
   async function removeGitHubAccess(options = {}) {
+    await loadStoredGitHubAccess();
     const accessId = options.id || githubSelectedAccessId;
-    const removedEntry = githubAccessEntries.find(function(entry) { return entry.id === accessId; });
+    const removedIndex = githubAccessEntries.findIndex(function(entry) { return entry.id === accessId; });
+    const removedEntry = githubAccessEntries[removedIndex];
     if (!removedEntry) return;
+    const removedToken = githubSessionAccessTokens.get(accessId);
+    const previousSelectedAccessId = githubSelectedAccessId;
+    const previousAdding = githubAccessAdding;
     githubAccessEntries = githubAccessEntries.filter(function(entry) { return entry.id !== accessId; });
     githubSessionAccessTokens.delete(accessId);
     githubSelectedAccessId = githubAccessEntries[0] ? githubAccessEntries[0].id : "";
     githubAccessAdding = !githubAccessEntries.length;
+    try {
+      await persistGitHubAccessVault();
+    } catch (error) {
+      githubAccessEntries.splice(removedIndex, 0, removedEntry);
+      if (removedToken) githubSessionAccessTokens.set(accessId, removedToken);
+      githubSelectedAccessId = previousSelectedAccessId;
+      githubAccessAdding = previousAdding;
+      renderGitHubAccessState();
+      throw error;
+    }
     renderGitHubAccessState();
     if (!options.silent) {
       showGitHubAccessToast(`"${removedEntry.name}" was removed.`, {
@@ -11904,6 +12213,7 @@ ${selector} .arrowheadPath {
 
   async function saveGitHubAccess() {
     if (!githubImportPatInput || !githubImportPatNameInput) return;
+    await loadStoredGitHubAccess();
     const name = validateGitHubAccessName(githubImportPatNameInput.value);
     const token = githubImportPatInput.value;
     validateGitHubPat(token);
@@ -11918,6 +12228,16 @@ ${selector} .arrowheadPath {
     githubSessionAccessTokens.set(entry.id, token);
     githubSelectedAccessId = entry.id;
     githubAccessAdding = false;
+    try {
+      await persistGitHubAccessVault();
+    } catch (error) {
+      githubAccessEntries = githubAccessEntries.filter(function(item) { return item.id !== entry.id; });
+      githubSessionAccessTokens.delete(entry.id);
+      githubSelectedAccessId = githubAccessEntries[0] ? githubAccessEntries[0].id : "";
+      githubAccessAdding = !githubAccessEntries.length;
+      renderGitHubAccessState();
+      throw error;
+    }
     resetGitHubAccessForm();
     renderGitHubAccessState();
     showGitHubAccessToast(`"${name}" was added. You can select or remove it anytime.`, {
@@ -18745,6 +19065,12 @@ ${selector} .arrowheadPath {
     githubImportPatSelect.addEventListener("change", function() {
       githubSelectedAccessId = githubImportPatSelect.value;
       renderGitHubAccessState();
+      void persistGitHubAccessVault().catch(function(error) {
+        showGitHubAccessToast(
+          error && error.message ? error.message : "The selected GitHub access could not be saved.",
+          { tone: "error", title: "GitHub access selection not saved" }
+        );
+      });
     });
   }
   if (githubImportPatAddAnotherBtn) {

@@ -60,7 +60,7 @@ In the desktop application, replacing or deleting the binary does not remove `Do
 | Feature | Data sent | Destination and retention | Access model |
 | :--- | :--- | :--- | :--- |
 | Web/PWA library loading | Library requests, IP and normal HTTP metadata | cdnjs, jsDelivr, or esm.sh; browser/Service Worker cache | Governed by the remote host |
-| GitHub import | Repository/path/ref request and selected content downloads; optional named PATs for private repositories | Public content: GitHub API and `raw.githubusercontent.com`; private content, PAT validation, and PAT-authenticated requests: `api.github.com` only | Fine-grained and classic PATs are accepted automatically, remain in memory for the current session until removed or the app closes, and are never written to application storage. GitHub's token-expiration response header is retained only as in-memory display metadata when available. |
+| GitHub import | Repository/path/ref request and selected content downloads; optional named PATs for private repositories | Public content: GitHub API and `raw.githubusercontent.com`; private content, PAT validation, and PAT-authenticated requests: `api.github.com` only | Fine-grained and classic PATs are accepted automatically. Credential payloads persist locally as AES-GCM ciphertext until removed and are not included in workspace backups. Browser builds keep a non-extractable key in IndexedDB; the desktop build keeps key material in Neutralino's system app storage and imports it as a non-extractable runtime key. PATs are sent only to GitHub. GitHub's token-expiration response header is retained as encrypted display metadata when readable; otherwise the UI reports **Expiry unknown**. |
 | Emoji lookup | Emoji API request | GitHub API; response kept in memory/cache | Remote host |
 | Remote diagrams | Diagram source or encoded source | PlantUML, Kroki, or mermaid.ink; response can be browser-cached | Remote renderer receives the source |
 | GeoJSON/TopoJSON maps | Tile and external-asset requests | Configured map-tile or asset host | Remote host |
@@ -68,6 +68,8 @@ In the desktop application, replacing or deleting the binary does not remove `Do
 | Managed media | Optimized image, GIF, or video after first-use consent | Cloudflare KV for 90 days from the latest upload of identical content | Public to anyone with the unguessable URL |
 | Stored Share Snapshot | Markdown content, mode, title, creation time, and size | Cloudflare KV for 90 days | Bearer snapshot URL |
 | Live Share | Yjs Markdown/Review updates, display name, presence, cursor, sync, leave, and session-end messages | Cloudflare Durable Object relay while clients are connected | Room secret plus host/edit/view capability |
+
+The local GitHub credential vault protects PAT values from plaintext storage and keeps them out of workspace backups. It is not an operating-system keychain: malicious code running in the application origin, a compromised browser/app profile, a hostile extension, or malware on the unlocked device could still use the locally stored key. Remove the local entry and revoke the PAT in GitHub if the device, profile, or token may be compromised.
 | Live Share capability metadata | Host, edit, and view bearer capability values plus `createdAt` | Durable Object storage; no application TTL or deletion path is implemented | Used by the Durable Object to authenticate roles |
 
 Cloudflare, CDN, GitHub, renderer, map, external-asset, reverse-proxy, and self-hosting operators can retain normal service logs independently of Markdown Viewer's application-level storage.
@@ -155,7 +157,7 @@ The default Neutralino configuration enables only:
 - open/save dialogs and message boxes;
 - external URL opening and tray setup;
 - file read/write; and
-- storage get/set.
+- storage get/set/list/remove/clear.
 
 `os.execCommand` is not in the default allowlist. The standard desktop application therefore cannot execute PlantUML or D2 command-line programs through the local-renderer code path. PlantUML and D2 use remote services in the standard build. A custom build that enables command execution changes the threat model and must use explicit user consent and narrowly fixed commands.
 

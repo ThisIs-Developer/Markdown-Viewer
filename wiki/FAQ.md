@@ -120,7 +120,7 @@ Yes. It supports regular expressions, capture replacements, preserve-case replac
 
 ### Can I import a private GitHub repository?
 
-Yes. Expand **Private repository access**, give the token a recognizable name, enter either a fine-grained or classic PAT, and select **Add access**. The app detects both formats automatically, asks GitHub to validate the token, and confirms success or failure in a GitHub-branded toast. The form then collapses into a named-token selector so you can add, select, or remove entries individually at any time. A compact warning badge shows GitHub's reported expiration only when a readable date is returned; otherwise no expiry badge is displayed. Tokens remain in memory for the current session only and are not written to application storage, so no passphrase or unlock step is needed. The app cannot revoke a PAT on GitHub; use GitHub settings to revoke or rotate it.
+Yes. Expand **Private repository access**, give the token a recognizable name, enter either a fine-grained or classic PAT, and select **Add access**. The app detects both formats automatically, asks GitHub to validate the token, and confirms success or failure in a GitHub-branded toast. The form then collapses into a named-token selector so you can add, select, or remove entries individually at any time. Tokens survive refreshes and app restarts in a local vault: credential payloads are AES-GCM encrypted and the key remains in local browser/app data, so no passphrase or unlock step is needed. A compact warning badge shows GitHub's reported expiration when readable and **Expiry unknown** otherwise. The app cannot revoke a PAT on GitHub; use GitHub settings to revoke or rotate it.
 
 ### Which PDF option should I use?
 

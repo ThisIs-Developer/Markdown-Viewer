@@ -271,7 +271,7 @@ GitHub import:
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added; the selected token has a compact warning badge only when GitHub provides a readable expiry date, while token actions use GitHub-branded accessible toasts.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens persist across refreshes and app restarts in a local AES-GCM vault and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added; the selected token has a compact warning badge with GitHub's expiry date when readable or **Expiry unknown** otherwise, while token actions use GitHub-branded accessible toasts.
 
 Limitations and privacy:
 
@@ -540,7 +540,7 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs; session-only in memory with individual removal at any time. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs in a local AES-GCM vault, with individual removal at any time. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |

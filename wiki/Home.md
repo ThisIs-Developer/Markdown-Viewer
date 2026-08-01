@@ -54,7 +54,7 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 | Editing | Editor, Split view, Preview, formatting toolbar, custom undo/redo, Find and Replace, LTR/RTL, large-Document rendering paths |
 | Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
-| Import/export | Local and GitHub branch/tag/commit import, with optional session-only private-repository access; Markdown, HTML, Browser Print, legacy raster PDF, and PNG export |
+| Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown, HTML, Browser Print, legacy raster PDF, and PNG export |
 | Sharing | URL-hash or KV-backed Share Snapshot; WebSocket Live Share with host/edit/view capabilities |
 | Delivery | Static web, PWA, Docker, Cloudflare, and seven Neutralino desktop targets |
 
