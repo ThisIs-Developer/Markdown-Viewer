@@ -543,9 +543,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   const githubImportAccessSummary = document.getElementById("github-import-access-summary");
   const githubImportAccessManage = document.getElementById("github-import-access-manage");
   const githubImportAccessForm = document.getElementById("github-import-access-form");
-  const githubImportAccessStatus = document.getElementById("github-import-access-status");
-  const githubImportAccessStatusMessage = document.getElementById("github-import-access-status-message");
   const githubImportPatSelect = document.getElementById("github-import-pat-select");
+  const githubImportTokenExpiry = document.getElementById("github-import-token-expiry");
+  const githubImportTokenExpiryText = document.getElementById("github-import-token-expiry-text");
   const githubImportPatAddAnotherBtn = document.getElementById("github-import-pat-add-another");
   const githubImportPatAddCancelBtn = document.getElementById("github-import-pat-add-cancel");
   const githubImportPatNameInput = document.getElementById("github-import-pat-name");
@@ -570,6 +570,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const githubImportCancelBtn = document.getElementById("github-import-cancel");
   const githubImportCloseBtn = document.getElementById("github-import-close");
   const githubImportSubmitBtn = document.getElementById("github-import-submit");
+  const githubImportLoading = document.getElementById("github-import-loading");
+  const githubImportModalBox = githubImportModal ? githubImportModal.querySelector(".github-import-modal-box") : null;
   const editorHighlightLayer = document.getElementById("editor-highlight-layer");
   const lineNumbers = document.getElementById("line-numbers");
   const clearFormattingModal = document.getElementById("clear-formatting-modal");
@@ -10970,12 +10972,12 @@ ${selector} .arrowheadPath {
     iconShell.className = 'app-toast-icon-shell';
     iconShell.setAttribute('aria-hidden', 'true');
     const icon = document.createElement('i');
-    icon.className = 'lucide ' + (settings.icon || ({
+    icon.className = settings.iconClass || ('lucide ' + (settings.icon || ({
       error: 'lucide-circle-alert',
       warning: 'lucide-triangle-alert',
       success: 'lucide-circle-check',
       info: 'lucide-info'
-    }[tone] || 'lucide-info'));
+    }[tone] || 'lucide-info')));
     iconShell.appendChild(icon);
 
     const copy = document.createElement('div');
@@ -11452,13 +11454,13 @@ ${selector} .arrowheadPath {
     return githubSessionAccessTokens.get(githubSelectedAccessId) || "";
   }
 
-  function getGitHubApiHeaders(accept, authenticated) {
+  function getGitHubApiHeaders(accept, authenticated, tokenOverride) {
     const headers = {
       Accept: accept || "application/vnd.github+json",
       "X-GitHub-Api-Version": GITHUB_API_VERSION
     };
     if (authenticated) {
-      const token = getGitHubAccessToken();
+      const token = tokenOverride || getGitHubAccessToken();
       if (!token) {
         throw new Error("The selected GitHub access token is unavailable or expired. Add it again.");
       }
@@ -11479,7 +11481,7 @@ ${selector} .arrowheadPath {
     }
     lastGitHubImportRequestAt = Date.now();
     const response = await fetch(url, {
-      headers: getGitHubApiHeaders(options.accept, options.authenticated === true),
+      headers: getGitHubApiHeaders(options.accept, options.authenticated === true, options.token),
       redirect: "error",
       cache: "no-store"
     });
@@ -11491,6 +11493,9 @@ ${selector} .arrowheadPath {
         message = "GitHub denied this request. Check token permissions, organization approval, or API rate limits.";
       }
       throw new GitHubRequestError(response.status, message);
+    }
+    if (options.authenticated === true && !options.token) {
+      recordGitHubTokenExpirationFromResponse(response, githubSelectedAccessId);
     }
     return response;
   }
@@ -11685,31 +11690,75 @@ ${selector} .arrowheadPath {
     };
   }
 
-  function setGitHubAccessStatus(message, options = {}) {
-    if (!githubImportAccessStatus || !githubImportAccessStatusMessage) return;
-    const normalizedMessage = String(message || "").trim();
-    if (!normalizedMessage) {
-      githubImportAccessStatus.hidden = true;
-      githubImportAccessStatusMessage.textContent = "";
-      githubImportAccessStatus.dataset.tone = "info";
+  function parseGitHubTokenExpiration(value) {
+    const input = String(value || "").trim();
+    if (!input) return null;
+    const match = input.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})\s+(UTC|[+-]\d{4})$/i);
+    const normalized = match
+      ? `${match[1]}T${match[2]}${match[3].toUpperCase() === "UTC" ? "Z" : match[3].slice(0, 3) + ":" + match[3].slice(3)}`
+      : input;
+    const timestamp = Date.parse(normalized);
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  function getGitHubTokenExpiration(response) {
+    if (!response || !response.headers) return null;
+    return parseGitHubTokenExpiration(response.headers.get("GitHub-Authentication-Token-Expiration"));
+  }
+
+  function formatGitHubTokenExpiration(expiresAt) {
+    if (!expiresAt || !Number.isFinite(Number(expiresAt))) return "Expiry unavailable";
+    if (Number(expiresAt) <= Date.now()) return "Expired";
+    const date = new Date(Number(expiresAt));
+    const options = date.getFullYear() === new Date().getFullYear()
+      ? { month: "short", day: "numeric" }
+      : { month: "short", day: "numeric", year: "numeric" };
+    return "Expires " + new Intl.DateTimeFormat(undefined, options).format(date);
+  }
+
+  function renderGitHubTokenExpiration(entry) {
+    if (!githubImportTokenExpiry || !githubImportTokenExpiryText) return;
+    if (!entry) {
+      githubImportTokenExpiry.hidden = true;
+      githubImportTokenExpiryText.textContent = "";
+      githubImportTokenExpiry.removeAttribute("title");
       return;
     }
+    const expiresAt = Number(entry.expiresAt) || null;
+    githubImportTokenExpiryText.textContent = formatGitHubTokenExpiration(expiresAt);
+    githubImportTokenExpiry.title = expiresAt
+      ? "GitHub token expiration: " + new Date(expiresAt).toLocaleString()
+      : "GitHub did not provide an expiration date for this token.";
+    githubImportTokenExpiry.hidden = false;
+  }
 
-    const tone = ["success", "error", "warning", "info"].includes(options.tone)
-      ? options.tone
-      : "info";
-    const icon = githubImportAccessStatus.querySelector(".github-import-access-status-icon > .lucide");
-    if (icon) {
-      const iconName = tone === "success"
-        ? "lucide-check-check"
-        : tone === "error" || tone === "warning"
-          ? "lucide-triangle-alert"
-          : "lucide-info";
-      icon.className = `lucide ${iconName}`;
-    }
-    githubImportAccessStatus.dataset.tone = tone;
-    githubImportAccessStatusMessage.textContent = normalizedMessage;
-    githubImportAccessStatus.hidden = false;
+  function recordGitHubTokenExpirationFromResponse(response, accessId) {
+    const expiresAt = getGitHubTokenExpiration(response);
+    if (!expiresAt || !accessId) return;
+    const entry = githubAccessEntries.find(function(item) { return item.id === accessId; });
+    if (!entry || entry.expiresAt === expiresAt) return;
+    entry.expiresAt = expiresAt;
+    if (accessId === githubSelectedAccessId) renderGitHubTokenExpiration(entry);
+  }
+
+  function showGitHubAccessToast(message, options = {}) {
+    const tone = options.tone || "info";
+    return showAppToast(message, {
+      tone,
+      title: options.title || "GitHub access",
+      iconClass: "bi bi-github",
+      dedupeKey: options.dedupeKey || "github-access-feedback"
+    });
+  }
+
+  async function inspectGitHubAccessToken(token) {
+    const response = await fetchGitHubResponse("https://api.github.com/user", {
+      authenticated: true,
+      token
+    });
+    const expiresAt = getGitHubTokenExpiration(response);
+    await response.json();
+    return { expiresAt };
   }
 
   function resetGitHubAccessForm() {
@@ -11720,7 +11769,6 @@ ${selector} .arrowheadPath {
   function setGitHubAccessAdding(isAdding, options = {}) {
     githubAccessAdding = Boolean(isAdding) || !githubAccessEntries.length;
     if (githubAccessAdding && options.reset !== false) resetGitHubAccessForm();
-    if (options.keepStatus !== true) setGitHubAccessStatus("");
     renderGitHubAccessState();
     if (githubAccessAdding && options.focus !== false && githubImportPatNameInput) {
       requestAnimationFrame(function() {
@@ -11772,6 +11820,7 @@ ${selector} .arrowheadPath {
     if (githubImportPatRemoveBtn) {
       githubImportPatRemoveBtn.hidden = !selectedEntry;
     }
+    renderGitHubTokenExpiration(selectedEntry);
   }
 
   async function loadStoredGitHubAccess() {
@@ -11807,7 +11856,10 @@ ${selector} .arrowheadPath {
       } catch (_) {
         githubAccessVaultLoaded = true;
         renderGitHubAccessState();
-        setGitHubAccessStatus("Old saved GitHub access could not be cleared.", { tone: "error" });
+        showGitHubAccessToast("Old saved GitHub access could not be cleared.", {
+          tone: "error",
+          title: "GitHub access cleanup failed"
+        });
       }
     })();
     try {
@@ -11827,7 +11879,10 @@ ${selector} .arrowheadPath {
     githubAccessAdding = !githubAccessEntries.length;
     renderGitHubAccessState();
     if (!options.silent) {
-      setGitHubAccessStatus(`"${removedEntry.name}" was removed.`, { tone: "success" });
+      showGitHubAccessToast(`"${removedEntry.name}" was removed.`, {
+        tone: "success",
+        title: "GitHub access removed"
+      });
     }
   }
 
@@ -11854,9 +11909,11 @@ ${selector} .arrowheadPath {
     const name = validateGitHubAccessName(githubImportPatNameInput.value);
     const token = githubImportPatInput.value;
     validateGitHubPat(token);
+    const inspection = await inspectGitHubAccessToken(token);
     const entry = {
       id: createGitHubAccessId(),
-      name
+      name,
+      expiresAt: inspection.expiresAt
     };
 
     githubAccessEntries.push(entry);
@@ -11865,7 +11922,10 @@ ${selector} .arrowheadPath {
     githubAccessAdding = false;
     resetGitHubAccessForm();
     renderGitHubAccessState();
-    setGitHubAccessStatus(`"${name}" was added. You can select or remove it anytime.`, { tone: "success" });
+    showGitHubAccessToast(`"${name}" was added. You can select or remove it anytime.`, {
+      tone: "success",
+      title: "GitHub access added"
+    });
   }
 
   function renderGitHubRepositoryContext(context) {
@@ -12194,6 +12254,13 @@ ${selector} .arrowheadPath {
 
   function setGitHubImportLoading(isLoading) {
     if (!githubImportSubmitBtn) return;
+    if (githubImportModalBox) {
+      githubImportModalBox.classList.toggle("is-loading", Boolean(isLoading));
+      githubImportModalBox.setAttribute("aria-busy", isLoading ? "true" : "false");
+    }
+    if (githubImportLoading) {
+      githubImportLoading.hidden = !isLoading;
+    }
     if (isLoading) {
       githubImportSubmitBtn.dataset.loadingText = githubImportSubmitBtn.textContent;
       githubImportSubmitBtn.textContent = "Importing...";
@@ -12220,6 +12287,7 @@ ${selector} .arrowheadPath {
 
   function resetGitHubImportModal() {
     if (!githubImportUrlInput || !githubImportFileSelect || !githubImportSubmitBtn) return;
+    setGitHubImportLoading(false);
     if (githubImportModal) githubImportModal.classList.remove("is-selection-step");
     if (githubImportTitle) {
       githubImportTitle.textContent = "Import Markdown from GitHub";
@@ -12264,7 +12332,6 @@ ${selector} .arrowheadPath {
     githubImportSubmitBtn._githubContext = null;
     githubImportSubmitBtn.textContent = "Import";
     setGitHubImportMessage("");
-    setGitHubAccessStatus("");
     renderGitHubAccessState();
   }
 
@@ -18679,7 +18746,6 @@ ${selector} .arrowheadPath {
   if (githubImportPatSelect) {
     githubImportPatSelect.addEventListener("change", function() {
       githubSelectedAccessId = githubImportPatSelect.value;
-      setGitHubAccessStatus("");
       renderGitHubAccessState();
     });
   }
@@ -18701,9 +18767,9 @@ ${selector} .arrowheadPath {
       try {
         await saveGitHubAccess();
       } catch (error) {
-        setGitHubAccessStatus(
+        showGitHubAccessToast(
           error && error.message ? error.message : "Private access could not be saved.",
-          { tone: "error" }
+          { tone: "error", title: "GitHub access not added" }
         );
       } finally {
         githubImportPatSaveBtn.disabled = false;
@@ -18717,7 +18783,10 @@ ${selector} .arrowheadPath {
       try {
         await removeGitHubAccess();
       } catch (_) {
-        setGitHubAccessStatus("Private access could not be removed.", { tone: "error" });
+        showGitHubAccessToast("Private access could not be removed.", {
+          tone: "error",
+          title: "GitHub access not removed"
+        });
       } finally {
         githubImportPatRemoveBtn.disabled = false;
       }

@@ -256,7 +256,7 @@ Media insertion:
 
 Application feedback:
 
-- GitHub import progress, media uploads, and general notifications use one shared bottom-corner toast position. Progress toasts include item counts, status details, and a progress bar; private-token actions report status inline inside the access panel.
+- GitHub import progress, media uploads, and general notifications use one shared bottom-corner toast position. Progress toasts include item counts, status details, and a progress bar; private-token actions use the same accessible toast surface with a GitHub icon.
 - User-facing errors, warnings, and informational alerts use the same accessible toast surface instead of blocking browser alert dialogs. Unsupported files use a red alert icon, a "File not supported" title, and format or size recovery guidance.
 - Toasts include text and Lucide icons rather than relying on color alone, and respect reduced-motion preferences.
 
@@ -266,12 +266,12 @@ GitHub import:
 - Resolves default branches, explicit branches (including names containing `/`), tags, and commit references to an immutable commit SHA.
 - Direct Markdown file URLs import immediately.
 - Repository or folder URLs query GitHub's API to find Markdown files.
-- The URL step remains a compact 520px dialog. The 760px selection step keeps repository name and metadata on one line, shows a branch/ref only for explicit tree/blob URLs, always links the short commit, and provides a searchable GitHub-style tree with a selected-count badge plus matching borderless controls for select/deselect all and collapse/expand all folders.
+- The URL step remains a compact 520px dialog and replaces its contents with a modal-contained loading surface after a valid URL is submitted. The 760px selection step uses a reduced-height repository row with separate left-aligned name and ref/commit blocks on one line, shows a branch/ref only for explicit tree/blob URLs, always links the short commit, and provides a searchable GitHub-style tree with a selected-count badge plus matching borderless controls for select/deselect all and collapse/expand all folders.
 - Default-branch imports create a repository-named folder. Each selected file's nested GitHub directory path is reproduced inside it.
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually at any time without a passphrase or unlock step. Token results use a compact accessible inline status row inside the access panel.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added; the selected token has a compact warning badge for GitHub's reported expiry (or **Expiry unavailable**), while token actions use GitHub-branded accessible toasts.
 
 Limitations and privacy:
 

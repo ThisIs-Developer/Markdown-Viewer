@@ -1275,6 +1275,11 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--accent-color);
 }
 
+.app-toast-icon-shell > .bi {
+  font-size: 17px;
+  line-height: 1;
+}
+
 .app-toast[data-tone="success"] .app-toast-icon-shell {
   background: color-mix(in srgb, var(--success-color) 12%, transparent);
   color: var(--success-color);
@@ -5943,6 +5948,7 @@ a:focus {
 }
 
 #github-import-modal .reset-modal-box {
+  position: relative;
   width: min(92vw, 520px);
   max-width: 520px;
   max-height: calc(100dvh - 40px);
@@ -6018,11 +6024,12 @@ a:focus {
 .github-import-access-panel[hidden],
 .github-import-access-manage[hidden],
 .github-import-access-form[hidden],
-.github-import-access-status[hidden],
+.github-import-token-expiry[hidden],
 .github-import-remove-token-btn[hidden],
 .github-import-repository-context[hidden],
 .github-import-ref[hidden],
-.github-import-base-path[hidden] {
+.github-import-base-path[hidden],
+.github-import-loading[hidden] {
   display: none !important;
 }
 
@@ -6207,53 +6214,39 @@ a:focus {
   padding-top: 2px;
 }
 
-.github-import-access-status {
-  --github-access-status-color: var(--accent-color);
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: start;
-  gap: 9px;
-  min-height: 40px;
-  padding: 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--github-access-status-color) 28%, var(--border-color));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--github-access-status-color) 7%, var(--bg-color));
-  color: var(--text-color);
-  font-size: var(--ui-font-sm);
-  line-height: 1.45;
-}
-
-.github-import-access-status[data-tone="success"] {
-  --github-access-status-color: var(--success-color);
-}
-
-.github-import-access-status[data-tone="error"] {
-  --github-access-status-color: var(--color-danger-fg);
-}
-
-.github-import-access-status[data-tone="warning"] {
-  --github-access-status-color: var(--warning-note-icon);
-}
-
-.github-import-access-status-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--github-access-status-color) 13%, transparent);
-  color: var(--github-access-status-color);
-}
-
-.github-import-access-status-icon > .lucide {
-  width: 15px;
-  height: 15px;
-}
-
-.github-import-access-status-message {
+.github-import-access-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  padding-top: 2px;
-  overflow-wrap: anywhere;
+}
+
+.github-import-access-select-row > select {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.github-import-token-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid var(--warning-note-border);
+  border-radius: 999px;
+  background: var(--warning-note-bg);
+  color: var(--warning-note-text);
+  font-size: var(--ui-font-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.github-import-token-expiry > .lucide {
+  width: 13px;
+  height: 13px;
+  color: var(--warning-note-icon);
 }
 
 .github-import-access-form-footer .reset-modal-btn {
@@ -6265,9 +6258,9 @@ a:focus {
 .github-import-repository-context {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 9px 10px;
+  padding: 5px 8px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: color-mix(in srgb, var(--button-bg) 62%, var(--bg-color));
@@ -6276,8 +6269,8 @@ a:focus {
 .github-import-repository-icon {
   display: inline-grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   flex: 0 0 auto;
   border-radius: 8px;
   background: var(--bg-color);
@@ -6286,18 +6279,17 @@ a:focus {
 
 .github-import-repository-icon > .lucide,
 .github-import-repository-icon > .bi {
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .github-import-repository-copy {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   overflow: hidden;
 }
 
@@ -6310,15 +6302,15 @@ a:focus {
 }
 
 .github-import-repository-heading {
-  flex: 1 1 auto;
-  gap: 8px;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .github-import-repository-heading strong {
+  max-width: min(36vw, 260px);
   overflow: hidden;
   color: var(--text-color);
-  font-size: var(--ui-font-lg);
+  font-size: var(--ui-font-md);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -6354,7 +6346,7 @@ a:focus {
 
 .github-import-repository-meta {
   flex: 0 1 auto;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
   color: var(--text-secondary);
   font-size: var(--ui-font-sm);
@@ -6372,6 +6364,65 @@ a:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.github-import-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border-radius: inherit;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+.github-import-loading-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text-color) 9%, transparent);
+  color: var(--text-color);
+}
+
+.github-import-loading-icon > .bi {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.github-import-loading-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.github-import-loading-copy strong {
+  font-size: var(--ui-font-md);
+}
+
+.github-import-loading-copy > span {
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+}
+
+.github-import-loading-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border: 2px solid color-mix(in srgb, var(--accent-color) 25%, transparent);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: github-import-loading-spin 0.8s linear infinite;
+}
+
+@keyframes github-import-loading-spin {
+  to { transform: rotate(360deg); }
 }
 
 .github-import-tree {
@@ -6704,6 +6755,10 @@ a:focus {
   .github-import-toolbar-btn,
   .github-import-access-chevron {
     transition: none;
+  }
+
+  .github-import-loading-spinner {
+    animation: none;
   }
 }
 
