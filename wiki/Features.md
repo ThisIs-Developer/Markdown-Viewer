@@ -256,7 +256,7 @@ Media insertion:
 
 Application feedback:
 
-- GitHub imports, media uploads, and general notifications use one shared bottom-corner toast position. Progress toasts include item counts, status details, and a progress bar.
+- GitHub import progress, media uploads, and general notifications use one shared bottom-corner toast position. Progress toasts include item counts, status details, and a progress bar; private-token actions report status inline inside the access panel.
 - User-facing errors, warnings, and informational alerts use the same accessible toast surface instead of blocking browser alert dialogs. Unsupported files use a red alert icon, a "File not supported" title, and format or size recovery guidance.
 - Toasts include text and Lucide icons rather than relying on color alone, and respect reduced-motion preferences.
 
@@ -271,7 +271,7 @@ GitHub import:
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session, can have an optional earlier expiry date, and can be removed individually without a passphrase or unlock step. Token results use application toasts instead of inline form status text.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually at any time without a passphrase or unlock step. Token results use a compact accessible inline status row inside the access panel.
 
 Limitations and privacy:
 
@@ -540,7 +540,7 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs; session-only in memory with optional earlier expiry and individual removal. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs; session-only in memory with individual removal at any time. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |

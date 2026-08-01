@@ -40,8 +40,8 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 - Added complete subtree traversal when GitHub marks a recursive repository tree response as truncated.
 - Added branch, tag, and commit URL resolution, including branch names containing `/`, and pinned each import to the resolved immutable commit SHA.
 - Added optional private repository access that accepts fine-grained and classic PATs automatically.
-- Kept private access session-only: named tokens remain in memory, disappear on reload or app close, support an optional earlier expiry date, and can be removed individually without a passphrase or unlock step. Retired locally saved GitHub-access records are deleted during upgrade.
-- Replaced the verbose token form with a compact add-then-select flow. Add/remove success and failure use application toasts instead of expanding the form with inline status text.
+- Kept private access session-only: named tokens remain in memory, disappear on reload or app close, and can be removed individually at any time without a passphrase or unlock step. Retired locally saved GitHub-access records are deleted during upgrade.
+- Replaced the verbose token form with a compact add-then-select flow. Add/remove success and failure appear in a compact accessible status row inside the private-access panel.
 - Restored the compact 520px GitHub URL step while keeping the searchable file picker at 760px. Repository name and ref metadata share one line; explicit tree/blob URLs show the branch or ref, while repository URLs show only the resolved commit.
 - Added file search, a compact selected-count badge, borderless toolbar-style controls for select/deselect all and collapse/expand all, and GitHub-style folder and file rows using the application typography scale.
 - Changed local, drag-and-drop, desktop, and GitHub Markdown imports to save documents in Explorer without opening every imported file as a tab.

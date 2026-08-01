@@ -6018,6 +6018,7 @@ a:focus {
 .github-import-access-panel[hidden],
 .github-import-access-manage[hidden],
 .github-import-access-form[hidden],
+.github-import-access-status[hidden],
 .github-import-remove-token-btn[hidden],
 .github-import-repository-context[hidden],
 .github-import-ref[hidden],
@@ -6147,7 +6148,7 @@ a:focus {
 }
 
 .github-import-access-form {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .github-import-access-form-heading,
@@ -6159,16 +6160,6 @@ a:focus {
 .github-import-access-form .reset-modal-label,
 .github-import-access-manage .reset-modal-label,
 .github-import-access-form-footer > button {
-  white-space: nowrap;
-}
-
-.github-import-access-selected-meta {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: var(--ui-font-sm);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -6212,22 +6203,57 @@ a:focus {
 }
 
 .github-import-access-form-footer {
+  justify-content: flex-end;
   padding-top: 2px;
 }
 
-.github-import-access-session-note {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--text-secondary);
+.github-import-access-status {
+  --github-access-status-color: var(--accent-color);
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--github-access-status-color) 28%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--github-access-status-color) 7%, var(--bg-color));
+  color: var(--text-color);
   font-size: var(--ui-font-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
 }
 
-.github-import-optional-label {
-  color: var(--text-secondary);
-  font-size: var(--ui-font-sm);
-  font-weight: 400;
+.github-import-access-status[data-tone="success"] {
+  --github-access-status-color: var(--success-color);
+}
+
+.github-import-access-status[data-tone="error"] {
+  --github-access-status-color: var(--color-danger-fg);
+}
+
+.github-import-access-status[data-tone="warning"] {
+  --github-access-status-color: var(--warning-note-icon);
+}
+
+.github-import-access-status-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--github-access-status-color) 13%, transparent);
+  color: var(--github-access-status-color);
+}
+
+.github-import-access-status-icon > .lucide {
+  width: 15px;
+  height: 15px;
+}
+
+.github-import-access-status-message {
+  min-width: 0;
+  padding-top: 2px;
+  overflow-wrap: anywhere;
 }
 
 .github-import-access-form-footer .reset-modal-btn {
@@ -6671,12 +6697,6 @@ a:focus {
   #github-import-modal .reset-modal-btn {
     width: auto;
     min-height: 44px;
-  }
-}
-
-@media (max-width: 420px) {
-  .github-import-access-form {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
