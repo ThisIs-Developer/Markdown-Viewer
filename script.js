@@ -11707,7 +11707,7 @@ ${selector} .arrowheadPath {
   }
 
   function formatGitHubTokenExpiration(expiresAt) {
-    if (!expiresAt || !Number.isFinite(Number(expiresAt))) return "Expiry unavailable";
+    if (!expiresAt || !Number.isFinite(Number(expiresAt))) return "";
     if (Number(expiresAt) <= Date.now()) return "Expired";
     const date = new Date(Number(expiresAt));
     const options = date.getFullYear() === new Date().getFullYear()
@@ -11718,17 +11718,15 @@ ${selector} .arrowheadPath {
 
   function renderGitHubTokenExpiration(entry) {
     if (!githubImportTokenExpiry || !githubImportTokenExpiryText) return;
-    if (!entry) {
+    const expiresAt = Number(entry && entry.expiresAt) || null;
+    if (!entry || !expiresAt) {
       githubImportTokenExpiry.hidden = true;
       githubImportTokenExpiryText.textContent = "";
       githubImportTokenExpiry.removeAttribute("title");
       return;
     }
-    const expiresAt = Number(entry.expiresAt) || null;
     githubImportTokenExpiryText.textContent = formatGitHubTokenExpiration(expiresAt);
-    githubImportTokenExpiry.title = expiresAt
-      ? "GitHub token expiration: " + new Date(expiresAt).toLocaleString()
-      : "GitHub did not provide an expiration date for this token.";
+    githubImportTokenExpiry.title = "GitHub token expiration: " + new Date(expiresAt).toLocaleString();
     githubImportTokenExpiry.hidden = false;
   }
 

@@ -271,7 +271,7 @@ GitHub import:
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added; the selected token has a compact warning badge for GitHub's reported expiry (or **Expiry unavailable**), while token actions use GitHub-branded accessible toasts.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens remain only in memory for the current session and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added; the selected token has a compact warning badge only when GitHub provides a readable expiry date, while token actions use GitHub-branded accessible toasts.
 
 Limitations and privacy:
 
