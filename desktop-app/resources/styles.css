@@ -6570,8 +6570,12 @@ a:focus {
 .github-tree-folder-icon {
   width: 17px;
   height: 17px;
-  color: var(--accent-color);
+  color: var(--text-secondary);
   flex: 0 0 auto;
+}
+
+.github-tree-folder-icon.lucide-folder-open {
+  color: var(--accent-color);
 }
 
 .github-tree-folder-count {
