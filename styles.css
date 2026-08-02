@@ -6278,15 +6278,14 @@ a:focus {
 
 .github-import-repository-heading {
   flex: 1 1 auto;
-  gap: 6px;
   min-width: 0;
   width: 100%;
 }
 
 .github-import-repository-heading strong {
-  min-width: 72px;
+  min-width: 0;
   flex: 1 1 auto;
-  max-width: min(36vw, 260px);
+  max-width: min(42vw, 320px);
   overflow: hidden;
   color: var(--text-color);
   font-size: var(--ui-font-md);
@@ -6335,7 +6334,7 @@ a:focus {
 .github-import-ref {
   flex: 0 1 auto;
   gap: 4px;
-  max-width: 120px;
+  max-width: min(32vw, 240px);
   min-width: 0;
   padding: 2px 7px;
   border: 1px solid var(--border-color);
@@ -6348,6 +6347,7 @@ a:focus {
 
 .github-import-ref > span,
 .github-import-base-path {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6417,7 +6417,7 @@ a:focus {
 
 .github-import-selection-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
 }
@@ -6466,10 +6466,10 @@ a:focus {
 .github-import-selection-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
   min-width: 0;
-  width: 100%;
+  width: auto;
 }
 
 .github-import-selected-count {
