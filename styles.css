@@ -22,8 +22,12 @@
   --ui-font-md: 12px;
   --ui-font-lg: 13px;
   --ui-font-xl: 16px;
+  --ui-icon-size-xs: 9px;
   --ui-icon-size-sm: 12px;
   --ui-icon-size-md: 14px;
+  --ui-icon-size-lg: 16px;
+  --ui-icon-size-xl: 18px;
+  --ui-icon-size-brand: 20px;
   --icon-size-md: var(--ui-icon-size-md);
   --toolbar-control-hover: color-mix(in srgb, var(--text-color) 7%, transparent);
   --toolbar-control-pressed: color-mix(in srgb, var(--text-color) 11%, transparent);
@@ -409,7 +413,7 @@ body {
 
 .document-filter-btn i {
   width: auto;
-  font-size: 11px;
+  font-size: var(--ui-icon-size-sm);
   line-height: 1;
   text-align: center;
 }
@@ -702,7 +706,7 @@ body {
   min-width: 0;
   overflow: hidden;
   color: inherit;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -721,7 +725,7 @@ body {
 .document-tree-main > .document-favorite-indicator {
   flex: 0 0 auto;
   color: var(--favorite-color);
-  font-size: 10px;
+  font-size: var(--ui-font-xs);
 }
 
 .document-tree-toggle,
@@ -744,7 +748,7 @@ body {
 }
 
 .document-tree-toggle > i {
-  font-size: 11px;
+  font-size: var(--ui-icon-size-sm);
 }
 
 .document-tree-row[data-tree-type="document"] > .document-tree-toggle {
@@ -1024,7 +1028,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .secret-workspace-modal-heading > i {
   color: var(--accent-color);
-  font-size: 18px;
+  font-size: var(--ui-icon-size-xl);
 }
 
 .secret-password-confirm-group[hidden] {
@@ -1142,9 +1146,9 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .import-progress-icon {
-  width: 16px;
-  height: 16px;
-  font-size: 16px;
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
+  font-size: var(--ui-icon-size-lg);
 }
 
 .import-progress-toast[data-state="loading"] .import-progress-icon {
@@ -1179,7 +1183,7 @@ body.document-sidebar-collapsed .document-sidebar {
 .import-progress-count {
   flex: 0 0 auto;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   font-weight: 500;
 }
 
@@ -1276,7 +1280,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .app-toast-icon-shell > .bi {
-  font-size: 17px;
+  font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }
 
@@ -1873,7 +1877,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .code-preview-language > i {
-  font-size: 12px;
+  font-size: var(--ui-icon-size-sm);
 }
 
 .code-preview-copy {
@@ -2136,7 +2140,7 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--text-color);
   border-radius: 7px;
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: var(--ui-font-lg);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2298,7 +2302,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .settings-menu-header span {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   line-height: 1.3;
 }
 
@@ -2354,7 +2358,7 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--text-color);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   line-height: 1.25;
   text-align: start;
   white-space: normal;
@@ -2388,14 +2392,14 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .app-menu-label {
   color: var(--text-color);
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   font-weight: 500;
   line-height: 1.25;
 }
 
 .app-menu-description {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   font-weight: 400;
   line-height: 1.3;
   white-space: normal;
@@ -2403,7 +2407,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .app-menu-trailing {
   color: var(--text-secondary) !important;
-  font-size: 10px !important;
+  font-size: var(--ui-font-xs) !important;
 }
 
 .settings-switch {
@@ -2826,7 +2830,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .document-action-item i {
   color: currentColor;
-  font-size: 14px;
+  font-size: var(--ui-icon-size-md);
   line-height: 1;
   text-align: center;
 }
@@ -2968,7 +2972,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .markdown-tool-select > .lucide-chevron-down {
-  font-size: 9px;
+  font-size: var(--ui-icon-size-xs);
   opacity: 0.72;
 }
 
@@ -3000,7 +3004,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .markdown-tool-select--insert .lucide-ellipsis {
-  font-size: var(--ui-font-xl);
+  font-size: var(--ui-icon-size-lg);
 }
 
 .markdown-tool-select-label {
@@ -3069,13 +3073,13 @@ body.document-sidebar-collapsed .document-sidebar {
   flex: 0 0 20px;
   width: 20px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--ui-icon-size-md);
   text-align: center;
 }
 
 .markdown-tool-menu-symbol {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 12px;
+  font-size: var(--ui-icon-size-sm);
   font-weight: 600;
 }
 
@@ -3328,7 +3332,7 @@ a:focus {
 }
 
 .stats-container {
-  font-size: 0.8rem;
+  font-size: var(--ui-font-lg);
   color: var(--text-color);
 }
 
@@ -3412,14 +3416,14 @@ a:focus {
 }
 
 .stat-item i {
-  font-size: 0.9rem;
+  font-size: var(--ui-icon-size-md);
   opacity: 0.8;
 }
 
 #importDropdown,
 #exportDropdown,
 #languageDropdown {
-  font-size: 0.8rem;
+  font-size: var(--ui-font-lg);
 }
 
 #importDropdown > i:first-child,
@@ -3428,15 +3432,15 @@ a:focus {
   font-size: var(--icon-size-md);
 }
 
-/* Ensure desktop dropdown menu options match the stats-container font size */
+/* Keep every desktop command menu on the shared menu type scale. */
 [aria-labelledby="importDropdown"] .dropdown-item,
 [aria-labelledby="exportDropdown"] .dropdown-item,
 [aria-labelledby="languageDropdown"] .dropdown-item {
-  font-size: 0.8rem;
+  font-size: var(--ui-font-md);
 }
 
 [aria-labelledby="languageDropdown"].settings-language-menu .lang-select-item {
-  font-size: 12px;
+  font-size: var(--ui-font-md);
 }
 
 /* Ensure mobile menu import, export, and language dropdown triggers/options match the mobile stats-container font size */
@@ -3760,7 +3764,7 @@ a:focus {
 }
 
 .github-link i {
-  font-size: 1.25rem;
+  font-size: var(--ui-icon-size-brand);
 }
 
 /* ========================================
@@ -3831,7 +3835,7 @@ a:focus {
 }
 
 .app-brand > .github-link i {
-  font-size: 20px;
+  font-size: var(--ui-icon-size-brand);
   line-height: 1;
 }
 
@@ -5937,7 +5941,7 @@ a:focus {
 
 .github-import-error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   color: var(--color-danger-fg, #d73a49);
   text-align: left;
   line-height: 1.5;
@@ -6076,8 +6080,8 @@ a:focus {
 }
 
 .github-import-access-icon > .lucide {
-  width: 17px;
-  height: 17px;
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
 }
 
 .github-import-access[data-state="active"] .github-import-access-icon {
@@ -6107,8 +6111,8 @@ a:focus {
 }
 
 .github-import-access-chevron {
-  width: 16px;
-  height: 16px;
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
   flex: 0 0 auto;
   color: var(--text-secondary);
   transition: transform 160ms ease;
@@ -6206,8 +6210,8 @@ a:focus {
 }
 
 .github-import-toolbar-btn > .lucide {
-  width: 16px;
-  height: 16px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
 }
 
 .github-import-remove-token-btn {
@@ -6261,9 +6265,9 @@ a:focus {
 
 .github-import-repository-icon > .lucide,
 .github-import-repository-icon > .bi {
-  width: 16px;
-  height: 16px;
-  font-size: 16px;
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
+  font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }
 
@@ -6316,8 +6320,8 @@ a:focus {
 
 .github-import-commit-link > .lucide,
 .github-import-ref > .lucide {
-  width: 13px;
-  height: 13px;
+  width: var(--ui-icon-size-sm);
+  height: var(--ui-icon-size-sm);
 }
 
 .github-import-commit-link:hover {
@@ -6441,8 +6445,8 @@ a:focus {
   position: absolute;
   left: 11px;
   z-index: 1;
-  width: 16px;
-  height: 16px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
   color: var(--text-secondary);
   pointer-events: none;
 }
@@ -6494,8 +6498,8 @@ a:focus {
 }
 
 .github-import-selected-count > .lucide {
-  width: 15px;
-  height: 15px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
   color: var(--accent-color);
 }
 
@@ -6561,15 +6565,15 @@ a:focus {
 }
 
 .github-tree-chevron {
-  width: 14px;
-  height: 14px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
   color: var(--text-secondary, #57606a);
   flex: 0 0 auto;
 }
 
 .github-tree-folder-icon {
-  width: 17px;
-  height: 17px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
   color: var(--text-secondary);
   flex: 0 0 auto;
 }
@@ -6586,7 +6590,7 @@ a:focus {
   border-radius: 999px;
   background: var(--button-bg);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   line-height: 1.45;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -6625,8 +6629,8 @@ a:focus {
 }
 
 .github-tree-file-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
   color: var(--text-secondary);
   flex: 0 0 auto;
 }
@@ -6643,8 +6647,8 @@ a:focus {
 }
 
 .github-tree-selection-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
   margin-left: auto;
   color: var(--accent-color);
   flex: 0 0 auto;

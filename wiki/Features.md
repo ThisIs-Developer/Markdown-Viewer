@@ -23,6 +23,7 @@ The app opens with a header, Files sidebar, document tab bar, formatting toolbar
 - The divider also supports keyboard adjustment with left and right arrow keys while split view is active.
 - The GitHub link in the header opens the source repository.
 - The bottom status bar centers reading time, word count, and character count, while its right edge reports Saving or All changes saved.
+- Application chrome uses a shared semantic size scale: equivalent toolbar, menu, modal, Explorer, mobile, and GitHub importer text and icons match, while headings, brand marks, badges, and illustrations keep their intentional hierarchy.
 
 The editor includes line numbers, wrapped-line height handling, a highlight layer for find results, live cursor overlays during Live Share, and skeleton placeholders during initial or heavy rendering. Line-number calculations are cached so large documents do not force a full layout measurement on every keystroke.
 
@@ -421,7 +422,8 @@ Localization:
 - The UI includes English, Simplified Chinese, Japanese, Korean, Brazilian Portuguese, Spanish, French, German, Russian, Italian, Turkish, Polish, Traditional Chinese, and Ukrainian.
 - Language is selected in this order: URL `?lang=`, hash query `?lang=`, saved `app-lang`, browser language, then English.
 - Selecting a language updates the URL query and saves `app-lang`.
-- Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is the source list and other catalogs use the same keys.
+- Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is generated only from interface source strings and every other catalog uses the same keys.
+- `node assets/i18n/audit-ui-locales.mjs` checks all 14 catalogs for key parity, source pollution, empty values, placeholder integrity, protected `GitHub` and `Markdown` terms, merged values, generator or encoding artifacts, and unexpected English fallbacks.
 - Some renderer output, browser messages, third-party text, filenames, and low-level errors can remain English.
 
 ## Statistics
