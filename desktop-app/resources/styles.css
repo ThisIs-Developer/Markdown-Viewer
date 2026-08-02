@@ -22,8 +22,12 @@
   --ui-font-md: 12px;
   --ui-font-lg: 13px;
   --ui-font-xl: 16px;
+  --ui-icon-size-xs: 9px;
   --ui-icon-size-sm: 12px;
   --ui-icon-size-md: 14px;
+  --ui-icon-size-lg: 16px;
+  --ui-icon-size-xl: 18px;
+  --ui-icon-size-brand: 20px;
   --icon-size-md: var(--ui-icon-size-md);
   --toolbar-control-hover: color-mix(in srgb, var(--text-color) 7%, transparent);
   --toolbar-control-pressed: color-mix(in srgb, var(--text-color) 11%, transparent);
@@ -409,7 +413,7 @@ body {
 
 .document-filter-btn i {
   width: auto;
-  font-size: 11px;
+  font-size: var(--ui-icon-size-sm);
   line-height: 1;
   text-align: center;
 }
@@ -702,7 +706,7 @@ body {
   min-width: 0;
   overflow: hidden;
   color: inherit;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -721,7 +725,7 @@ body {
 .document-tree-main > .document-favorite-indicator {
   flex: 0 0 auto;
   color: var(--favorite-color);
-  font-size: 10px;
+  font-size: var(--ui-font-xs);
 }
 
 .document-tree-toggle,
@@ -744,7 +748,7 @@ body {
 }
 
 .document-tree-toggle > i {
-  font-size: 11px;
+  font-size: var(--ui-icon-size-sm);
 }
 
 .document-tree-row[data-tree-type="document"] > .document-tree-toggle {
@@ -1024,7 +1028,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .secret-workspace-modal-heading > i {
   color: var(--accent-color);
-  font-size: 18px;
+  font-size: var(--ui-icon-size-xl);
 }
 
 .secret-password-confirm-group[hidden] {
@@ -1142,9 +1146,9 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .import-progress-icon {
-  width: 16px;
-  height: 16px;
-  font-size: 16px;
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
+  font-size: var(--ui-icon-size-lg);
 }
 
 .import-progress-toast[data-state="loading"] .import-progress-icon {
@@ -1179,7 +1183,7 @@ body.document-sidebar-collapsed .document-sidebar {
 .import-progress-count {
   flex: 0 0 auto;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   font-weight: 500;
 }
 
@@ -1273,6 +1277,11 @@ body.document-sidebar-collapsed .document-sidebar {
   border-radius: 9px;
   background: color-mix(in srgb, var(--accent-color) 11%, transparent);
   color: var(--accent-color);
+}
+
+.app-toast-icon-shell > .bi {
+  font-size: var(--ui-icon-size-lg);
+  line-height: 1;
 }
 
 .app-toast[data-tone="success"] .app-toast-icon-shell {
@@ -1868,7 +1877,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .code-preview-language > i {
-  font-size: 12px;
+  font-size: var(--ui-icon-size-sm);
 }
 
 .code-preview-copy {
@@ -2131,7 +2140,7 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--text-color);
   border-radius: 7px;
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: var(--ui-font-lg);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2293,7 +2302,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .settings-menu-header span {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   line-height: 1.3;
 }
 
@@ -2349,7 +2358,7 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--text-color);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   line-height: 1.25;
   text-align: start;
   white-space: normal;
@@ -2383,14 +2392,14 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .app-menu-label {
   color: var(--text-color);
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   font-weight: 500;
   line-height: 1.25;
 }
 
 .app-menu-description {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--ui-font-sm);
   font-weight: 400;
   line-height: 1.3;
   white-space: normal;
@@ -2398,7 +2407,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .app-menu-trailing {
   color: var(--text-secondary) !important;
-  font-size: 10px !important;
+  font-size: var(--ui-font-xs) !important;
 }
 
 .settings-switch {
@@ -2821,7 +2830,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .document-action-item i {
   color: currentColor;
-  font-size: 14px;
+  font-size: var(--ui-icon-size-md);
   line-height: 1;
   text-align: center;
 }
@@ -2963,7 +2972,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .markdown-tool-select > .lucide-chevron-down {
-  font-size: 9px;
+  font-size: var(--ui-icon-size-xs);
   opacity: 0.72;
 }
 
@@ -2995,7 +3004,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .markdown-tool-select--insert .lucide-ellipsis {
-  font-size: var(--ui-font-xl);
+  font-size: var(--ui-icon-size-lg);
 }
 
 .markdown-tool-select-label {
@@ -3064,13 +3073,13 @@ body.document-sidebar-collapsed .document-sidebar {
   flex: 0 0 20px;
   width: 20px;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--ui-icon-size-md);
   text-align: center;
 }
 
 .markdown-tool-menu-symbol {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 12px;
+  font-size: var(--ui-icon-size-sm);
   font-weight: 600;
 }
 
@@ -3323,7 +3332,7 @@ a:focus {
 }
 
 .stats-container {
-  font-size: 0.8rem;
+  font-size: var(--ui-font-lg);
   color: var(--text-color);
 }
 
@@ -3407,14 +3416,14 @@ a:focus {
 }
 
 .stat-item i {
-  font-size: 0.9rem;
+  font-size: var(--ui-icon-size-md);
   opacity: 0.8;
 }
 
 #importDropdown,
 #exportDropdown,
 #languageDropdown {
-  font-size: 0.8rem;
+  font-size: var(--ui-font-lg);
 }
 
 #importDropdown > i:first-child,
@@ -3423,15 +3432,15 @@ a:focus {
   font-size: var(--icon-size-md);
 }
 
-/* Ensure desktop dropdown menu options match the stats-container font size */
+/* Keep every desktop command menu on the shared menu type scale. */
 [aria-labelledby="importDropdown"] .dropdown-item,
 [aria-labelledby="exportDropdown"] .dropdown-item,
 [aria-labelledby="languageDropdown"] .dropdown-item {
-  font-size: 0.8rem;
+  font-size: var(--ui-font-md);
 }
 
 [aria-labelledby="languageDropdown"].settings-language-menu .lang-select-item {
-  font-size: 12px;
+  font-size: var(--ui-font-md);
 }
 
 /* Ensure mobile menu import, export, and language dropdown triggers/options match the mobile stats-container font size */
@@ -3755,7 +3764,7 @@ a:focus {
 }
 
 .github-link i {
-  font-size: 1.25rem;
+  font-size: var(--ui-icon-size-brand);
 }
 
 /* ========================================
@@ -3826,7 +3835,7 @@ a:focus {
 }
 
 .app-brand > .github-link i {
-  font-size: 20px;
+  font-size: var(--ui-icon-size-brand);
   line-height: 1;
 }
 
@@ -5932,7 +5941,7 @@ a:focus {
 
 .github-import-error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   color: var(--color-danger-fg, #d73a49);
   text-align: left;
   line-height: 1.5;
@@ -5943,12 +5952,19 @@ a:focus {
 }
 
 #github-import-modal .reset-modal-box {
+  position: relative;
   width: min(92vw, 520px);
   max-width: 520px;
+  max-height: calc(100dvh - 40px);
   min-width: 0;
   padding: 0;
   gap: 0;
   overflow: hidden;
+}
+
+#github-import-modal.is-selection-step .reset-modal-box {
+  width: min(94vw, 760px);
+  max-width: 760px;
 }
 
 #github-import-modal .reset-modal-message {
@@ -5964,11 +5980,37 @@ a:focus {
 
 .github-import-modal-body {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  gap: 8px;
-  max-height: min(56vh, 460px);
-  overflow: auto;
+  gap: 10px;
+  min-height: 0;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 16px;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--text-secondary) 45%, transparent) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.github-import-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.github-import-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.github-import-modal-body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary) 45%, transparent);
+  background-clip: padding-box;
+}
+
+#github-import-modal.is-selection-step .github-import-modal-body {
+  overflow: hidden;
 }
 
 #github-import-url,
@@ -5982,74 +6024,656 @@ a:focus {
   min-height: 180px;
 }
 
-.github-import-tree {
-  max-height: 320px;
-  overflow: auto;
+.github-import-access[hidden],
+.github-import-access-panel[hidden],
+.github-import-access-manage[hidden],
+.github-import-access-form[hidden],
+.github-import-remove-token-btn[hidden],
+.github-import-repository-context[hidden],
+.github-import-ref[hidden],
+.github-import-base-path[hidden] {
+  display: none !important;
+}
+
+.github-import-access {
+  flex: 0 0 auto;
+  overflow: hidden;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: 9px;
   background: var(--bg-color);
 }
 
-.github-import-selection-toolbar {
+.github-import-access-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.github-import-access-toggle:hover,
+.github-import-access-toggle:focus-visible {
+  background: var(--button-hover);
+}
+
+.github-import-access-toggle:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.github-import-access-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-secondary) 10%, transparent);
+  color: var(--text-secondary);
+}
+
+.github-import-access-icon > .lucide {
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
+}
+
+.github-import-access[data-state="active"] .github-import-access-icon {
+  background: color-mix(in srgb, #1a7f37 13%, transparent);
+  color: #1a7f37;
+}
+
+.github-import-access-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.github-import-access-title {
+  font-size: var(--ui-font-md);
+  font-weight: 700;
+}
+
+.github-import-access-summary {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.github-import-access-chevron {
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  transition: transform 160ms ease;
+}
+
+.github-import-access-toggle[aria-expanded="true"] .github-import-access-chevron {
+  transform: rotate(180deg);
+}
+
+.github-import-access-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-color);
+}
+
+.github-import-access-form-heading,
+.github-import-access-manage-header,
+.github-import-access-form-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
+  min-width: 0;
+}
+
+.github-import-access-form-heading {
+  font-size: var(--ui-font-md);
+}
+
+.github-import-access-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.github-import-access-form,
+.github-import-access-manage {
+  display: grid;
+  gap: 10px;
+}
+
+.github-import-access-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.github-import-access-form-heading,
+.github-import-access-token-field,
+.github-import-access-form-footer {
+  grid-column: 1 / -1;
+}
+
+.github-import-access-form .reset-modal-label,
+.github-import-access-manage .reset-modal-label,
+.github-import-access-form-footer > button {
+  white-space: nowrap;
+}
+
+.github-import-access-panel .rename-modal-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 9px;
+  font-size: var(--ui-font-md);
+}
+
+.github-import-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.github-import-toolbar-btn.tool-button {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.github-import-toolbar-btn.tool-button:hover,
+.github-import-toolbar-btn.tool-button:focus-visible {
+  border-color: transparent;
+  background: var(--toolbar-control-hover);
+}
+
+#github-import-toggle-folders,
+#github-import-toggle-folders:hover,
+#github-import-toggle-folders:focus-visible,
+#github-import-toggle-folders:active {
+  color: var(--text-color);
+}
+
+.github-import-toolbar-btn > .lucide {
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+}
+
+.github-import-remove-token-btn {
+  color: var(--color-danger-fg, #cf222e);
+}
+
+.github-import-access-form-footer {
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.github-import-access-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.github-import-access-select-row > select {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.github-import-access-form-footer .reset-modal-btn {
+  min-height: 34px;
+  padding: 7px 14px;
+  font-size: var(--ui-font-md);
+}
+
+.github-import-repository-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: var(--button-bg);
+  background: color-mix(in srgb, var(--button-bg) 62%, var(--bg-color));
+}
+
+.github-import-repository-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+.github-import-repository-icon > .lucide,
+.github-import-repository-icon > .bi {
+  width: var(--ui-icon-size-lg);
+  height: var(--ui-icon-size-lg);
+  font-size: var(--ui-icon-size-lg);
+  line-height: 1;
+}
+
+.github-import-repository-copy {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.github-import-repository-heading,
+.github-import-repository-meta,
+.github-import-ref,
+.github-import-commit-link {
+  display: flex;
+  align-items: center;
+}
+
+.github-import-repository-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.github-import-repository-heading strong {
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: min(42vw, 320px);
+  overflow: hidden;
+  color: var(--text-color);
+  font-size: var(--ui-font-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.github-import-commit-link {
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-color);
+  color: var(--accent-color);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--ui-font-sm);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.github-import-commit-link > .lucide,
+.github-import-ref > .lucide {
+  width: var(--ui-icon-size-sm);
+  height: var(--ui-icon-size-sm);
+}
+
+.github-import-commit-link:hover {
+  border-color: var(--accent-color);
+}
+
+.github-import-commit-link:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.github-import-repository-meta {
+  flex: 0 1 auto;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  white-space: nowrap;
+}
+
+.github-import-ref {
+  flex: 0 1 auto;
+  gap: 4px;
+  max-width: min(32vw, 240px);
+  min-width: 0;
+  padding: 2px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-color);
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  font-weight: 600;
+}
+
+.github-import-ref > span,
+.github-import-base-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#github-import-submit.is-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.github-import-button-spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid color-mix(in srgb, var(--accent-color) 25%, transparent);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: github-import-loading-spin 0.8s linear infinite;
+}
+
+@keyframes github-import-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+.github-import-tree {
+  min-height: 240px;
+  max-height: min(48vh, 440px);
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--bg-color);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.github-import-tree-skeleton {
+  min-height: 238px;
+  padding: 8px 12px;
+}
+
+.github-import-tree-skeleton .skeleton-tree-folder {
+  width: min(42%, 190px);
+  height: 18px;
+  margin-block: 6px;
+}
+
+.github-import-tree-skeleton .skeleton-tree-file {
+  width: min(58%, 260px);
+  height: 15px;
+  margin-block: 5px;
+}
+
+.github-import-tree-skeleton li:nth-child(even) .skeleton-tree-folder {
+  width: min(34%, 160px);
+}
+
+.github-import-tree-skeleton li:nth-child(even) .skeleton-tree-file {
+  width: min(48%, 220px);
+}
+
+#github-import-modal.is-selection-loading .github-import-selection-actions {
+  opacity: 0.58;
+}
+
+.github-import-selection-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.github-import-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+}
+
+.github-import-search > .lucide {
+  position: absolute;
+  left: 11px;
+  z-index: 1;
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+#github-import-search {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font: inherit;
+  font-size: var(--ui-font-md);
+}
+
+#github-import-search::placeholder {
+  color: var(--text-secondary);
+}
+
+#github-import-search:focus-visible {
+  border-color: var(--accent-color);
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
+  outline-offset: 1px;
+}
+
+.github-import-selection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  width: auto;
 }
 
 .github-import-selected-count {
-  font-size: var(--ui-font-md);
-  font-weight: 600;
-  color: var(--text-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  margin: 0;
+  padding: 0 3px;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.github-import-selected-count > .lucide {
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+  color: var(--accent-color);
+}
+
+#github-import-select-all[aria-pressed="true"],
+#github-import-select-all[aria-pressed="true"]:hover,
+#github-import-select-all[aria-pressed="true"]:focus-visible,
+#github-import-select-all[aria-pressed="true"]:active {
+  border-color: transparent;
+  color: var(--accent-color);
+  background: transparent;
 }
 
 .github-import-tree ul {
   list-style: none;
   margin: 0;
-  padding-left: 18px;
+  padding-left: 24px;
+}
+
+.github-import-tree ul ul {
+  margin-left: 16px;
+  padding-left: 8px;
+  border-left: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
 }
 
 .github-import-tree>ul {
-  padding-left: 4px;
+  padding-left: 0;
+}
+
+.github-import-tree>ul>li:last-child>.github-tree-file-btn,
+.github-import-tree>ul>li:last-child>.github-tree-folder-label {
+  border-bottom-color: transparent;
 }
 
 .github-import-tree li {
-  margin: 2px 0;
+  margin: 0;
 }
 
 .github-tree-folder-label {
-  display: inline-block;
-  font-size: 14px;
-  color: var(--text-secondary, #57606a);
-  margin-bottom: 4px;
-}
-
-.github-tree-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 7px 10px;
   border: 0;
+  border-bottom: 1px solid var(--border-color);
   background: transparent;
   color: var(--text-color);
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
   text-align: left;
+  font: inherit;
+  font-size: var(--ui-font-md);
+}
+
+.github-tree-folder-label:hover,
+.github-tree-folder-label:focus-visible {
+  background: var(--button-hover);
+}
+
+.github-tree-folder-label:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.github-tree-chevron {
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+  color: var(--text-secondary, #57606a);
+  flex: 0 0 auto;
+}
+
+.github-tree-folder-icon {
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+}
+
+.github-tree-folder-icon.lucide-folder-open {
+  color: var(--accent-color);
+}
+
+.github-tree-folder-count {
+  min-width: 24px;
+  margin-left: auto;
+  padding: 1px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.45;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.github-tree-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  font-size: 14px;
+  min-height: 40px;
+  padding: 7px 10px 7px 32px;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-color);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-size: var(--ui-font-md);
 }
 
 .github-tree-file-btn:hover,
 .github-tree-file-btn:focus-visible {
   background: var(--button-hover);
-  outline: none;
+}
+
+.github-tree-file-btn:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
 }
 
 .github-tree-file-btn.is-selected {
-  background: rgba(56, 139, 253, 0.14);
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
   color: var(--accent-color);
+}
+
+.github-tree-file-icon {
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+}
+
+.github-tree-file-btn.is-selected .github-tree-file-icon {
+  color: var(--accent-color);
+}
+
+.github-import-tree-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.github-tree-selection-icon {
+  width: var(--ui-icon-size-md);
+  height: var(--ui-icon-size-md);
+  margin-left: auto;
+  color: var(--accent-color);
+  flex: 0 0 auto;
+}
+
+.github-tree-selection-icon[hidden] {
+  display: none;
+}
+
+.github-import-tree-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 220px;
+  padding: 24px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: var(--ui-font-md);
+}
+
+.github-import-tree-empty > .lucide {
+  width: 24px;
+  height: 24px;
 }
 
 #github-import-modal .reset-modal-actions {
@@ -6073,9 +6697,38 @@ a:focus {
     gap: 0;
   }
 
-  .github-import-selection-toolbar {
-    flex-direction: column;
-    align-items: stretch;
+  #github-import-search,
+  .github-import-toolbar-btn.tool-button {
+    min-height: 44px;
+  }
+
+  .github-import-toolbar-btn.tool-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+
+  .github-import-selection-actions {
+    justify-content: space-between;
+  }
+
+  .github-import-selected-count {
+    min-height: 44px;
+    padding-inline: 3px;
+  }
+
+  .github-import-tree {
+    min-height: 220px;
+    max-height: min(46vh, 380px);
+  }
+
+  .github-tree-folder-label,
+  .github-tree-file-btn {
+    min-height: 44px;
+  }
+
+  .github-import-access-panel .rename-modal-input {
+    min-height: 44px;
   }
 
   #github-import-modal .reset-modal-message {
@@ -6089,6 +6742,32 @@ a:focus {
   #github-import-modal .reset-modal-btn {
     width: auto;
     min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .github-import-toolbar-btn,
+  .github-import-access-chevron {
+    transition: none;
+  }
+
+  .github-import-button-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) and (max-height: 500px) {
+  #github-import-search,
+  .github-import-toolbar-btn.tool-button,
+  .github-tree-folder-label,
+  .github-tree-file-btn {
+    min-height: 44px;
+  }
+
+  .github-import-toolbar-btn.tool-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
   }
 }
 
@@ -6207,6 +6886,8 @@ a:focus {
 [dir="rtl"] .alert-option,
 [dir="rtl"] .github-import-error,
 [dir="rtl"] #github-import-modal .reset-modal-message,
+[dir="rtl"] .github-import-access-toggle,
+[dir="rtl"] .github-import-access-panel,
 [dir="rtl"] .github-tree-file-btn,
 [dir="rtl"] .frontmatter-table td {
   text-align: right;
@@ -6214,11 +6895,41 @@ a:focus {
 
 [dir="rtl"] .github-import-tree ul {
   padding-left: 0;
-  padding-right: 18px;
+  padding-right: 24px;
 }
 
 [dir="rtl"] .github-import-tree>ul {
-  padding-right: 4px;
+  padding-right: 0;
+}
+
+[dir="rtl"] .github-import-tree ul ul {
+  margin-right: 16px;
+  margin-left: 0;
+  padding-right: 8px;
+  padding-left: 0;
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+  border-left: 0;
+}
+
+[dir="rtl"] .github-import-search > .lucide {
+  right: 11px;
+  left: auto;
+}
+
+[dir="rtl"] #github-import-search {
+  padding-right: 36px;
+  padding-left: 12px;
+}
+
+[dir="rtl"] .github-tree-file-btn {
+  padding-right: 32px;
+  padding-left: 10px;
+}
+
+[dir="rtl"] .github-tree-folder-count,
+[dir="rtl"] .github-tree-selection-icon {
+  margin-right: auto;
+  margin-left: 0;
 }
 
 [dir="rtl"] .markdown-body .markdown-alert,

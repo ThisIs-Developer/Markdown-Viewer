@@ -11,6 +11,7 @@ const PORT = 4197;
 const HOST = '127.0.0.1';
 const FORCE = process.argv.includes('--force');
 const REPAIR_TERMS = process.argv.includes('--repair-terms');
+const REPAIR_CORRUPT = process.argv.includes('--repair-corrupt');
 
 const LOCALES = {
   zh: 'zh-CN',
@@ -36,7 +37,20 @@ const PROTECTED_TERMS = [
 const CURATED_OVERRIDES = {
   de: {
     'Report': 'Melden', 'Light mode': 'Heller Modus', 'Use light mode': 'Hellen Modus verwenden',
-    'Use dark mode': 'Dunklen Modus verwenden', 'Protect Secret Workspace': 'Geheimen Arbeitsbereich schützen'
+    'Use dark mode': 'Dunklen Modus verwenden', 'Protect Secret Workspace': 'Geheimen Arbeitsbereich schützen',
+    'Backup': 'Sicherung',
+    'Paste a GitHub file or repository URL.': 'Fügen Sie eine GitHub-Datei- oder Repository-URL ein.',
+    'PDF export failed:': 'PDF-Export fehlgeschlagen:',
+    'PDF generation progress': 'Fortschritt der PDF-Erstellung',
+    'Please enter a GitHub URL.': 'Bitte geben Sie eine GitHub-URL ein.',
+    'Please enter a valid GitHub URL.': 'Bitte geben Sie eine gültige GitHub-URL ein.',
+    'PNG export failed:': 'PNG-Export fehlgeschlagen:',
+    'Polyphony Voices': 'Polyphonie-Stimmen',
+    'Preparing document': 'Dokument wird vorbereitet',
+    'Preparing download': 'Download wird vorbereitet',
+    'Preparing import…': 'Import wird vorbereitet…',
+    'Preparing repository folder…': 'Repository-Ordner wird vorbereitet…',
+    'Previous match (Shift+Enter)': 'Vorheriger Treffer (Shift+Enter)'
   },
   es: {
     'Report': 'Informar', 'Light mode': 'Modo claro', 'Use light mode': 'Usar modo claro'
@@ -49,7 +63,19 @@ const CURATED_OVERRIDES = {
     'Report': 'Segnala', 'Light mode': 'Modalità chiara', 'Use light mode': 'Usa la modalità chiara',
     'Close menu': 'Chiudi il menu'
   },
-  ja: { 'Settings': '設定', 'About': '情報' },
+  ja: {
+    'Settings': '設定', 'About': '情報', 'Appearance': '外観',
+    'Browser Print (Recommended)': 'ブラウザー印刷（推奨）',
+    'Closed: Not closed': '終了: 未終了',
+    'Enter a folder name.': 'フォルダー名を入力してください。',
+    'Enter a name.': '名前を入力してください。',
+    'folder': 'フォルダー', 'items available.': '件利用できます。',
+    'Preserve Case': '大文字と小文字を保持', 'review item': 'レビュー項目',
+    'Review item reopened.': 'レビュー項目を再開しました。',
+    'Terminal block': 'ターミナルブロック',
+    'This review item is no longer available.': 'このレビュー項目は利用できません。',
+    'Zoom model': 'モデルを拡大表示'
+  },
   ko: {
     'Explorer': '탐색기',
     'Protect Secret Workspace': '비밀 작업 공간 보호',
@@ -82,7 +108,8 @@ const CURATED_OVERRIDES = {
   },
   tr: {
     'Sync scrolling': 'Kaydırmayı eşitle', 'Report': 'Bildir', 'Light mode': 'Açık mod',
-    'Dark mode': 'Koyu mod', 'Use light mode': 'Açık modu kullan', 'Use dark mode': 'Koyu modu kullan'
+    'Dark mode': 'Koyu mod', 'Use light mode': 'Açık modu kullan', 'Use dark mode': 'Koyu modu kullan',
+    'Markdown files in this GitHub location': 'Bu GitHub konumundaki Markdown dosyaları'
   },
   tw: {
     'View': '檢視', 'Split': '分割', 'Actions': '操作', 'New': '新增', 'New document': '新增文件',
@@ -106,7 +133,8 @@ const CURATED_OVERRIDES = {
     'View': 'Вигляд', 'Split': 'Розділити', 'Review mode': 'Режим рецензування', 'New': 'Новий',
     'Export': 'Експортувати', 'Live Share': 'Спільний доступ наживо', 'Report': 'Повідомити',
     'About': 'Про програму', 'Theme': 'Оформлення', 'Use light mode': 'Увімкнути світлу тему',
-    'Use dark mode': 'Увімкнути темну тему'
+    'Use dark mode': 'Увімкнути темну тему', 'Min Read': 'Хв читання',
+    'Wrap Around (Wrap)': 'Циклічний пошук (Перенесення)'
   },
   zh: {
     'View': '视图', 'Split': '分屏', 'Actions': '操作', 'New': '新建', 'New document': '新建文档',
@@ -201,10 +229,27 @@ const EXTRA_STRINGS = [
   'This shared document is read-only for you.',
   'This share link has expired or does not exist.',
   'This Live Share room has ended, expired, or no active host is available.',
+  'No access token added', 'Enter a token name.', 'Keep the token name to 60 characters or fewer.',
+  'Use a unique token name.', 'Enter a valid personal access token without spaces.',
+  'Up to 50 GitHub access tokens can be saved.', 'GitHub access', 'GitHub access added',
+  'GitHub access removed', 'GitHub access repaired', 'GitHub access unavailable',
+  '"{{0}}" was added. You can select or remove it anytime.', '"{{0}}" was removed.',
+  '"{{0}}" is no longer available. Add the token again.', '"{{0}}" is unavailable. Add the token again.',
+  'Some damaged saved GitHub access entries were removed.',
+  'Select Markdown files to import', 'Loading Markdown files from GitHub…',
+  'Loading Markdown files…', 'Search Markdown files', 'Loading…', 'Import Selected',
+  '{{0}} selected', '{{0}} Markdown files found. Choose what to save to Explorer.',
+  'No Markdown files match your search.', 'Select all files', 'Deselect all files',
+  'Collapse all folders', 'Expand all folders', 'Clear search to change all folders',
+  'Open commit {{0}} on GitHub',
   'No Markdown files were found at that GitHub location.',
   'The provided URL does not point to a Markdown file.',
   'Please enter a GitHub URL.', 'Please enter a valid GitHub URL.',
   'Please select at least one file to import.',
+  'No matching branch, tag, or commit was found in this GitHub URL.',
+  'GitHub returned a partial tree. Scanning every folder to find all Markdown files…',
+  'Large GitHub repository detected. Scanning every folder.',
+  'All GitHub folders expanded.', 'All GitHub folders collapsed.',
   'GitHub import finished.', 'Your file is ready.', 'Your files are ready.', 'Save changes'
 ];
 
@@ -212,12 +257,21 @@ function normalize(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function removeEmbeddedTranslationDictionary(source) {
+  const dictionaryStart = source.indexOf('  const I18N_DICTS = {');
+  const dictionaryEnd = source.indexOf("  let activeLang = 'en';", dictionaryStart);
+  if (dictionaryStart < 0 || dictionaryEnd < 0) return source;
+  return source.slice(0, dictionaryStart) + source.slice(dictionaryEnd);
+}
+
 function isTranslatable(value) {
   const text = normalize(value);
   if (text.length < 2 || text.length > 420) return false;
   if (!/\p{L}/u.test(text)) return false;
   if (/^(?:https?:\/\/|data:|blob:|#[0-9a-f]{3,8}$)/i.test(text)) return false;
-  if (/<[^>]*>|(?:class|aria-hidden|data-[\w-]+)=|\\u200b/i.test(text)) return false;
+  if (/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/i.test(text)) return false;
+  if (/<[^>]*>|(?:^|\s)(?:style|class|id|aria-[\w-]+|data-[\w-]+|role|tabindex)=|\\u200b/i.test(text)) return false;
+  if (/^bi(?:\s+bi-[\w-]+)+$/i.test(text)) return false;
   if (/[{}]=>|\b(?:document|window|console)\.[A-Za-z_$]|function\s*\(/.test(text)) return false;
   if (/^[-+*/=<>()[\]{}.,:;!?\\|_`~]+$/.test(text)) return false;
   return true;
@@ -260,6 +314,8 @@ function extractScriptStrings(source) {
     while ((match = quotedPattern.exec(segment))) {
       const value = normalize((match[1] ?? match[2] ?? '')
         .replace(/\\(['"\\])/g, '$1')
+        .replace(/\\u\{([0-9a-f]+)\}/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+        .replace(/\\u([0-9a-f]{4})/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
         .replace(/\\n/g, ' '));
       if (isLikelyUiLiteral(value)) values.add(value);
     }
@@ -296,6 +352,10 @@ function restoreProtectedTerms(value) {
     (result, term) => result.replaceAll(term.token, term.value),
     value
   );
+}
+
+function hasTranslationArtifact(value) {
+  return /[\r\n]|MV\d+|__MVTERM_|\uFFFD/i.test(String(value || ''));
 }
 
 function chunkStrings(strings) {
@@ -341,7 +401,17 @@ async function translateChunk(values, targetLanguage) {
     }
     return Promise.all(values.map(async value => (await translateChunk([value], targetLanguage))[0]));
   }
-  return translated.map(restoreProtectedTerms);
+  const restored = translated.map(restoreProtectedTerms);
+  const corruptIndexes = restored.flatMap((value, index) => hasTranslationArtifact(value) ? [index] : []);
+  if (corruptIndexes.length) {
+    if (values.length === 1) {
+      throw new Error(`Translation service returned a corrupt value for: ${values[0]}`);
+    }
+    await Promise.all(corruptIndexes.map(async index => {
+      restored[index] = (await translateChunk([values[index]], targetLanguage))[0];
+    }));
+  }
+  return restored;
 }
 
 async function repairProtectedTerms() {
@@ -363,6 +433,24 @@ async function repairProtectedTerms() {
     Object.assign(catalog, CURATED_OVERRIDES[locale] || {});
     await writeFile(outputUrl, JSON.stringify(catalog, null, 2) + '\n', 'utf8');
     console.log(`Repaired protected terms for ${locale}.`);
+  }
+}
+
+async function repairCorruptTranslations() {
+  const englishCatalog = JSON.parse(await readFile(new URL('en.json', OUTPUT_DIR), 'utf8'));
+  for (const [locale, targetLanguage] of Object.entries(LOCALES)) {
+    const outputUrl = new URL(`${locale}.json`, OUTPUT_DIR);
+    const catalog = JSON.parse(await readFile(outputUrl, 'utf8'));
+    const sources = Object.keys(englishCatalog).filter(source => hasTranslationArtifact(catalog[source]));
+    console.log(`Repairing ${locale}: ${sources.length} corrupt translations...`);
+    for (let index = 0; index < sources.length; index += 4) {
+      const group = sources.slice(index, index + 4);
+      const translations = await Promise.all(group.map(source => translateChunk([source], targetLanguage)));
+      group.forEach((source, groupIndex) => { catalog[source] = translations[groupIndex][0]; });
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    Object.assign(catalog, CURATED_OVERRIDES[locale] || {});
+    await writeFile(outputUrl, JSON.stringify(catalog, null, 2) + '\n', 'utf8');
   }
 }
 
@@ -424,8 +512,14 @@ async function main() {
     await repairProtectedTerms();
     return;
   }
+  if (REPAIR_CORRUPT) {
+    await repairCorruptTranslations();
+    return;
+  }
   const domStrings = await collectDomStrings();
-  const scriptSource = await readFile(new URL('../../script.js', import.meta.url), 'utf8');
+  const scriptSource = removeEmbeddedTranslationDictionary(
+    await readFile(new URL('../../script.js', import.meta.url), 'utf8')
+  );
   const allStrings = new Set([...domStrings, ...extractScriptStrings(scriptSource), ...EXTRA_STRINGS]);
   const strings = Array.from(allStrings).map(normalize).filter(isTranslatable).sort((a, b) => a.localeCompare(b));
 

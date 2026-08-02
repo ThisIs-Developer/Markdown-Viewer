@@ -23,6 +23,7 @@ The app opens with a header, Files sidebar, document tab bar, formatting toolbar
 - The divider also supports keyboard adjustment with left and right arrow keys while split view is active.
 - The GitHub link in the header opens the source repository.
 - The bottom status bar centers reading time, word count, and character count, while its right edge reports Saving or All changes saved.
+- Application chrome uses a shared semantic size scale: equivalent toolbar, menu, modal, Explorer, mobile, and GitHub importer text and icons match, while headings, brand marks, badges, and illustrations keep their intentional hierarchy.
 
 The editor includes line numbers, wrapped-line height handling, a highlight layer for find results, live cursor overlays during Live Share, and skeleton placeholders during initial or heavy rendering. Line-number calculations are cached so large documents do not force a full layout measurement on every keystroke.
 
@@ -241,7 +242,7 @@ Local file import:
 - Rejects an individual Markdown file larger than 10 MB.
 - Dragging files over the app shows a compact drop notice. Explorer document drags use a Markdown file preview, folders expand on hover, and the Explorer scrolls near its top and bottom edges.
 - The first 8 KB of a file are scanned for null bytes to avoid loading binary files as text.
-- Imported local files open in the active tab or a new tab depending on the action.
+- Imported local files are saved to Explorer without opening new tabs. Select a saved file in Explorer when you want to edit it.
 
 Media insertion:
 
@@ -256,26 +257,28 @@ Media insertion:
 
 Application feedback:
 
-- GitHub imports, media uploads, and general notifications use one shared bottom-corner toast position. Progress toasts include item counts, status details, and a progress bar.
+- GitHub import progress, media uploads, and general notifications use one shared bottom-corner toast position. Progress toasts include item counts, status details, and a progress bar; private-token actions use the same accessible toast surface with a GitHub icon.
 - User-facing errors, warnings, and informational alerts use the same accessible toast surface instead of blocking browser alert dialogs. Unsupported files use a red alert icon, a "File not supported" title, and format or size recovery guidance.
 - Toasts include text and Lucide icons rather than relying on color alone, and respect reduced-motion preferences.
 
 GitHub import:
 
 - Accepts `github.com/owner/repo`, `github.com/owner/repo/tree/ref/path`, `github.com/owner/repo/blob/ref/path`, and `raw.githubusercontent.com` file URLs.
+- Resolves default branches, explicit branches (including names containing `/`), tags, and commit references to an immutable commit SHA.
 - Direct Markdown file URLs import immediately.
-- Repository or folder URLs query GitHub's public API to find Markdown files.
-- The modal shows a tree and supports selecting multiple files.
-- Imports create a repository-named folder and reproduce each selected file's nested GitHub directory path inside it.
-- Only the first 30 Markdown files are shown if a repository contains more.
+- Repository or folder URLs query GitHub's API to find Markdown files.
+- The URL step uses the original compact 520px dialog and the Markdown selection step uses its original 760px width. The Import button shows an immediate spinner, followed by a shimmer tree until Markdown discovery completes. The reduced-height repository row keeps the repository name on the left and groups a wider resolved branch/ref badge with the linked short commit on the right; a truncated ref is revealed in full on hover. The searchable GitHub-style tree keeps its selected-count and matching borderless select/deselect-all and collapse/expand-all controls directly beside the search field. Its folder icons mirror Explorer, using a neutral color while closed and the accent color while open.
+- Default-branch imports create a repository-named folder. Each selected file's nested GitHub directory path is reproduced inside it.
+- Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
-- Selected files are fetched as raw content and opened as separate tabs.
+- Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens persist across refreshes and app restarts in a local AES-GCM vault and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added, while token actions use GitHub-branded accessible toasts.
 
 Limitations and privacy:
 
 - Local file content is read in the browser or desktop application and is not uploaded by local import.
-- GitHub import sends repository and path information to GitHub and downloads public file contents from GitHub.
-- Private GitHub repositories are not supported because the app does not ask for tokens.
+- GitHub import sends repository, ref, and path information to GitHub. Public requests are anonymous unless GitHub requires authenticated access.
+- A private-repository PAT is attached only to `api.github.com` requests and is never sent to `raw.githubusercontent.com` or the Markdown Viewer backend. Local deletion does not revoke the token on GitHub.
 
 ## Export Markdown to PDF, HTML, PNG, and MD
 
@@ -419,7 +422,8 @@ Localization:
 - The UI includes English, Simplified Chinese, Japanese, Korean, Brazilian Portuguese, Spanish, French, German, Russian, Italian, Turkish, Polish, Traditional Chinese, and Ukrainian.
 - Language is selected in this order: URL `?lang=`, hash query `?lang=`, saved `app-lang`, browser language, then English.
 - Selecting a language updates the URL query and saves `app-lang`.
-- Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is the source list and other catalogs use the same keys.
+- Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is generated only from interface source strings and every other catalog uses the same keys.
+- `node assets/i18n/audit-ui-locales.mjs` checks all 14 catalogs for key parity, source pollution, empty values, placeholder integrity, protected `GitHub` and `Markdown` terms, merged values, generator or encoding artifacts, and unexpected English fallbacks.
 - Some renderer output, browser messages, third-party text, filenames, and low-level errors can remain English.
 
 ## Statistics
@@ -538,7 +542,7 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | GitHub API/raw URLs | Public repos only; no token flow. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs in a local AES-GCM vault, with individual removal at any time. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |
@@ -552,7 +556,7 @@ Security limitations:
 - Browser storage quotas can reject very large saved workspaces.
 - Markdown Viewer does not impose a document-count limit; available storage and operating-system/filesystem constraints still apply.
 - An individual local Markdown import is limited to 10 MB.
-- The GitHub importer shows a maximum of 30 Markdown files.
+- The GitHub importer shows every Markdown file found in the selected public or authorized private repository or folder.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.
 - The current Share Snapshot UI does not expose its API deletion token, so UI-created stored snapshots normally remain until their 90-day expiry.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.

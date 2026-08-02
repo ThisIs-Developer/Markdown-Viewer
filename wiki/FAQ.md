@@ -60,7 +60,7 @@ A workspace ZIP contains normal Documents, folder organization, review data, sel
 
 ### Does Markdown leave my device?
 
-Normal editing, local import, Preview, Workspace storage, and most exports stay on the device. Data can leave when you use managed media, public GitHub import, remote diagram rendering, stored Share Snapshot, Live Share, external assets/map tiles, or uncached web libraries.
+Normal editing, local import, Preview, Workspace storage, and most exports stay on the device. Data can leave when you use managed media, GitHub import, remote diagram rendering, stored Share Snapshot, Live Share, external assets/map tiles, or uncached web libraries.
 
 See [Privacy and Security](Privacy-and-Security.md) for the complete table.
 
@@ -120,7 +120,7 @@ Yes. It supports regular expressions, capture replacements, preserve-case replac
 
 ### Can I import a private GitHub repository?
 
-No. The importer uses public GitHub URLs and does not request a token. Repository and Folder results show at most 30 Markdown files.
+Yes. Expand **Private repository access**, give the token a recognizable name, enter either a fine-grained or classic PAT, and select **Add access**. The app detects both formats automatically, asks GitHub to validate the token, and confirms success or failure in a GitHub-branded toast. The form then collapses into a named-token selector so you can add, select, or remove entries individually at any time. Tokens survive refreshes and app restarts in a local vault: credential payloads are AES-GCM encrypted and the key remains in local browser/app data, so no passphrase or unlock step is needed. The app cannot revoke a PAT on GitHub; use GitHub settings to revoke or rotate it.
 
 ### Which PDF option should I use?
 

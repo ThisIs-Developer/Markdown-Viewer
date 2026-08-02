@@ -96,7 +96,7 @@ Scope matching uses Marked's lexer and is best-effort for unusual Markdown.
 
 ### Local Files
 
-Use Import > From files, the mobile import button, or drag and drop to open local Markdown files. Dropping a file on an Explorer folder imports it there; dropping it elsewhere imports it at the default workspace root. Folders expand after a short drag hover, and the Explorer scrolls automatically near its top and bottom edges.
+Use Import > From files, the mobile import button, or drag and drop to save local Markdown files in Explorer. Imported documents remain closed until you select one in Explorer, so large imports do not fill the tab bar. Dropping a file on an Explorer folder imports it there; dropping it elsewhere imports it at the default workspace root. Folders expand after a short drag hover, and the Explorer scrolls automatically near its top and bottom edges.
 
 Paste an image or GIF from the clipboard, drop an image/GIF/video file, or use the media dialog to insert it at the current editor cursor. A progress toast shows preparation and upload status. Still images are optimized, animated GIFs retain their original animation, and MP4, WebM, or Ogg videos are inserted as playable HTML5 media. After first-use consent, the app uploads the file to managed public media storage and inserts a short HTTPS link. Anyone with that unguessable URL can retrieve the media for up to 90 days; after expiry the reference remains in Markdown but the media stops rendering. Documents containing older inline base64 raster images offer to convert them to short links without changing their alt text or title.
 
@@ -116,12 +116,16 @@ Use Import > From GitHub and paste one of these URL types:
 
 - `https://github.com/owner/repo`
 - `https://github.com/owner/repo/tree/main/docs`
+- `https://github.com/owner/repo/tree/release/2026/docs`
+- `https://github.com/owner/repo/tree/758cbeda07ac15093520c803c11140ae9b1f4a2c`
 - `https://github.com/owner/repo/blob/main/README.md`
 - `https://raw.githubusercontent.com/owner/repo/main/README.md`
 
-Direct Markdown file URLs import immediately. Repository and folder URLs query GitHub's public API, show a tree of Markdown files, and let you import selected files into separate tabs. Selected files are placed in a repository-named Explorer folder with their nested GitHub directory paths preserved. If more than 30 Markdown files exist, only the first 30 are shown.
+Direct Markdown file URLs import immediately into Explorer. Repository and folder URLs resolve the default branch, an explicit branch (including names containing `/`), a tag, or a commit to an immutable commit SHA before listing files. After a valid URL is submitted, the Import button shows a spinner while the repository/ref resolves; the modal then expands from its original 520px URL width to the original 760px selection width and shows a shimmer tree until Markdown discovery completes. The searchable, collapsible tree contains every Markdown file found and uses the same compact type scale as other application modals. In the reduced-height repository row, the repository name stays on the left while a wider resolved branch/ref badge and linked short commit are grouped on the right; a direct commit URL shows only the commit, and truncated refs reveal their full value on hover. The toolbar places its lightweight selected-file indicator and matching borderless select/deselect-all and collapse/expand-all controls directly beside the search field. Default-branch imports use a repository-named Explorer folder. Nested GitHub directory paths are preserved, and imported files remain closed until you select one in Explorer.
 
-GitHub import sends the repository/path request to GitHub and only works for public content. The app does not ask for GitHub credentials.
+Public repositories need no credentials. For a private repository, expand **Private repository access**, enter a recognizable name and either a fine-grained or classic PAT, and select **Add access**. The app accepts both PAT formats automatically. After adding, the form closes and a dropdown lets you select among multiple named tokens before choosing **Import**. Use the icon controls to add another token or remove the selected one. The importer first tries public access and sends the selected token only to `api.github.com` when authenticated access is needed. Private file content is downloaded through GitHub's Contents API rather than the raw-content host.
+
+GitHub access tokens survive refreshes and app restarts until you remove them. The app stores each credential payload only as AES-GCM ciphertext and keeps its encryption key in local browser/app data, so no protection passphrase or unlock step is required. Clearing this site's/app's local data also removes access. GitHub validates a token when it is added. Adding, removing, or rejecting a token is reported in a GitHub-branded toast. Local removal does not revoke a PAT on GitHub, so revoke it separately in GitHub settings if it may have been exposed.
 
 ## Export Markdown to PDF, HTML, PNG, and MD
 

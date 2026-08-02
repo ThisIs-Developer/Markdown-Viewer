@@ -69,7 +69,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="3D STL Full screen" width="90%" />
 </p>
 
-- **Import and export:** open local files or public GitHub content; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF.
+- **Import and export:** open local files or GitHub content from branches, tags, commits, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF.
 
 - **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
 
@@ -110,7 +110,7 @@ Markdown Viewer is local-first, not network-free. The following table shows the 
 | :--- | :--- |
 | Editing, local imports, Preview, Workspace autosave, and most exports | On the device |
 | Web libraries and uncached renderer dependencies | CDN requests in the web/PWA build |
-| Public GitHub import and emoji lookup | GitHub APIs and raw-content hosts |
+| GitHub import and emoji lookup | Public content uses GitHub APIs and raw-content hosts; private content uses an optional PAT only with `api.github.com` |
 | PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, and some diagram previews | Diagram source can be sent to PlantUML, Kroki, or mermaid.ink |
 | Consented image, GIF, and video insertion | Public, content-addressed Cloudflare media storage for 90 days |
 | Large Share Snapshot | Cloudflare KV for 90 days |
@@ -156,7 +156,9 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - Importing a workspace backup permanently replaces the current workspace after confirmation.
 - Workspace backups do not include trash, desktop history, or crash-recovery journals.
 - A local Markdown file larger than 10 MB is rejected.
-- The public GitHub importer shows at most 30 Markdown files for a repository or folder result.
+- The searchable GitHub importer shows every Markdown file found in a repository or folder result and resolves branch, tag, and commit URLs to an immutable commit SHA.
+- Private repository access accepts fine-grained and classic PATs automatically. Multiple named tokens can be added, selected, and removed at any time. Tokens survive refreshes and app restarts in a local vault: credential payloads are stored only as AES-GCM ciphertext and the encryption key remains in local browser/app data. GitHub validates each token when added.
+- Imported Markdown files are saved to Explorer and remain closed until you choose one, preventing large imports from flooding the tab bar.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.
 - Stored Share Snapshot content is limited to 8,000,000 characters and expires after 90 days.
 - Live Share allows up to 64 WebSocket participants and 8 MB per live message.

@@ -534,17 +534,41 @@ document.addEventListener("DOMContentLoaded", async function () {
   const mobileLiveShareParticipants = document.getElementById("mobile-live-share-participants");
   const githubImportModal = document.getElementById("github-import-modal");
   const githubImportTitle = document.getElementById("github-import-title");
+  const githubImportSubtitle = document.getElementById("github-import-subtitle");
   const githubImportUrlInput = document.getElementById("github-import-url");
   const githubImportUrlLabel = document.getElementById("github-import-url-label");
+  const githubImportAccess = document.getElementById("github-import-access");
+  const githubImportAccessToggle = document.getElementById("github-import-access-toggle");
+  const githubImportAccessPanel = document.getElementById("github-import-access-panel");
+  const githubImportAccessSummary = document.getElementById("github-import-access-summary");
+  const githubImportAccessManage = document.getElementById("github-import-access-manage");
+  const githubImportAccessForm = document.getElementById("github-import-access-form");
+  const githubImportPatSelect = document.getElementById("github-import-pat-select");
+  const githubImportPatAddAnotherBtn = document.getElementById("github-import-pat-add-another");
+  const githubImportPatAddCancelBtn = document.getElementById("github-import-pat-add-cancel");
+  const githubImportPatNameInput = document.getElementById("github-import-pat-name");
+  const githubImportPatInput = document.getElementById("github-import-pat");
+  const githubImportPatSaveBtn = document.getElementById("github-import-pat-save");
+  const githubImportPatRemoveBtn = document.getElementById("github-import-pat-remove");
   const githubImportFileSelect = document.getElementById("github-import-file-select");
+  const githubImportRepositoryContext = document.getElementById("github-import-repository-context");
+  const githubImportRepositoryName = document.getElementById("github-import-repository-name");
+  const githubImportCommitLink = document.getElementById("github-import-commit-link");
+  const githubImportCommit = document.getElementById("github-import-commit");
+  const githubImportRefItem = document.getElementById("github-import-ref-item");
+  const githubImportRef = document.getElementById("github-import-ref");
+  const githubImportBasePath = document.getElementById("github-import-base-path");
   const githubImportSelectionToolbar = document.getElementById("github-import-selection-toolbar");
-  const githubImportSelectedCount = document.getElementById("github-import-selected-count");
+  const githubImportSearchInput = document.getElementById("github-import-search");
+  const githubImportSelectedCountText = document.getElementById("github-import-selected-count-text");
+  const githubImportToggleFoldersBtn = document.getElementById("github-import-toggle-folders");
   const githubImportSelectAllBtn = document.getElementById("github-import-select-all");
   const githubImportTree = document.getElementById("github-import-tree");
   const githubImportError = document.getElementById("github-import-error");
   const githubImportCancelBtn = document.getElementById("github-import-cancel");
   const githubImportCloseBtn = document.getElementById("github-import-close");
   const githubImportSubmitBtn = document.getElementById("github-import-submit");
+  const githubImportModalBox = githubImportModal ? githubImportModal.querySelector(".github-import-modal-box") : null;
   const editorHighlightLayer = document.getElementById("editor-highlight-layer");
   const lineNumbers = document.getElementById("line-numbers");
   const clearFormattingModal = document.getElementById("clear-formatting-modal");
@@ -7746,9 +7770,74 @@ document.addEventListener("DOMContentLoaded", async function () {
       idsToClose = openTabs.map(function(tab) { return tab.id; });
     }
     closeTabMenus();
-    idsToClose.forEach(function(id) {
-      if (tabs.some(function(tab) { return tab.id === id && isTabOpen(tab); })) closeTab(id);
+    if (idsToClose.length === 1) {
+      closeTab(idsToClose[0]);
+      return;
+    }
+    closeTabsInBatch(idsToClose);
+  }
+
+  function closeTabsInBatch(tabIds) {
+    const idsToClose = new Set((tabIds || []).filter(Boolean));
+    if (!idsToClose.size) return;
+
+    // Live sessions have teardown and restore behavior that must keep using the
+    // single-tab path. All ordinary documents can be closed in one state update.
+    if (liveCollaboration && idsToClose.has(liveCollaboration.tabId)) {
+      Array.from(idsToClose).forEach(function(id) {
+        if (tabs.some(function(tab) { return tab.id === id && isTabOpen(tab); })) closeTab(id);
+      });
+      return;
+    }
+
+    const openTabsBeforeClose = getOpenTabs();
+    const activeOpenIndex = openTabsBeforeClose.findIndex(function(tab) { return tab.id === activeTabId; });
+    const activeWillClose = idsToClose.has(activeTabId);
+    const splitWillClose = idsToClose.has(secondarySplitTabId) || (activeWillClose && Boolean(secondarySplitTabId));
+    const changedIds = [];
+    const temporaryIds = new Set();
+
+    if (pendingReviewDelete && idsToClose.has(pendingReviewDelete.tabId)) {
+      cancelReviewDeleteConfirmation();
+    }
+    if (activeWillClose) saveCurrentTabState();
+    saveSecondarySplitState();
+    if (splitWillClose) closeDocumentSplitView({ silent: true, renderTabs: false });
+
+    tabs.forEach(function(tab) {
+      if (!idsToClose.has(tab.id) || !isTabOpen(tab)) return;
+      if (isTemporaryDocument(tab)) {
+        temporaryIds.add(tab.id);
+        shareSnapshotViewOnlyTabIds.delete(tab.id);
+        if (tabHistories[tab.id]) delete tabHistories[tab.id];
+        return;
+      }
+      tab.isOpen = false;
+      changedIds.push(tab.id);
     });
+
+    if (temporaryIds.size) {
+      tabs = tabs.filter(function(tab) { return !temporaryIds.has(tab.id); });
+    }
+    if (changedIds.length) saveTabsToStorage(tabs, changedIds);
+
+    if (activeWillClose) {
+      const remainingOpenTabs = getOpenTabs();
+      const nextTab = remainingOpenTabs.length
+        ? remainingOpenTabs[Math.min(Math.max(activeOpenIndex - 1, 0), remainingOpenTabs.length - 1)]
+        : null;
+      if (nextTab) {
+        void switchTab(nextTab.id).then(renderDocumentSidebar, renderDocumentSidebar);
+      } else {
+        clearActiveDocument();
+        renderDocumentSidebar();
+      }
+    } else {
+      renderDocumentSplitView();
+      renderTabBar(tabs, activeTabId);
+      renderDocumentSidebar();
+    }
+    announceToScreenReader(idsToClose.size + ' tabs closed. Files remain available in Explorer.');
   }
 
   function openTabContextMenu(tab, point, focusTab) {
@@ -10880,12 +10969,12 @@ ${selector} .arrowheadPath {
     iconShell.className = 'app-toast-icon-shell';
     iconShell.setAttribute('aria-hidden', 'true');
     const icon = document.createElement('i');
-    icon.className = 'lucide ' + (settings.icon || ({
+    icon.className = settings.iconClass || ('lucide ' + (settings.icon || ({
       error: 'lucide-circle-alert',
       warning: 'lucide-triangle-alert',
       success: 'lucide-circle-check',
       info: 'lucide-info'
-    }[tone] || 'lucide-info'));
+    }[tone] || 'lucide-info')));
     iconShell.appendChild(icon);
 
     const copy = document.createElement('div');
@@ -11105,16 +11194,37 @@ ${selector} .arrowheadPath {
     mediaProgressHideTimeout = setTimeout(function() { toast.hidden = true; }, 4200);
   }
 
+  function createImportedDocument(content, title, location) {
+    const targetLocation = location || (documentOrganization
+      ? getPreferredDocumentLocation()
+      : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
+    if (targetLocation.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) return null;
+    const tab = createTab(content, title, 'split', targetLocation);
+    tab.isOpen = false;
+    normalizeTabDocumentMetadata(tab, { allowSecret: targetLocation.workspaceId === SECRET_WORKSPACE_ID });
+    tabs.push(tab);
+    return tab;
+  }
+
+  async function persistImportedDocuments(documentIds) {
+    const ids = Array.from(documentIds || []).filter(Boolean);
+    if (!ids.length) return;
+    saveTabsToStorage(tabs, ids);
+    await _flushTabsToStorage(tabs, { changedIds: ids });
+    evictInactiveDocumentContent();
+    renderDocumentSidebar();
+  }
+
   function importMarkdownFile(file, location) {
     return new Promise(function(resolve) {
       if (!file) {
-        resolve(false);
+        resolve(null);
         return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
         showUnsupportedFileToast('This Markdown file is too large. The maximum supported size is 10 MB.');
-        resolve(false);
+        resolve(null);
         return;
       }
 
@@ -11127,16 +11237,16 @@ ${selector} .arrowheadPath {
         for (let i = 0; i < checkLength; i++) {
           if (text.charCodeAt(i) === 0) {
             showUnsupportedFileToast('This file appears to be binary. Choose a Markdown file (.md or .markdown).');
-            resolve(false);
+            resolve(null);
             return;
           }
         }
 
-        resolve(newTab(text, getMarkdownFileTitle(file), location) === true);
+        resolve(createImportedDocument(text, getMarkdownFileTitle(file), location));
       };
       reader.onerror = function() {
         alert('Failed to read the file. Please check permissions and try again.');
-        resolve(false);
+        resolve(null);
       };
       reader.readAsText(file);
     });
@@ -11160,17 +11270,25 @@ ${selector} .arrowheadPath {
     const filesToImport = markdownFiles;
 
     let importedCount = 0;
+    const importedDocumentIds = [];
     showImportProgress(filesToImport.length);
     for (let index = 0; index < filesToImport.length; index++) {
-      if (await importMarkdownFile(filesToImport[index], settings.location)) {
+      const importedDocument = await importMarkdownFile(filesToImport[index], settings.location);
+      if (importedDocument) {
         importedCount++;
+        importedDocumentIds.push(importedDocument.id);
       }
       updateImportProgress(index + 1, filesToImport.length);
     }
+    await persistImportedDocuments(importedDocumentIds);
     if (settings.location && settings.location.workspaceId === SECRET_WORKSPACE_ID && isSecretWorkspaceUnlocked()) {
       await flushSecretWorkspaceToStorage();
     }
-    finishImportProgress(importedCount, filesToImport.length);
+    finishImportProgress(importedCount, filesToImport.length, {
+      detail: importedCount === filesToImport.length
+        ? 'Saved to Explorer without opening new tabs.'
+        : undefined
+    });
 
     return importedCount;
   }
@@ -11178,11 +11296,29 @@ ${selector} .arrowheadPath {
   function isMarkdownPath(path) {
     return /\.(md|markdown)$/i.test(path || "");
   }
-  const MAX_GITHUB_FILES_SHOWN = 30;
   const GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS = 800;
+  const GITHUB_API_VERSION = "2022-11-28";
+  const GITHUB_ACCESS_VAULT_NAME = "githubAccessVaultV3";
+  const GITHUB_RETIRED_ACCESS_VAULT_NAME = "githubAccessVaultV2";
+  const GITHUB_LEGACY_ACCESS_RECORD_NAME = "githubAccessRecordV1";
+  const GITHUB_ACCESS_VAULT_VERSION = 3;
+  const GITHUB_ACCESS_KEY_DATABASE_NAME = "markdownViewerCredentialKeys";
+  const GITHUB_ACCESS_KEY_DATABASE_VERSION = 1;
+  const GITHUB_ACCESS_KEY_STORE_NAME = "keys";
+  const GITHUB_ACCESS_KEY_ID = "githubAccessVaultKeyV1";
+  const GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME = "markdownViewerGithubAccessKeyV1";
   let lastGitHubImportRequestAt = 0;
   const selectedGitHubImportPaths = new Set();
+  const collapsedGitHubImportFolders = new Set();
   let availableGitHubImportPaths = [];
+  let githubImportSearchTimer = null;
+  let githubAccessEntries = [];
+  let githubSelectedAccessId = "";
+  let githubAccessAdding = true;
+  let githubAccessVaultLoaded = false;
+  let githubAccessVaultLoadPromise = null;
+  let githubAccessVaultKeyPromise = null;
+  const githubSessionAccessTokens = new Map();
 
   function getFileName(path) {
     return (path || "").split("/").pop() || "document.md";
@@ -11206,11 +11342,37 @@ ${selector} .arrowheadPath {
     return parentFolder || repositoryFolder;
   }
 
-  async function importGitHubFilesInBackground(owner, repo, ref, filePaths) {
+  function encodeGitHubPath(path) {
+    return String(path || "")
+      .split("/")
+      .filter(Boolean)
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+  }
+
+  function getGitHubRepositoryFolderName(context) {
+    if (!context || !context.repo) return "GitHub import";
+    return context.isDefaultRef || !context.commitSha
+      ? context.repo
+      : `${context.repo} @ ${context.commitSha.slice(0, 7)}`;
+  }
+
+  async function fetchGitHubFileContent(context, filePath) {
+    if (context.isPrivate) {
+      const url = `https://api.github.com/repos/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repo)}/contents/${encodeGitHubPath(filePath)}?ref=${encodeURIComponent(context.commitSha)}`;
+      return fetchGitHubText(url, {
+        authenticated: true,
+        accept: "application/vnd.github.raw+json"
+      });
+    }
+    return fetchTextContent(buildRawGitHubUrl(context.owner, context.repo, context.commitSha, filePath));
+  }
+
+  async function importGitHubFilesInBackground(context, filePaths) {
     const paths = Array.from(filePaths || []).filter(Boolean);
     if (!paths.length) return 0;
 
-    const folder = ensureWorkspaceFolder(DEFAULT_WORKSPACE_ID, repo);
+    const folder = ensureWorkspaceFolder(DEFAULT_WORKSPACE_ID, getGitHubRepositoryFolderName(context));
     if (!folder) {
       showImportProgress(paths.length, { title: 'GitHub import', detail: 'Preparing repository folder…' });
       finishImportProgress(0, paths.length, { detail: 'The repository folder could not be created.' });
@@ -11224,15 +11386,22 @@ ${selector} .arrowheadPath {
     });
 
     let imported = 0;
+    const importedDocumentIds = [];
     for (let index = 0; index < paths.length; index++) {
       const filePath = paths[index];
       updateImportProgress(index, paths.length, 'Importing ' + getFileName(filePath));
       try {
-        const markdown = await fetchTextContent(buildRawGitHubUrl(owner, repo, ref, filePath));
+        const markdown = await fetchGitHubFileContent(context, filePath);
         const destinationFolder = ensureGitHubFolderPath(DEFAULT_WORKSPACE_ID, folder, filePath);
         const destination = { workspaceId: DEFAULT_WORKSPACE_ID, folderId: destinationFolder.id };
-        if (newTab(markdown, getFileName(filePath).replace(/\.(md|markdown)$/i, ''), destination)) {
+        const importedDocument = createImportedDocument(
+          markdown,
+          getFileName(filePath).replace(/\.(md|markdown)$/i, ''),
+          destination
+        );
+        if (importedDocument) {
           imported++;
+          importedDocumentIds.push(importedDocument.id);
         }
       } catch (error) {
         console.error('GitHub file import failed:', filePath, error);
@@ -11240,11 +11409,12 @@ ${selector} .arrowheadPath {
       updateImportProgress(index + 1, paths.length, 'Saving to Workspace / ' + folder.name);
     }
 
+    await persistImportedDocuments(importedDocumentIds);
     const failureCount = paths.length - imported;
     finishImportProgress(imported, paths.length, {
       detail: failureCount
         ? failureCount + ' file' + (failureCount === 1 ? '' : 's') + ' could not be imported.'
-        : 'Saved in Workspace / ' + folder.name
+        : 'Saved in Workspace / ' + folder.name + ' without opening new tabs.'
     });
     announceToScreenReader(imported === paths.length
       ? 'GitHub import complete. Files saved in the ' + folder.name + ' folder.'
@@ -11252,11 +11422,11 @@ ${selector} .arrowheadPath {
     return imported;
   }
 
-  function startGitHubImport(owner, repo, ref, filePaths) {
+  function startGitHubImport(context, filePaths) {
     const paths = Array.from(filePaths || []).filter(Boolean);
     closeGitHubImportModal();
     if (!paths.length) return;
-    void importGitHubFilesInBackground(owner, repo, ref, paths).catch(function(error) {
+    void importGitHubFilesInBackground(context, paths).catch(function(error) {
       console.error('GitHub import failed:', error);
       showImportProgress(paths.length, { title: 'GitHub import', detail: 'Unable to start import.' });
       finishImportProgress(0, paths.length, { detail: error && error.message ? error.message : 'GitHub import failed.' });
@@ -11264,7 +11434,51 @@ ${selector} .arrowheadPath {
     });
   }
 
-  async function fetchGitHubJson(url) {
+  class GitHubRequestError extends Error {
+    constructor(status, message) {
+      super(message || `GitHub API request failed (${status})`);
+      this.name = "GitHubRequestError";
+      this.status = status;
+    }
+  }
+
+  function createGitHubAccessId() {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+      return "github_access_" + globalThis.crypto.randomUUID();
+    }
+    return "github_access_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  function getSelectedGitHubAccessEntry() {
+    return githubAccessEntries.find(function(entry) {
+      return entry.id === githubSelectedAccessId;
+    }) || null;
+  }
+
+  function getGitHubAccessToken() {
+    return githubSessionAccessTokens.get(githubSelectedAccessId) || "";
+  }
+
+  function getGitHubApiHeaders(accept, authenticated, tokenOverride) {
+    const headers = {
+      Accept: accept || "application/vnd.github+json",
+      "X-GitHub-Api-Version": GITHUB_API_VERSION
+    };
+    if (authenticated) {
+      const token = tokenOverride || getGitHubAccessToken();
+      if (!token) {
+        throw new Error("The selected GitHub access token is unavailable or expired. Add it again.");
+      }
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
+  async function fetchGitHubResponse(url, options = {}) {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:" || parsedUrl.origin !== "https://api.github.com") {
+      throw new Error("Blocked an unsafe GitHub API destination.");
+    }
     const now = Date.now();
     const waitTime = GITHUB_IMPORT_MIN_REQUEST_INTERVAL_MS - (now - lastGitHubImportRequestAt);
     if (waitTime > 0) {
@@ -11272,22 +11486,53 @@ ${selector} .arrowheadPath {
     }
     lastGitHubImportRequestAt = Date.now();
     const response = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.github+json"
-      }
+      headers: getGitHubApiHeaders(options.accept, options.authenticated === true, options.token),
+      redirect: "error",
+      cache: "no-store"
     });
     if (!response.ok) {
-      throw new Error(`GitHub API request failed (${response.status})`);
+      let message = `GitHub API request failed (${response.status})`;
+      if (response.status === 401) {
+        message = "GitHub rejected the token. Check that it is active and has read-only repository Contents access.";
+      } else if (response.status === 403) {
+        message = "GitHub denied this request. Check token permissions, organization approval, or API rate limits.";
+      }
+      throw new GitHubRequestError(response.status, message);
     }
+    return response;
+  }
+
+  async function fetchGitHubJson(url, options = {}) {
+    const response = await fetchGitHubResponse(url, options);
     return response.json();
   }
 
+  async function fetchGitHubText(url, options = {}) {
+    const response = await fetchGitHubResponse(url, options);
+    return response.text();
+  }
+
   async function fetchTextContent(url) {
-    const response = await fetch(url);
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:" || parsedUrl.origin !== "https://raw.githubusercontent.com") {
+      throw new Error("Blocked an unsafe GitHub content destination.");
+    }
+    const response = await fetch(url, {
+      redirect: "error",
+      cache: "no-store"
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch file (${response.status})`);
     }
     return response.text();
+  }
+
+  function decodeGitHubPathSegments(pathname) {
+    try {
+      return pathname.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+    } catch (_) {
+      return null;
+    }
   }
 
   function parseGitHubImportUrl(input) {
@@ -11298,14 +11543,22 @@ ${selector} .arrowheadPath {
       return null;
     }
 
+    if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password || parsedUrl.port) {
+      return null;
+    }
     const host = parsedUrl.hostname.replace(/^www\./, "");
-    const segments = parsedUrl.pathname.split("/").filter(Boolean);
+    const segments = decodeGitHubPathSegments(parsedUrl.pathname);
+    if (!segments) return null;
 
     if (host === "raw.githubusercontent.com") {
       if (segments.length < 4) return null;
-      const [owner, repo, ref, ...rest] = segments;
-      const filePath = rest.join("/");
-      return { owner, repo, ref, type: "file", filePath };
+      return {
+        owner: segments[0],
+        repo: segments[1].replace(/\.git$/i, ""),
+        type: "file",
+        locationSegments: segments.slice(2),
+        source: "raw"
+      };
     }
 
     if (host !== "github.com" || segments.length < 2) return null;
@@ -11322,8 +11575,8 @@ ${selector} .arrowheadPath {
         owner,
         repo,
         type: "file",
-        ref: segments[3],
-        filePath: segments.slice(4).join("/")
+        locationSegments: segments.slice(3),
+        source: "blob"
       };
     }
 
@@ -11332,26 +11585,688 @@ ${selector} .arrowheadPath {
         owner,
         repo,
         type: "tree",
-        ref: segments[3],
-        basePath: segments.slice(4).join("/")
+        locationSegments: segments.slice(3),
+        source: "tree"
       };
     }
 
     return { owner, repo, type: "repo" };
   }
 
-  async function getDefaultBranch(owner, repo) {
-    const repoInfo = await fetchGitHubJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`);
-    return repoInfo.default_branch;
+  async function getGitHubRepositoryInfo(owner, repo) {
+    const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+    try {
+      return {
+        info: await fetchGitHubJson(url),
+        authenticated: false
+      };
+    } catch (error) {
+      const canRetryWithToken = error instanceof GitHubRequestError
+        && (error.status === 403 || error.status === 404)
+        && Boolean(getGitHubAccessToken());
+      if (!canRetryWithToken) {
+        if (error instanceof GitHubRequestError && error.status === 404) {
+          const selectedAccess = getSelectedGitHubAccessEntry();
+          if (selectedAccess && !githubSessionAccessTokens.has(selectedAccess.id)) {
+            throw new Error(`"${selectedAccess.name}" is no longer available. Add the token again.`);
+          }
+          throw new Error("Repository not found. If it is private, add secure private repository access and try again.");
+        }
+        throw error;
+      }
+      try {
+        return {
+          info: await fetchGitHubJson(url, { authenticated: true }),
+          authenticated: true
+        };
+      } catch (authenticatedError) {
+        const selectedAccess = getSelectedGitHubAccessEntry();
+        const accessName = selectedAccess ? `"${selectedAccess.name}"` : "The selected token";
+        if (authenticatedError instanceof GitHubRequestError && authenticatedError.status === 401) {
+          throw new Error(`${accessName} was rejected by GitHub. Replace or remove it.`);
+        }
+        if (authenticatedError instanceof GitHubRequestError
+          && (authenticatedError.status === 403 || authenticatedError.status === 404)) {
+          throw new Error(`${accessName} cannot access ${owner}/${repo}. Check its repository access and permissions.`);
+        }
+        throw authenticatedError;
+      }
+    }
   }
 
-  async function listMarkdownFiles(owner, repo, ref, basePath) {
-    const treeResponse = await fetchGitHubJson(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
+  async function resolveGitHubCommit(owner, repo, refName, authenticated) {
+    const commit = await fetchGitHubJson(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${encodeURIComponent(refName)}`,
+      { authenticated }
+    );
+    if (!commit || !commit.sha) {
+      throw new Error("GitHub did not return a commit for this branch, tag, or commit reference.");
+    }
+    return commit;
+  }
+
+  async function resolveGitHubLocation(parsed) {
+    const repository = await getGitHubRepositoryInfo(parsed.owner, parsed.repo);
+    const repoInfo = repository.info || {};
+    const authenticated = Boolean(repository.authenticated || repoInfo.private);
+    const defaultBranch = repoInfo.default_branch || "main";
+    let refName = defaultBranch;
+    let commit = null;
+    let remainder = [];
+
+    if (parsed.type === "repo") {
+      commit = await resolveGitHubCommit(parsed.owner, parsed.repo, refName, authenticated);
+    } else {
+      const segments = Array.from(parsed.locationSegments || []).filter(Boolean);
+      const minimumRemainder = parsed.type === "file" ? 1 : 0;
+      const maximumRefSegments = segments.length - minimumRemainder;
+      for (let count = maximumRefSegments; count >= 1; count--) {
+        const candidate = segments.slice(0, count).join("/");
+        try {
+          commit = await resolveGitHubCommit(parsed.owner, parsed.repo, candidate, authenticated);
+          refName = candidate;
+          remainder = segments.slice(count);
+          break;
+        } catch (error) {
+          if (!(error instanceof GitHubRequestError) || error.status !== 404) throw error;
+        }
+      }
+      if (!commit) {
+        throw new Error("No matching branch, tag, or commit was found in this GitHub URL.");
+      }
+    }
+
+    const isDirectCommitRef = parsed.type !== "repo"
+      && /^[0-9a-f]{7,40}$/i.test(refName)
+      && commit.sha.toLowerCase().startsWith(refName.toLowerCase());
+
+    return {
+      owner: parsed.owner,
+      repo: parsed.repo,
+      type: parsed.type,
+      refName,
+      commitSha: commit.sha,
+      defaultBranch,
+      isDefaultRef: refName === defaultBranch,
+      hasDisplayRef: Boolean(refName) && !isDirectCommitRef,
+      isPrivate: Boolean(repoInfo.private),
+      authenticated,
+      filePath: parsed.type === "file" ? remainder.join("/") : "",
+      basePath: parsed.type === "tree" ? remainder.join("/") : ""
+    };
+  }
+
+  function showGitHubAccessToast(message, options = {}) {
+    const tone = options.tone || "info";
+    return showAppToast(message, {
+      tone,
+      title: options.title || "GitHub access",
+      iconClass: "bi bi-github",
+      dedupeKey: options.dedupeKey || "github-access-feedback"
+    });
+  }
+
+  async function inspectGitHubAccessToken(token) {
+    const response = await fetchGitHubResponse("https://api.github.com/user", {
+      authenticated: true,
+      token
+    });
+    await response.json();
+  }
+
+  function resetGitHubAccessForm() {
+    if (githubImportPatNameInput) githubImportPatNameInput.value = "";
+    if (githubImportPatInput) githubImportPatInput.value = "";
+  }
+
+  function setGitHubAccessAdding(isAdding, options = {}) {
+    githubAccessAdding = Boolean(isAdding) || !githubAccessEntries.length;
+    if (githubAccessAdding && options.reset !== false) resetGitHubAccessForm();
+    renderGitHubAccessState();
+    if (githubAccessAdding && options.focus !== false && githubImportPatNameInput) {
+      requestAnimationFrame(function() {
+        githubImportPatNameInput.focus();
+        githubImportPatNameInput.scrollIntoView({ block: "nearest" });
+      });
+    }
+  }
+
+  function renderGitHubAccessState() {
+    githubAccessEntries = githubAccessEntries.filter(function(entry) {
+      return githubSessionAccessTokens.has(entry.id);
+    });
+    if (!githubAccessEntries.some(function(entry) { return entry.id === githubSelectedAccessId; })) {
+      githubSelectedAccessId = githubAccessEntries[0] ? githubAccessEntries[0].id : "";
+    }
+
+    const selectedEntry = getSelectedGitHubAccessEntry();
+    const hasEntries = githubAccessEntries.length > 0;
+    githubAccessAdding = githubAccessAdding || !hasEntries;
+
+    if (githubImportAccess) {
+      githubImportAccess.dataset.state = selectedEntry ? "active" : "empty";
+    }
+    if (githubImportAccessSummary) {
+      githubImportAccessSummary.textContent = selectedEntry
+        ? `${selectedEntry.name} · Ready`
+        : "No access token added";
+    }
+    if (githubImportAccessManage) {
+      githubImportAccessManage.hidden = !hasEntries || githubAccessAdding;
+    }
+    if (githubImportAccessForm) {
+      githubImportAccessForm.hidden = hasEntries && !githubAccessAdding;
+    }
+    if (githubImportPatAddCancelBtn) {
+      githubImportPatAddCancelBtn.hidden = !hasEntries;
+    }
+    if (githubImportPatSelect) {
+      githubImportPatSelect.replaceChildren();
+      githubAccessEntries.forEach(function(entry) {
+        const option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = entry.name;
+        githubImportPatSelect.appendChild(option);
+      });
+      githubImportPatSelect.value = githubSelectedAccessId;
+    }
+    if (githubImportPatRemoveBtn) {
+      githubImportPatRemoveBtn.hidden = !selectedEntry;
+    }
+  }
+
+  function openGitHubAccessKeyDatabase() {
+    return new Promise(function(resolve, reject) {
+      if (!window.indexedDB) {
+        reject(new Error("Secure credential storage is unavailable in this browser."));
+        return;
+      }
+      const request = window.indexedDB.open(
+        GITHUB_ACCESS_KEY_DATABASE_NAME,
+        GITHUB_ACCESS_KEY_DATABASE_VERSION
+      );
+      request.onupgradeneeded = function() {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(GITHUB_ACCESS_KEY_STORE_NAME)) {
+          database.createObjectStore(GITHUB_ACCESS_KEY_STORE_NAME, { keyPath: "id" });
+        }
+      };
+      request.onsuccess = function() { resolve(request.result); };
+      request.onerror = function() {
+        reject(request.error || new Error("Secure credential storage could not be opened."));
+      };
+      request.onblocked = function() {
+        reject(new Error("Secure credential storage is busy. Close other app windows and try again."));
+      };
+    });
+  }
+
+  function completeGitHubAccessKeyTransaction(transaction) {
+    return new Promise(function(resolve, reject) {
+      transaction.oncomplete = function() { resolve(); };
+      transaction.onerror = function() {
+        reject(transaction.error || new Error("Secure credential storage failed."));
+      };
+      transaction.onabort = function() {
+        reject(transaction.error || new Error("Secure credential storage was interrupted."));
+      };
+    });
+  }
+
+  function requestGitHubAccessKey(request) {
+    return new Promise(function(resolve, reject) {
+      request.onsuccess = function() { resolve(request.result || null); };
+      request.onerror = function() {
+        reject(request.error || new Error("Secure credential storage failed."));
+      };
+    });
+  }
+
+  async function getGitHubAccessVaultKey() {
+    if (githubAccessVaultKeyPromise) return githubAccessVaultKeyPromise;
+    githubAccessVaultKeyPromise = (async function() {
+      const cryptoApi = getWebCrypto();
+      if (!cryptoApi) {
+        throw new Error("Encrypted credential storage is unavailable in this browser.");
+      }
+      if (typeof Neutralino !== "undefined" && Neutralino.storage) {
+        if (typeof Neutralino.storage.getKeys !== "function") {
+          throw new Error("Encrypted credential storage requires a newer desktop runtime.");
+        }
+        const storageKeys = await Neutralino.storage.getKeys();
+        let rawKey = null;
+        if (storageKeys.includes(GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME)) {
+          const storedKey = JSON.parse(
+            await Neutralino.storage.getData(GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME)
+          );
+          rawKey = storedKey && storedKey.version === 1 && typeof storedKey.key === "string"
+            ? base64ToBytes(storedKey.key)
+            : null;
+          if (!rawKey || rawKey.length !== 32) {
+            throw new Error("The desktop credential key is invalid. Clear app data before saving a new token.");
+          }
+        } else {
+          rawKey = cryptoApi.getRandomValues(new Uint8Array(32));
+          await Neutralino.storage.setData(
+            GITHUB_ACCESS_DESKTOP_KEY_RECORD_NAME,
+            JSON.stringify({ version: 1, key: bytesToBase64(rawKey) })
+          );
+        }
+        try {
+          return await cryptoApi.subtle.importKey(
+            "raw",
+            rawKey,
+            { name: "AES-GCM" },
+            false,
+            ["encrypt", "decrypt"]
+          );
+        } finally {
+          rawKey.fill(0);
+        }
+      }
+      const database = await openGitHubAccessKeyDatabase();
+      try {
+        const readTransaction = database.transaction(GITHUB_ACCESS_KEY_STORE_NAME, "readonly");
+        const storedRecord = await requestGitHubAccessKey(
+          readTransaction.objectStore(GITHUB_ACCESS_KEY_STORE_NAME).get(GITHUB_ACCESS_KEY_ID)
+        );
+        await completeGitHubAccessKeyTransaction(readTransaction);
+        if (storedRecord && storedRecord.key) return storedRecord.key;
+
+        const key = await cryptoApi.subtle.generateKey(
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+        const writeTransaction = database.transaction(GITHUB_ACCESS_KEY_STORE_NAME, "readwrite");
+        writeTransaction.objectStore(GITHUB_ACCESS_KEY_STORE_NAME).put({
+          id: GITHUB_ACCESS_KEY_ID,
+          key
+        });
+        await completeGitHubAccessKeyTransaction(writeTransaction);
+        return key;
+      } finally {
+        database.close();
+      }
+    })();
+    try {
+      return await githubAccessVaultKeyPromise;
+    } catch (error) {
+      githubAccessVaultKeyPromise = null;
+      throw error;
+    }
+  }
+
+  function getGitHubAccessAdditionalData(accessId) {
+    return new TextEncoder().encode(
+      `markdown-viewer:github-access-v${GITHUB_ACCESS_VAULT_VERSION}:${accessId}`
+    );
+  }
+
+  async function encryptGitHubAccessRecord(entry, token, key) {
+    const cryptoApi = getWebCrypto();
+    const iv = cryptoApi.getRandomValues(new Uint8Array(12));
+    const payload = {
+      name: entry.name,
+      token
+    };
+    const encrypted = await cryptoApi.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData: getGitHubAccessAdditionalData(entry.id)
+      },
+      key,
+      new TextEncoder().encode(JSON.stringify(payload))
+    );
+    return {
+      id: entry.id,
+      iv: bytesToBase64(iv),
+      ciphertext: bytesToBase64(new Uint8Array(encrypted))
+    };
+  }
+
+  async function decryptGitHubAccessRecord(record, key) {
+    if (!record || typeof record.id !== "string" || record.id.length > 160
+      || typeof record.iv !== "string" || typeof record.ciphertext !== "string"
+      || record.ciphertext.length > 16384) {
+      throw new Error("Invalid encrypted GitHub access record.");
+    }
+    const decrypted = await getWebCrypto().subtle.decrypt(
+      {
+        name: "AES-GCM",
+        iv: base64ToBytes(record.iv),
+        additionalData: getGitHubAccessAdditionalData(record.id)
+      },
+      key,
+      base64ToBytes(record.ciphertext)
+    );
+    const payload = JSON.parse(new TextDecoder().decode(decrypted));
+    const name = String(payload && payload.name || "").trim().replace(/\s+/g, " ");
+    const token = String(payload && payload.token || "");
+    if (!name || name.length > 60 || !token || token.length > 2048 || /\s/.test(token)) {
+      throw new Error("Invalid encrypted GitHub access payload.");
+    }
+    return {
+      entry: {
+        id: record.id,
+        name
+      },
+      token
+    };
+  }
+
+  async function deleteGitHubAccessMetadata(key) {
+    if (!workspaceStorage) return;
+    if (typeof workspaceStorage.deleteMetadata === "function") {
+      await workspaceStorage.deleteMetadata(key);
+    } else {
+      await workspaceStorage.setMetadata(key, null);
+    }
+  }
+
+  async function persistGitHubAccessVault() {
+    if (!workspaceStorage) {
+      throw new Error("Encrypted credential storage is unavailable.");
+    }
+    await workspaceStorage.init();
+    if (!githubAccessEntries.length) {
+      await deleteGitHubAccessMetadata(GITHUB_ACCESS_VAULT_NAME);
+      return;
+    }
+    if (githubAccessEntries.length > 50) {
+      throw new Error("Up to 50 GitHub access tokens can be saved.");
+    }
+    const key = await getGitHubAccessVaultKey();
+    const encryptedEntries = [];
+    for (const entry of githubAccessEntries) {
+      const token = githubSessionAccessTokens.get(entry.id);
+      if (!token) throw new Error(`"${entry.name}" is unavailable. Add the token again.`);
+      encryptedEntries.push(await encryptGitHubAccessRecord(entry, token, key));
+    }
+    const selectedAccessId = githubAccessEntries.some(function(entry) {
+      return entry.id === githubSelectedAccessId;
+    }) ? githubSelectedAccessId : githubAccessEntries[0].id;
+    await workspaceStorage.setMetadata(GITHUB_ACCESS_VAULT_NAME, {
+      version: GITHUB_ACCESS_VAULT_VERSION,
+      selectedAccessId,
+      entries: encryptedEntries
+    });
+  }
+
+  async function restoreGitHubAccessVault(vault) {
+    if (!vault) return { restored: 0, skipped: 0 };
+    if (vault.version !== GITHUB_ACCESS_VAULT_VERSION || !Array.isArray(vault.entries)
+      || vault.entries.length > 50) {
+      throw new Error("The saved GitHub access vault is invalid.");
+    }
+    const key = await getGitHubAccessVaultKey();
+    const restoredEntries = [];
+    const restoredTokens = new Map();
+    const seenIds = new Set();
+    let skipped = 0;
+    for (const encryptedRecord of vault.entries) {
+      try {
+        const restored = await decryptGitHubAccessRecord(encryptedRecord, key);
+        if (seenIds.has(restored.entry.id)) throw new Error("Duplicate GitHub access record.");
+        seenIds.add(restored.entry.id);
+        restoredEntries.push(restored.entry);
+        restoredTokens.set(restored.entry.id, restored.token);
+      } catch (_) {
+        skipped++;
+      }
+    }
+    if (vault.entries.length && !restoredEntries.length) {
+      throw new Error("Saved GitHub access could not be decrypted on this device.");
+    }
+    githubAccessEntries = restoredEntries;
+    githubSessionAccessTokens.clear();
+    restoredTokens.forEach(function(token, id) { githubSessionAccessTokens.set(id, token); });
+    githubSelectedAccessId = restoredEntries.some(function(entry) {
+      return entry.id === vault.selectedAccessId;
+    }) ? vault.selectedAccessId : (restoredEntries[0] ? restoredEntries[0].id : "");
+    githubAccessAdding = !restoredEntries.length;
+    return { restored: restoredEntries.length, skipped };
+  }
+
+  async function loadStoredGitHubAccess() {
+    if (githubAccessVaultLoaded) {
+      renderGitHubAccessState();
+      return;
+    }
+    if (githubAccessVaultLoadPromise) {
+      await githubAccessVaultLoadPromise;
+      return;
+    }
+    githubAccessVaultLoadPromise = (async function() {
+      if (!workspaceStorage) {
+        githubAccessVaultLoaded = true;
+        renderGitHubAccessState();
+        return;
+      }
+      let vault = null;
+      try {
+        await workspaceStorage.init();
+        vault = await workspaceStorage.getMetadata(GITHUB_ACCESS_VAULT_NAME);
+        const retiredVault = await workspaceStorage.getMetadata(GITHUB_RETIRED_ACCESS_VAULT_NAME);
+        const legacyRecord = await workspaceStorage.getMetadata(GITHUB_LEGACY_ACCESS_RECORD_NAME);
+        if (retiredVault) {
+          await deleteGitHubAccessMetadata(GITHUB_RETIRED_ACCESS_VAULT_NAME).catch(function() {});
+        }
+        if (legacyRecord) {
+          await deleteGitHubAccessMetadata(GITHUB_LEGACY_ACCESS_RECORD_NAME).catch(function() {});
+        }
+      } catch (error) {
+        githubAccessVaultLoaded = true;
+        renderGitHubAccessState();
+        showGitHubAccessToast("Saved GitHub access could not be opened on this device.", {
+          tone: "error",
+          title: "GitHub access unavailable"
+        });
+        return;
+      }
+      try {
+        const restored = await restoreGitHubAccessVault(vault);
+        if (restored.skipped) {
+          await persistGitHubAccessVault();
+          showGitHubAccessToast("Some damaged saved GitHub access entries were removed.", {
+            tone: "warning",
+            title: "GitHub access repaired"
+          });
+        }
+        githubAccessVaultLoaded = true;
+        renderGitHubAccessState();
+      } catch (error) {
+        githubAccessEntries = [];
+        githubSessionAccessTokens.clear();
+        githubSelectedAccessId = "";
+        githubAccessAdding = true;
+        await deleteGitHubAccessMetadata(GITHUB_ACCESS_VAULT_NAME).catch(function() {});
+        githubAccessVaultLoaded = true;
+        renderGitHubAccessState();
+        showGitHubAccessToast(
+          error && error.message ? error.message : "Saved GitHub access could not be restored.", {
+          tone: "error",
+          title: "GitHub access unavailable"
+        });
+      }
+    })();
+    try {
+      await githubAccessVaultLoadPromise;
+    } finally {
+      githubAccessVaultLoadPromise = null;
+    }
+  }
+
+  async function removeGitHubAccess(options = {}) {
+    await loadStoredGitHubAccess();
+    const accessId = options.id || githubSelectedAccessId;
+    const removedIndex = githubAccessEntries.findIndex(function(entry) { return entry.id === accessId; });
+    const removedEntry = githubAccessEntries[removedIndex];
+    if (!removedEntry) return;
+    const removedToken = githubSessionAccessTokens.get(accessId);
+    const previousSelectedAccessId = githubSelectedAccessId;
+    const previousAdding = githubAccessAdding;
+    githubAccessEntries = githubAccessEntries.filter(function(entry) { return entry.id !== accessId; });
+    githubSessionAccessTokens.delete(accessId);
+    githubSelectedAccessId = githubAccessEntries[0] ? githubAccessEntries[0].id : "";
+    githubAccessAdding = !githubAccessEntries.length;
+    try {
+      await persistGitHubAccessVault();
+    } catch (error) {
+      githubAccessEntries.splice(removedIndex, 0, removedEntry);
+      if (removedToken) githubSessionAccessTokens.set(accessId, removedToken);
+      githubSelectedAccessId = previousSelectedAccessId;
+      githubAccessAdding = previousAdding;
+      renderGitHubAccessState();
+      throw error;
+    }
+    renderGitHubAccessState();
+    if (!options.silent) {
+      showGitHubAccessToast(`"${removedEntry.name}" was removed.`, {
+        tone: "success",
+        title: "GitHub access removed"
+      });
+    }
+  }
+
+  function validateGitHubPat(token) {
+    if (!token || token.length < 20 || /\s/.test(token)) {
+      throw new Error("Enter a valid personal access token without spaces.");
+    }
+  }
+
+  function validateGitHubAccessName(name) {
+    const normalizedName = String(name || "").trim().replace(/\s+/g, " ");
+    if (!normalizedName) throw new Error("Enter a token name.");
+    if (normalizedName.length > 60) throw new Error("Keep the token name to 60 characters or fewer.");
+    if (githubAccessEntries.some(function(entry) {
+      return entry.name.toLocaleLowerCase() === normalizedName.toLocaleLowerCase();
+    })) {
+      throw new Error("Use a unique token name.");
+    }
+    return normalizedName;
+  }
+
+  async function saveGitHubAccess() {
+    if (!githubImportPatInput || !githubImportPatNameInput) return;
+    await loadStoredGitHubAccess();
+    const name = validateGitHubAccessName(githubImportPatNameInput.value);
+    const token = githubImportPatInput.value;
+    validateGitHubPat(token);
+    await inspectGitHubAccessToken(token);
+    const entry = {
+      id: createGitHubAccessId(),
+      name
+    };
+
+    githubAccessEntries.push(entry);
+    githubSessionAccessTokens.set(entry.id, token);
+    githubSelectedAccessId = entry.id;
+    githubAccessAdding = false;
+    try {
+      await persistGitHubAccessVault();
+    } catch (error) {
+      githubAccessEntries = githubAccessEntries.filter(function(item) { return item.id !== entry.id; });
+      githubSessionAccessTokens.delete(entry.id);
+      githubSelectedAccessId = githubAccessEntries[0] ? githubAccessEntries[0].id : "";
+      githubAccessAdding = !githubAccessEntries.length;
+      renderGitHubAccessState();
+      throw error;
+    }
+    resetGitHubAccessForm();
+    renderGitHubAccessState();
+    showGitHubAccessToast(`"${name}" was added. You can select or remove it anytime.`, {
+      tone: "success",
+      title: "GitHub access added"
+    });
+  }
+
+  function renderGitHubRepositoryContext(context) {
+    if (!githubImportRepositoryContext) return;
+    if (!context) {
+      githubImportRepositoryContext.hidden = true;
+      return;
+    }
+    githubImportRepositoryContext.hidden = false;
+    if (githubImportRepositoryName) {
+      githubImportRepositoryName.textContent = `${context.owner}/${context.repo}`;
+    }
+    if (githubImportCommit) {
+      githubImportCommit.textContent = context.commitSha.slice(0, 7);
+    }
+    if (githubImportCommitLink) {
+      githubImportCommitLink.href = `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repo)}/tree/${encodeURIComponent(context.commitSha)}`;
+      githubImportCommitLink.title = `Open commit ${context.commitSha} on GitHub`;
+      githubImportCommitLink.setAttribute("aria-label", `Open commit ${context.commitSha} on GitHub`);
+    }
+    if (githubImportRef) {
+      githubImportRef.textContent = context.refName;
+    }
+    if (githubImportRefItem) {
+      githubImportRefItem.hidden = !context.hasDisplayRef;
+      githubImportRefItem.title = context.hasDisplayRef ? context.refName : "";
+      githubImportRefItem.setAttribute("aria-label", context.hasDisplayRef ? context.refName : "");
+    }
+    if (githubImportBasePath) {
+      githubImportBasePath.textContent = context.basePath ? `/ ${context.basePath}` : "";
+      githubImportBasePath.hidden = !context.basePath;
+    }
+  }
+
+  function isPathInsideGitHubBase(path, normalizedBasePath) {
+    return !normalizedBasePath || path === normalizedBasePath || path.startsWith(normalizedBasePath + "/");
+  }
+
+  function shouldTraverseGitHubTree(path, normalizedBasePath) {
+    if (!normalizedBasePath) return true;
+    return path === normalizedBasePath
+      || normalizedBasePath.startsWith(path + "/")
+      || path.startsWith(normalizedBasePath + "/");
+  }
+
+  async function listMarkdownFilesFromGitHubSubtrees(owner, repo, ref, normalizedBasePath, authenticated) {
+    const pendingTrees = [{ path: "", ref }];
+    const markdownPaths = new Set();
+
+    for (let index = 0; index < pendingTrees.length; index++) {
+      const currentTree = pendingTrees[index];
+      const treeResponse = await fetchGitHubJson(
+        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(currentTree.ref)}`,
+        { authenticated }
+      );
+
+      (treeResponse.tree || []).forEach((entry) => {
+        const fullPath = currentTree.path ? `${currentTree.path}/${entry.path}` : entry.path;
+        if (entry.type === "blob" && isMarkdownPath(fullPath) && isPathInsideGitHubBase(fullPath, normalizedBasePath)) {
+          markdownPaths.add(fullPath);
+        } else if (entry.type === "tree" && shouldTraverseGitHubTree(fullPath, normalizedBasePath)) {
+          pendingTrees.push({ path: fullPath, ref: entry.sha });
+        }
+      });
+    }
+
+    return Array.from(markdownPaths).sort((a, b) => a.localeCompare(b));
+  }
+
+  async function listMarkdownFiles(owner, repo, ref, basePath, options = {}) {
+    const authenticated = options.authenticated === true;
+    const treeResponse = await fetchGitHubJson(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
+      { authenticated }
+    );
     const normalizedBasePath = (basePath || "").replace(/^\/+|\/+$/g, "");
+
+    if (treeResponse.truncated) {
+      if (typeof options.onTruncatedTree === "function") {
+        options.onTruncatedTree();
+      }
+      return listMarkdownFilesFromGitHubSubtrees(owner, repo, ref, normalizedBasePath, authenticated);
+    }
 
     return (treeResponse.tree || [])
       .filter((entry) => entry.type === "blob" && isMarkdownPath(entry.path))
-      .filter((entry) => !normalizedBasePath || entry.path === normalizedBasePath || entry.path.startsWith(normalizedBasePath + "/"))
+      .filter((entry) => isPathInsideGitHubBase(entry.path, normalizedBasePath))
       .map((entry) => entry.path)
       .sort((a, b) => a.localeCompare(b));
   }
@@ -11375,16 +12290,23 @@ ${selector} .arrowheadPath {
   }
 
   function updateGitHubImportSelectedCount() {
-    if (!githubImportSelectedCount) return;
+    if (!githubImportSelectedCountText) return;
     const count = selectedGitHubImportPaths.size;
-    githubImportSelectedCount.textContent = `${count} selected`;
+    githubImportSelectedCountText.textContent = `${count.toLocaleString()} selected`;
   }
 
   function updateGitHubSelectAllButtonLabel() {
     if (!githubImportSelectAllBtn) return;
     const total = availableGitHubImportPaths.length;
     const allSelected = total > 0 && selectedGitHubImportPaths.size === total;
-    githubImportSelectAllBtn.textContent = allSelected ? "Clear All" : "Select All";
+    const actionLabel = allSelected ? "Deselect all files" : "Select all files";
+    githubImportSelectAllBtn.setAttribute("aria-label", actionLabel);
+    githubImportSelectAllBtn.title = actionLabel;
+    githubImportSelectAllBtn.setAttribute("aria-pressed", allSelected ? "true" : "false");
+    const icon = githubImportSelectAllBtn.querySelector("i");
+    if (icon) {
+      icon.className = "lucide lucide-check-check";
+    }
   }
 
   function syncGitHubSelectionToButtons() {
@@ -11393,6 +12315,9 @@ ${selector} .arrowheadPath {
       const isSelected = selectedGitHubImportPaths.has(btn.dataset.path);
       btn.classList.toggle("is-selected", isSelected);
       btn.setAttribute("aria-pressed", isSelected ? "true" : "false");
+      btn.setAttribute("aria-label", `${btn.dataset.name || getFileName(btn.dataset.path)}, ${isSelected ? "selected" : "not selected"}`);
+      const checkIcon = btn.querySelector(".github-tree-selection-icon");
+      if (checkIcon) checkIcon.hidden = !isSelected;
     });
   }
 
@@ -11416,22 +12341,126 @@ ${selector} .arrowheadPath {
     updateGitHubSelectAllButtonLabel();
   }
 
+  function getFilteredGitHubImportPaths() {
+    const query = githubImportSearchInput ? githubImportSearchInput.value.trim().toLocaleLowerCase() : "";
+    if (!query) return availableGitHubImportPaths.slice();
+    return availableGitHubImportPaths.filter((path) => path.toLocaleLowerCase().includes(query));
+  }
+
+  function getGitHubImportFolderPaths(paths) {
+    const folderPaths = new Set();
+    (paths || []).forEach(function(path) {
+      const segments = String(path || "").split("/").filter(Boolean);
+      segments.pop();
+      for (let index = 1; index <= segments.length; index++) {
+        folderPaths.add(segments.slice(0, index).join("/"));
+      }
+    });
+    return Array.from(folderPaths);
+  }
+
+  function updateGitHubFolderToggleButton() {
+    if (!githubImportToggleFoldersBtn) return;
+    const folderPaths = getGitHubImportFolderPaths(availableGitHubImportPaths);
+    const searchActive = Boolean(githubImportSearchInput && githubImportSearchInput.value.trim());
+    const allCollapsed = folderPaths.length > 0 && folderPaths.every(function(path) {
+      return collapsedGitHubImportFolders.has(path);
+    });
+    const actionLabel = allCollapsed ? "Expand all folders" : "Collapse all folders";
+    githubImportToggleFoldersBtn.disabled = searchActive || !folderPaths.length;
+    githubImportToggleFoldersBtn.setAttribute("aria-label", actionLabel);
+    githubImportToggleFoldersBtn.title = searchActive ? "Clear search to change all folders" : actionLabel;
+    githubImportToggleFoldersBtn.removeAttribute("aria-pressed");
+    const icon = githubImportToggleFoldersBtn.querySelector("i");
+    if (icon) {
+      icon.className = `lucide ${allCollapsed ? "lucide-unfold-vertical" : "lucide-fold-vertical"}`;
+    }
+  }
+
+  function toggleAllGitHubImportFolders() {
+    const folderPaths = getGitHubImportFolderPaths(availableGitHubImportPaths);
+    if (!folderPaths.length) return;
+    const shouldExpand = folderPaths.every(function(path) {
+      return collapsedGitHubImportFolders.has(path);
+    });
+    collapsedGitHubImportFolders.clear();
+    if (!shouldExpand) {
+      folderPaths.forEach(function(path) {
+        collapsedGitHubImportFolders.add(path);
+      });
+    }
+    renderGitHubImportTree();
+    announceToScreenReader(shouldExpand ? "All GitHub folders expanded." : "All GitHub folders collapsed.");
+  }
+
+  function countMarkdownFilesInTreeNode(node) {
+    return node.files.length + Object.values(node.folders).reduce((total, folder) => {
+      return total + countMarkdownFilesInTreeNode(folder);
+    }, 0);
+  }
+
   function renderGitHubImportTree(paths) {
     if (!githubImportTree || !githubImportFileSelect) return;
-    githubImportTree.innerHTML = "";
-    const tree = buildMarkdownFileTree(paths);
+    githubImportTree.textContent = "";
+    const visiblePaths = Array.isArray(paths) ? paths : getFilteredGitHubImportPaths();
+    const searchActive = Boolean(githubImportSearchInput && githubImportSearchInput.value.trim());
+    if (!visiblePaths.length) {
+      const emptyState = document.createElement("div");
+      emptyState.className = "github-import-tree-empty";
+      emptyState.setAttribute("role", "status");
+      emptyState.innerHTML = '<i class="lucide lucide-search" aria-hidden="true"></i><span>No Markdown files match your search.</span>';
+      githubImportTree.appendChild(emptyState);
+      updateGitHubFolderToggleButton();
+      return;
+    }
+    const tree = buildMarkdownFileTree(visiblePaths);
 
     const createTreeBranch = function(node, parentPath) {
       const list = document.createElement("ul");
+      list.setAttribute("role", "group");
       const folderNames = Object.keys(node.folders).sort((a, b) => a.localeCompare(b));
       folderNames.forEach((folderName) => {
         const folderPath = parentPath ? `${parentPath}/${folderName}` : folderName;
         const item = document.createElement("li");
-        const folderLabel = document.createElement("span");
-        folderLabel.className = "github-tree-folder-label";
-        folderLabel.textContent = `📁 ${folderName}`;
-        item.appendChild(folderLabel);
-        item.appendChild(createTreeBranch(node.folders[folderName], folderPath));
+        item.className = "github-tree-folder-item";
+        item.setAttribute("role", "none");
+        const folderToggle = document.createElement("button");
+        const childBranch = createTreeBranch(node.folders[folderName], folderPath);
+        const collapsed = !searchActive && collapsedGitHubImportFolders.has(folderPath);
+        folderToggle.type = "button";
+        folderToggle.className = "github-tree-folder-label";
+        folderToggle.dataset.folderPath = folderPath;
+        folderToggle.setAttribute("role", "treeitem");
+        folderToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        folderToggle.title = folderPath;
+
+        const chevron = document.createElement("i");
+        chevron.className = `lucide ${collapsed ? "lucide-chevron-right" : "lucide-chevron-down"} github-tree-chevron`;
+        chevron.setAttribute("aria-hidden", "true");
+        const folderIcon = document.createElement("i");
+        folderIcon.className = `lucide ${collapsed ? "lucide-folder" : "lucide-folder-open"} github-tree-folder-icon`;
+        folderIcon.setAttribute("aria-hidden", "true");
+        const folderNameNode = document.createElement("span");
+        folderNameNode.className = "github-import-tree-name";
+        folderNameNode.textContent = folderName;
+        const folderCount = document.createElement("span");
+        folderCount.className = "github-tree-folder-count";
+        folderCount.textContent = countMarkdownFilesInTreeNode(node.folders[folderName]).toLocaleString();
+        folderCount.setAttribute("aria-label", `${folderCount.textContent} Markdown files`);
+
+        childBranch.hidden = collapsed;
+        folderToggle.append(chevron, folderIcon, folderNameNode, folderCount);
+        folderToggle.addEventListener("click", function() {
+          const shouldCollapse = folderToggle.getAttribute("aria-expanded") === "true";
+          folderToggle.setAttribute("aria-expanded", shouldCollapse ? "false" : "true");
+          childBranch.hidden = shouldCollapse;
+          chevron.className = `lucide ${shouldCollapse ? "lucide-chevron-right" : "lucide-chevron-down"} github-tree-chevron`;
+          folderIcon.className = `lucide ${shouldCollapse ? "lucide-folder" : "lucide-folder-open"} github-tree-folder-icon`;
+          if (shouldCollapse) collapsedGitHubImportFolders.add(folderPath);
+          else collapsedGitHubImportFolders.delete(folderPath);
+          updateGitHubFolderToggleButton();
+        });
+        item.append(folderToggle, childBranch);
         list.appendChild(item);
       });
 
@@ -11439,12 +12468,29 @@ ${selector} .arrowheadPath {
         .sort((a, b) => a.path.localeCompare(b.path))
         .forEach((file) => {
           const fileItem = document.createElement("li");
+          fileItem.className = "github-tree-file-item";
+          fileItem.setAttribute("role", "none");
           const fileButton = document.createElement("button");
           fileButton.type = "button";
           fileButton.className = "github-tree-file-btn";
           fileButton.dataset.path = file.path;
+          fileButton.dataset.name = file.name;
+          fileButton.setAttribute("role", "treeitem");
           fileButton.setAttribute("aria-pressed", "false");
-          fileButton.textContent = `📄 ${file.name}`;
+          fileButton.title = file.path;
+
+          const fileIcon = document.createElement("i");
+          fileIcon.className = "lucide lucide-file-text github-tree-file-icon";
+          fileIcon.setAttribute("aria-hidden", "true");
+          const fileName = document.createElement("span");
+          fileName.className = "github-import-tree-name";
+          fileName.textContent = file.name;
+          const selectedIcon = document.createElement("i");
+          selectedIcon.className = "lucide lucide-check github-tree-selection-icon";
+          selectedIcon.setAttribute("aria-hidden", "true");
+          selectedIcon.hidden = true;
+
+          fileButton.append(fileIcon, fileName, selectedIcon);
           fileButton.addEventListener("click", function() {
             toggleGitHubSelectedPath(file.path);
           });
@@ -11455,20 +12501,37 @@ ${selector} .arrowheadPath {
       return list;
     };
 
-    githubImportTree.appendChild(createTreeBranch(tree, ""));
+    const treeFragment = document.createDocumentFragment();
+    treeFragment.appendChild(createTreeBranch(tree, ""));
+    githubImportTree.appendChild(treeFragment);
     syncGitHubSelectionToButtons();
+    updateGitHubFolderToggleButton();
   }
 
   function setGitHubImportLoading(isLoading) {
     if (!githubImportSubmitBtn) return;
+    if (githubImportModalBox) {
+      githubImportModalBox.setAttribute("aria-busy", isLoading ? "true" : "false");
+    }
     if (isLoading) {
-      githubImportSubmitBtn.dataset.loadingText = githubImportSubmitBtn.textContent;
-      githubImportSubmitBtn.textContent = "Importing...";
-    } else if (githubImportSubmitBtn.dataset.loadingText) {
-      githubImportSubmitBtn.textContent = githubImportSubmitBtn.dataset.step === "select"
-        ? "Import Selected"
-        : githubImportSubmitBtn.dataset.loadingText;
-      delete githubImportSubmitBtn.dataset.loadingText;
+      if (!githubImportSubmitBtn.dataset.loadingText) {
+        githubImportSubmitBtn.dataset.loadingText = githubImportSubmitBtn.textContent;
+      }
+      githubImportSubmitBtn.classList.add("is-loading");
+      const spinner = document.createElement("span");
+      spinner.className = "github-import-button-spinner";
+      spinner.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.textContent = "Loading…";
+      githubImportSubmitBtn.replaceChildren(spinner, label);
+    } else {
+      githubImportSubmitBtn.classList.remove("is-loading");
+      if (githubImportSubmitBtn.dataset.loadingText) {
+        githubImportSubmitBtn.textContent = githubImportSubmitBtn.dataset.step === "select"
+          ? "Import Selected"
+          : githubImportSubmitBtn.dataset.loadingText;
+        delete githubImportSubmitBtn.dataset.loadingText;
+      }
     }
   }
 
@@ -11485,14 +12548,71 @@ ${selector} .arrowheadPath {
     githubImportError.style.display = "block";
   }
 
+  function showGitHubImportSelectionLoading(context) {
+    if (githubImportModal) {
+      githubImportModal.classList.add("is-selection-step", "is-selection-loading");
+    }
+    if (githubImportTitle) githubImportTitle.textContent = "Select Markdown files to import";
+    if (githubImportSubtitle) githubImportSubtitle.textContent = "Loading Markdown files from GitHub…";
+    githubImportUrlInput.style.display = "none";
+    if (githubImportUrlLabel) githubImportUrlLabel.style.display = "none";
+    if (githubImportAccess) githubImportAccess.hidden = true;
+    renderGitHubRepositoryContext(context);
+    if (githubImportSelectionToolbar) githubImportSelectionToolbar.style.display = "grid";
+    if (githubImportSearchInput) {
+      githubImportSearchInput.value = "";
+      githubImportSearchInput.placeholder = "Loading Markdown files…";
+      githubImportSearchInput.disabled = true;
+    }
+    if (githubImportSelectedCountText) githubImportSelectedCountText.textContent = "Loading…";
+    if (githubImportTree) {
+      renderGitHubImportTreeSkeleton();
+      githubImportTree.style.display = "block";
+    }
+  }
+
+  function restoreGitHubImportUrlStep() {
+    if (githubImportModal) {
+      githubImportModal.classList.remove("is-selection-step", "is-selection-loading");
+    }
+    if (githubImportTitle) githubImportTitle.textContent = "Import Markdown from GitHub";
+    if (githubImportSubtitle) githubImportSubtitle.textContent = "Paste a GitHub file or repository URL.";
+    githubImportUrlInput.style.display = "block";
+    if (githubImportUrlLabel) githubImportUrlLabel.style.display = "block";
+    if (githubImportAccess) githubImportAccess.hidden = false;
+    renderGitHubRepositoryContext(null);
+    if (githubImportSelectionToolbar) githubImportSelectionToolbar.style.display = "none";
+    if (githubImportSearchInput) {
+      githubImportSearchInput.value = "";
+      githubImportSearchInput.placeholder = "Search Markdown files";
+    }
+    if (githubImportTree) {
+      githubImportTree.textContent = "";
+      githubImportTree.style.display = "none";
+    }
+    githubImportSubmitBtn.dataset.step = "url";
+    githubImportSubmitBtn._githubContext = null;
+  }
+
   function resetGitHubImportModal() {
     if (!githubImportUrlInput || !githubImportFileSelect || !githubImportSubmitBtn) return;
+    setGitHubImportLoading(false);
+    if (githubImportModal) githubImportModal.classList.remove("is-selection-step", "is-selection-loading");
     if (githubImportTitle) {
       githubImportTitle.textContent = "Import Markdown from GitHub";
+    }
+    if (githubImportSubtitle) {
+      githubImportSubtitle.textContent = "Paste a GitHub file or repository URL.";
     }
     githubImportUrlInput.value = "";
     githubImportUrlInput.style.display = "block";
     if (githubImportUrlLabel) githubImportUrlLabel.style.display = "block";
+    if (githubImportAccess) githubImportAccess.hidden = false;
+    if (githubImportAccessToggle) githubImportAccessToggle.setAttribute("aria-expanded", "false");
+    if (githubImportAccessPanel) githubImportAccessPanel.hidden = true;
+    resetGitHubAccessForm();
+    githubAccessAdding = !githubAccessEntries.length;
+    renderGitHubRepositoryContext(null);
     githubImportUrlInput.disabled = false;
     githubImportFileSelect.innerHTML = "";
     githubImportFileSelect.style.display = "none";
@@ -11501,6 +12621,15 @@ ${selector} .arrowheadPath {
       githubImportSelectionToolbar.style.display = "none";
     }
     availableGitHubImportPaths = [];
+    collapsedGitHubImportFolders.clear();
+    clearTimeout(githubImportSearchTimer);
+    githubImportSearchTimer = null;
+    if (githubImportSearchInput) {
+      githubImportSearchInput.value = "";
+      githubImportSearchInput.placeholder = "Search Markdown files";
+      githubImportSearchInput.disabled = false;
+    }
+    updateGitHubFolderToggleButton();
     setGitHubSelectedPaths([]);
     if (githubImportTree) {
       githubImportTree.innerHTML = "";
@@ -11510,8 +12639,10 @@ ${selector} .arrowheadPath {
     delete githubImportSubmitBtn.dataset.owner;
     delete githubImportSubmitBtn.dataset.repo;
     delete githubImportSubmitBtn.dataset.ref;
+    githubImportSubmitBtn._githubContext = null;
     githubImportSubmitBtn.textContent = "Import";
     setGitHubImportMessage("");
+    renderGitHubAccessState();
   }
 
   function openGitHubImportModal() {
@@ -11521,6 +12652,7 @@ ${selector} .arrowheadPath {
       focusTarget: githubImportUrlInput,
       onClose: closeGitHubImportModal
     });
+    void loadStoredGitHubAccess();
   }
 
   function closeGitHubImportModal() {
@@ -11539,19 +12671,36 @@ ${selector} .arrowheadPath {
       if (githubImportSelectAllBtn) {
         githubImportSelectAllBtn.disabled = disabled;
       }
+      if (githubImportToggleFoldersBtn) {
+        githubImportToggleFoldersBtn.disabled = disabled;
+      }
+      if (githubImportSearchInput) {
+        githubImportSearchInput.disabled = disabled;
+      }
+      [
+        githubImportAccessToggle,
+        githubImportPatSelect,
+        githubImportPatAddAnotherBtn,
+        githubImportPatAddCancelBtn,
+        githubImportPatNameInput,
+        githubImportPatInput,
+        githubImportPatSaveBtn,
+        githubImportPatRemoveBtn
+      ].forEach(function(control) {
+        if (control) control.disabled = disabled;
+      });
+      if (!disabled) updateGitHubFolderToggleButton();
     };
     const step = githubImportSubmitBtn.dataset.step || "url";
     if (step === "select") {
       const selectedPaths = Array.from(selectedGitHubImportPaths);
-      const owner = githubImportSubmitBtn.dataset.owner;
-      const repo = githubImportSubmitBtn.dataset.repo;
-      const ref = githubImportSubmitBtn.dataset.ref;
-      if (!owner || !repo || !ref || !selectedPaths.length) {
+      const context = githubImportSubmitBtn._githubContext;
+      if (!context || !context.owner || !context.repo || !context.commitSha || !selectedPaths.length) {
         setGitHubImportMessage("Please select at least one file to import.");
         return;
       }
       announceToScreenReader("Importing selected files from GitHub...");
-      startGitHubImport(owner, repo, ref, selectedPaths);
+      startGitHubImport(context, selectedPaths);
       return;
     }
 
@@ -11570,94 +12719,94 @@ ${selector} .arrowheadPath {
     setGitHubImportMessage("");
     setGitHubImportLoading(true);
     setGitHubImportDialogDisabled(true);
+    let selectionLoadingStarted = false;
     try {
-      if (parsed.type === "file") {
-        if (!isMarkdownPath(parsed.filePath)) {
+      const context = await resolveGitHubLocation(parsed);
+      if (context.type === "file") {
+        if (!isMarkdownPath(context.filePath)) {
           throw new Error("The provided URL does not point to a Markdown file.");
         }
         announceToScreenReader("Starting GitHub import...");
-        startGitHubImport(parsed.owner, parsed.repo, parsed.ref, [parsed.filePath]);
+        startGitHubImport(context, [context.filePath]);
         return;
       }
 
       // Accessibility dynamic live announcer
       const fetchingText = I18N_DICTS[activeLang].loadingFiles || "Fetching file tree...";
       announceToScreenReader(fetchingText);
+      showGitHubImportSelectionLoading(context);
+      selectionLoadingStarted = true;
 
-      // Render hierarchical visual skeleton tree while the list is loading
-      if (githubImportTree) {
-        renderGitHubImportTreeSkeleton();
-        githubImportTree.style.display = "block";
-      }
-
-      const ref = parsed.ref || await getDefaultBranch(parsed.owner, parsed.repo);
-      const files = await listMarkdownFiles(parsed.owner, parsed.repo, ref, parsed.basePath || "");
+      const files = await listMarkdownFiles(context.owner, context.repo, context.commitSha, context.basePath, {
+        authenticated: context.authenticated,
+        onTruncatedTree: function() {
+          setGitHubImportMessage("GitHub returned a partial tree. Scanning every folder to find all Markdown files\u2026", { isError: false });
+          announceToScreenReader("Large GitHub repository detected. Scanning every folder.");
+        }
+      });
 
       if (!files.length) {
-        if (githubImportTree) {
-          githubImportTree.innerHTML = "";
-          githubImportTree.style.display = "none";
-        }
+        restoreGitHubImportUrlStep();
         setGitHubImportMessage("No Markdown files were found at that GitHub location.");
         announceToScreenReader("Failed to locate Markdown files.");
         return;
       }
 
-      const shownFiles = files.slice(0, MAX_GITHUB_FILES_SHOWN);
       if (files.length === 1) {
         const targetPath = files[0];
         announceToScreenReader("Starting GitHub import...");
-        startGitHubImport(parsed.owner, parsed.repo, ref, [targetPath]);
+        startGitHubImport(context, [targetPath]);
         return;
       }
 
       githubImportFileSelect.innerHTML = "";
-      githubImportUrlInput.style.display = "none";
-      if (githubImportUrlLabel) githubImportUrlLabel.style.display = "none";
+      if (githubImportModal) githubImportModal.classList.remove("is-selection-loading");
       githubImportFileSelect.style.display = "none";
-      if (githubImportSelectionToolbar) {
-        githubImportSelectionToolbar.style.display = "flex";
-      }
+      if (githubImportSearchInput) githubImportSearchInput.placeholder = "Search Markdown files";
       if (githubImportTree) {
         githubImportTree.style.display = "block";
       }
-      shownFiles.forEach((filePath) => {
-        const option = document.createElement("option");
-        option.value = filePath;
-        option.textContent = filePath;
-        githubImportFileSelect.appendChild(option);
-      });
-      availableGitHubImportPaths = shownFiles.slice();
-      setGitHubSelectedPaths(shownFiles[0] ? [shownFiles[0]] : []);
-      renderGitHubImportTree(shownFiles);
+      availableGitHubImportPaths = files.slice();
+      setGitHubSelectedPaths(files[0] ? [files[0]] : []);
+      renderGitHubImportTree();
 
       // Announce load complete
       announceToScreenReader("GitHub files loaded. " + files.length + " files available in the tree.");
 
-      if (files.length > MAX_GITHUB_FILES_SHOWN) {
-        setGitHubImportMessage(`Showing first ${MAX_GITHUB_FILES_SHOWN} of ${files.length} Markdown files.`, { isError: false });
-      } else {
-        setGitHubImportMessage("");
-      }
+      setGitHubImportMessage("");
       if (githubImportTitle) {
-        githubImportTitle.textContent = "Select Markdown file(s) to import";
+        githubImportTitle.textContent = "Select Markdown files to import";
+      }
+      if (githubImportSubtitle) {
+        githubImportSubtitle.textContent = `${files.length.toLocaleString()} Markdown files found. Choose what to save to Explorer.`;
       }
       githubImportSubmitBtn.dataset.step = "select";
-      githubImportSubmitBtn.dataset.owner = parsed.owner;
-      githubImportSubmitBtn.dataset.repo = parsed.repo;
-      githubImportSubmitBtn.dataset.ref = ref;
+      githubImportSubmitBtn.dataset.owner = context.owner;
+      githubImportSubmitBtn.dataset.repo = context.repo;
+      githubImportSubmitBtn.dataset.ref = context.commitSha;
+      githubImportSubmitBtn._githubContext = context;
       githubImportSubmitBtn.textContent = "Import Selected";
     } catch (error) {
       console.error("GitHub import failed:", error);
+      if (selectionLoadingStarted) restoreGitHubImportUrlStep();
       setGitHubImportMessage("GitHub import failed: " + error.message);
+      if (githubImportAccessToggle && githubImportAccessPanel
+        && /^".+" (?:is no longer available|cannot access|was rejected)/.test(error.message || "")) {
+        githubImportAccessToggle.setAttribute("aria-expanded", "true");
+        githubImportAccessPanel.hidden = false;
+        renderGitHubAccessState();
+      }
       announceToScreenReader("GitHub import failed.");
       if (githubImportTree) {
-        githubImportTree.innerHTML = "";
+        githubImportTree.textContent = "";
         githubImportTree.style.display = "none";
       }
     } finally {
       setGitHubImportDialogDisabled(false);
       setGitHubImportLoading(false);
+      if (githubImportSubmitBtn.dataset.step === "select" && githubImportSearchInput) {
+        requestAnimationFrame(function() { githubImportSearchInput.focus(); });
+      }
     }
   }
 
@@ -17825,11 +18974,26 @@ ${selector} .arrowheadPath {
         multiSelections: true
       });
       if (result && result.length > 0) {
-        for (const filePath of result) {
-          const content = await Neutralino.filesystem.readFile(filePath);
-          const fileName = filePath.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, "");
-          if (!newTab(content, fileName)) break;
+        const importedDocumentIds = [];
+        showImportProgress(result.length);
+        for (let index = 0; index < result.length; index++) {
+          const filePath = result[index];
+          try {
+            const content = await Neutralino.filesystem.readFile(filePath);
+            const fileName = filePath.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, "");
+            const importedDocument = createImportedDocument(content, fileName);
+            if (importedDocument) importedDocumentIds.push(importedDocument.id);
+          } catch (fileError) {
+            console.error("Native file import failed:", filePath, fileError);
+          }
+          updateImportProgress(index + 1, result.length);
         }
+        await persistImportedDocuments(importedDocumentIds);
+        finishImportProgress(importedDocumentIds.length, result.length, {
+          detail: importedDocumentIds.length === result.length
+            ? 'Saved to Explorer without opening new tabs.'
+            : undefined
+        });
       }
     } catch (e) {
       console.error("Native import failed:", e);
@@ -17864,6 +19028,88 @@ ${selector} .arrowheadPath {
   if (githubImportCloseBtn) {
     githubImportCloseBtn.addEventListener("click", closeGitHubImportModal);
   }
+  if (githubImportAccessToggle && githubImportAccessPanel) {
+    githubImportAccessToggle.addEventListener("click", function() {
+      const expanded = githubImportAccessToggle.getAttribute("aria-expanded") === "true";
+      githubImportAccessToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+      githubImportAccessPanel.hidden = expanded;
+      if (!expanded) {
+        const target = githubAccessAdding ? githubImportPatNameInput : githubImportPatSelect;
+        if (target) {
+          requestAnimationFrame(function() {
+            target.focus();
+            target.scrollIntoView({ block: "nearest" });
+          });
+        }
+      }
+    });
+  }
+  if (githubImportPatSelect) {
+    githubImportPatSelect.addEventListener("change", function() {
+      githubSelectedAccessId = githubImportPatSelect.value;
+      renderGitHubAccessState();
+      void persistGitHubAccessVault().catch(function(error) {
+        showGitHubAccessToast(
+          error && error.message ? error.message : "The selected GitHub access could not be saved.",
+          { tone: "error", title: "GitHub access selection not saved" }
+        );
+      });
+    });
+  }
+  if (githubImportPatAddAnotherBtn) {
+    githubImportPatAddAnotherBtn.addEventListener("click", function() {
+      setGitHubAccessAdding(true);
+    });
+  }
+  if (githubImportPatAddCancelBtn) {
+    githubImportPatAddCancelBtn.addEventListener("click", function() {
+      setGitHubAccessAdding(false, { focus: false });
+    });
+  }
+  if (githubImportPatSaveBtn) {
+    githubImportPatSaveBtn.addEventListener("click", async function() {
+      const previousText = githubImportPatSaveBtn.textContent;
+      githubImportPatSaveBtn.disabled = true;
+      githubImportPatSaveBtn.textContent = "Adding…";
+      try {
+        await saveGitHubAccess();
+      } catch (error) {
+        showGitHubAccessToast(
+          error && error.message ? error.message : "Private access could not be saved.",
+          { tone: "error", title: "GitHub access not added" }
+        );
+      } finally {
+        githubImportPatSaveBtn.disabled = false;
+        githubImportPatSaveBtn.textContent = previousText;
+      }
+    });
+  }
+  if (githubImportPatRemoveBtn) {
+    githubImportPatRemoveBtn.addEventListener("click", async function() {
+      githubImportPatRemoveBtn.disabled = true;
+      try {
+        await removeGitHubAccess();
+      } catch (_) {
+        showGitHubAccessToast("Private access could not be removed.", {
+          tone: "error",
+          title: "GitHub access not removed"
+        });
+      } finally {
+        githubImportPatRemoveBtn.disabled = false;
+      }
+    });
+  }
+  const bindGitHubAccessEnterAction = function(input, actionButton) {
+    if (!input || !actionButton) return;
+    input.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        actionButton.click();
+      }
+    });
+  };
+  bindGitHubAccessEnterAction(githubImportPatInput, githubImportPatSaveBtn);
+  void loadStoredGitHubAccess();
   const handleGitHubImportInputKeydown = function(e) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -17878,12 +19124,33 @@ ${selector} .arrowheadPath {
   if (githubImportFileSelect) {
     githubImportFileSelect.addEventListener("keydown", handleGitHubImportInputKeydown);
   }
+  if (githubImportSearchInput) {
+    githubImportSearchInput.addEventListener("input", function() {
+      clearTimeout(githubImportSearchTimer);
+      githubImportSearchTimer = setTimeout(function() {
+        renderGitHubImportTree();
+        const visibleCount = getFilteredGitHubImportPaths().length;
+        announceToScreenReader(visibleCount + " Markdown file" + (visibleCount === 1 ? "" : "s") + " shown.");
+      }, 120);
+    });
+    githubImportSearchInput.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && githubImportSearchInput.value) {
+        e.preventDefault();
+        e.stopPropagation();
+        githubImportSearchInput.value = "";
+        renderGitHubImportTree();
+      }
+    });
+  }
   if (githubImportSelectAllBtn) {
     githubImportSelectAllBtn.addEventListener("click", function() {
       const allPaths = availableGitHubImportPaths.slice();
       const shouldSelectAll = selectedGitHubImportPaths.size !== allPaths.length;
       setGitHubSelectedPaths(shouldSelectAll ? allPaths : []);
     });
+  }
+  if (githubImportToggleFoldersBtn) {
+    githubImportToggleFoldersBtn.addEventListener("click", toggleAllGitHubImportFolders);
   }
 
   fileInput.addEventListener("change", async function (e) {

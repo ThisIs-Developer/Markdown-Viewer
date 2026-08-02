@@ -36,6 +36,7 @@
     "filesystem.remove",
     "storage.setData",
     "storage.getData",
+    "storage.getKeys",
     "storage.removeData",
     "storage.clear"
   ],
