@@ -45,7 +45,7 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 - Restored the original GitHub importer widths: a compact 520px URL step and a 760px Markdown selection step. The resolved branch/ref exposes its full value on hover and is paired with the linked immutable commit; direct commit URLs show only the commit.
 - Added two-stage loading feedback: the URL-step Import button shows an immediate spinner, then the selection layout displays repository context and a reduced-motion-aware shimmer tree until Markdown discovery completes.
 - Simplified the selection toolbar with a lightweight selected-count indicator, a stateless collapse/expand command, and a select-all toggle that keeps one icon and indicates selection using icon color only.
-- Moved the selected-count and tree actions beside the search field, and grouped the wider branch/ref badge with the commit on the right side of the compact repository row.
+- Moved the selected-count and tree actions beside the search field, grouped the wider branch/ref badge with the commit on the right side of the compact repository row, and kept the folder toggle at its normal icon color after collapsing the tree.
 - Regenerated and audited every supported interface catalog so the newer GitHub importer labels, statuses, errors, tooltips, and accessibility text no longer fall back to English.
 - Added file search, a lightweight selected-count indicator, borderless toolbar-style controls for select/deselect all and collapse/expand all, and GitHub-style folder and file rows using the application typography scale.
 - Changed local, drag-and-drop, desktop, and GitHub Markdown imports to save documents in Explorer without opening every imported file as a tab.

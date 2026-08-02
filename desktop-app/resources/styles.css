@@ -6198,6 +6198,13 @@ a:focus {
   background: var(--toolbar-control-hover);
 }
 
+#github-import-toggle-folders,
+#github-import-toggle-folders:hover,
+#github-import-toggle-folders:focus-visible,
+#github-import-toggle-folders:active {
+  color: var(--text-color);
+}
+
 .github-import-toolbar-btn > .lucide {
   width: 16px;
   height: 16px;
