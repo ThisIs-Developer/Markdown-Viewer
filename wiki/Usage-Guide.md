@@ -25,6 +25,7 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 - Select Workspace, Secret Workspace, or a folder, then use the clearly labeled **New file** or **New folder** button. The selected row shows where the item will be created; the plus menu beside an unlocked workspace or folder creates directly inside it.
 - Workspace roots are fixed. Create nested folders inside **Workspace** or the password-protected **Secret Workspace**.
 - The first time Secret Workspace is opened, create a password of at least eight characters. Files and folder names are encrypted locally. Use its menu to lock it when finished; the password cannot be recovered.
+- When multiple files are selected, dragging any selected file moves the full selection and the drag preview shows the file count. Expanded folders accept drops across their visible contents, not only on the folder name.
 - Drag a file row onto a folder or workspace to move it. Use **Move to…** from the file menu as the keyboard and touch-friendly alternative. Dropping local Markdown files onto a folder imports them there.
 - Use **All files** for the hierarchy, **Recent** for recently opened or edited files, and **Favorites** for starred files.
 - On desktop, one click selects a sidebar document and a double click opens it. On touch layouts, one tap opens it and closes the drawer.
