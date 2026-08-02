@@ -3112,7 +3112,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentSidebarRenderBudget = null;
   let documentSidebarInitialized = false;
   let isDocumentSidebarResizing = false;
-  let draggedSidebarDocumentId = null;
+  let draggedSidebarDocumentIds = [];
   let activeDocumentDragPreview = null;
   let documentTreeDragExpandTimer = null;
   let documentTreeDragExpandRow = null;
@@ -5007,8 +5007,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function clearDocumentDropTargets() {
-    document.querySelectorAll('#document-tree .document-tree-row.is-drop-target').forEach(function(row) {
-      row.classList.remove('is-drop-target');
+    document.querySelectorAll('#document-tree .is-drop-target').forEach(function(target) {
+      target.classList.remove('is-drop-target');
     });
   }
 
@@ -5101,28 +5101,29 @@ document.addEventListener("DOMContentLoaded", async function () {
     activeDocumentDragPreview = null;
   }
 
-  function createDocumentDragPreview(title) {
+  function createDocumentDragPreview(title, count) {
     removeDocumentDragPreview();
+    const fileCount = Math.max(1, Number(count) || 1);
     const normalizedTitle = String(title || 'Untitled').trim() || 'Untitled';
     const filename = /\.md$/i.test(normalizedTitle) ? normalizedTitle : normalizedTitle + '.md';
     const preview = document.createElement('div');
-    preview.className = 'document-drag-preview';
+    preview.className = 'document-drag-preview' + (fileCount > 1 ? ' is-multiple' : '');
     preview.setAttribute('aria-hidden', 'true');
 
     const page = document.createElement('span');
     page.className = 'document-drag-preview-page';
     const icon = document.createElement('i');
-    icon.className = 'lucide lucide-download';
+    icon.className = 'lucide ' + (fileCount > 1 ? 'lucide-files' : 'lucide-file-text');
     icon.setAttribute('aria-hidden', 'true');
     const badge = document.createElement('span');
     badge.className = 'document-drag-preview-badge';
-    badge.textContent = 'MD';
+    badge.textContent = fileCount > 1 ? String(fileCount) : 'MD';
     page.appendChild(icon);
     page.appendChild(badge);
 
     const label = document.createElement('span');
     label.className = 'document-drag-preview-label';
-    label.textContent = filename;
+    label.textContent = fileCount > 1 ? fileCount + ' files' : filename;
     preview.appendChild(page);
     preview.appendChild(label);
     document.body.appendChild(preview);
@@ -5130,32 +5131,56 @@ document.addEventListener("DOMContentLoaded", async function () {
     return preview;
   }
 
-  function attachDocumentDropTarget(row, location) {
-    if (!row || !location) return;
-    row.setAttribute('data-drop-workspace-id', location.workspaceId);
-    if (location.folderId) row.setAttribute('data-drop-folder-id', location.folderId);
+  function getDraggedSidebarDocumentIds(dataTransfer) {
+    if (draggedSidebarDocumentIds.length) return draggedSidebarDocumentIds.slice();
+    if (!dataTransfer) return [];
+    let documentIds = [];
+    try {
+      const encodedIds = dataTransfer.getData('application/x-markdown-viewer-documents');
+      const parsedIds = encodedIds ? JSON.parse(encodedIds) : [];
+      if (Array.isArray(parsedIds)) documentIds = parsedIds;
+    } catch (_) {}
+    if (!documentIds.length) {
+      const legacyId = dataTransfer.getData('application/x-markdown-viewer-document');
+      if (legacyId) documentIds = [legacyId];
+    }
+    return Array.from(new Set(documentIds)).filter(function(tabId) {
+      return tabs.some(function(tab) { return tab.id === tabId && !isTemporaryDocument(tab); });
+    });
+  }
 
-    row.addEventListener('dragover', function(event) {
+  function attachDocumentDropTarget(target, location) {
+    if (!target || !location) return;
+    target.setAttribute('data-drop-workspace-id', location.workspaceId);
+    if (location.folderId) target.setAttribute('data-drop-folder-id', location.folderId);
+
+    function isClosestDropSurface(event) {
+      return event.target.closest('[data-drop-workspace-id]') === target;
+    }
+
+    target.addEventListener('dragover', function(event) {
+      if (!isClosestDropSurface(event)) return;
       const transferTypes = event.dataTransfer && event.dataTransfer.types
         ? Array.from(event.dataTransfer.types)
         : [];
       const hasFiles = transferTypes.includes('Files') || Boolean(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length);
-      if (!draggedSidebarDocumentId && !hasFiles) return;
+      if (!draggedSidebarDocumentIds.length && !hasFiles) return;
       event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = draggedSidebarDocumentId ? 'move' : 'copy';
+      if (event.dataTransfer) event.dataTransfer.dropEffect = draggedSidebarDocumentIds.length ? 'move' : 'copy';
       clearDocumentDropTargets();
-      row.classList.add('is-drop-target');
-      scheduleDocumentTreeDragExpansion(row, location);
+      target.classList.add('is-drop-target');
+      scheduleDocumentTreeDragExpansion(target, location);
     });
 
-    row.addEventListener('dragleave', function(event) {
-      if (!event.relatedTarget || !row.contains(event.relatedTarget)) {
-        row.classList.remove('is-drop-target');
-        if (documentTreeDragExpandRow === row) clearDocumentTreeDragExpansion();
+    target.addEventListener('dragleave', function(event) {
+      if (!event.relatedTarget || !target.contains(event.relatedTarget)) {
+        target.classList.remove('is-drop-target');
+        if (documentTreeDragExpandRow === target) clearDocumentTreeDragExpansion();
       }
     });
 
-    row.addEventListener('drop', function(event) {
+    target.addEventListener('drop', function(event) {
+      if (!isClosestDropSurface(event)) return;
       event.preventDefault();
       event.stopPropagation();
       resetDocumentTreeDragFeedback();
@@ -5176,8 +5201,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
         return;
       }
-      const tabId = draggedSidebarDocumentId || (event.dataTransfer && event.dataTransfer.getData('application/x-markdown-viewer-document'));
-      if (tabId) moveDocumentToLocation(tabId, location.workspaceId, location.folderId || null);
+      const tabIds = getDraggedSidebarDocumentIds(event.dataTransfer);
+      if (tabIds.length > 1) moveDocumentsToLocation(tabIds, location.workspaceId, location.folderId || null);
+      else if (tabIds.length === 1) moveDocumentToLocation(tabIds[0], location.workspaceId, location.folderId || null);
     });
   }
 
@@ -5277,21 +5303,31 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (options.documentId && !options.temporary) {
       row.draggable = true;
       row.addEventListener('dragstart', function(event) {
-        draggedSidebarDocumentId = options.documentId;
-        row.classList.add('is-dragging');
+        const rowSelectionKey = getDocumentTreeSelectionKey('document', options.documentId);
+        const selectedDocuments = selectedDocumentTreeIds.has(rowSelectionKey) ? getSelectedDocuments() : [];
+        draggedSidebarDocumentIds = selectedDocuments.length > 1
+          ? selectedDocuments.map(function(tab) { return tab.id; })
+          : [options.documentId];
+        if (draggedSidebarDocumentIds.length === 1) setSingleDocumentTreeSelection('document', options.documentId);
+        document.querySelectorAll('#document-tree .document-tree-row[data-document-id]').forEach(function(documentRow) {
+          documentRow.classList.toggle('is-dragging', draggedSidebarDocumentIds.includes(documentRow.getAttribute('data-document-id')));
+        });
         if (event.dataTransfer) {
           event.dataTransfer.effectAllowed = 'move';
           event.dataTransfer.setData('application/x-markdown-viewer-document', options.documentId);
-          event.dataTransfer.setData('text/plain', options.documentId);
-          const preview = createDocumentDragPreview(options.label);
+          event.dataTransfer.setData('application/x-markdown-viewer-documents', JSON.stringify(draggedSidebarDocumentIds));
+          event.dataTransfer.setData('text/plain', draggedSidebarDocumentIds.join('\n'));
+          const preview = createDocumentDragPreview(options.label, draggedSidebarDocumentIds.length);
           try {
             event.dataTransfer.setDragImage(preview, 36, 34);
           } catch (_) {}
         }
       });
       row.addEventListener('dragend', function() {
-        draggedSidebarDocumentId = null;
-        row.classList.remove('is-dragging');
+        draggedSidebarDocumentIds = [];
+        document.querySelectorAll('#document-tree .document-tree-row.is-dragging').forEach(function(documentRow) {
+          documentRow.classList.remove('is-dragging');
+        });
         removeDocumentDragPreview();
         resetDocumentTreeDragFeedback();
       });
@@ -5448,6 +5484,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       workspaceGroup.className = 'document-tree-group document-tree-group--workspace';
       workspaceGroup.setAttribute('role', 'group');
       workspaceGroup.hidden = !expanded;
+      attachDocumentDropTarget(workspaceGroup, { workspaceId: workspace.id, folderId: null });
 
       const sortedFolders = folders.sort(function(left, right) { return left.createdAt - right.createdAt || left.name.localeCompare(right.name); });
       const foldersByParent = new Map();
@@ -5499,6 +5536,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         folderGroup.className = 'document-tree-group document-tree-group--folder';
         folderGroup.setAttribute('role', 'group');
         folderGroup.hidden = !folderExpanded;
+        attachDocumentDropTarget(folderGroup, { workspaceId: workspace.id, folderId: folder.id });
         (foldersByParent.get(folder.id) || []).forEach(function(child) {
           appendFolderBranch(child, folderGroup, depth + 1);
         });
