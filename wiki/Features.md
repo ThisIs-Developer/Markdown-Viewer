@@ -266,12 +266,12 @@ GitHub import:
 - Resolves default branches, explicit branches (including names containing `/`), tags, and commit references to an immutable commit SHA.
 - Direct Markdown file URLs import immediately.
 - Repository or folder URLs query GitHub's API to find Markdown files.
-- The URL step remains a compact 520px dialog and replaces its contents with a modal-contained loading surface after a valid URL is submitted. The 760px selection step uses a reduced-height repository row with separate left-aligned name and ref/commit blocks on one line, shows a branch/ref only for explicit tree/blob URLs, always links the short commit, and provides a searchable GitHub-style tree with a selected-count badge plus matching borderless controls for select/deselect all and collapse/expand all folders.
+- The URL step remains a compact 520px dialog and gives its Import button an immediate loading spinner. After the repository/ref resolves, the 760px selection layout appears with a shimmer tree until Markdown discovery completes. Its reduced-height repository row shows an explicit branch/ref directly beside the repository name, always links the short commit, and provides a searchable GitHub-style tree with a selected-count badge plus matching borderless controls for select/deselect all and collapse/expand all folders.
 - Default-branch imports create a repository-named folder. Each selected file's nested GitHub directory path is reproduced inside it.
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens persist across refreshes and app restarts in a local AES-GCM vault and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added; the selected token has a compact warning badge with GitHub's expiry date when readable or **Expiry unknown** otherwise, while token actions use GitHub-branded accessible toasts.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens persist across refreshes and app restarts in a local AES-GCM vault and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added, while token actions use GitHub-branded accessible toasts.
 
 Limitations and privacy:
 

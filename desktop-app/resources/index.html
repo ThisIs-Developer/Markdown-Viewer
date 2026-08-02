@@ -1312,10 +1312,6 @@
                     </div>
                     <div class="github-import-access-select-row">
                       <select id="github-import-pat-select" class="rename-modal-input"></select>
-                      <span id="github-import-token-expiry" class="github-import-token-expiry" hidden>
-                        <i class="lucide lucide-clock-3" aria-hidden="true"></i>
-                        <span id="github-import-token-expiry-text"></span>
-                      </span>
                     </div>
                   </div>
                   <div id="github-import-access-form" class="github-import-access-form">
@@ -1345,10 +1341,10 @@
                 <div class="github-import-repository-copy">
                   <div class="github-import-repository-heading">
                     <strong id="github-import-repository-name"></strong>
+                    <span id="github-import-ref-item" class="github-import-ref" hidden><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
                   </div>
                 </div>
                 <div class="github-import-repository-meta">
-                  <span id="github-import-ref-item" class="github-import-ref"><i class="lucide lucide-git-branch" aria-hidden="true"></i><span id="github-import-ref"></span></span>
                   <a id="github-import-commit-link" class="github-import-commit-link" target="_blank" rel="noopener noreferrer">
                     <i class="lucide lucide-git-commit-horizontal" aria-hidden="true"></i>
                     <span id="github-import-commit"></span>
@@ -1379,14 +1375,6 @@
             <div class="reset-modal-actions">
               <button class="reset-modal-btn reset-modal-cancel" id="github-import-cancel">Cancel</button>
               <button class="reset-modal-btn" id="github-import-submit">Import</button>
-            </div>
-            <div id="github-import-loading" class="github-import-loading" role="status" aria-live="polite" aria-atomic="true" hidden>
-              <span class="github-import-loading-icon" aria-hidden="true"><i class="bi bi-github"></i></span>
-              <span class="github-import-loading-copy">
-                <strong>Loading repository</strong>
-                <span>Checking the GitHub link and Markdown files…</span>
-              </span>
-              <span class="github-import-loading-spinner" aria-hidden="true"></span>
             </div>
           </div>
         </div>
