@@ -1358,7 +1358,10 @@
                   <input type="search" id="github-import-search" placeholder="Search Markdown files" autocomplete="off" spellcheck="false" />
                 </label>
                 <div class="github-import-selection-actions">
-                  <output id="github-import-selected-count" class="github-import-selected-count" aria-live="polite">0 selected</output>
+                  <output id="github-import-selected-count" class="github-import-selected-count" aria-live="polite">
+                    <i class="lucide lucide-check" aria-hidden="true"></i>
+                    <span id="github-import-selected-count-text">0 selected</span>
+                  </output>
                   <div class="github-import-toolbar-actions" role="group" aria-label="File tree actions">
                     <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="github-import-toggle-folders" aria-label="Collapse all folders" title="Collapse all folders">
                       <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>

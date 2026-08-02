@@ -560,7 +560,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const githubImportBasePath = document.getElementById("github-import-base-path");
   const githubImportSelectionToolbar = document.getElementById("github-import-selection-toolbar");
   const githubImportSearchInput = document.getElementById("github-import-search");
-  const githubImportSelectedCount = document.getElementById("github-import-selected-count");
+  const githubImportSelectedCountText = document.getElementById("github-import-selected-count-text");
   const githubImportToggleFoldersBtn = document.getElementById("github-import-toggle-folders");
   const githubImportSelectAllBtn = document.getElementById("github-import-select-all");
   const githubImportTree = document.getElementById("github-import-tree");
@@ -11688,7 +11688,7 @@ ${selector} .arrowheadPath {
       commitSha: commit.sha,
       defaultBranch,
       isDefaultRef: refName === defaultBranch,
-      hasExplicitRef: parsed.type !== "repo" && !isDirectCommitRef,
+      hasDisplayRef: Boolean(refName) && !isDirectCommitRef,
       isPrivate: Boolean(repoInfo.private),
       authenticated,
       filePath: parsed.type === "file" ? remainder.join("/") : "",
@@ -12204,7 +12204,7 @@ ${selector} .arrowheadPath {
       githubImportRef.textContent = context.refName;
     }
     if (githubImportRefItem) {
-      githubImportRefItem.hidden = !context.hasExplicitRef;
+      githubImportRefItem.hidden = !context.hasDisplayRef;
     }
     if (githubImportBasePath) {
       githubImportBasePath.textContent = context.basePath ? `/ ${context.basePath}` : "";
@@ -12288,9 +12288,9 @@ ${selector} .arrowheadPath {
   }
 
   function updateGitHubImportSelectedCount() {
-    if (!githubImportSelectedCount) return;
+    if (!githubImportSelectedCountText) return;
     const count = selectedGitHubImportPaths.size;
-    githubImportSelectedCount.textContent = `${count.toLocaleString()} selected`;
+    githubImportSelectedCountText.textContent = `${count.toLocaleString()} selected`;
   }
 
   function updateGitHubSelectAllButtonLabel() {
@@ -12303,7 +12303,7 @@ ${selector} .arrowheadPath {
     githubImportSelectAllBtn.setAttribute("aria-pressed", allSelected ? "true" : "false");
     const icon = githubImportSelectAllBtn.querySelector("i");
     if (icon) {
-      icon.className = `lucide ${allSelected ? "lucide-square-x" : "lucide-check-check"}`;
+      icon.className = "lucide lucide-check-check";
     }
   }
 
@@ -12368,7 +12368,7 @@ ${selector} .arrowheadPath {
     githubImportToggleFoldersBtn.disabled = searchActive || !folderPaths.length;
     githubImportToggleFoldersBtn.setAttribute("aria-label", actionLabel);
     githubImportToggleFoldersBtn.title = searchActive ? "Clear search to change all folders" : actionLabel;
-    githubImportToggleFoldersBtn.setAttribute("aria-pressed", allCollapsed ? "true" : "false");
+    githubImportToggleFoldersBtn.removeAttribute("aria-pressed");
     const icon = githubImportToggleFoldersBtn.querySelector("i");
     if (icon) {
       icon.className = `lucide ${allCollapsed ? "lucide-unfold-vertical" : "lucide-fold-vertical"}`;
@@ -12562,7 +12562,7 @@ ${selector} .arrowheadPath {
       githubImportSearchInput.placeholder = "Loading Markdown files…";
       githubImportSearchInput.disabled = true;
     }
-    if (githubImportSelectedCount) githubImportSelectedCount.textContent = "Loading…";
+    if (githubImportSelectedCountText) githubImportSelectedCountText.textContent = "Loading…";
     if (githubImportTree) {
       renderGitHubImportTreeSkeleton();
       githubImportTree.style.display = "block";

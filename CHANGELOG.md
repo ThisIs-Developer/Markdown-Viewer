@@ -42,9 +42,10 @@ The following changes are implemented on `main` after `v3.9.4` but are not yet p
 - Added optional private repository access that accepts fine-grained and classic PATs automatically.
 - Persisted named private-access tokens across refreshes and app restarts in a local vault. Credential payloads are encrypted with AES-GCM using key material kept in local browser/app data, tokens can still be removed individually without a passphrase or unlock step, and retired saved-access formats are deleted during upgrade.
 - Replaced the verbose token form with a compact add-then-select flow. GitHub validates a token when it is added, and add/remove failures or success use GitHub-branded accessible toasts. Token-expiry display was removed.
-- Restored the compact 520px GitHub URL step while keeping the searchable file picker at 760px. An explicit branch/ref appears directly beside the repository name, followed by the linked immutable commit; repository URLs without an explicit ref show only the commit.
-- Added two-stage loading feedback: the URL-step Import button shows an immediate spinner, then the wider selection layout displays repository context and a reduced-motion-aware shimmer tree until Markdown discovery completes.
-- Added file search, a compact selected-count badge, borderless toolbar-style controls for select/deselect all and collapse/expand all, and GitHub-style folder and file rows using the application typography scale.
+- Kept both GitHub importer steps at the same compact 520px width. The resolved branch/ref appears directly beside the repository name, followed by the linked immutable commit; direct commit URLs show only the commit.
+- Added two-stage loading feedback: the URL-step Import button shows an immediate spinner, then the selection layout displays repository context and a reduced-motion-aware shimmer tree until Markdown discovery completes.
+- Simplified the selection toolbar with a lightweight selected-count indicator, a stateless collapse/expand command, and a select-all toggle that keeps one icon and indicates selection using icon color only.
+- Added file search, a lightweight selected-count indicator, borderless toolbar-style controls for select/deselect all and collapse/expand all, and GitHub-style folder and file rows using the application typography scale.
 - Changed local, drag-and-drop, desktop, and GitHub Markdown imports to save documents in Explorer without opening every imported file as a tab.
 - Batched multi-tab close commands so closing hundreds of tabs performs one state update and render instead of repeatedly rebuilding the interface.
 
