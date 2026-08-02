@@ -5958,6 +5958,11 @@ a:focus {
   overflow: hidden;
 }
 
+#github-import-modal.is-selection-step .reset-modal-box {
+  width: min(94vw, 760px);
+  max-width: 760px;
+}
+
 #github-import-modal .reset-modal-message {
   font-size: var(--ui-font-lg);
   line-height: 1.3;

@@ -266,7 +266,7 @@ GitHub import:
 - Resolves default branches, explicit branches (including names containing `/`), tags, and commit references to an immutable commit SHA.
 - Direct Markdown file URLs import immediately.
 - Repository or folder URLs query GitHub's API to find Markdown files.
-- Both importer steps use the same compact 520px dialog. The Import button shows an immediate spinner, followed by a shimmer tree until Markdown discovery completes. The reduced-height repository row shows the resolved branch/ref directly beside the repository name and always links the short commit. The searchable GitHub-style tree uses a lightweight selected-count indicator plus matching borderless controls for select/deselect all and collapse/expand all folders.
+- The URL step uses the original compact 520px dialog and the Markdown selection step uses its original 760px width. The Import button shows an immediate spinner, followed by a shimmer tree until Markdown discovery completes. The reduced-height repository row shows the resolved branch/ref directly beside the repository name, reveals a truncated ref in full on hover, and always links the short commit. The searchable GitHub-style tree uses a lightweight selected-count indicator plus matching borderless controls for select/deselect all and collapse/expand all folders.
 - Default-branch imports create a repository-named folder. Each selected file's nested GitHub directory path is reproduced inside it.
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.

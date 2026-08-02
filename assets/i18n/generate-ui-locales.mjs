@@ -82,7 +82,8 @@ const CURATED_OVERRIDES = {
   },
   tr: {
     'Sync scrolling': 'Kaydırmayı eşitle', 'Report': 'Bildir', 'Light mode': 'Açık mod',
-    'Dark mode': 'Koyu mod', 'Use light mode': 'Açık modu kullan', 'Use dark mode': 'Koyu modu kullan'
+    'Dark mode': 'Koyu mod', 'Use light mode': 'Açık modu kullan', 'Use dark mode': 'Koyu modu kullan',
+    'Markdown files in this GitHub location': 'Bu GitHub konumundaki Markdown dosyaları'
   },
   tw: {
     'View': '檢視', 'Split': '分割', 'Actions': '操作', 'New': '新增', 'New document': '新增文件',
@@ -201,10 +202,27 @@ const EXTRA_STRINGS = [
   'This shared document is read-only for you.',
   'This share link has expired or does not exist.',
   'This Live Share room has ended, expired, or no active host is available.',
+  'No access token added', 'Enter a token name.', 'Keep the token name to 60 characters or fewer.',
+  'Use a unique token name.', 'Enter a valid personal access token without spaces.',
+  'Up to 50 GitHub access tokens can be saved.', 'GitHub access', 'GitHub access added',
+  'GitHub access removed', 'GitHub access repaired', 'GitHub access unavailable',
+  '"{{0}}" was added. You can select or remove it anytime.', '"{{0}}" was removed.',
+  '"{{0}}" is no longer available. Add the token again.', '"{{0}}" is unavailable. Add the token again.',
+  'Some damaged saved GitHub access entries were removed.',
+  'Select Markdown files to import', 'Loading Markdown files from GitHub…',
+  'Loading Markdown files…', 'Search Markdown files', 'Loading…', 'Import Selected',
+  '{{0}} selected', '{{0}} Markdown files found. Choose what to save to Explorer.',
+  'No Markdown files match your search.', 'Select all files', 'Deselect all files',
+  'Collapse all folders', 'Expand all folders', 'Clear search to change all folders',
+  'Open commit {{0}} on GitHub',
   'No Markdown files were found at that GitHub location.',
   'The provided URL does not point to a Markdown file.',
   'Please enter a GitHub URL.', 'Please enter a valid GitHub URL.',
   'Please select at least one file to import.',
+  'No matching branch, tag, or commit was found in this GitHub URL.',
+  'GitHub returned a partial tree. Scanning every folder to find all Markdown files…',
+  'Large GitHub repository detected. Scanning every folder.',
+  'All GitHub folders expanded.', 'All GitHub folders collapsed.',
   'GitHub import finished.', 'Your file is ready.', 'Your files are ready.', 'Save changes'
 ];
 
@@ -260,6 +278,8 @@ function extractScriptStrings(source) {
     while ((match = quotedPattern.exec(segment))) {
       const value = normalize((match[1] ?? match[2] ?? '')
         .replace(/\\(['"\\])/g, '$1')
+        .replace(/\\u\{([0-9a-f]+)\}/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+        .replace(/\\u([0-9a-f]{4})/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
         .replace(/\\n/g, ' '));
       if (isLikelyUiLiteral(value)) values.add(value);
     }

@@ -12205,6 +12205,8 @@ ${selector} .arrowheadPath {
     }
     if (githubImportRefItem) {
       githubImportRefItem.hidden = !context.hasDisplayRef;
+      githubImportRefItem.title = context.hasDisplayRef ? context.refName : "";
+      githubImportRefItem.setAttribute("aria-label", context.hasDisplayRef ? context.refName : "");
     }
     if (githubImportBasePath) {
       githubImportBasePath.textContent = context.basePath ? `/ ${context.basePath}` : "";
