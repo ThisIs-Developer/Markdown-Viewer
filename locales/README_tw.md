@@ -33,14 +33,14 @@
 - [主要功能](#主要功能)
 - [快速開始](#快速開始)
 - [本機處理與網路處理](#本機處理與網路處理)
-- [媒體儲存方式](#媒體儲存方式)
-- [主要限制](#主要限制)
-- [重要隱私權說明](#重要隱私權說明)
+- [視覺化轉譯器概覽](#視覺化轉譯器概覽)
 - [文件](#文件)
+- [主要限制](#主要限制)
 - [展示專案](#展示專案)
 - [開發歷程](#開發歷程)
 - [貢獻者](#貢獻者)
-- [參與貢獻與授權條款](#參與貢獻與授權條款)
+- [參與貢獻與支援](#參與貢獻與支援)
+- [授權條款](#授權條款)
 
 </details>
 
@@ -56,7 +56,7 @@ Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開�
 
 ## 主要功能
 
-- **工作區與文件：** 在巢狀資料夾中整理文件，應用程式不設定文件數量上限；實際上限取決於可用儲存空間。並可使用最近使用、我的最愛、搜尋、分頁、批次操作及加密的 Secret Workspace（秘密工作區）。
+- **工作區與文件：** Web 版使用個別文件的 IndexedDB 儲存空間，並可在巢狀資料夾中整理文件。還可使用最近使用、我的最愛、搜尋、分頁、批次操作及加密的 Secret Workspace（秘密工作區）。
 - **備份與還原：** 匯出或匯入保留資料夾結構的工作區 ZIP。可選擇包含加密的 Secret Workspace 文件，但垃圾桶與桌面歷程記錄不包含在備份中。
 - **編輯與審閱：** 在編輯器、分割檢視與預覽之間切換，並使用格式工具、自訂復原／重做、尋找與取代、LTR／RTL、留言與建議。
 - **Markdown 轉譯：** 支援 CommonMark 風格基礎語法、GitHub-Flavored Markdown（GFM）、表格、工作清單、提示區塊、註腳、定義清單、程式碼語法醒目提示、已清理的 HTML 與 MathJax。
@@ -69,7 +69,7 @@ Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開�
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全螢幕 3D STL 檢視" width="90%" />
 </p>
 
-- **導入與匯出：** 除本機檔案外，也可導入指定分支、標籤或提交 SHA 的公開／私人 GitHub 內容。找到的所有 Markdown 檔案都會儲存至 Explorer，而不會開啟新分頁。支援匯出 Markdown、獨立 HTML、PNG、瀏覽器列印／另存為 PDF 或舊版點陣 PDF。
+- **導入與匯出：** 開啟本機檔案，或開啟來自分支、標籤、提交 SHA 及選用私人儲存庫的 GitHub 內容；支援匯出 Markdown、獨立 HTML、PNG、瀏覽器列印／另存為 PDF 或舊版點陣 PDF。
 - **選用分享功能：** 建立「僅供查看」或「可以編輯」模式的 Share Snapshot（分享快照），或啟動具有主持人、可以編輯與僅供查看權限的暫時 Live Share（即時共享）房間。
 
 <p align="center">
@@ -111,44 +111,25 @@ Markdown Viewer 以本機處理為優先，但並非所有功能都能離線執�
 | PlantUML、D2、Graphviz、Vega-Lite、WaveDrom 與部分圖表預覽 | 圖表原始碼可能傳送至 PlantUML、Kroki 或 mermaid.ink |
 | 經同意後插入的圖片、GIF 與影片 | 透過公開連結存取的 Cloudflare 暫存媒體儲存空間（90 天） |
 | 大型 Share Snapshot | Cloudflare KV（90 天） |
-| Live Share | Cloudflare Durable Object WebSocket 轉送 |
+| Live Share | Cloudflare Durable Object WebSocket 轉送；文件內容不會在伺服器端持久儲存 |
 | 外部圖片、媒體、連結與地圖圖磚 | 文件指定的外部主機 |
 
 Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連結的人都能使用連結內含的權限。Live Share 不提供端對端加密。在對敏感文件使用網路功能前，請先閱讀[隱私權與安全性（英文）](../wiki/Privacy-and-Security.md)。
 
-## 媒體儲存方式
+## 視覺化轉譯器概覽
 
-- 可插入 AVIF、BMP、GIF（包括動畫 GIF）、JPEG、PNG、WebP、MP4、WebM 與 Ogg。
-- 首次同意後，媒體會上傳至 Cloudflare 暫存空間，並以短的內容定址 HTTPS URL 插入。
-- 任何取得 URL 的人都能在連結到期前擷取媒體。
-- 連結會在相同內容最近一次上傳的 90 天後到期。
-- Share Snapshot 與 Live Share 只會分享 Markdown 中的 URL，不會建立另一份媒體副本。
+| 程式碼圍欄 | 轉譯路徑 |
+| :--- | :--- |
+| `mermaid` | 用戶端轉譯；插入預覽可能使用 mermaid.ink 或 Kroki |
+| `plantuml` | PlantUML 伺服器；Kroki 作為備援 |
+| `d2`、`graphviz`、`dot`、`vega-lite`、`vegalite`、`wavedrom` | Kroki |
+| `markmap` | 用戶端 Markmap 與 D3 |
+| `geojson`、`topojson` | 用戶端 Leaflet；地圖圖磚可能使用網路 |
+| `stl` | 用戶端 Three.js／WebGL |
+| `abc` | 用戶端 ABCJS；播放需要瀏覽器音訊支援 |
+| `math` 與 LaTeX 分隔符號 | 用戶端 MathJax |
 
-## 主要限制
-
-- Markdown Viewer 不設定文件數量上限；實際上限取決於瀏覽器配額或桌面檔案系統容量。
-- 單一本機 Markdown 檔案的大小上限為 10 MB。
-- GitHub 導入器會顯示在所選儲存庫／資料夾中找到的所有 Markdown 檔案。
-- 本機 GitHub 認證保管庫最多可儲存 50 個具名 PAT。每個權杖名稱上限為 60 個字元。
-- 處理前的媒體來源檔案上限為 25 MiB；儲存上限為靜態圖片 300 KiB、GIF 5 MiB、影片 10 MiB。
-- 儲存型 Share Snapshot 最多包含 8,000,000 個字元，並在 90 天後到期。
-- Live Share 最多允許 64 位 WebSocket 參與者，單一即時訊息上限為 8 MB。
-- STL 原始碼上限為 2 MiB，轉譯後幾何最多為 300,000 個頂點。
-- 桌面保管庫會為每份文件保留最多 20 份最近的歷程記錄副本。
-- 點陣 PDF／PNG 匯出受瀏覽器記憶體、Canvas 與 CORS 限制。
-
-## 重要隱私權說明
-
-- 一般 Web 文件會以個別 IndexedDB 記錄儲存，桌面文件則儲存在固定的 `Documents/Markdown Viewer Vault` 中。
-- 啟用隱私模式會暫停目前工作階段中新文件狀態的持久儲存；現有的一般文件與 Secret Workspace 資料不會被刪除。
-- **重設工作區**會永久刪除文件、資料夾、設定、審閱資料、Secret Workspace 資料、歷程記錄與垃圾桶。
-- 透過**儲存與備份**可建立或匯入保留資料夾結構的 ZIP。匯入備份會在確認後完全取代目前的工作區。
-- 私人儲存庫 PAT 會儲存在本機 AES-GCM 加密保管庫中，且不會包含在工作區備份內。此保管庫並非作業系統鑰匙圈。PAT 只會傳送至 `api.github.com`；在本機刪除 PAT 不會在 GitHub 上將其撤銷。
-- Live Share 不會在伺服器端持久儲存 Markdown／審閱內容，但會將各角色的持有者權限值與建立時間寫入 Durable Object 儲存空間；目前未實作應用程式層級的到期時間或刪除路徑。
-- Share Snapshot 建立 API 會傳回刪除權杖，但目前的介面不會顯示該權杖，也不提供提前刪除操作。
-- 應用程式程式碼未實作帳號、分析、遙測、廣告、追蹤像素或應用程式專用 Cookie。外部服務與託管提供者仍可能處理一般要求記錄。
-
-> **備份：** **重設工作區**會永久刪除所有本機工作區資料。如需保留資料，請先透過**儲存與備份**建立 ZIP 備份。
+遠端轉譯器服務會接收其轉譯的圖表原始碼。若不信任已設定的服務，請勿傳送敏感的圖表原始碼。語法請參閱 [Markdown Reference（英文）](../wiki/Markdown-Reference.md)，限制請參閱[功能參考（英文）](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)。
 
 ## 文件
 
@@ -156,6 +137,7 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 
 | 目的 | 頁面（英文） |
 | :--- | :--- |
+| 選擇起始頁面 | [Documentation Home](../wiki/Home.md) |
 | 完整功能與限制 | [Features](../wiki/Features.md) |
 | 日常操作與快速鍵 | [Usage Guide](../wiki/Usage-Guide.md) |
 | Markdown／圖表語法 | [Markdown Reference](../wiki/Markdown-Reference.md) |
@@ -163,9 +145,25 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 | Live Share | [Live Share](../wiki/Live-Share-Cloudflare.md) |
 | 隱私權與安全性 | [Privacy and Security](../wiki/Privacy-and-Security.md) |
 | 安裝與部署 | [Installation](../wiki/Installation.md) |
+| 設定儲存空間、轉譯器與 Cloudflare | [Configuration](../wiki/Configuration.md) |
 | 疑難排解 | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
 | 參與貢獻 | [Contributing](../wiki/Contributing.md) |
 | 多語言術語與在地化 | [Localization and Terminology](../wiki/Localization.md) |
+
+## 主要限制
+
+- 工作區備份導入不會合併工作區；確認後會永久取代目前的工作區。
+- 工作區備份不包含垃圾桶、桌面歷程記錄或當機復原日誌。
+- 大於 10 MB 的本機 Markdown 檔案會被拒絕。
+- GitHub 認證保管庫最多可儲存 50 個具名 PAT；每個權杖名稱上限為 60 個字元。
+- 處理前的媒體來源檔案上限為 25 MiB；儲存上限為靜態圖片 300 KiB、GIF 5 MiB、影片 10 MiB。
+- 儲存型 Share Snapshot 最多包含 8,000,000 個字元，並在 90 天後到期。
+- Live Share 最多允許 64 位 WebSocket 參與者，單一即時訊息上限為 8 MB。
+- STL 原始碼上限為 2 MiB，轉譯後幾何最多為 300,000 個頂點。
+- 桌面保管庫會為每份文件保留最多 20 份最近的歷程記錄副本。
+- 點陣 PDF／PNG 匯出受瀏覽器記憶體、Canvas 與 CORS 限制。
+
+詳情請參閱 [Features: Known Technical Limits（英文）](../wiki/Features.md#known-technical-limits)。
 
 ## 展示專案
 
@@ -187,8 +185,12 @@ Markdown Viewer 在社群貢獻者的共同參與下持續成長。
   <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer 貢獻者" />
 </a>
 
-## 參與貢獻與授權條款
+## 參與貢獻與支援
 
-建立 Pull Request 前，請先閱讀 [Contributing（英文）](../wiki/Contributing.md)。可重現的錯誤與明確的功能建議可提交至 [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)。請勿在一般 Issue 中公開弱點細節。
+建立 Pull Request 前，請先閱讀 [Contributing（英文）](../wiki/Contributing.md)。可重現的錯誤與明確的功能建議可提交至 [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)。
+
+請勿在一般 Issue 中公開弱點細節。請使用 [Contributing: Security Reports（英文）](../wiki/Contributing.md#security-reports)中說明的儲存庫私人安全性回報管道。
+
+## 授權條款
 
 Markdown Viewer 採用 [Apache License 2.0](../LICENSE)。

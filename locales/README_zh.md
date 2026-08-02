@@ -33,14 +33,14 @@
 - [核心功能](#核心功能)
 - [快速开始](#快速开始)
 - [本地处理与网络处理](#本地处理与网络处理)
-- [媒体存储方式](#媒体存储方式)
-- [主要限制](#主要限制)
-- [重要隐私说明](#重要隐私说明)
+- [可视化渲染器概览](#可视化渲染器概览)
 - [文档](#文档)
+- [主要限制](#主要限制)
 - [展示项目](#展示项目)
 - [开发历程](#开发历程)
 - [贡献者](#贡献者)
-- [参与贡献与许可证](#参与贡献与许可证)
+- [参与贡献与支持](#参与贡献与支持)
+- [许可证](#许可证)
 
 </details>
 
@@ -56,7 +56,7 @@ Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、�
 
 ## 核心功能
 
-- **工作区与文档：** 在嵌套文件夹中整理文档，应用不设置文档数量上限；实际上限取决于可用存储空间。并可使用最近使用、收藏夹、搜索、标签页、批量操作和加密的 Secret Workspace（秘密工作区）。
+- **工作区与文档：** 在 Web 端使用按文档划分的 IndexedDB 存储，并在嵌套文件夹中整理文档。还可使用最近使用、收藏夹、搜索、标签页、批量操作和加密的 Secret Workspace（秘密工作区）。
 - **备份与恢复：** 导出或导入保留文件夹结构的工作区 ZIP。可以选择包含加密的 Secret Workspace 文件，但回收站和桌面历史记录不包含在备份中。
 - **编辑与审阅：** 在编辑器、分屏视图和预览之间切换，使用格式工具、自定义撤销/重做、查找和替换、LTR/RTL、评论与建议。
 - **Markdown 渲染：** 支持 CommonMark 风格基础语法、GitHub-Flavored Markdown（GFM）、表格、任务列表、提示块、脚注、定义列表、代码语法高亮、已清理的 HTML 和 MathJax。
@@ -69,7 +69,7 @@ Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、�
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全屏 3D STL 视图" width="90%" />
 </p>
 
-- **导入与导出：** 除本地文件外，还可导入指定分支、标签或提交 SHA 的公开/私有 GitHub 内容。发现的所有 Markdown 文件都会保存到 Explorer，而不会打开新标签页。支持导出 Markdown、独立 HTML、PNG、浏览器打印/另存为 PDF 或旧版栅格 PDF。
+- **导入与导出：** 打开本地文件，或打开来自分支、标签、提交 SHA 以及可选私有仓库的 GitHub 内容；支持导出 Markdown、独立 HTML、PNG、浏览器打印/另存为 PDF 或旧版栅格 PDF。
 - **可选分享：** 创建“仅供查看”或“可以编辑”模式的 Share Snapshot（分享快照），或者启动具有主持人、可以编辑和仅供查看权限的临时 Live Share（实时共享）房间。
 
 <p align="center">
@@ -111,44 +111,25 @@ Markdown Viewer 以本地处理为优先，但并非所有功能都能离线运�
 | PlantUML、D2、Graphviz、Vega-Lite、WaveDrom 和部分图表预览 | 图表源码可能发送到 PlantUML、Kroki 或 mermaid.ink |
 | 经同意后插入的图片、GIF 和视频 | 通过公开链接访问的 Cloudflare 临时媒体存储（90 天） |
 | 大型 Share Snapshot | Cloudflare KV（90 天） |
-| Live Share | Cloudflare Durable Object WebSocket 中继 |
+| Live Share | Cloudflare Durable Object WebSocket 中继；文档内容不会在服务器端持久保存 |
 | 外部图片、媒体、链接和地图图块 | 文档指定的外部主机 |
 
 Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链接的人都可以使用其中包含的权限。Live Share 不提供端到端加密。在对敏感文档使用网络功能之前，请阅读[隐私与安全（英文）](../wiki/Privacy-and-Security.md)。
 
-## 媒体存储方式
+## 可视化渲染器概览
 
-- 可插入 AVIF、BMP、GIF（包括动画 GIF）、JPEG、PNG、WebP、MP4、WebM 和 Ogg。
-- 首次同意后，媒体会上传到 Cloudflare 临时存储，并以短的内容寻址 HTTPS URL 插入。
-- 任何获得 URL 的人都能在链接过期前获取媒体。
-- 链接会在相同内容最近一次上传的 90 天后过期。
-- Share Snapshot 与 Live Share 只会分享 Markdown 中的 URL，不会创建另一份媒体副本。
+| 代码围栏 | 渲染路径 |
+| :--- | :--- |
+| `mermaid` | 客户端渲染；插入预览可能使用 mermaid.ink 或 Kroki |
+| `plantuml` | PlantUML 服务器；Kroki 作为后备 |
+| `d2`、`graphviz`、`dot`、`vega-lite`、`vegalite`、`wavedrom` | Kroki |
+| `markmap` | 客户端 Markmap 和 D3 |
+| `geojson`、`topojson` | 客户端 Leaflet；地图图块可能使用网络 |
+| `stl` | 客户端 Three.js/WebGL |
+| `abc` | 客户端 ABCJS；播放需要浏览器音频支持 |
+| `math` 和 LaTeX 分隔符 | 客户端 MathJax |
 
-## 主要限制
-
-- Markdown Viewer 不设置文档数量上限；实际上限取决于浏览器配额或桌面文件系统容量。
-- 单个本地 Markdown 文件最大为 10 MB。
-- GitHub 导入器会显示在所选仓库/文件夹中发现的所有 Markdown 文件。
-- 本地 GitHub 凭据保管库最多可保存 50 个命名 PAT。每个令牌名称最长为 60 个字符。
-- 处理前的媒体源文件最大为 25 MiB；存储上限为静态图片 300 KiB、GIF 5 MiB、视频 10 MiB。
-- 存储型 Share Snapshot 最多包含 8,000,000 个字符，并在 90 天后过期。
-- Live Share 最多允许 64 个 WebSocket 参与者，单条实时消息最大为 8 MB。
-- STL 源码最大为 2 MiB，渲染后的几何体最多为 300,000 个顶点。
-- 桌面保管库为每个文档最多保留 20 个最近历史副本。
-- 栅格 PDF/PNG 导出受浏览器内存、Canvas 与 CORS 限制。
-
-## 重要隐私说明
-
-- 常规 Web 文档以独立的 IndexedDB 记录存储，桌面文档存储在固定的 `Documents/Markdown Viewer Vault` 中。
-- 启用隐私模式会暂停当前会话中新文档状态的持久化；现有常规文档和 Secret Workspace 数据不会被删除。
-- **重置工作区**会永久删除文档、文件夹、设置、审阅数据、Secret Workspace 数据、历史记录和回收站。
-- 通过**存储与备份**可以创建或导入保留文件夹结构的 ZIP。导入备份会在确认后完全替换当前工作区。
-- 私有仓库 PAT 存储在本地 AES-GCM 加密保管库中，不包含在工作区备份内。该保管库并非操作系统密钥链。PAT 只会发送到 `api.github.com`；在本地删除 PAT 不会在 GitHub 上将其撤销。
-- Live Share 不会在服务器端持久保存 Markdown/审阅内容，但会将各角色的持有者权限值和创建时间写入 Durable Object 存储；当前未实现应用级过期时间或删除路径。
-- Share Snapshot 创建 API 会返回删除令牌，但当前界面不会显示该令牌，也不提供提前删除操作。
-- 应用代码未实现账号、分析、遥测、广告、跟踪像素或应用专用 Cookie。外部服务和托管提供商仍可能处理常规请求日志。
-
-> **备份：** **重置工作区**会永久删除所有本地工作区数据。如需保留数据，请先通过**存储与备份**创建 ZIP 备份。
+远程渲染服务会接收其渲染的图表源码。如果不信任所配置的服务，请勿发送敏感图表源码。语法请参阅 [Markdown Reference（英文）](../wiki/Markdown-Reference.md)，限制请参阅[功能参考（英文）](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)。
 
 ## 文档
 
@@ -156,6 +137,7 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 
 | 目的 | 页面（英文） |
 | :--- | :--- |
+| 选择起始页面 | [Documentation Home](../wiki/Home.md) |
 | 完整功能与限制 | [Features](../wiki/Features.md) |
 | 日常使用与快捷键 | [Usage Guide](../wiki/Usage-Guide.md) |
 | Markdown/图表语法 | [Markdown Reference](../wiki/Markdown-Reference.md) |
@@ -163,9 +145,25 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 | Live Share | [Live Share](../wiki/Live-Share-Cloudflare.md) |
 | 隐私与安全 | [Privacy and Security](../wiki/Privacy-and-Security.md) |
 | 安装与部署 | [Installation](../wiki/Installation.md) |
+| 配置存储、渲染器和 Cloudflare | [Configuration](../wiki/Configuration.md) |
 | 故障排除 | [Troubleshooting](../wiki/Troubleshooting.md)/[FAQ](../wiki/FAQ.md) |
 | 参与贡献 | [Contributing](../wiki/Contributing.md) |
 | 多语言术语与本地化 | [Localization and Terminology](../wiki/Localization.md) |
+
+## 主要限制
+
+- 工作区备份导入不会合并工作区；确认后会永久替换当前工作区。
+- 工作区备份不包含回收站、桌面历史记录或崩溃恢复日志。
+- 大于 10 MB 的本地 Markdown 文件会被拒绝。
+- GitHub 凭据保管库最多可保存 50 个命名 PAT；每个令牌名称最长为 60 个字符。
+- 处理前的媒体源文件最大为 25 MiB；存储上限为静态图片 300 KiB、GIF 5 MiB、视频 10 MiB。
+- 存储型 Share Snapshot 最多包含 8,000,000 个字符，并在 90 天后过期。
+- Live Share 最多允许 64 个 WebSocket 参与者，单条实时消息最大为 8 MB。
+- STL 源码最大为 2 MiB，渲染后的几何体最多为 300,000 个顶点。
+- 桌面保管库为每个文档最多保留 20 个最近历史副本。
+- 栅格 PDF/PNG 导出受浏览器内存、Canvas 与 CORS 限制。
+
+详情请参阅 [Features: Known Technical Limits（英文）](../wiki/Features.md#known-technical-limits)。
 
 ## 展示项目
 
@@ -187,8 +185,12 @@ Markdown Viewer 在社区贡献者的共同参与下不断成长。
   <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer 贡献者" />
 </a>
 
-## 参与贡献与许可证
+## 参与贡献与支持
 
-创建 Pull Request 前，请阅读 [Contributing（英文）](../wiki/Contributing.md)。可复现的缺陷和明确的功能建议可提交至 [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)。请勿在普通 Issue 中发布漏洞详情。
+创建 Pull Request 前，请阅读 [Contributing（英文）](../wiki/Contributing.md)。可复现的缺陷和明确的功能建议可提交至 [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)。
+
+请勿在普通 Issue 中发布漏洞详情。请使用 [Contributing: Security Reports（英文）](../wiki/Contributing.md#security-reports)中说明的仓库私密安全报告渠道。
+
+## 许可证
 
 Markdown Viewer 采用 [Apache License 2.0](../LICENSE)。

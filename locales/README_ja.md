@@ -33,14 +33,14 @@
 - [主な機能](#主な機能)
 - [クイックスタート](#クイックスタート)
 - [ローカル処理とネットワーク処理](#ローカル処理とネットワーク処理)
-- [メディアの保存](#メディアの保存)
-- [主な制限](#主な制限)
-- [プライバシー上の重要事項](#プライバシー上の重要事項)
+- [ビジュアルレンダラーの概要](#ビジュアルレンダラーの概要)
 - [ドキュメント](#ドキュメント)
+- [主な制限](#主な制限)
 - [ショーケースプロジェクト](#ショーケースプロジェクト)
 - [開発の歩み](#開発の歩み)
 - [コントリビューター](#コントリビューター)
-- [コントリビューションとライセンス](#コントリビューションとライセンス)
+- [コントリビューションとサポート](#コントリビューションとサポート)
+- [ライセンス](#ライセンス)
 
 </details>
 
@@ -56,7 +56,7 @@ Markdown Viewer は、開発者、ライター、学生、研究者など、`.md
 
 ## 主な機能
 
-- **ワークスペースと文書：** アプリによる文書数の上限なく、文書をネストしたフォルダーに整理できます。実際の上限は利用可能なストレージ容量です。最近使ったファイル、お気に入り、検索、タブ、一括操作、暗号化された Secret Workspace（秘密のワークスペース）に対応します。
+- **ワークスペースと文書：** Web では文書ごとの IndexedDB ストレージを使用し、文書をネストしたフォルダーに整理できます。最近使ったファイル、お気に入り、検索、タブ、一括操作、暗号化された Secret Workspace（秘密のワークスペース）に対応します。
 - **バックアップと復元：** フォルダー構成を保持したワークスペース ZIP をエクスポートまたはインポートできます。Secret Workspace の暗号化済みファイルは任意で含められますが、ゴミ箱とデスクトップの履歴はバックアップに含まれません。
 - **編集とレビュー：** エディター、分割表示、プレビューを切り替えられます。書式設定ツール、独自の元に戻す／やり直す、検索と置換、LTR／RTL、コメント、提案を利用できます。
 - **Markdown 描画：** CommonMark 形式の基本構文、GitHub-Flavored Markdown（GFM）、表、タスクリスト、アラート、脚注、定義リスト、コードのシンタックスハイライト、サニタイズ済み HTML、MathJax に対応します。
@@ -69,7 +69,7 @@ Markdown Viewer は、開発者、ライター、学生、研究者など、`.md
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全画面の 3D STL ビュー" width="90%" />
 </p>
 
-- **インポートとエクスポート：** ローカルファイルのほか、ブランチ、タグ、コミット SHA を指定した公開／非公開 GitHub コンテンツをインポートできます。検出されたすべての Markdown ファイルは、新しいタブを開かず Explorer に保存されます。Markdown、単体 HTML、PNG、ブラウザー印刷／PDF 保存、従来のラスター PDF として出力できます。
+- **インポートとエクスポート：** ローカルファイルのほか、ブランチ、タグ、コミット SHA、必要に応じて非公開リポジトリの GitHub コンテンツを開けます。Markdown、単体 HTML、PNG、ブラウザー印刷／PDF 保存、従来のラスター PDF として出力できます。
 - **任意の共有機能：** 「表示のみ」または「編集可能」の Share Snapshot（スナップショットの共有）を作成したり、ホスト／編集可能／表示のみの権限を持つ一時的な Live Share（ライブシェア）ルームを開始したりできます。
 
 <p align="center">
@@ -111,44 +111,25 @@ Markdown Viewer はローカルファーストですが、すべての機能が�
 | PlantUML、D2、Graphviz、Vega-Lite、WaveDrom、一部の図表プレビュー | 図表ソースを PlantUML、Kroki、mermaid.ink に送信する場合あり |
 | 同意後に挿入する画像、GIF、動画 | 公開リンク型の Cloudflare 一時メディアストレージ（90 日） |
 | 大きな Share Snapshot | Cloudflare KV（90 日） |
-| Live Share | Cloudflare Durable Object の WebSocket リレー |
+| Live Share | Cloudflare Durable Object の WebSocket リレー。文書内容はサーバー側に永続保存されない |
 | 外部画像、メディア、リンク、地図タイル | 文書で指定された外部ホスト |
 
 Share Snapshot と Live Share の URL はベアラーリンクです。有効なリンクを入手した人は、そのリンクに含まれる権限を利用できます。Live Share はエンドツーエンド暗号化されていません。機密性の高い文書を扱う前に、[プライバシーとセキュリティ（英語）](../wiki/Privacy-and-Security.md)を確認してください。
 
-## メディアの保存
+## ビジュアルレンダラーの概要
 
-- AVIF、BMP、GIF（アニメーション GIF を含む）、JPEG、PNG、WebP、MP4、WebM、Ogg を挿入できます。
-- 初回の同意後、メディアは Cloudflare の一時ストレージにアップロードされ、短いコンテンツアドレス型 HTTPS URL として挿入されます。
-- URL を知っている人は誰でも、期限が切れるまでメディアを取得できます。
-- 同一コンテンツを最後にアップロードしてから 90 日後に期限切れになります。
-- Share Snapshot と Live Share は Markdown 内の URL を共有します。メディアの別コピーは作成しません。
+| フェンス | 描画方法 |
+| :--- | :--- |
+| `mermaid` | クライアント側。挿入プレビューでは mermaid.ink または Kroki を使用する場合あり |
+| `plantuml` | PlantUML サーバー。Kroki にフォールバック |
+| `d2`、`graphviz`、`dot`、`vega-lite`、`vegalite`、`wavedrom` | Kroki |
+| `markmap` | クライアント側の Markmap と D3 |
+| `geojson`、`topojson` | クライアント側の Leaflet。地図タイルはネットワークを使用する場合あり |
+| `stl` | クライアント側の Three.js／WebGL |
+| `abc` | クライアント側の ABCJS。再生にはブラウザーの音声サポートが必要 |
+| `math` と LaTeX 区切り文字 | クライアント側の MathJax |
 
-## 主な制限
-
-- Markdown Viewer は文書数の上限を設けません。実際の上限はブラウザーのクォータまたはデスクトップのファイルシステム容量です。
-- 1 件のローカル Markdown ファイルは 10 MB までです。
-- GitHub インポーターは、選択したリポジトリ／フォルダーで検出されたすべての Markdown ファイルを表示します。
-- ローカルの GitHub 認証情報保管領域には、名前付き PAT を最大 50 件保存できます。各トークン名は 60 文字までです。
-- メディアの元ファイルは処理前で 25 MiB までです。保存上限は静止画 300 KiB、GIF 5 MiB、動画 10 MiB です。
-- 保存型 Share Snapshot は最大 8,000,000 文字で、90 日後に期限切れになります。
-- Live Share は最大 64 WebSocket 参加者、1 メッセージ 8 MB までです。
-- STL はソース 2 MiB、描画ジオメトリ 300,000 頂点までです。
-- デスクトップの保管領域では、文書ごとに直近 20 件の履歴コピーが保持されます。
-- ラスター PDF／PNG はブラウザーのメモリ、Canvas、CORS の制約を受けます。
-
-## プライバシー上の重要事項
-
-- 通常の Web 文書は文書単位の IndexedDB レコードに保存され、デスクトップ文書は固定の `Documents/Markdown Viewer Vault` に保存されます。
-- プライベートモードを有効にすると、そのセッションでの新しい文書状態の保存が停止します。既存の通常文書と Secret Workspace データは削除されません。
-- **ワークスペースをリセット**すると、文書、フォルダー、設定、レビューデータ、Secret Workspace データ、履歴、ゴミ箱が完全に削除されます。
-- **ストレージとバックアップ**では、フォルダー構成を保持した ZIP を作成またはインポートできます。インポートすると、確認後に現在のワークスペースが完全に置き換えられます。
-- 非公開リポジトリ用 PAT は、ローカルの AES-GCM 暗号化保管領域に保存され、ワークスペースのバックアップには含まれません。この保管領域は OS のキーチェーンではありません。PAT は `api.github.com` にのみ送信されます。ローカルから削除しても GitHub 側では失効しません。
-- Live Share は Markdown／レビューデータをサーバー側に永続保存しません。ただし、役割別のベアラー権限値と作成時刻は Durable Object ストレージに保存され、アプリケーション側の有効期限／削除経路はありません。
-- Share Snapshot の作成 API は削除トークンを返しますが、現在の UI はそのトークンを表示せず、期限前の削除操作も提供していません。
-- アプリケーションコードには、アカウント、分析、テレメトリ、広告、トラッキングピクセル、アプリ固有 Cookie は実装されていません。外部サービスやホスティング事業者は通常のリクエストログを処理する場合があります。
-
-> **バックアップ:** **ワークスペースをリセット**すると、すべてのローカルワークスペースデータが完全に削除されます。必要なデータがある場合は、先に **ストレージとバックアップ** から ZIP バックアップを作成してください。
+リモートレンダラーサービスは、描画対象の図表ソースを受信します。設定されたサービスを信頼できない場合は、機密性の高い図表ソースを送信しないでください。構文は [Markdown Reference（英語）](../wiki/Markdown-Reference.md)、制限は[機能リファレンス（英語）](../wiki/Features.md#insert-diagrams-charts-maps-models-and-music)を参照してください。
 
 ## ドキュメント
 
@@ -156,6 +137,7 @@ Share Snapshot と Live Share の URL はベアラーリンクです。有効な
 
 | 目的 | ページ（英語） |
 | :--- | :--- |
+| 最初に読むページを選ぶ | [Documentation Home](../wiki/Home.md) |
 | 全機能と制限 | [Features](../wiki/Features.md) |
 | 日常の操作とショートカット | [Usage Guide](../wiki/Usage-Guide.md) |
 | Markdown／図表の構文 | [Markdown Reference](../wiki/Markdown-Reference.md) |
@@ -163,9 +145,25 @@ Share Snapshot と Live Share の URL はベアラーリンクです。有効な
 | Live Share | [Live Share](../wiki/Live-Share-Cloudflare.md) |
 | プライバシーとセキュリティ | [Privacy and Security](../wiki/Privacy-and-Security.md) |
 | インストールとデプロイ | [Installation](../wiki/Installation.md) |
+| ストレージ、レンダラー、Cloudflare の設定 | [Configuration](../wiki/Configuration.md) |
 | トラブルシューティング | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
 | コントリビューション | [Contributing](../wiki/Contributing.md) |
 | 多言語用語とローカライズ | [Localization and Terminology](../wiki/Localization.md) |
+
+## 主な制限
+
+- ワークスペースのバックアップインポートではワークスペースを統合できません。確認後、現在のワークスペースが完全に置き換えられます。
+- ワークスペースのバックアップには、ゴミ箱、デスクトップの履歴、クラッシュ復旧ジャーナルは含まれません。
+- 10 MB を超えるローカル Markdown ファイルは拒否されます。
+- GitHub 認証情報保管領域には、名前付き PAT を最大 50 件保存できます。各トークン名は 60 文字までです。
+- メディアの元ファイルは処理前で 25 MiB までです。保存上限は静止画 300 KiB、GIF 5 MiB、動画 10 MiB です。
+- 保存型 Share Snapshot は最大 8,000,000 文字で、90 日後に期限切れになります。
+- Live Share は最大 64 WebSocket 参加者、1 メッセージ 8 MB までです。
+- STL はソース 2 MiB、描画ジオメトリ 300,000 頂点までです。
+- デスクトップの保管領域では、文書ごとに直近 20 件の履歴コピーが保持されます。
+- ラスター PDF／PNG はブラウザーのメモリ、Canvas、CORS の制約を受けます。
+
+詳細は [Features: Known Technical Limits（英語）](../wiki/Features.md#known-technical-limits)を参照してください。
 
 ## ショーケースプロジェクト
 
@@ -187,8 +185,12 @@ Markdown Viewer は、コミュニティからのコントリビューション�
   <img src="https://contrib.rocks/image?repo=ThisIs-Developer/Markdown-Viewer" alt="Markdown Viewer のコントリビューター" />
 </a>
 
-## コントリビューションとライセンス
+## コントリビューションとサポート
 
-Pull Request を作成する前に、[Contributing（英語）](../wiki/Contributing.md)を確認してください。再現可能な不具合や明確な機能提案は [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) に報告できます。脆弱性の詳細は通常の Issue に投稿しないでください。
+Pull Request を作成する前に、[Contributing（英語）](../wiki/Contributing.md)を確認してください。再現可能な不具合や明確な機能提案は [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) に報告できます。
+
+脆弱性の詳細は通常の Issue に投稿しないでください。[Contributing: Security Reports（英語）](../wiki/Contributing.md#security-reports)に記載されている、リポジトリの非公開セキュリティ報告手段を利用してください。
+
+## ライセンス
 
 Markdown Viewer は [Apache License 2.0](../LICENSE) で提供されています。
