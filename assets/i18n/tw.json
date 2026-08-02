@@ -90,7 +90,6 @@
   "Capturing document": "擷取文檔",
   "Capturing image": "拍攝影像",
   "Change text case": "更改文字大小寫",
-  "Changelog": "變更日誌",
   "Chars": "字符",
   "Checkbox Map": "複選框圖",
   "Checklist Map": "清單地圖",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "無法轉換嵌入影像。請再試一次。",
   "expanded.": "擴展。",
   "Image conversion was cancelled because the document changed.": "由於文件更改，影像轉換被取消。",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "在插入影像之前開啟可編輯的 Markdown 檔案。",
   "uploaded and inserted with short links.": "已上傳並插入短連結。",
   "cancel": "取消",
@@ -1156,5 +1154,10 @@
   "Token name": "代幣名稱",
   "Up to 50 GitHub access tokens can be saved.": "最多可以保存 50 個 GitHub 存取權杖。",
   "Use a unique token name.": "使用唯一的令牌名稱。",
-  "Move to…": "移至..."
+  "Move to…": "移至...",
+  "Release notes unavailable": "發行說明不可用",
+  "Show Release Notes": "顯示發行說明",
+  "The release notes could not be opened.": "無法開啟發行說明。",
+  "Release notes are read only.": "發行說明是唯讀的。",
+  "Release notes opened.": "發行說明已開啟。"
 }

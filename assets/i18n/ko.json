@@ -90,7 +90,6 @@
   "Capturing document": "문서 캡쳐 중",
   "Capturing image": "이미지 캡쳐 중",
   "Change text case": "대소문자 변경",
-  "Changelog": "변경 내역",
   "Chars": "문자",
   "Checkbox Map": "체크박스 맵",
   "Checklist Map": "체크리스트 맵",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "삽입된 이미지를 변환할 수 없습니다. 다시 시도해 주세요.",
   "expanded.": "이 확장되었습니다.",
   "Image conversion was cancelled because the document changed.": "문서가 변경되어 이미지 변환이 취소되었습니다.",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "이미지를 삽입하기 전에 편집 가능한 Markdown 파일을 엽니다.",
   "uploaded and inserted with short links.": "짧은 링크와 함께 업로드 및 삽입되었습니다.",
   "cancel": "취소",
@@ -1156,5 +1154,10 @@
   "Token name": "토큰 이름",
   "Up to 50 GitHub access tokens can be saved.": "GitHub 액세스 토큰은 최대 50개까지 저장할 수 있습니다.",
   "Use a unique token name.": "고유한 토큰 이름을 사용하세요.",
-  "Move to…": "이동…"
+  "Move to…": "이동…",
+  "Release notes unavailable": "릴리스 노트를 사용할 수 없습니다.",
+  "Show Release Notes": "출시 노트 보기",
+  "The release notes could not be opened.": "릴리스 노트를 열 수 없습니다.",
+  "Release notes are read only.": "릴리스 노트는 읽기 전용입니다.",
+  "Release notes opened.": "릴리스 노트가 열렸습니다."
 }

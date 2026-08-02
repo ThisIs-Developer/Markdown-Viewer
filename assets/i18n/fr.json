@@ -90,7 +90,6 @@
   "Capturing document": "Capture de document",
   "Capturing image": "Capture d'image",
   "Change text case": "Modifier la casse du texte",
-  "Changelog": "Journal des modifications",
   "Chars": "Caractères",
   "Checkbox Map": "Carte des cases à cocher",
   "Checklist Map": "Carte de la liste de contrôle",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "Les images intégrées n'ont pas pu être converties. Veuillez réessayer.",
   "expanded.": "développé.",
   "Image conversion was cancelled because the document changed.": "La conversion de l'image a été annulée car le document a été modifié.",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "Ouvrez un fichier Markdown modifiable avant d'insérer des images.",
   "uploaded and inserted with short links.": "téléchargé et inséré avec des liens courts.",
   "cancel": "annuler",
@@ -1156,5 +1154,10 @@
   "Token name": "Nom du jeton",
   "Up to 50 GitHub access tokens can be saved.": "Jusqu'à 50 jetons d'accès GitHub peuvent être enregistrés.",
   "Use a unique token name.": "Utilisez un nom de jeton unique.",
-  "Move to…": "Déplacer vers…"
+  "Move to…": "Déplacer vers…",
+  "Release notes unavailable": "Notes de version indisponibles",
+  "Show Release Notes": "Afficher les notes de version",
+  "The release notes could not be opened.": "Les notes de version n'ont pas pu être ouvertes.",
+  "Release notes are read only.": "Les notes de version sont en lecture seule.",
+  "Release notes opened.": "Notes de version ouvertes."
 }

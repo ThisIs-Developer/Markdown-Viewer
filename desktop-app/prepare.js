@@ -55,6 +55,9 @@ console.log("Copied preview-worker.js to resources/js/preview-worker.js");
 fs.copyFileSync(path.join(ROOT_DIR, "styles.css"), path.join(RESOURCES_DIR, "styles.css"));
 console.log("✓ Copied styles.css → resources/styles.css");
 
+fs.copyFileSync(path.join(ROOT_DIR, "RELEASE_NOTES"), path.join(RESOURCES_DIR, "RELEASE_NOTES"));
+console.log("Copied RELEASE_NOTES to resources/RELEASE_NOTES");
+
 // PERF-027: Exclude large demo assets (GIFs) from desktop build to reduce binary size
 copyDirSync(path.join(ROOT_DIR, "assets"), path.join(RESOURCES_DIR, "assets"), [/\.gif$/i]);
 console.log("✓ Copied assets/ → resources/assets/ (excluding GIF demos)");

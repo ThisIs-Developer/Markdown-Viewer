@@ -4464,6 +4464,13 @@ a:focus {
   font-size: 13px;
 }
 
+.tab-app-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
 .tab-item.active .tab-file-icon {
   color: var(--accent-color);
 }
@@ -5160,7 +5167,9 @@ a:focus {
   border-radius: 8px;
   background: var(--button-bg);
   color: var(--text-color);
+  cursor: pointer;
   font-size: var(--ui-font-md);
+  font-family: inherit;
   line-height: 1.2;
   text-decoration: none;
   transition: background-color 0.15s ease, border-color 0.15s ease;

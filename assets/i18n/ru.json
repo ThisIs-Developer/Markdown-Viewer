@@ -90,7 +90,6 @@
   "Capturing document": "Захват документа",
   "Capturing image": "Захват изображения",
   "Change text case": "Изменить регистр текста",
-  "Changelog": "Список изменений",
   "Chars": "Символы",
   "Checkbox Map": "Карта флажков",
   "Checklist Map": "Карта контрольного списка",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "Не удалось преобразовать встроенные изображения. Пожалуйста, попробуйте еще раз.",
   "expanded.": "расширено.",
   "Image conversion was cancelled because the document changed.": "Преобразование изображения было отменено, поскольку документ изменился.",
-  "MD": "Доктор медицины",
   "Open an editable Markdown file before inserting images.": "Прежде чем вставлять изображения, откройте редактируемый файл Markdown.",
   "uploaded and inserted with short links.": "загружено и вставлено с короткими ссылками.",
   "cancel": "отменить",
@@ -1156,5 +1154,10 @@
   "Token name": "Имя токена",
   "Up to 50 GitHub access tokens can be saved.": "Можно сохранить до 50 токенов доступа GitHub.",
   "Use a unique token name.": "Используйте уникальное имя токена.",
-  "Move to…": "Перейти к…"
+  "Move to…": "Перейти к…",
+  "Release notes unavailable": "Примечания к выпуску недоступны",
+  "Show Release Notes": "Показать примечания к выпуску",
+  "The release notes could not be opened.": "Не удалось открыть примечания к выпуску.",
+  "Release notes are read only.": "Примечания к выпуску доступны только для чтения.",
+  "Release notes opened.": "Открыты примечания к выпуску."
 }

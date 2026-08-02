@@ -1,0 +1,23 @@
+# Markdown Viewer 3.11.0
+
+_Released August 3, 2026_
+
+This update makes it easier to understand what changed without leaving your workspace.
+
+## Release notes in your workspace
+
+- Release notes now open automatically in the tab list after Markdown Viewer updates to a new version.
+- The note opens once per version. Close its tab after reading it and it stays dismissed until the next update.
+- The release-note tab is read only, uses Markdown Viewer's app logo, and behaves like a temporary file without being added to Explorer or saved with your documents.
+
+## Easier to find again
+
+- **About Markdown Viewer** now includes **Show Release Notes**, which reopens the current version's note in the tab list at any time.
+- The bundled `RELEASE_NOTES` document has no file extension and remains available offline in the web, PWA, and desktop builds.
+
+## Consistent versioning
+
+- The web app, offline cache, and Neutralino desktop packages now report version **3.11.0**.
+- Release-note visibility is tracked locally per version and does not require an account or network request.
+
+For the complete project history, see the [changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).

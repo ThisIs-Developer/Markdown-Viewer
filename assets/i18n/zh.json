@@ -90,7 +90,6 @@
   "Capturing document": "捕获文档",
   "Capturing image": "拍摄图像",
   "Change text case": "更改文本大小写",
-  "Changelog": "变更日志",
   "Chars": "字符",
   "Checkbox Map": "复选框图",
   "Checklist Map": "清单地图",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "无法转换嵌入图像。请再试一次。",
   "expanded.": "扩展。",
   "Image conversion was cancelled because the document changed.": "由于文档更改，图像转换被取消。",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "在插入图像之前打开可编辑的 Markdown 文件。",
   "uploaded and inserted with short links.": "已上传并插入短链接。",
   "cancel": "取消",
@@ -1156,5 +1154,10 @@
   "Token name": "代币名称",
   "Up to 50 GitHub access tokens can be saved.": "最多可以保存 50 个 GitHub 访问令牌。",
   "Use a unique token name.": "使用唯一的令牌名称。",
-  "Move to…": "移至..."
+  "Move to…": "移至...",
+  "Release notes unavailable": "发行说明不可用",
+  "Show Release Notes": "显示发行说明",
+  "The release notes could not be opened.": "无法打开发行说明。",
+  "Release notes are read only.": "发行说明是只读的。",
+  "Release notes opened.": "发行说明已打开。"
 }

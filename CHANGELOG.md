@@ -3,6 +3,17 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## v3.11.0
+
+- **Description:** Added a VS Code-style, once-per-version release-note experience inside the existing document workspace.
+  - **Update Experience:** Opens the current release note automatically after a version change and remembers dismissal only after the user closes the tab.
+  - **Tabs & About:** Presents the extensionless, read-only `RELEASE_NOTES` document in the normal tab list with the Markdown Viewer app logo, keeps it out of Explorer and document storage, and replaces the external Changelog action in About with Show Release Notes.
+  - **Offline & Desktop:** Precached the release note for the PWA, bundled it into Neutralino desktop builds, synchronized the application/package/cache version at 3.11.0, and persisted version visibility across desktop launches.
+- **Date:** 2026-08-03
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.11.0
+
+---
+
 ## v3.10.0
 
 - **Description:** Introduced scalable local document storage, complete workspace backup and recovery, and a rebuilt GitHub importer with secure private-repository access.

@@ -1,6 +1,11 @@
 document.addEventListener("DOMContentLoaded", async function () {
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
+  const APP_VERSION = '3.11.0';
+  const RELEASE_NOTES_TAB_KIND = 'release-notes';
+  const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
+  const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
+  const RELEASE_NOTES_SEEN_VERSION_KEY = 'markdownViewerReleaseNotesSeenVersion';
   const DOCUMENT_STORAGE_KEYS = new Set([
     'markdownViewerGlobalState',
     'markdownViewerTabs',
@@ -46,6 +51,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       'markdownViewerUntitledCounter',
       'markdownViewerDocumentOrganization',
       'markdownViewerSecretWorkspace',
+      RELEASE_NOTES_LAST_VERSION_KEY,
+      RELEASE_NOTES_PENDING_VERSION_KEY,
+      RELEASE_NOTES_SEEN_VERSION_KEY,
       'find-replace-docked',
       'app-lang'
     ];
@@ -288,7 +296,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const APP_VERSION = '3.10.0';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -429,6 +436,88 @@ document.addEventListener("DOMContentLoaded", async function () {
     return Boolean(activeTabId && isShareSnapshotTabId(activeTabId));
   }
 
+  function isReleaseNotesTab(tab) {
+    return Boolean(tab && tab.kind === RELEASE_NOTES_TAB_KIND);
+  }
+
+  function isReleaseNotesActive() {
+    return Boolean(activeTabId && tabs.some(function(tab) {
+      return tab.id === activeTabId && isReleaseNotesTab(tab);
+    }));
+  }
+
+  function readReleaseNotesStorage(key) {
+    try {
+      return localStorage.getItem(key) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function markReleaseNotesSeen(tab) {
+    if (!isReleaseNotesTab(tab)) return;
+    const version = tab.releaseVersion || APP_VERSION;
+    saveStorageItem(RELEASE_NOTES_SEEN_VERSION_KEY, version);
+    if (readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY) === version) {
+      removeStorageItem(RELEASE_NOTES_PENDING_VERSION_KEY);
+    }
+  }
+
+  function queueCurrentReleaseNotes(hadExistingWorkspace) {
+    const previousVersion = readReleaseNotesStorage(RELEASE_NOTES_LAST_VERSION_KEY);
+    const seenVersion = readReleaseNotesStorage(RELEASE_NOTES_SEEN_VERSION_KEY);
+    let pendingVersion = readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY);
+    const versionChanged = Boolean(previousVersion && previousVersion !== APP_VERSION);
+    const featureUpgrade = Boolean(!previousVersion && hadExistingWorkspace);
+
+    if ((versionChanged || featureUpgrade) && seenVersion !== APP_VERSION) {
+      pendingVersion = APP_VERSION;
+      saveStorageItem(RELEASE_NOTES_PENDING_VERSION_KEY, APP_VERSION);
+    }
+    saveStorageItem(RELEASE_NOTES_LAST_VERSION_KEY, APP_VERSION);
+    return pendingVersion === APP_VERSION && seenVersion !== APP_VERSION;
+  }
+
+  let releaseNotesContentPromise = null;
+
+  function loadCurrentReleaseNotes() {
+    if (!releaseNotesContentPromise) {
+      releaseNotesContentPromise = fetch('RELEASE_NOTES').then(function(response) {
+        if (!response.ok) throw new Error('Release notes returned ' + response.status);
+        return response.text();
+      }).catch(function(error) {
+        console.warn('Failed to load release notes:', error);
+        return '# Markdown Viewer ' + APP_VERSION + '\n\nThe release notes could not be loaded. Visit the [project releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases) for the latest changes.';
+      });
+    }
+    return releaseNotesContentPromise;
+  }
+
+  async function openReleaseNotes(options) {
+    const settings = options || {};
+    const existing = tabs.find(function(tab) {
+      return isReleaseNotesTab(tab) && tab.releaseVersion === APP_VERSION;
+    });
+    if (existing) {
+      await switchTab(existing.id);
+      updateLiveEditorAccess();
+      return existing;
+    }
+
+    const content = await loadCurrentReleaseNotes();
+    const tab = createTab(content, 'Release Notes: ' + APP_VERSION, 'preview');
+    tab.kind = RELEASE_NOTES_TAB_KIND;
+    tab.temporary = true;
+    tab.releaseVersion = APP_VERSION;
+    tabs.push(tab);
+    await switchTab(tab.id);
+    updateLiveEditorAccess();
+    if (!settings.silent) {
+      announceToScreenReader('Release notes opened.');
+    }
+    return tab;
+  }
+
   function stripTemporaryTabs(tabsArr) {
     return (tabsArr || []).filter(function(tab) {
       return !isShareSnapshotTab(tab) && tab.temporary !== true;
@@ -480,6 +569,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (isShareSnapshotViewOnlyActive()) {
       return 'This shared snapshot is view only.';
+    }
+    if (isReleaseNotesActive()) {
+      return 'Release notes are read only.';
     }
     if (isLiveViewOnlyParticipant()) {
       return 'This Live Share session is view only.';
@@ -592,6 +684,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutModalClose = document.getElementById("about-modal-close");
   const aboutModalCloseIcon = document.getElementById("about-modal-close-icon");
   const aboutVersion = document.getElementById("about-version");
+  const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
   const storageSettingsButton = document.getElementById("storage-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
@@ -5404,7 +5497,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function renderWorkspaceTree(tree) {
     let renderedDocuments = 0;
-    const temporaryTabs = tabs.filter(isTemporaryDocument).filter(documentMatchesSidebarSearch);
+    const temporaryTabs = tabs.filter(function(tab) {
+      return isTemporaryDocument(tab) && !isReleaseNotesTab(tab);
+    }).filter(documentMatchesSidebarSearch);
     if (temporaryTabs.length) {
       const temporaryLabel = document.createElement('p');
       temporaryLabel.className = 'document-tree-section-label';
@@ -7725,29 +7820,33 @@ document.addEventListener("DOMContentLoaded", async function () {
     dropdown.className = 'tab-menu-dropdown';
     dropdown.setAttribute('data-tab-menu-dropdown', 'true');
     dropdown.setAttribute('role', 'menu');
-    const duplicateAction = isShareSnapshotTab(tab)
-      ? ''
-      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
-    const downloadAction = isShareSnapshotTab(tab)
-      ? ''
-      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
-    const favoriteAction = isShareSnapshotTab(tab)
-      ? ''
-      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
-    const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
-    const splitAction = isCombinedSplitTab
-      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
-      : tabs.length > 1
-      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
-      : '';
-    dropdown.innerHTML =
-      '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
-      duplicateAction +
-      favoriteAction +
-      splitAction +
-      downloadAction +
-      '<div class="tab-menu-separator" role="separator"></div>' +
-      '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
+    if (isReleaseNotesTab(tab)) {
+      dropdown.innerHTML = '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
+    } else {
+      const duplicateAction = isShareSnapshotTab(tab)
+        ? ''
+        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
+      const downloadAction = isShareSnapshotTab(tab)
+        ? ''
+        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
+      const favoriteAction = isShareSnapshotTab(tab)
+        ? ''
+        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
+      const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
+      const splitAction = isCombinedSplitTab
+        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
+        : tabs.length > 1
+        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
+        : '';
+      dropdown.innerHTML =
+        '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
+        duplicateAction +
+        favoriteAction +
+        splitAction +
+        downloadAction +
+        '<div class="tab-menu-separator" role="separator"></div>' +
+        '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
+    }
 
     menuBtn.addEventListener('click', function(e) {
       e.preventDefault();
@@ -7846,6 +7945,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!idsToClose.has(tab.id) || !isTabOpen(tab)) return;
       if (isTemporaryDocument(tab)) {
         temporaryIds.add(tab.id);
+        markReleaseNotesSeen(tab);
         shareSnapshotViewOnlyTabIds.delete(tab.id);
         if (tabHistories[tab.id]) delete tabHistories[tab.id];
         return;
@@ -7891,14 +7991,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     menu.setAttribute('aria-label', 'Tab actions for ' + (tab.title || 'Untitled'));
 
     const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
-    const actions = [{
-      id: isCombinedSplitTab ? 'split-close' : 'split',
-      icon: isCombinedSplitTab ? 'lucide-panel-right-close' : 'lucide-columns-2',
-      label: isCombinedSplitTab ? 'Exit split view' : 'Open in split view',
-      disabled: !isCombinedSplitTab && tabs.length < 2
-    }, {
-      separator: true
-    }, {
+    const closeActions = [{
       id: 'close', icon: 'lucide-x', label: 'Close'
     }, {
       id: 'others', icon: 'lucide-circle-x', label: 'Close others', disabled: openTabs.length < 2
@@ -7909,6 +8002,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, {
       id: 'all', icon: 'lucide-square-x', label: 'Close all'
     }];
+    const actions = isReleaseNotesTab(tab) ? closeActions : [{
+      id: isCombinedSplitTab ? 'split-close' : 'split',
+      icon: isCombinedSplitTab ? 'lucide-panel-right-close' : 'lucide-columns-2',
+      label: isCombinedSplitTab ? 'Exit split view' : 'Open in split view',
+      disabled: !isCombinedSplitTab && tabs.length < 2
+    }, {
+      separator: true
+    }].concat(closeActions);
 
     actions.forEach(function(action) {
       if (action.separator) {
@@ -7988,7 +8089,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         ? tabs.find(function(item) { return item.id === secondarySplitTabId && isTabOpen(item); })
         : null;
       const item = document.createElement('div');
-      item.className = 'tab-item' + (tab.id === currentActiveTabId ? ' active' : '') + (splitPartner ? ' is-document-split' : '');
+      item.className = 'tab-item' + (tab.id === currentActiveTabId ? ' active' : '') + (splitPartner ? ' is-document-split' : '') + (isReleaseNotesTab(tab) ? ' release-notes-tab' : '');
       item.setAttribute('data-tab-id', tab.id);
       if (splitPartner) item.setAttribute('data-split-tab-id', splitPartner.id);
       item.setAttribute('role', 'tab');
@@ -8002,9 +8103,18 @@ document.addEventListener("DOMContentLoaded", async function () {
         item.style.setProperty('--split-tab-preferred-width', Math.round(preferredWidth) + 'px');
       }
 
-      const fileIcon = document.createElement('i');
-      fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : 'lucide-file-text') + ' tab-file-icon';
-      fileIcon.setAttribute('aria-hidden', 'true');
+      let fileIcon;
+      if (isReleaseNotesTab(tab) && !splitPartner) {
+        fileIcon = document.createElement('img');
+        fileIcon.className = 'tab-file-icon tab-app-icon';
+        fileIcon.src = 'assets/icon.jpg';
+        fileIcon.alt = '';
+        fileIcon.setAttribute('aria-hidden', 'true');
+      } else {
+        fileIcon = document.createElement('i');
+        fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : 'lucide-file-text') + ' tab-file-icon';
+        fileIcon.setAttribute('aria-hidden', 'true');
+      }
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'tab-title' + (splitPartner ? ' tab-split-titles' : '');
@@ -8283,7 +8393,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (contentChanged && !isTemporaryDocument(tab)) {
       tab.lastEditedAt = Date.now();
     }
-    saveTabsToStorage(tabs, [tab.id]);
+    if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     if (contentChanged) renderDocumentSidebar();
   }
 
@@ -8418,7 +8528,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     documentSplitEditor.hidden = previewMode;
     documentSplitPreview.hidden = !previewMode;
     if (documentSplitEditor.value !== tab.content) documentSplitEditor.value = tab.content || '';
-    documentSplitEditor.readOnly = shareSnapshotViewOnlyTabIds.has(tab.id);
+    documentSplitEditor.readOnly = shareSnapshotViewOnlyTabIds.has(tab.id) || isReleaseNotesTab(tab);
     documentSplitEditor.setAttribute('aria-label', 'Edit ' + (tab.title || 'Untitled') + ' in split view');
     documentSplitPreview.setAttribute('aria-label', 'Preview ' + (tab.title || 'Untitled') + ' in split view');
     if (previewMode) renderDocumentSplitPreview(tab);
@@ -8477,7 +8587,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function openDocumentSplitView(sourceTabId, secondTabId) {
     const sourceTab = tabs.find(function(item) { return item.id === sourceTabId; });
     const secondTab = tabs.find(function(item) { return item.id === secondTabId; });
-    if (!sourceTab || !secondTab || sourceTab.id === secondTab.id) return;
+    if (!sourceTab || !secondTab || sourceTab.id === secondTab.id || isReleaseNotesTab(sourceTab) || isReleaseNotesTab(secondTab)) return;
     try {
       await Promise.all([ensureTabContent(sourceTab), ensureTabContent(secondTab)]);
     } catch (_) {
@@ -8499,8 +8609,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function openDocumentSplitPicker(sourceTabId) {
     const sourceTab = tabs.find(function(item) { return item.id === sourceTabId; });
-    const candidates = tabs.filter(function(item) { return item.id !== sourceTabId; });
-    if (!sourceTab || candidates.length === 0) {
+    const candidates = tabs.filter(function(item) { return item.id !== sourceTabId && !isReleaseNotesTab(item); });
+    if (!sourceTab || isReleaseNotesTab(sourceTab) || candidates.length === 0) {
       alert('Open or create another document before starting split view.');
       return;
     }
@@ -8682,6 +8792,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const idx = tabs.findIndex(function(t) { return t.id === tabId; });
     if (idx === -1) return;
+    const tab = tabs[idx];
     const wasActive = activeTabId === tabId;
     const splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) {
@@ -8694,6 +8805,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       closeDocumentSplitView({ silent: true, renderTabs: false });
     }
     shareSnapshotViewOnlyTabIds.delete(tabId);
+    markReleaseNotesSeen(tab);
     
     // Clean up history of the closed tab
     if (tabHistories[tabId]) {
@@ -9003,6 +9115,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     documentOrganization = await loadDocumentOrganization();
     initializeSecretWorkspaceState();
     tabs = await loadTabsFromStorage();
+    const hadExistingWorkspace = tabs.length > 0;
     activeTabId = loadActiveTabId();
 
     // Check if Neutralino passed an initial file via command line (early load)
@@ -9103,6 +9216,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         openDocumentSurfaceContextMenu(surface, event);
       });
     });
+    return hadExistingWorkspace;
   }
 
   // Late-load callback hook for Neutralino command-line files
@@ -13080,7 +13194,7 @@ ${selector} .arrowheadPath {
   // View Mode Functions - Story 1.1 & 1.2
   function setViewMode(mode) {
     if (secondarySplitTabId && mode === 'split') mode = 'editor';
-    if (isShareSnapshotViewOnlyActive() && mode !== 'preview') {
+    if ((isShareSnapshotViewOnlyActive() || isReleaseNotesActive()) && mode !== 'preview') {
       mode = 'preview';
       announceToScreenReader(getEditorReadOnlyMessage());
     }
@@ -17973,6 +18087,18 @@ ${selector} .arrowheadPath {
     if (aboutModalCloseIcon) {
       aboutModalCloseIcon.addEventListener('click', function() { closeAppModal(aboutModal); });
     }
+    if (aboutReleaseNotes) {
+      aboutReleaseNotes.addEventListener('click', function() {
+        closeAppModal(aboutModal);
+        openReleaseNotes().catch(function(error) {
+          console.warn('Failed to open release notes:', error);
+          showAppToast('The release notes could not be opened.', {
+            tone: 'error',
+            title: 'Release notes unavailable'
+          });
+        });
+      });
+    }
   }
 
   function openHelpModal() {
@@ -18686,8 +18812,11 @@ ${selector} .arrowheadPath {
     });
   }
 
-  await initTabs();
+  const hadExistingWorkspace = await initTabs();
   initReviewMode();
+  if (queueCurrentReleaseNotes(hadExistingWorkspace)) {
+    await openReleaseNotes();
+  }
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();
   updateMobileStats();
   updateFindHighlights();
@@ -21773,7 +21902,7 @@ ${selector} .arrowheadPath {
   }
 
   function canMutateEditor() {
-    return hasActiveOpenDocument() && !reviewModeActive && !isLiveViewOnlyParticipant() && !isShareSnapshotViewOnlyActive();
+    return hasActiveOpenDocument() && !reviewModeActive && !isLiveViewOnlyParticipant() && !isShareSnapshotViewOnlyActive() && !isReleaseNotesActive();
   }
 
   function isLiveMutatingAction(action) {
@@ -21808,10 +21937,11 @@ ${selector} .arrowheadPath {
 
   function updateLiveEditorAccess() {
     const snapshotViewOnly = isShareSnapshotViewOnlyActive();
+    const releaseNotesActive = isReleaseNotesActive();
     const snapshotActive = isShareSnapshotActive();
     const liveShareDocumentActive = isLiveShareDocumentActive();
     const liveShareGuestDocumentActive = liveShareDocumentActive && !isLiveShareHostDocumentActive();
-    const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly;
+    const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly || releaseNotesActive;
     const sourceReadOnly = viewOnly || reviewModeActive;
     if (markdownEditor) {
       markdownEditor.readOnly = sourceReadOnly;
@@ -21822,7 +21952,7 @@ ${selector} .arrowheadPath {
 
     viewModeButtons.forEach(function(button) {
       const mode = button.getAttribute('data-view-mode');
-      const shouldDisable = (snapshotViewOnly || reviewModeActive) && mode !== 'preview';
+      const shouldDisable = (snapshotViewOnly || releaseNotesActive || reviewModeActive) && mode !== 'preview';
       if (shouldDisable) {
         button.dataset.shareSnapshotDisabled = 'true';
         button.disabled = true;
@@ -21837,7 +21967,7 @@ ${selector} .arrowheadPath {
 
     mobileViewModeButtons.forEach(function(button) {
       const mode = button.getAttribute('data-mode');
-      const shouldDisable = (snapshotViewOnly || reviewModeActive) && mode !== 'preview';
+      const shouldDisable = (snapshotViewOnly || releaseNotesActive || reviewModeActive) && mode !== 'preview';
       if (shouldDisable) {
         button.dataset.shareSnapshotDisabled = 'true';
         button.disabled = true;

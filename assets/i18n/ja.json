@@ -90,7 +90,6 @@
   "Capturing document": "ドキュメントをキャプチャしています",
   "Capturing image": "画像キャプチャ",
   "Change text case": "テキストの大文字と小文字を変更する",
-  "Changelog": "変更履歴",
   "Chars": "文字",
   "Checkbox Map": "チェックボックス マップ",
   "Checklist Map": "チェックリストマップ",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "埋め込み画像を変換できませんでした。もう一度試してください。",
   "expanded.": "を展開しました。",
   "Image conversion was cancelled because the document changed.": "ドキュメントが変更されたため、画像変換がキャンセルされました。",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "画像を挿入する前に、編集可能な Markdown ファイルを開いてください。",
   "uploaded and inserted with short links.": "がアップロードされ、短いリンクが挿入されました。",
   "cancel": "キャンセル",
@@ -1156,5 +1154,10 @@
   "Token name": "トークン名",
   "Up to 50 GitHub access tokens can be saved.": "GitHub アクセストークンは最大 50 個まで保存できます。",
   "Use a unique token name.": "一意のトークン名を使用します。",
-  "Move to…": "移動先…"
+  "Move to…": "移動先…",
+  "Release notes unavailable": "リリースノートは利用できません",
+  "Show Release Notes": "リリースノートを表示",
+  "The release notes could not be opened.": "リリースノートを開けませんでした。",
+  "Release notes are read only.": "リリースノートは読み取り専用です。",
+  "Release notes opened.": "リリースノートを公開しました。"
 }

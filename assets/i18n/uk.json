@@ -90,7 +90,6 @@
   "Capturing document": "Запис документа",
   "Capturing image": "Захоплення зображення",
   "Change text case": "Змінити регістр тексту",
-  "Changelog": "Журнал змін",
   "Chars": "Символи",
   "Checkbox Map": "Карта прапорців",
   "Checklist Map": "Карта контрольного списку",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "Вбудовані зображення не вдалося конвертувати. Спробуйте ще раз.",
   "expanded.": "розширено.",
   "Image conversion was cancelled because the document changed.": "Перетворення зображення скасовано, оскільки документ змінено.",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "Відкрийте редагований файл Markdown перед вставленням зображень.",
   "uploaded and inserted with short links.": "завантажено та вставлено з короткими посиланнями.",
   "cancel": "скасувати",
@@ -1156,5 +1154,10 @@
   "Token name": "Назва маркера",
   "Up to 50 GitHub access tokens can be saved.": "Можна зберегти до 50 токенів доступу GitHub.",
   "Use a unique token name.": "Використовуйте унікальну назву маркера.",
-  "Move to…": "Перейти до…"
+  "Move to…": "Перейти до…",
+  "Release notes unavailable": "Примітки до випуску недоступні",
+  "Show Release Notes": "Показати примітки до випуску",
+  "The release notes could not be opened.": "Не вдалося відкрити примітки до випуску.",
+  "Release notes are read only.": "Примітки до випуску доступні лише для читання.",
+  "Release notes opened.": "Відкрито примітки до випуску."
 }

@@ -90,7 +90,6 @@
   "Capturing document": "Belge yakalanıyor",
   "Capturing image": "Görüntü yakalanıyor",
   "Change text case": "Metnin büyük/küçük harflerini değiştir",
-  "Changelog": "Değişiklik Günlüğü",
   "Chars": "Karakterler",
   "Checkbox Map": "Onay Kutusu Haritası",
   "Checklist Map": "Kontrol Listesi Haritası",
@@ -971,7 +970,6 @@
   "Embedded images could not be converted. Please try again.": "Gömülü görüntüler dönüştürülemedi. Lütfen tekrar deneyin.",
   "expanded.": "genişletildi.",
   "Image conversion was cancelled because the document changed.": "Belge değiştiği için görüntü dönüştürme iptal edildi.",
-  "MD": "MD",
   "Open an editable Markdown file before inserting images.": "Görüntüleri eklemeden önce düzenlenebilir bir Markdown dosyasını açın.",
   "uploaded and inserted with short links.": "kısa bağlantılarla yüklendi ve eklendi.",
   "cancel": "iptal et",
@@ -1156,5 +1154,10 @@
   "Token name": "Jeton adı",
   "Up to 50 GitHub access tokens can be saved.": "En fazla 50 GitHub erişim belirteci kaydedilebilir.",
   "Use a unique token name.": "Benzersiz bir belirteç adı kullanın.",
-  "Move to…": "Şuraya git…"
+  "Move to…": "Şuraya git…",
+  "Release notes unavailable": "Sürüm notları mevcut değil",
+  "Show Release Notes": "Sürüm Notlarını Göster",
+  "The release notes could not be opened.": "Sürüm notları açılamadı.",
+  "Release notes are read only.": "Sürüm notları salt okunurdur.",
+  "Release notes opened.": "Sürüm notları açıldı."
 }
