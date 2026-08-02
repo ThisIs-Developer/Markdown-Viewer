@@ -73,6 +73,9 @@ When running inside Neutralino, dynamic library URLs are rewritten to local `/li
 | Line-height cache size | 5,000 entries |
 | Local Markdown import | 10 MB per file |
 | GitHub importer shown files | All Markdown files found |
+| Saved GitHub access tokens | 50 named entries |
+| GitHub access-token name | 60 characters |
+| Desktop document history | 20 recent copies per document |
 | Share URL warning ceiling | 32,000 characters |
 | Legacy share URL ceiling | 4,096 characters |
 | Server share threshold | 3,000 bytes |
@@ -189,7 +192,7 @@ Security headers configured in Docker/Nginx documentation include:
 - `Permissions-Policy`
 - `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`
 
-Cloudflare Pages reads the root `_headers` and `_redirects` files. `_redirects` hides `.env`, `_headers`, and source-map paths behind 404 responses. Self-hosters should preserve equivalent policies and make sure `preview-worker.js`, `sample.md`, `sw.js`, `manifest.json`, `script.js`, `styles.css`, `assets/`, `workers/`, and `functions/` or their Cloudflare equivalents are deployed according to the features they intend to use.
+Cloudflare Pages reads the root `_headers` and `_redirects` files. `_redirects` hides `.env`, `_headers`, and source-map paths behind 404 responses. Self-hosters should preserve equivalent policies and make sure `workspace-storage.js`, `preview-worker.js`, `sample.md`, `sw.js`, `manifest.json`, `script.js`, `styles.css`, `assets/`, `workers/`, and `functions/` or their Cloudflare equivalents are deployed according to the features they intend to use.
 
 The checked-in root Dockerfile does not copy `preview-worker.js` or `sample.md`; see [Docker Deployment: Known Stock Image Limitation](Docker-Deployment.md#known-stock-image-limitation).
 

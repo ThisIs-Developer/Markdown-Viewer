@@ -68,9 +68,9 @@ In the desktop application, replacing or deleting the binary does not remove `Do
 | Managed media | Optimized image, GIF, or video after first-use consent | Cloudflare KV for 90 days from the latest upload of identical content | Public to anyone with the unguessable URL |
 | Stored Share Snapshot | Markdown content, mode, title, creation time, and size | Cloudflare KV for 90 days | Bearer snapshot URL |
 | Live Share | Yjs Markdown/Review updates, display name, presence, cursor, sync, leave, and session-end messages | Cloudflare Durable Object relay while clients are connected | Room secret plus host/edit/view capability |
+| Live Share capability metadata | Host, edit, and view bearer capability values plus `createdAt` | Durable Object storage; no application TTL or deletion path is implemented | Used by the Durable Object to authenticate roles |
 
 The local GitHub credential vault protects PAT values from plaintext storage and keeps them out of workspace backups. It is not an operating-system keychain: malicious code running in the application origin, a compromised browser/app profile, a hostile extension, or malware on the unlocked device could still use the locally stored key. Remove the local entry and revoke the PAT in GitHub if the device, profile, or token may be compromised.
-| Live Share capability metadata | Host, edit, and view bearer capability values plus `createdAt` | Durable Object storage; no application TTL or deletion path is implemented | Used by the Durable Object to authenticate roles |
 
 Cloudflare, CDN, GitHub, renderer, map, external-asset, reverse-proxy, and self-hosting operators can retain normal service logs independently of Markdown Viewer's application-level storage.
 

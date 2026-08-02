@@ -130,7 +130,7 @@ chmod +x markdown-viewer-mac_universal
 ## Data Handling
 
 - Normal documents are ordinary `.md` files under the fixed `Documents/Markdown Viewer Vault/Workspace` path.
-- Vault metadata, recent history, trash, recovery journals, settings, and opaque encrypted Secret Workspace records are kept under the same vault.
+- Vault metadata, up to 20 recent history copies per document, trash, recovery journals, settings, and opaque encrypted Secret Workspace records are kept under the same vault.
 - Replacement binaries check the fixed vault path automatically. Use **Storage and Backup** to inspect, back up, import, or open it.
 - Importing a ZIP backup replaces the current workspace. ZIP backups exclude vault history, trash, and recovery journals; copy the full vault separately when those records must also be retained.
 - Native file access happens through explicit open/save actions or launch arguments.

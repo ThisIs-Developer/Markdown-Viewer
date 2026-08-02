@@ -272,7 +272,7 @@ GitHub import:
 - Every Markdown file found is shown.
 - Requests are rate-limited by the app to avoid hammering GitHub.
 - Public files are fetched as raw content. Private files use GitHub's authenticated Contents API. Both are saved to Explorer without opening new tabs.
-- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Multiple named tokens persist across refreshes and app restarts in a local AES-GCM vault and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added, while token actions use GitHub-branded accessible toasts.
+- Optional private access accepts fine-grained and classic PATs automatically in a compact add-then-select flow. Up to 50 named tokens persist across refreshes and app restarts in a local AES-GCM vault and can be removed individually at any time without a passphrase or unlock step. GitHub validates each token when added, while token actions use GitHub-branded accessible toasts.
 
 Limitations and privacy:
 
@@ -468,7 +468,7 @@ Accessibility behavior:
 The web app registers `sw.js` when service workers are supported.
 
 - The service worker cache name is versioned in `sw.js` so stale caches can be retired safely.
-- Critical local assets include `/`, `index.html`, `styles.css`, `script.js`, `preview-worker.js`, `manifest.json`, and `assets/icon.jpg`.
+- Critical local assets include `/`, `index.html`, `workspace-storage.js`, `script.js`, `preview-worker.js`, `styles.css`, `assets/lucide-icons.css`, `sample.md`, `manifest.json`, and `assets/icon.jpg`.
 - Local shell assets use a network-first strategy for update-sensitive paths, falling back to cache when offline.
 - CDN assets from cdnjs and jsDelivr use cache-first behavior after first successful load.
 - The app manifest allows standalone PWA installation.
@@ -542,14 +542,14 @@ Security limitations:
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |
 | Markdown/HTML/PDF/PNG export | No, except remote assets already referenced | User download location | Browser may request external images/fonts used by content. |
-| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Multiple named fine-grained or classic PATs in a local AES-GCM vault, with individual removal at any time. |
+| GitHub import | Yes | Public: GitHub API/raw URLs. Private: `api.github.com` only | Up to 50 named fine-grained or classic PATs in a local AES-GCM vault, with individual removal at any time. |
 | Emoji lookup | Yes | GitHub emoji API response in memory | Used for shortcode picker/lookup. |
 | CDN library loading | Yes | Browser/service-worker cache | Web build only, first use unless cached. |
 | Remote diagram engines | Yes | Third-party renderer response/cache | Source is sent to PlantUML, Kroki, or mermaid.ink depending on renderer/preview. |
 | Share Snapshot hash link | Only when user sends the link | Inside URL hash | Small documents are not uploaded by generation. |
 | Stored Share Snapshot | Yes | Cloudflare KV for 90 days | Content, mode, title, createdAt, and size. |
 | Live Share | Yes | Client/WebSocket relay state plus Durable Object capability storage | Markdown and Review content are not persisted server-side; role capabilities and `createdAt` are stored without an application TTL. |
-| Desktop native storage | No | `Documents/Markdown Viewer Vault` by default | Ordinary `.md` files plus internal metadata, encrypted records, history, trash, and crash journal. |
+| Desktop native storage | No | `Documents/Markdown Viewer Vault` by default | Ordinary `.md` files plus internal metadata, encrypted records, up to 20 recent history copies per document, trash, and crash journal. |
 
 ## Known Technical Limits
 
@@ -557,9 +557,12 @@ Security limitations:
 - Markdown Viewer does not impose a document-count limit; available storage and operating-system/filesystem constraints still apply.
 - An individual local Markdown import is limited to 10 MB.
 - The GitHub importer shows every Markdown file found in the selected public or authorized private repository or folder.
+- The local GitHub credential vault stores up to 50 named PAT entries.
+- GitHub access-token names are limited to 60 characters.
 - Stored Share Snapshot content is limited to 8,000,000 characters. Managed media remains separate and travels as short HTTPS links.
 - The current Share Snapshot UI does not expose its API deletion token, so UI-created stored snapshots normally remain until their 90-day expiry.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.
+- The desktop vault retains up to 20 recent history copies per document.
 - Legacy raster PDF and PNG exports can fail on extremely tall documents because canvas size and memory are browser-limited.
 - Remote renderer availability depends on third-party services and network conditions.
 - The service worker cannot cache assets that have never been successfully fetched.

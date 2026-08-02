@@ -69,7 +69,7 @@ Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開�
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全螢幕 3D STL 檢視" width="90%" />
 </p>
 
-- **導入與匯出：** 開啟本機檔案或公開 GitHub 內容，並匯出 Markdown、獨立 HTML、PNG、瀏覽器列印／另存為 PDF 或舊版點陣 PDF。
+- **導入與匯出：** 除本機檔案外，也可導入指定分支、標籤或提交 SHA 的公開／私人 GitHub 內容。找到的所有 Markdown 檔案都會儲存至 Explorer，而不會開啟新分頁。支援匯出 Markdown、獨立 HTML、PNG、瀏覽器列印／另存為 PDF 或舊版點陣 PDF。
 - **選用分享功能：** 建立「僅供查看」或「可以編輯」模式的 Share Snapshot（分享快照），或啟動具有主持人、可以編輯與僅供查看權限的暫時 Live Share（即時共享）房間。
 
 <p align="center">
@@ -107,7 +107,7 @@ Markdown Viewer 以本機處理為優先，但並非所有功能都能離線執�
 | :--- | :--- |
 | 編輯、本機導入、預覽、工作區自動儲存及大多數匯出 | 裝置本機 |
 | Web 程式庫與未快取的轉譯器相依項目 | Web／PWA 版本向 CDN 發出要求 |
-| GitHub 導入與表情符號查詢 | GitHub API／原始內容主機 |
+| GitHub 導入與表情符號查詢 | 公開內容使用 GitHub API／原始內容主機；私人內容與 PAT 僅使用 `api.github.com` |
 | PlantUML、D2、Graphviz、Vega-Lite、WaveDrom 與部分圖表預覽 | 圖表原始碼可能傳送至 PlantUML、Kroki 或 mermaid.ink |
 | 經同意後插入的圖片、GIF 與影片 | 透過公開連結存取的 Cloudflare 暫存媒體儲存空間（90 天） |
 | 大型 Share Snapshot | Cloudflare KV（90 天） |
@@ -128,11 +128,13 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 
 - Markdown Viewer 不設定文件數量上限；實際上限取決於瀏覽器配額或桌面檔案系統容量。
 - 單一本機 Markdown 檔案的大小上限為 10 MB。
-- GitHub 導入器在每個儲存庫／資料夾結果中最多顯示 30 個 Markdown 檔案。
+- GitHub 導入器會顯示在所選儲存庫／資料夾中找到的所有 Markdown 檔案。
+- 本機 GitHub 認證保管庫最多可儲存 50 個具名 PAT。每個權杖名稱上限為 60 個字元。
 - 處理前的媒體來源檔案上限為 25 MiB；儲存上限為靜態圖片 300 KiB、GIF 5 MiB、影片 10 MiB。
 - 儲存型 Share Snapshot 最多包含 8,000,000 個字元，並在 90 天後到期。
 - Live Share 最多允許 64 位 WebSocket 參與者，單一即時訊息上限為 8 MB。
 - STL 原始碼上限為 2 MiB，轉譯後幾何最多為 300,000 個頂點。
+- 桌面保管庫會為每份文件保留最多 20 份最近的歷程記錄副本。
 - 點陣 PDF／PNG 匯出受瀏覽器記憶體、Canvas 與 CORS 限制。
 
 ## 重要隱私權說明
@@ -141,6 +143,7 @@ Share Snapshot 與 Live Share URL 都是持有者連結。任何取得有效連�
 - 啟用隱私模式會暫停目前工作階段中新文件狀態的持久儲存；現有的一般文件與 Secret Workspace 資料不會被刪除。
 - **重設工作區**會永久刪除文件、資料夾、設定、審閱資料、Secret Workspace 資料、歷程記錄與垃圾桶。
 - 透過**儲存與備份**可建立或匯入保留資料夾結構的 ZIP。匯入備份會在確認後完全取代目前的工作區。
+- 私人儲存庫 PAT 會儲存在本機 AES-GCM 加密保管庫中，且不會包含在工作區備份內。此保管庫並非作業系統鑰匙圈。PAT 只會傳送至 `api.github.com`；在本機刪除 PAT 不會在 GitHub 上將其撤銷。
 - Live Share 不會在伺服器端持久儲存 Markdown／審閱內容，但會將各角色的持有者權限值與建立時間寫入 Durable Object 儲存空間；目前未實作應用程式層級的到期時間或刪除路徑。
 - Share Snapshot 建立 API 會傳回刪除權杖，但目前的介面不會顯示該權杖，也不提供提前刪除操作。
 - 應用程式程式碼未實作帳號、分析、遙測、廣告、追蹤像素或應用程式專用 Cookie。外部服務與託管提供者仍可能處理一般要求記錄。

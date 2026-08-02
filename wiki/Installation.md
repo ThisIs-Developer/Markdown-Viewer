@@ -78,10 +78,12 @@ The Docker image serves static files with Nginx. It does not magically provide C
 Serve at least these root files:
 
 - `index.html`
+- `workspace-storage.js`
 - `script.js`
 - `styles.css`
 - `preview-worker.js`
 - `sw.js`
+- `sample.md`
 - `manifest.json`
 - `assets/`
 
@@ -113,7 +115,7 @@ Then deploy the Pages project with `wrangler.toml` or your Cloudflare Pages conf
 
 ## Desktop Application
 
-Published desktop binaries are available from [GitHub Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases). Changes implemented after `v3.9.4` are currently unreleased, so build from source to test the latest Storage and Backup behavior.
+Published desktop binaries are available from [GitHub Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases). Use a published build for a stable release, or build from `main` when you need to test changes that have not yet been released.
 
 From `desktop-app/`:
 

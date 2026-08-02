@@ -69,7 +69,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="3D STL Full screen" width="90%" />
 </p>
 
-- **Import and export:** open local files or GitHub content from branches, tags, commits, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF.
+- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF.
 
 - **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
 
@@ -153,16 +153,15 @@ Remote renderer services receive the source of the diagram they render. Do not s
 
 ## Important Limits
 
-- Importing a workspace backup permanently replaces the current workspace after confirmation.
+- Workspace backup import does not merge workspaces; it permanently replaces the current workspace after confirmation.
 - Workspace backups do not include trash, desktop history, or crash-recovery journals.
 - A local Markdown file larger than 10 MB is rejected.
-- The searchable GitHub importer shows every Markdown file found in a repository or folder result and resolves branch, tag, and commit URLs to an immutable commit SHA.
-- Private repository access accepts fine-grained and classic PATs automatically. Multiple named tokens can be added, selected, and removed at any time. Tokens survive refreshes and app restarts in a local vault: credential payloads are stored only as AES-GCM ciphertext and the encryption key remains in local browser/app data. GitHub validates each token when added.
-- Imported Markdown files are saved to Explorer and remain closed until you choose one, preventing large imports from flooding the tab bar.
+- The GitHub credential vault stores up to 50 named PAT entries; each token name is limited to 60 characters.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.
 - Stored Share Snapshot content is limited to 8,000,000 characters and expires after 90 days.
 - Live Share allows up to 64 WebSocket participants and 8 MB per live message.
 - STL source is limited to 2 MiB and rendered geometry to 300,000 vertices.
+- The desktop vault retains up to 20 recent history copies per document.
 - Raster PDF and PNG exports remain subject to browser memory, canvas, and cross-origin resource limits.
 
 See [Features: Known Technical Limits](wiki/Features.md#known-technical-limits) for context.

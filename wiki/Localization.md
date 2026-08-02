@@ -76,6 +76,7 @@ The runtime also supports numbered templates such as `{{0}} files`. If a catalog
 
 - Add or update visible English source text first.
 - Regenerate catalogs from the repository root with `node assets/i18n/generate-ui-locales.mjs`.
+- Run `node assets/i18n/audit-ui-locales.mjs` and resolve every reported catalog, key, placeholder, terminology, or encoding problem.
 - Review every new translation in context; use curated overrides where literal machine translation is unclear.
 - Keep all locale catalogs on the same key set as `en.json`.
 - Run the desktop prepare step so bundled catalogs match the web app.
@@ -141,6 +142,14 @@ Use these terms in Markdown Viewer documentation and translation reviews. The Ja
 | Backup | バックアップ | 백업 | 备份 | 備份 |
 | Import Backup | インポートバックアップ | 백업 가져오기 | 导入备份 | 導入備份 |
 | Import | インポート | 가져오기 | 导入 | 導入 |
+| GitHub import | GitHub インポート | GitHub 가져오기 | GitHub 导入 | GitHub 導入 |
+| Repository | リポジトリ | 저장소 | 仓库 | 儲存庫 |
+| Private repository | 非公開リポジトリ | 비공개 저장소 | 私有仓库 | 私人儲存庫 |
+| Branch | ブランチ | 브랜치 | 分支 | 分支 |
+| Tag | タグ | 태그 | 标签 | 標籤 |
+| Commit SHA | コミット SHA | 커밋 SHA | 提交 SHA | 提交 SHA |
+| Personal access token (PAT) | 個人アクセストークン（PAT） | 개인용 액세스 토큰(PAT) | 个人访问令牌（PAT） | 個人存取權杖（PAT） |
+| Credential vault | 認証情報保管領域 | 자격 증명 보관소 | 凭据保管库 | 認證保管庫 |
 | Export | エクスポート | 내보내기 | 导出 | 匯出 |
 | Markdown export | Markdown エクスポート | Markdown 내보내기 | Markdown 导出 | Markdown 匯出 |
 | HTML export | HTML エクスポート | HTML 내보내기 | HTML 导出 | HTML 匯出 |

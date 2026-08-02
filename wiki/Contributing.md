@@ -83,7 +83,8 @@ When changing managed media, snapshot, or live behavior, update the relevant fil
 5. Compare the translation with the English source for technical meaning and omissions.
 6. Review grammar, UI-label consistency, heading length, and link targets in context.
 7. Run `node assets/i18n/generate-ui-locales.mjs` only when interface catalogs are in scope, then review generated output before committing.
-8. Run the desktop preparation workflow when interface catalogs change so bundled copies remain synchronized.
+8. Run `node assets/i18n/audit-ui-locales.mjs` and resolve every reported problem.
+9. Run the desktop preparation workflow when interface catalogs change so bundled copies remain synchronized.
 
 Detailed Wiki pages are maintained in English. When no localized page exists, label the English destination instead of creating a broken localized link.
 
@@ -156,11 +157,12 @@ Include the affected version/commit, required preconditions, impact, minimal rep
 | Path | Purpose |
 | :--- | :--- |
 | `index.html` | App shell, toolbar, modals, default content, CDN tags. |
+| `workspace-storage.js` | Browser IndexedDB and desktop vault storage, migration, backup, history, trash, and recovery operations. |
 | `script.js` | Main application logic. |
 | `preview-worker.js` | Worker Markdown rendering path. |
 | `styles.css` | Layout, themes, renderer styles, modals, responsive UI. |
 | `sw.js` | PWA/service-worker cache behavior. |
-| `assets/i18n/` | Interface catalogs and their generator. |
+| `assets/i18n/` | Interface catalogs, generator, and catalog-audit tool. |
 | `functions/api/image/[[id]].js` | Content-addressed managed raster image and GIF API. |
 | `functions/api/media/[[id]].js` | Route alias for content-addressed managed video uploads and delivery. |
 | `functions/api/share/[[id]].js` | Stored Share Snapshot API. |

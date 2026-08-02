@@ -55,7 +55,7 @@ The root `.dockerignore` excludes desktop build output and unrelated local files
 
 ## What the Container Provides
 
-The container serves the static browser shell: `index.html`, `script.js`, `styles.css`, `sw.js`, `manifest.json`, `robots.txt`, `sitemap.xml`, and `assets/`. It provides the Editor, main-thread Preview, local storage, local imports, most exports, and CDN-loaded renderer libraries.
+The container serves the static browser shell: `index.html`, `workspace-storage.js`, `script.js`, `styles.css`, `sw.js`, `manifest.json`, `robots.txt`, `sitemap.xml`, and `assets/`. It provides the Editor, main-thread Preview, local storage, local imports, most exports, and CDN-loaded renderer libraries.
 
 On `localhost`, managed-media and stored Share Snapshot requests use the production `https://markdownviewer.pages.dev` API. Live Share defaults to the Docker origin and fails unless a compatible `/live-room` endpoint is available or `window.MARKDOWN_VIEWER_LIVE_ROOM_URL` is configured in a custom deployment.
 
@@ -81,7 +81,7 @@ If you maintain a custom image, copy both files to `/usr/share/nginx/html/`, reb
 
 The Docker image uses `nginx:alpine`. Production deployments should keep these behaviors:
 
-- Serve `index.html`, `script.js`, `styles.css`, `preview-worker.js`, `sw.js`, `manifest.json`, and `assets/`.
+- Serve `index.html`, `workspace-storage.js`, `script.js`, `styles.css`, `preview-worker.js`, `sw.js`, `manifest.json`, and `assets/`.
 - Serve `sample.md` because the Service Worker includes it in the critical precache.
 - Serve JavaScript files with correct MIME types.
 - Allow Service Worker registration from the app origin.
@@ -98,7 +98,7 @@ The Dockerfile also sets a Content-Security-Policy with the external origins req
 
 Cloudflare Pages deployments use the stricter root `_headers` and `_redirects` files, including CSP, HSTS, clickjacking, permissions, cross-origin, and sensitive-path protections. When self-hosting behind Docker or another reverse proxy, keep the CSP compatible with `index.html`, lazy-loaded renderers, Share Snapshot, and Live Share instead of copying a wildcard policy.
 
-Use long caching carefully. `sw.js`, `index.html`, `script.js`, and `styles.css` are update-sensitive; stale versions can keep old app behavior alive.
+Use long caching carefully. `sw.js`, `index.html`, `workspace-storage.js`, `script.js`, and `styles.css` are update-sensitive; stale versions can keep old app behavior alive.
 
 ## Reverse Proxy Examples
 

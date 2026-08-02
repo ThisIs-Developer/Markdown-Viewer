@@ -69,7 +69,7 @@ Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、�
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="全屏 3D STL 视图" width="90%" />
 </p>
 
-- **导入与导出：** 打开本地文件或公开 GitHub 内容，导出 Markdown、独立 HTML、PNG、浏览器打印/另存为 PDF 或旧版栅格 PDF。
+- **导入与导出：** 除本地文件外，还可导入指定分支、标签或提交 SHA 的公开/私有 GitHub 内容。发现的所有 Markdown 文件都会保存到 Explorer，而不会打开新标签页。支持导出 Markdown、独立 HTML、PNG、浏览器打印/另存为 PDF 或旧版栅格 PDF。
 - **可选分享：** 创建“仅供查看”或“可以编辑”模式的 Share Snapshot（分享快照），或者启动具有主持人、可以编辑和仅供查看权限的临时 Live Share（实时共享）房间。
 
 <p align="center">
@@ -107,7 +107,7 @@ Markdown Viewer 以本地处理为优先，但并非所有功能都能离线运�
 | :--- | :--- |
 | 编辑、本地导入、预览、工作区自动保存和大多数导出 | 设备本地 |
 | Web 库与未缓存的渲染器依赖 | Web/PWA 版本向 CDN 发出请求 |
-| GitHub 导入与表情符号查询 | GitHub API/原始内容主机 |
+| GitHub 导入与表情符号查询 | 公开内容使用 GitHub API/原始内容主机；私有内容和 PAT 仅使用 `api.github.com` |
 | PlantUML、D2、Graphviz、Vega-Lite、WaveDrom 和部分图表预览 | 图表源码可能发送到 PlantUML、Kroki 或 mermaid.ink |
 | 经同意后插入的图片、GIF 和视频 | 通过公开链接访问的 Cloudflare 临时媒体存储（90 天） |
 | 大型 Share Snapshot | Cloudflare KV（90 天） |
@@ -128,11 +128,13 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 
 - Markdown Viewer 不设置文档数量上限；实际上限取决于浏览器配额或桌面文件系统容量。
 - 单个本地 Markdown 文件最大为 10 MB。
-- GitHub 导入器在每个仓库/文件夹结果中最多显示 30 个 Markdown 文件。
+- GitHub 导入器会显示在所选仓库/文件夹中发现的所有 Markdown 文件。
+- 本地 GitHub 凭据保管库最多可保存 50 个命名 PAT。每个令牌名称最长为 60 个字符。
 - 处理前的媒体源文件最大为 25 MiB；存储上限为静态图片 300 KiB、GIF 5 MiB、视频 10 MiB。
 - 存储型 Share Snapshot 最多包含 8,000,000 个字符，并在 90 天后过期。
 - Live Share 最多允许 64 个 WebSocket 参与者，单条实时消息最大为 8 MB。
 - STL 源码最大为 2 MiB，渲染后的几何体最多为 300,000 个顶点。
+- 桌面保管库为每个文档最多保留 20 个最近历史副本。
 - 栅格 PDF/PNG 导出受浏览器内存、Canvas 与 CORS 限制。
 
 ## 重要隐私说明
@@ -141,6 +143,7 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 - 启用隐私模式会暂停当前会话中新文档状态的持久化；现有常规文档和 Secret Workspace 数据不会被删除。
 - **重置工作区**会永久删除文档、文件夹、设置、审阅数据、Secret Workspace 数据、历史记录和回收站。
 - 通过**存储与备份**可以创建或导入保留文件夹结构的 ZIP。导入备份会在确认后完全替换当前工作区。
+- 私有仓库 PAT 存储在本地 AES-GCM 加密保管库中，不包含在工作区备份内。该保管库并非操作系统密钥链。PAT 只会发送到 `api.github.com`；在本地删除 PAT 不会在 GitHub 上将其撤销。
 - Live Share 不会在服务器端持久保存 Markdown/审阅内容，但会将各角色的持有者权限值和创建时间写入 Durable Object 存储；当前未实现应用级过期时间或删除路径。
 - Share Snapshot 创建 API 会返回删除令牌，但当前界面不会显示该令牌，也不提供提前删除操作。
 - 应用代码未实现账号、分析、遥测、广告、跟踪像素或应用专用 Cookie。外部服务和托管提供商仍可能处理常规请求日志。

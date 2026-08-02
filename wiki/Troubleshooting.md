@@ -28,7 +28,7 @@ Open `http://localhost:8080`. Web Workers and Service Workers can be blocked und
 
 - Confirm that JavaScript is enabled.
 - Check the console for CSP, SRI, MIME-type, or network failures.
-- Confirm that `index.html`, `script.js`, `styles.css`, `preview-worker.js`, `sw.js`, `manifest.json`, `sample.md`, and `assets/` are served at the expected paths.
+- Confirm that `index.html`, `workspace-storage.js`, `script.js`, `styles.css`, `preview-worker.js`, `sw.js`, `manifest.json`, `sample.md`, and `assets/` are served at the expected paths.
 - If self-hosting under a sub-path, verify Worker, Service Worker, manifest, asset, and dynamic-library URLs.
 - Hard-refresh once to bypass a stale page shell.
 
@@ -79,8 +79,8 @@ Extension matching is case-insensitive. Rename a plain-text file to `.md` only w
 
 - Use a public `github.com` repository, tree, blob, or `raw.githubusercontent.com` Markdown URL.
 - For a private repository, add either a fine-grained or classic PAT with permission to read the required repository. The app detects both formats automatically. If an organization requires approval or SAML authorization, complete that step in GitHub.
-- Branch, tag, and commit URLs are supported. For branch names containing `/`, paste the complete GitHub tree or blob URL so the importer can resolve the longest matching ref.
-- Select the intended named token before importing. If GitHub rejects it or reports that it cannot access the repository, check the GitHub-branded error toast, then replace the token or update its repository permissions. Tokens persist locally across refreshes and app restarts until you remove them or clear the site's/app's local data.
+- Supported repository, tree, blob, and raw URLs can identify a default branch, explicit branch, tag, or commit SHA. A standard GitHub `/commit/<sha>` page URL is not supported; use a `tree` or `blob` URL containing the commit SHA. For branch names containing `/`, paste the complete GitHub tree or blob URL so the importer can resolve the longest matching ref.
+- Select the intended named token before importing. The local vault stores up to 50 named tokens, and each token name is limited to 60 characters. If GitHub rejects a token or reports that it cannot access the repository, check the GitHub-branded error toast, then replace the token or update its repository permissions. Tokens persist locally across refreshes and app restarts until you remove them or clear the site's/app's local data.
 - Repository and folder results show every Markdown file found.
 - Check GitHub API rate-limit and network responses.
 - Confirm that CSP allows `api.github.com` and `raw.githubusercontent.com`.
