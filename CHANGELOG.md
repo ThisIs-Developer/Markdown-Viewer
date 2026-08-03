@@ -6,7 +6,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 ## v3.10.0
 
 - **Description:** Introduced scalable local document storage, complete workspace backup and recovery, and a rebuilt GitHub importer with secure private-repository access.
-  - **In-App Release Notes:** Added the extensionless, read-only v3.10.0 release note as a branded workspace tab with first-run visibility, close-as-seen version tracking, a sticky section guide, and a Show Release Notes action in About.
+  - **In-App Release Notes:** Added the extensionless, read-only v3.10.0 release note as a branded workspace tab with first-run visibility, close-as-seen version tracking, a sticky section guide, a Show Release Notes action in About, and a canonical Markdown template that scales from one-fix patches to large multi-contributor releases.
   - **Workspace Storage:** Removed the document-count limit, migrated browser workspaces to per-document IndexedDB records with on-demand loading, a bounded memory cache, and paged Explorer rendering, and stored desktop documents as ordinary Markdown files in the fixed `Documents/Markdown Viewer Vault` location.
   - **Backup & Recovery:** Added folder-preserving ZIP backup and restore for web and desktop, optional encrypted Secret Workspace files, exact usage and document counts, safer import and reset confirmations, and clearer browser-data and Private mode behavior.
   - **GitHub Import:** Discovered every Markdown file including truncated repository trees, resolved branches, tags, slash-containing refs, and commits to immutable SHAs, and added up to 50 named fine-grained or classic PAT entries stored in an AES-GCM-encrypted local credential vault.

@@ -67,9 +67,11 @@ Bulk tab closing is batched so large sessions remain responsive, and small-scree
 
 ## Thank you
 
-Thank you to **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** for the design, implementation, testing, documentation, and release work.
+### Contributors
 
-### Pull requests included
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Design, implementation, testing, documentation, and release work.
+
+### Changes included
 
 - [#230 — Unlimited storage, backup, reset, and fixed vault](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/230)
 - [#231 — Preserve the complete #230 commit history](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/231)

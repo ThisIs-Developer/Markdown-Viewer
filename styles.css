@@ -12066,6 +12066,10 @@ html[data-theme="dark"] .mermaid svg {
   color: var(--preview-text-color);
 }
 
+.markdown-body .release-note-section:first-child > ul > li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .release-note-section:last-child {
   padding: clamp(24px, 4vw, 36px);
   margin-bottom: 0;
