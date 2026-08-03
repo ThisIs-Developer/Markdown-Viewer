@@ -11764,7 +11764,7 @@ html[data-theme="dark"] .mermaid svg {
 
 #markdown-preview.release-notes-preview {
   min-height: 100%;
-  padding: clamp(24px, 4vw, 52px);
+  padding: clamp(18px, 2.4vw, 28px) clamp(24px, 4vw, 52px);
   background: var(--preview-bg);
 }
 
@@ -11796,7 +11796,7 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .release-note-intro {
-  padding: clamp(22px, 4vw, 46px) 0 clamp(34px, 6vw, 64px);
+  padding: clamp(4px, 1vw, 10px) 0 clamp(30px, 4vw, 44px);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -11806,66 +11806,62 @@ html[data-theme="dark"] .mermaid svg {
   width: fit-content;
   align-items: center;
   gap: 10px;
-  margin: 0 0 30px;
+  margin: 0 0 18px;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 650;
 }
 
 .release-note-brandline img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 7px;
   object-fit: cover;
 }
 
-.release-note-brandline strong {
+.markdown-body .release-note-brandline > strong {
+  color: var(--preview-text-color);
+  font-weight: 650;
+}
+
+.markdown-body .release-note-brandline code {
   padding: 3px 8px;
   border: 1px solid hsl(var(--release-note-accent-hsl) / 0.28);
   border-radius: 999px;
   color: var(--release-note-accent);
   background: var(--release-note-accent-soft);
+  font-family: inherit;
   font-size: 10px;
+  font-weight: 650;
   letter-spacing: 0.07em;
+  line-height: 1.4;
   text-transform: uppercase;
 }
 
 .markdown-body .release-note-intro h1 {
-  max-width: 860px;
+  max-width: none;
   padding: 0;
-  margin: 0 0 18px;
+  margin: 0 0 12px;
   border: 0;
   color: var(--preview-text-color);
-  font-size: clamp(34px, 5vw, 58px);
+  font-size: clamp(32px, 3.7vw, 44px);
   font-weight: 690;
   letter-spacing: -0.045em;
-  line-height: 1.04;
-  text-wrap: balance;
+  line-height: 1.08;
+  text-wrap: nowrap;
+  white-space: nowrap;
 }
 
-.release-note-release-meta,
-.markdown-body .release-note-release-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 24px;
-}
-
-.release-note-release-meta span {
-  display: inline-flex;
-  min-height: 28px;
-  align-items: center;
-  padding: 4px 9px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+.release-note-release-date,
+.markdown-body .release-note-release-date {
+  margin: 0 0 18px;
   color: var(--text-secondary);
-  background: var(--release-note-surface);
-  font-size: 11px;
+  font-size: 12px;
 }
 
-.release-note-intro > p:not(.release-note-brandline):not(.release-note-release-meta),
-.markdown-body .release-note-intro > p:not(.release-note-brandline):not(.release-note-release-meta) {
+.release-note-intro > p:not(.release-note-brandline):not(.release-note-release-date):not(.release-note-actions),
+.markdown-body .release-note-intro > p:not(.release-note-brandline):not(.release-note-release-date):not(.release-note-actions) {
   max-width: 75ch;
   margin: 0 0 14px;
   color: var(--text-secondary);
@@ -11874,9 +11870,10 @@ html[data-theme="dark"] .mermaid svg {
 
 .release-note-actions {
   display: flex;
+  max-width: none;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 26px;
+  margin: 24px 0 0;
 }
 
 .markdown-body .release-note-actions a {
@@ -11884,6 +11881,7 @@ html[data-theme="dark"] .mermaid svg {
   min-height: 44px;
   align-items: center;
   justify-content: center;
+  gap: 7px;
   padding: 8px 14px;
   border: 1px solid var(--border-color);
   border-radius: 7px;
@@ -11893,6 +11891,11 @@ html[data-theme="dark"] .mermaid svg {
   font-weight: 650;
   text-decoration: none;
   transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.markdown-body .release-note-actions a i {
+  flex: 0 0 auto;
+  font-size: 15px;
 }
 
 .markdown-body .release-note-actions a:first-child {
@@ -12063,29 +12066,6 @@ html[data-theme="dark"] .mermaid svg {
   color: var(--preview-text-color);
 }
 
-.release-note-section table {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  margin: 22px 0;
-  overflow-x: auto;
-  border-spacing: 0;
-  scrollbar-width: thin;
-}
-
-.release-note-section table th,
-.release-note-section table td {
-  min-width: 118px;
-  padding: 10px 12px;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.release-note-section table th {
-  color: var(--preview-text-color);
-  font-weight: 650;
-}
-
 .release-note-section:last-child {
   padding: clamp(24px, 4vw, 36px);
   margin-bottom: 0;
@@ -12119,6 +12099,13 @@ html[data-theme="dark"] .mermaid svg {
   border-color: var(--release-note-accent);
   color: var(--release-note-accent);
   background: var(--button-hover);
+}
+
+@media (max-width: 900px) {
+  .markdown-body .release-note-intro h1 {
+    text-wrap: balance;
+    white-space: normal;
+  }
 }
 
 @media (max-width: 760px) {
@@ -12192,7 +12179,7 @@ html[data-theme="dark"] .mermaid svg {
 
 @media (max-width: 520px) {
   .markdown-body .release-note-intro h1 {
-    font-size: clamp(31px, 10vw, 42px);
+    font-size: clamp(30px, 9vw, 40px);
   }
 
   .release-note-brandline {
@@ -12240,8 +12227,7 @@ html[data-theme="dark"] .mermaid svg {
     display: block;
   }
 
-  .release-note-section,
-  .release-note-section table {
+  .release-note-section {
     break-inside: avoid;
   }
 }

@@ -527,6 +527,33 @@ document.addEventListener("DOMContentLoaded", async function () {
         intro.appendChild(node);
       });
 
+      const introParagraphs = Array.from(intro.children).filter(function(node) {
+        return node.tagName === 'P';
+      });
+      const brandLine = introParagraphs.find(function(paragraph) {
+        return Boolean(paragraph.querySelector('img[src$="assets/icon.jpg"]'));
+      });
+      if (brandLine) brandLine.classList.add('release-note-brandline');
+
+      const releaseDate = introParagraphs.find(function(paragraph) {
+        return /^Released\s/i.test(paragraph.textContent.trim());
+      });
+      if (releaseDate) releaseDate.classList.add('release-note-release-date');
+
+      const releaseLink = intro.querySelector('a[href*="/releases/tag/"]');
+      const changelogLink = intro.querySelector('a[href*="/CHANGELOG.md"]');
+      if (releaseLink && changelogLink && releaseLink.parentElement === changelogLink.parentElement) {
+        releaseLink.parentElement.classList.add('release-note-actions');
+        const releaseIcon = document.createElement('i');
+        releaseIcon.className = 'bi bi-github';
+        releaseIcon.setAttribute('aria-hidden', 'true');
+        releaseLink.prepend(releaseIcon);
+        const changelogIcon = document.createElement('i');
+        changelogIcon.className = 'lucide lucide-history';
+        changelogIcon.setAttribute('aria-hidden', 'true');
+        changelogLink.prepend(changelogIcon);
+      }
+
       const layout = document.createElement('div');
       layout.className = 'release-note-layout';
       const navigation = document.createElement('nav');
