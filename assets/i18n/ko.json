@@ -1016,7 +1016,6 @@
   "Paste failed:": "붙여넣기 실패:",
   "Selection copied to clipboard.": "선택 항목이 클립보드에 복사되었습니다.",
   "Selection cut to clipboard.": "선택 항목을 클립보드로 잘라냈습니다.",
-  "1 file": "파일 1개",
   "Checking…": "확인 중…",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "삭제된 문서는 복구 가능한 휴지통으로 이동됩니다. 데스크탑 편집은 Vault 내부에 최근 기록을 유지합니다.",
   "Document unavailable": "문서를 사용할 수 없습니다.",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "출시 노트 보기",
   "The release notes could not be opened.": "릴리스 노트를 열 수 없습니다.",
   "Release notes are read only.": "릴리스 노트는 읽기 전용입니다.",
-  "Release notes opened.": "릴리스 노트가 열렸습니다."
+  "Release notes opened.": "릴리스 노트가 열렸습니다.",
+  "Back to the top of the release notes": "릴리스 노트 위로 돌아가기",
+  "Back to top": "위로 가기",
+  "Close Release Notes: 3.10.0": "닫기 릴리스 노트: 3.10.0",
+  "File options for Release Notes: 3.10.0": "릴리스 노트의 파일 옵션: 3.10.0",
+  "In this update": "이번 업데이트에서는",
+  "release notes": "릴리스 노트",
+  "Release notes are available in the tab list.": "릴리스 노트는 탭 목록에서 확인할 수 있습니다.",
+  "Release Notes: 3.10.0": "출시 노트: 3.10.0",
+  "Skip update navigation": "업데이트 탐색 건너뛰기",
+  "1 file": "파일 1개"
 }

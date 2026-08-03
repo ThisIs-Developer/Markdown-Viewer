@@ -1016,7 +1016,6 @@
   "Paste failed:": "Не вдалося вставити:",
   "Selection copied to clipboard.": "Виділення скопійовано в буфер обміну.",
   "Selection cut to clipboard.": "Виділення вирізано в буфер обміну.",
-  "1 file": "1 файл",
   "Checking…": "Перевірка…",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "Видалені документи переміщуються до кошика для відновлення. Редагування на робочому столі зберігає нещодавню історію в сховищі.",
   "Document unavailable": "Документ недоступний",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "Показати примітки до випуску",
   "The release notes could not be opened.": "Не вдалося відкрити примітки до випуску.",
   "Release notes are read only.": "Примітки до випуску доступні лише для читання.",
-  "Release notes opened.": "Відкрито примітки до випуску."
+  "Release notes opened.": "Відкрито примітки до випуску.",
+  "Back to the top of the release notes": "Повернутися до початку приміток до випуску",
+  "Back to top": "На початок",
+  "Close Release Notes: 3.10.0": "Закрити Примітки до випуску: 3.10.0",
+  "File options for Release Notes: 3.10.0": "Параметри файлу для приміток до випуску: 3.10.0",
+  "In this update": "У цьому оновленні",
+  "release notes": ".",
+  "Release notes are available in the tab list.": "Примітки до випуску доступні у списку вкладок.",
+  "Release Notes: 3.10.0": "Примітки до випуску: 3.10.0",
+  "Skip update navigation": "Пропустити оновлення навігації",
+  "1 file": "1 файл"
 }

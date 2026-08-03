@@ -1016,7 +1016,6 @@
   "Paste failed:": "Yapıştırma başarısız oldu:",
   "Selection copied to clipboard.": "Seçim panoya kopyalandı.",
   "Selection cut to clipboard.": "Seçim panoya kesildi.",
-  "1 file": "1 dosya",
   "Checking…": "Kontrol ediliyor…",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "Silinen belgeler kurtarılabilir çöp kutusuna taşınır. Masaüstü düzenlemeleri yakın geçmişi kasanın içinde tutar.",
   "Document unavailable": "Belge kullanılamıyor",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "Sürüm Notlarını Göster",
   "The release notes could not be opened.": "Sürüm notları açılamadı.",
   "Release notes are read only.": "Sürüm notları salt okunurdur.",
-  "Release notes opened.": "Sürüm notları açıldı."
+  "Release notes opened.": "Sürüm notları açıldı.",
+  "Back to the top of the release notes": "Sürüm notlarının başına dön",
+  "Back to top": "Başa dön",
+  "Close Release Notes: 3.10.0": "Sürüm Notlarını Kapat: 3.10.0",
+  "File options for Release Notes: 3.10.0": "Sürüm Notları için dosya seçenekleri: 3.10.0",
+  "In this update": "Bu güncellemede",
+  "release notes": "sürüm notları",
+  "Release notes are available in the tab list.": "Sürüm notları sekme listesinde mevcuttur.",
+  "Release Notes: 3.10.0": "Sürüm Notları: 3.10.0",
+  "Skip update navigation": "Güncelleme gezinmesini atla",
+  "1 file": "1 dosya"
 }

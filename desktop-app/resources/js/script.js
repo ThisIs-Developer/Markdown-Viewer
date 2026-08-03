@@ -1,10 +1,11 @@
 document.addEventListener("DOMContentLoaded", async function () {
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
-  const APP_VERSION = '3.11.0';
+  const APP_VERSION = '3.10.0';
   const RELEASE_NOTES_TAB_KIND = 'release-notes';
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
   const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
+  const RELEASE_NOTES_PENDING_MODE_KEY = 'markdownViewerPendingReleaseNotesMode';
   const RELEASE_NOTES_SEEN_VERSION_KEY = 'markdownViewerReleaseNotesSeenVersion';
   const DOCUMENT_STORAGE_KEYS = new Set([
     'markdownViewerGlobalState',
@@ -53,6 +54,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       'markdownViewerSecretWorkspace',
       RELEASE_NOTES_LAST_VERSION_KEY,
       RELEASE_NOTES_PENDING_VERSION_KEY,
+      RELEASE_NOTES_PENDING_MODE_KEY,
       RELEASE_NOTES_SEEN_VERSION_KEY,
       'find-replace-docked',
       'app-lang'
@@ -460,6 +462,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     saveStorageItem(RELEASE_NOTES_SEEN_VERSION_KEY, version);
     if (readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY) === version) {
       removeStorageItem(RELEASE_NOTES_PENDING_VERSION_KEY);
+      removeStorageItem(RELEASE_NOTES_PENDING_MODE_KEY);
     }
   }
 
@@ -467,18 +470,171 @@ document.addEventListener("DOMContentLoaded", async function () {
     const previousVersion = readReleaseNotesStorage(RELEASE_NOTES_LAST_VERSION_KEY);
     const seenVersion = readReleaseNotesStorage(RELEASE_NOTES_SEEN_VERSION_KEY);
     let pendingVersion = readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY);
+    let pendingMode = readReleaseNotesStorage(RELEASE_NOTES_PENDING_MODE_KEY);
+    const firstRun = Boolean(!previousVersion && !hadExistingWorkspace);
     const versionChanged = Boolean(previousVersion && previousVersion !== APP_VERSION);
     const featureUpgrade = Boolean(!previousVersion && hadExistingWorkspace);
 
-    if ((versionChanged || featureUpgrade) && seenVersion !== APP_VERSION) {
+    if ((firstRun || versionChanged || featureUpgrade) && seenVersion !== APP_VERSION) {
       pendingVersion = APP_VERSION;
+      pendingMode = firstRun ? 'background' : 'foreground';
       saveStorageItem(RELEASE_NOTES_PENDING_VERSION_KEY, APP_VERSION);
+      saveStorageItem(RELEASE_NOTES_PENDING_MODE_KEY, pendingMode);
     }
     saveStorageItem(RELEASE_NOTES_LAST_VERSION_KEY, APP_VERSION);
-    return pendingVersion === APP_VERSION && seenVersion !== APP_VERSION;
+    return {
+      shouldOpen: pendingVersion === APP_VERSION && seenVersion !== APP_VERSION,
+      activate: pendingMode !== 'background'
+    };
   }
 
   let releaseNotesContentPromise = null;
+  let releaseNotesPreviewCleanup = null;
+  let releaseNotesScrollFrame = null;
+
+  function clearReleaseNotesPreviewEnhancements() {
+    if (releaseNotesPreviewCleanup) {
+      releaseNotesPreviewCleanup();
+      releaseNotesPreviewCleanup = null;
+    }
+    if (releaseNotesScrollFrame !== null) {
+      cancelAnimationFrame(releaseNotesScrollFrame);
+      releaseNotesScrollFrame = null;
+    }
+    if (previewPane) previewPane.classList.remove('release-notes-surface');
+    if (markdownPreview) markdownPreview.classList.remove('release-notes-preview');
+  }
+
+  function enhanceReleaseNotesPreview() {
+    clearReleaseNotesPreviewEnhancements();
+    if (!isReleaseNotesActive() || !markdownPreview || !previewPane) return;
+
+    let shell = markdownPreview.querySelector('.release-note-shell');
+    if (!shell) {
+      const sourceNodes = Array.from(markdownPreview.childNodes);
+      const firstSectionIndex = sourceNodes.findIndex(function(node) {
+        return node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H2';
+      });
+      if (firstSectionIndex < 0) return;
+
+      shell = document.createElement('article');
+      shell.className = 'release-note-shell';
+      shell.setAttribute('aria-label', 'Markdown Viewer ' + APP_VERSION + ' release notes');
+
+      const intro = document.createElement('header');
+      intro.className = 'release-note-intro';
+      sourceNodes.slice(0, firstSectionIndex).forEach(function(node) {
+        intro.appendChild(node);
+      });
+
+      const layout = document.createElement('div');
+      layout.className = 'release-note-layout';
+      const navigation = document.createElement('nav');
+      navigation.className = 'release-note-navigation';
+      navigation.setAttribute('aria-label', 'In this update');
+      const navigationLabel = document.createElement('p');
+      navigationLabel.className = 'release-note-navigation-label';
+      navigationLabel.textContent = 'In this update';
+      navigation.appendChild(navigationLabel);
+
+      const content = document.createElement('div');
+      content.className = 'release-note-content';
+      content.id = 'release-note-content';
+      let currentSection = null;
+      sourceNodes.slice(firstSectionIndex).forEach(function(node) {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H2') {
+          currentSection = document.createElement('section');
+          currentSection.className = 'release-note-section';
+          currentSection.id = node.id || ('release-note-section-' + content.children.length);
+          node.id = currentSection.id + '-heading';
+          currentSection.setAttribute('aria-labelledby', node.id);
+          currentSection.appendChild(node);
+          content.appendChild(currentSection);
+
+          const link = document.createElement('a');
+          link.href = '#' + currentSection.id;
+          link.textContent = node.textContent || 'Section';
+          navigation.appendChild(link);
+          return;
+        }
+        if (currentSection) currentSection.appendChild(node);
+      });
+
+      const skipLink = document.createElement('a');
+      skipLink.className = 'release-note-skip-link';
+      skipLink.href = '#release-note-content';
+      skipLink.textContent = 'Skip update navigation';
+      layout.appendChild(skipLink);
+      layout.appendChild(navigation);
+      layout.appendChild(content);
+      shell.appendChild(intro);
+      shell.appendChild(layout);
+
+      const topLink = document.createElement('a');
+      topLink.className = 'release-note-back-to-top';
+      const topTarget = intro.querySelector('h1');
+      if (topTarget && !topTarget.id) topTarget.id = 'release-note-top';
+      topLink.href = '#' + (topTarget && topTarget.id ? topTarget.id : 'release-note-content');
+      topLink.setAttribute('aria-label', 'Back to the top of the release notes');
+      topLink.title = 'Back to top';
+      topLink.innerHTML = '<i class="lucide lucide-chevron-up" aria-hidden="true"></i>';
+      shell.appendChild(topLink);
+      markdownPreview.replaceChildren(shell);
+    }
+
+    previewPane.classList.add('release-notes-surface');
+    markdownPreview.classList.add('release-notes-preview');
+    const links = Array.from(shell.querySelectorAll('.release-note-navigation a[href^="#"]'));
+    const sections = links.map(function(link) {
+      const id = decodeURIComponent((link.getAttribute('href') || '').slice(1));
+      return { link: link, section: id ? shell.querySelector('#' + CSS.escape(id)) : null };
+    }).filter(function(item) {
+      return Boolean(item.section);
+    });
+
+    function updateActiveReleaseNotesSection() {
+      releaseNotesScrollFrame = null;
+      if (!isReleaseNotesActive() || !document.body.contains(shell) || sections.length === 0) return;
+      const paneTop = previewPane.getBoundingClientRect().top;
+      const activationLine = paneTop + Math.min(112, previewPane.clientHeight * 0.24);
+      let current = sections[0];
+      sections.forEach(function(item) {
+        if (item.section.getBoundingClientRect().top <= activationLine) current = item;
+      });
+      if (previewPane.scrollTop + previewPane.clientHeight >= previewPane.scrollHeight - 8) {
+        current = sections[sections.length - 1];
+      }
+      sections.forEach(function(item) {
+        const active = item === current;
+        item.link.classList.toggle('is-active', active);
+        if (active) item.link.setAttribute('aria-current', 'location');
+        else item.link.removeAttribute('aria-current');
+      });
+    }
+
+    function scheduleReleaseNotesSectionUpdate() {
+      if (releaseNotesScrollFrame !== null) return;
+      releaseNotesScrollFrame = requestAnimationFrame(updateActiveReleaseNotesSection);
+    }
+
+    const backToTopLink = shell.querySelector('.release-note-back-to-top');
+    function handleReleaseNotesBackToTop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      previewPane.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+
+    previewPane.addEventListener('scroll', scheduleReleaseNotesSectionUpdate, { passive: true });
+    window.addEventListener('resize', scheduleReleaseNotesSectionUpdate);
+    if (backToTopLink) backToTopLink.addEventListener('click', handleReleaseNotesBackToTop);
+    releaseNotesPreviewCleanup = function() {
+      previewPane.removeEventListener('scroll', scheduleReleaseNotesSectionUpdate);
+      window.removeEventListener('resize', scheduleReleaseNotesSectionUpdate);
+      if (backToTopLink) backToTopLink.removeEventListener('click', handleReleaseNotesBackToTop);
+    };
+    scheduleReleaseNotesSectionUpdate();
+  }
 
   function loadCurrentReleaseNotes() {
     if (!releaseNotesContentPromise) {
@@ -495,12 +651,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function openReleaseNotes(options) {
     const settings = options || {};
+    const shouldActivate = settings.activate !== false;
     const existing = tabs.find(function(tab) {
       return isReleaseNotesTab(tab) && tab.releaseVersion === APP_VERSION;
     });
     if (existing) {
-      await switchTab(existing.id);
-      updateLiveEditorAccess();
+      if (shouldActivate) {
+        await switchTab(existing.id);
+        updateLiveEditorAccess();
+      } else {
+        renderTabBar(tabs, activeTabId);
+      }
       return existing;
     }
 
@@ -510,10 +671,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.temporary = true;
     tab.releaseVersion = APP_VERSION;
     tabs.push(tab);
-    await switchTab(tab.id);
-    updateLiveEditorAccess();
+    if (shouldActivate) {
+      await switchTab(tab.id);
+      updateLiveEditorAccess();
+    } else {
+      renderTabBar(tabs, activeTabId);
+    }
     if (!settings.silent) {
-      announceToScreenReader('Release notes opened.');
+      announceToScreenReader(shouldActivate ? 'Release notes opened.' : 'Release notes are available in the tab list.');
     }
     return tab;
   }
@@ -3949,7 +4114,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentCountForLimit() {
-    return tabs.length + (isSecretWorkspaceUnlocked() ? 0 : secretWorkspaceDocumentCount);
+    return tabs.filter(function(tab) { return !isReleaseNotesTab(tab); }).length +
+      (isSecretWorkspaceUnlocked() ? 0 : secretWorkspaceDocumentCount);
   }
 
   function getWorkspaceById(workspaceId) {
@@ -5664,6 +5830,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     let renderedCount = filter === 'all' ? renderWorkspaceTree(tree) : renderFlatDocumentView(tree, filter);
     documentSidebarRenderBudget = null;
     let visibleDocumentCount = tabs.filter(function(tab) {
+      if (isReleaseNotesTab(tab)) return false;
       if (filter !== 'all' && isTemporaryDocument(tab)) return false;
       if (filter === 'favorites' && !tab.favorite) return false;
       return documentMatchesSidebarSearch(tab);
@@ -10901,6 +11068,8 @@ ${selector} .arrowheadPath {
       processEmojis(root);
       enhancePreviewCodeBlocks(root);
     });
+
+    enhanceReleaseNotesPreview();
 
     queryPreviewRoots(roots, 'input[type="checkbox"]').forEach(function(input) {
       if (!input.hasAttribute('aria-label')) {
@@ -18814,9 +18983,7 @@ ${selector} .arrowheadPath {
 
   const hadExistingWorkspace = await initTabs();
   initReviewMode();
-  if (queueCurrentReleaseNotes(hadExistingWorkspace)) {
-    await openReleaseNotes();
-  }
+  const releaseNotesLaunch = queueCurrentReleaseNotes(hadExistingWorkspace);
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();
   updateMobileStats();
   updateFindHighlights();
@@ -26480,6 +26647,13 @@ ${selector} .arrowheadPath {
       navigator.serviceWorker.register('sw.js').catch(function(err) {
         console.log('ServiceWorker registration failed: ', err);
       });
+    });
+  }
+
+  // Wait until all editor and collaboration dependencies exist before adding the update tab.
+  if (releaseNotesLaunch.shouldOpen) {
+    await openReleaseNotes({
+      activate: releaseNotesLaunch.activate
     });
   }
 });

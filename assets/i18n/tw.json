@@ -1016,7 +1016,6 @@
   "Paste failed:": "貼上失敗：",
   "Selection copied to clipboard.": "所選內容已複製到剪貼簿。",
   "Selection cut to clipboard.": "所選內容剪下到剪貼簿。",
-  "1 file": "1 份文件",
   "Checking…": "正在檢查...",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "已刪除的文件將移至可回收垃圾箱。桌面編輯將最近的歷史記錄保留在保管庫內。",
   "Document unavailable": "文件不可用",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "顯示發行說明",
   "The release notes could not be opened.": "無法開啟發行說明。",
   "Release notes are read only.": "發行說明是唯讀的。",
-  "Release notes opened.": "發行說明已開啟。"
+  "Release notes opened.": "發行說明已開啟。",
+  "Back to the top of the release notes": "返回發行說明頂部",
+  "Back to top": "回頂部",
+  "Close Release Notes: 3.10.0": "關閉發行說明：3.10.0",
+  "File options for Release Notes: 3.10.0": "發行說明的檔案選項：3.10.0",
+  "In this update": "在本次更新中",
+  "release notes": "發行說明",
+  "Release notes are available in the tab list.": "發行說明可在選項卡清單中找到。",
+  "Release Notes: 3.10.0": "發行說明：3.10.0",
+  "Skip update navigation": "跳過更新導航",
+  "1 file": "1 份文件"
 }

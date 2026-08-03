@@ -1016,7 +1016,6 @@
   "Paste failed:": "Wklejanie nie powiodło się:",
   "Selection copied to clipboard.": "Zaznaczenie skopiowane do schowka.",
   "Selection cut to clipboard.": "Zaznaczenie wycięte do schowka.",
-  "1 file": "1 plik",
   "Checking…": "Sprawdzam…",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "Usunięte dokumenty są przenoszone do kosza, który można odzyskać. Zmiany na pulpicie przechowują najnowszą historię w skarbcu.",
   "Document unavailable": "Dokument niedostępny",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "Pokaż informacje o wersji",
   "The release notes could not be opened.": "Nie można otworzyć informacji o wersji.",
   "Release notes are read only.": "Informacje o wersji są tylko do odczytu.",
-  "Release notes opened.": "Otwarto informacje o wersji."
+  "Release notes opened.": "Otwarto informacje o wersji.",
+  "Back to the top of the release notes": "Powrót na początek informacji o wydaniu",
+  "Back to top": "Powrót do góry",
+  "Close Release Notes: 3.10.0": "Zamknij Informacje o wydaniu: 3.10.0",
+  "File options for Release Notes: 3.10.0": "Opcje plików dla informacji o wydaniu: 3.10.0",
+  "In this update": "W tej aktualizacji",
+  "release notes": "informacje o wydaniu",
+  "Release notes are available in the tab list.": "Informacje o wydaniu są dostępne na liście zakładek.",
+  "Release Notes: 3.10.0": "Informacje o wydaniu: 3.10.0",
+  "Skip update navigation": "Pomiń nawigację po aktualizacji",
+  "1 file": "1 plik"
 }

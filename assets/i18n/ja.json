@@ -1016,7 +1016,6 @@
   "Paste failed:": "貼り付けに失敗しました:",
   "Selection copied to clipboard.": "選択範囲がクリップボードにコピーされました。",
   "Selection cut to clipboard.": "選択範囲がクリップボードに切り取られました。",
-  "1 file": "1ファイル",
   "Checking…": "確認中…",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "削除されたドキュメントは回復可能なゴミ箱に移動されます。デスクトップ編集では、最近の履歴が Vault 内に保存されます。",
   "Document unavailable": "ドキュメントが利用できません",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "リリースノートを表示",
   "The release notes could not be opened.": "リリースノートを開けませんでした。",
   "Release notes are read only.": "リリースノートは読み取り専用です。",
-  "Release notes opened.": "リリースノートを公開しました。"
+  "Release notes opened.": "リリースノートを公開しました。",
+  "Back to the top of the release notes": "リリースノートの先頭に戻る",
+  "Back to top": "トップに戻る",
+  "Close Release Notes: 3.10.0": "リリースノートを閉じる: 3.10.0",
+  "File options for Release Notes: 3.10.0": "リリースノートのファイルオプション: 3.10.0",
+  "In this update": "今回のアップデートでは",
+  "release notes": "リリースノート",
+  "Release notes are available in the tab list.": "リリースノートはタブ一覧からご覧いただけます。",
+  "Release Notes: 3.10.0": "リリースノート: 3.10.0",
+  "Skip update navigation": "アップデートナビゲーションをスキップ",
+  "1 file": "1ファイル"
 }

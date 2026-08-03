@@ -1016,7 +1016,6 @@
   "Paste failed:": "Не удалось вставить:",
   "Selection copied to clipboard.": "Выделение скопировано в буфер обмена.",
   "Selection cut to clipboard.": "Выделенный фрагмент вырезан в буфер обмена.",
-  "1 file": "1 файл",
   "Checking…": "Проверка…",
   "Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.": "Удаленные документы перемещаются в восстанавливаемую корзину. Изменения на рабочем столе сохраняют недавнюю историю в хранилище.",
   "Document unavailable": "Документ недоступен",
@@ -1159,5 +1158,15 @@
   "Show Release Notes": "Показать примечания к выпуску",
   "The release notes could not be opened.": "Не удалось открыть примечания к выпуску.",
   "Release notes are read only.": "Примечания к выпуску доступны только для чтения.",
-  "Release notes opened.": "Открыты примечания к выпуску."
+  "Release notes opened.": "Открыты примечания к выпуску.",
+  "Back to the top of the release notes": "Вернуться к началу примечаний к выпуску",
+  "Back to top": "Вернуться к началу",
+  "Close Release Notes: 3.10.0": "Закрыть Примечания к выпуску: 3.10.0",
+  "File options for Release Notes: 3.10.0": "Параметры файла для примечаний к выпуску: 3.10.0",
+  "In this update": "В этом обновлении",
+  "release notes": "примечания к выпуску",
+  "Release notes are available in the tab list.": "Примечания к выпуску доступны в списке вкладок.",
+  "Release Notes: 3.10.0": "Примечания к выпуску: 3.10.0",
+  "Skip update navigation": "Пропустить навигацию по обновлению",
+  "1 file": "1 файл"
 }
