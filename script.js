@@ -19524,6 +19524,7 @@ ${selector} .arrowheadPath {
 
   exportMd.addEventListener("click", function () {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     if (blockShareSnapshotSourceAccess()) return;
     if (typeof Neutralino !== 'undefined') {
       nativeSaveMarkdown();
@@ -19542,6 +19543,7 @@ ${selector} .arrowheadPath {
 
   exportHtml.addEventListener("click", function () {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     try {
       const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
       const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
@@ -20904,6 +20906,7 @@ ${selector} .arrowheadPath {
   exportPdf.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     openAppModal(pdfExportModal);
   });
 
@@ -21256,6 +21259,7 @@ ${selector} .arrowheadPath {
   exportPng.addEventListener("click", async function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     logPdfExportDebug("PNG export button clicked!");
     if (activePdfExport) {
       logPdfExportDebug("Export already active, ignoring click");
@@ -21755,6 +21759,7 @@ ${selector} .arrowheadPath {
 
   function openShareModal() {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     if (blockTemporarySnapshotShare()) return;
     if (blockLiveDocumentShareSnapshot()) return;
     // PERF-002: Lazy-load pako on first share
@@ -22129,6 +22134,79 @@ ${selector} .arrowheadPath {
     setSelectedLiveAccessMode(mode);
   }
 
+  function updateReleaseNotesActionAvailability(releaseNotesActive) {
+    const actions = [
+      exportDropdown,
+      exportMd,
+      exportHtml,
+      exportPdf,
+      exportPng,
+      shareButton,
+      liveShareButton,
+      mobileExportToggle,
+      mobileExportMd,
+      mobileExportHtml,
+      mobileExportPdf,
+      mobileExportPng,
+      mobileShareButton,
+      mobileLiveShareButton
+    ];
+
+    actions.forEach(function(action) {
+      if (!action) return;
+      if (releaseNotesActive) {
+        if (action.dataset.releaseNotesDisabled !== 'true') {
+          action.dataset.releaseNotesWasDisabled = action.disabled ? 'true' : 'false';
+          if (action.tagName === 'A') {
+            action.dataset.releaseNotesOriginalTabindex = action.hasAttribute('tabindex')
+              ? action.getAttribute('tabindex')
+              : '__missing__';
+          }
+        }
+        action.dataset.releaseNotesDisabled = 'true';
+        if ('disabled' in action) action.disabled = true;
+        action.classList.add('disabled');
+        action.setAttribute('aria-disabled', 'true');
+        if (action.tagName === 'A') action.setAttribute('tabindex', '-1');
+        return;
+      }
+
+      if (action.dataset.releaseNotesDisabled !== 'true') return;
+      const wasDisabled = action.dataset.releaseNotesWasDisabled === 'true';
+      const hasAnotherDisabledState = Object.keys(action.dataset).some(function(key) {
+        return key !== 'releaseNotesDisabled' &&
+          key !== 'releaseNotesWasDisabled' &&
+          /Disabled$/.test(key) &&
+          action.dataset[key] === 'true';
+      });
+      const remainsDisabled = wasDisabled || hasAnotherDisabledState;
+      delete action.dataset.releaseNotesDisabled;
+      delete action.dataset.releaseNotesWasDisabled;
+      if ('disabled' in action) action.disabled = remainsDisabled;
+      action.classList.toggle('disabled', remainsDisabled);
+      action.setAttribute('aria-disabled', remainsDisabled ? 'true' : 'false');
+      if (action.tagName === 'A') {
+        const originalTabindex = action.dataset.releaseNotesOriginalTabindex;
+        delete action.dataset.releaseNotesOriginalTabindex;
+        if (originalTabindex && originalTabindex !== '__missing__') {
+          action.setAttribute('tabindex', originalTabindex);
+        } else {
+          action.removeAttribute('tabindex');
+        }
+      }
+    });
+
+    if (!releaseNotesActive) return;
+    if (exportDropdown) {
+      exportDropdown.setAttribute('aria-expanded', 'false');
+      const exportMenu = exportDropdown.parentElement && exportDropdown.parentElement.querySelector('.dropdown-menu');
+      if (exportMenu) exportMenu.classList.remove('show');
+    }
+    const mobileExportPanel = document.getElementById('mobile-menu-export-panel');
+    if (mobileExportToggle) mobileExportToggle.setAttribute('aria-expanded', 'false');
+    if (mobileExportPanel) mobileExportPanel.hidden = true;
+  }
+
   function updateLiveEditorAccess() {
     const snapshotViewOnly = isShareSnapshotViewOnlyActive();
     const releaseNotesActive = isReleaseNotesActive();
@@ -22274,6 +22352,7 @@ ${selector} .arrowheadPath {
       }
     }
     updateDocumentToolbarAvailability(hasActiveOpenDocument());
+    updateReleaseNotesActionAvailability(releaseNotesActive);
   }
 
   function getLiveRoomSocketUrl(roomId, secret, auth) {
@@ -23767,6 +23846,7 @@ ${selector} .arrowheadPath {
 
   function openLiveShareModal() {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     if (!liveShareModal) return;
     if (blockTemporarySnapshotLiveShare()) return;
     if (liveShareDisplayName && !liveShareDisplayName.value) {

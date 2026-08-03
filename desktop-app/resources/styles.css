@@ -2390,6 +2390,13 @@ body.document-sidebar-collapsed .document-sidebar {
   outline-offset: -2px;
 }
 
+.app-menu-item.disabled,
+.app-menu-item[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .app-menu-item > i:first-child {
   color: currentColor;
   font-size: var(--ui-icon-size-md);
@@ -11806,7 +11813,7 @@ html[data-theme="dark"] .mermaid svg {
   width: fit-content;
   align-items: center;
   gap: 10px;
-  margin: 0 0 18px;
+  margin: 8px 0 18px;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 650;
