@@ -90,7 +90,7 @@ Detailed Wiki pages are maintained in English. When no localized page exists, la
 
 ## Release Notes Format
 
-Use [`RELEASE_NOTES_TEMPLATE.md`](../RELEASE_NOTES_TEMPLATE.md) as the canonical source for every release. Copy it to the extensionless `RELEASE_NOTES` file, replace every `{{PLACEHOLDER}}`, and delete unused optional sections. Keep the source as standard Markdown; the application adds the branded layout, action icons, section navigation, and active-section state after rendering.
+Use the single extensionless [`RELEASE_NOTES`](../RELEASE_NOTES) file as both the current release note and the canonical example. Update it in place for each version; do not add a duplicate template or a versioned copy. Keep its source entirely in Markdown. The application adds the branded layout, action icons, section navigation, and active-section state after Markdown rendering.
 
 Every release note must contain these parts in this order:
 
@@ -109,11 +109,13 @@ Scale the same format to the release size:
 
 Authoring rules:
 
+- Use the Markdown syntax supported by the editor: headings, paragraphs, emphasis, inline or fenced code, links, images, blockquotes, GitHub-style alerts, ordered or unordered lists, task lists, tables, definition lists, footnotes, and horizontal rules. Use a construct only when it helps explain the release.
+- Do not embed HTML elements, inline styles, `<style>` blocks, or scripts in `RELEASE_NOTES`. Presentation belongs to the scoped release-note renderer and stylesheet.
 - Describe user impact instead of copying commit subjects.
 - Do not show commit, PR, issue, file, or line counts in the introduction.
 - Do not add empty headings. Delete any optional section that has no useful content.
 - Keep **Highlights** to five bullets or fewer. Combine related changes instead of creating a card for every commit.
-- Use `##` for navigation topics and `###` only for supporting content inside a topic.
+- Use `##` for sidebar topics and `###` only for supporting content inside a topic. The sidebar is generated automatically from the `##` headings.
 - Use alerts only for migration steps, compatibility notes, data-loss risks, or other actions the user must notice.
 - Keep references as Markdown bullets, not tables. For a very large release, list the most important references and rely on the release/changelog link for the complete history.
 - With one contributor, use one bullet. With multiple contributors, use one bullet per person in display-name order and state each contribution briefly.
@@ -125,7 +127,7 @@ Before publishing a release:
 
 1. Verify the version and date in `RELEASE_NOTES`, `CHANGELOG.md`, `script.js`, `sw.js`, and the desktop package/configuration files.
 2. Verify every contributor and PR, issue, or commit link against GitHub.
-3. Search for unreplaced `{{PLACEHOLDER}}` values and remove all unused template content.
+3. Confirm that `RELEASE_NOTES` contains no raw HTML and remove any headings or Markdown constructs that are not useful for the current version.
 4. Run `node assets/i18n/generate-ui-locales.mjs` and `node assets/i18n/audit-ui-locales.mjs` when visible labels or the version title change.
 5. Run `node desktop-app/prepare.js`, `npm run build`, and the focused release-note lifecycle/responsive tests.
 
@@ -203,8 +205,7 @@ Include the affected version/commit, required preconditions, impact, minimal rep
 | `preview-worker.js` | Worker Markdown rendering path. |
 | `styles.css` | Layout, themes, renderer styles, modals, responsive UI. |
 | `sw.js` | PWA/service-worker cache behavior. |
-| `RELEASE_NOTES` | Current extensionless release note bundled with web/PWA and desktop builds. |
-| `RELEASE_NOTES_TEMPLATE.md` | Canonical Markdown structure and placeholders for every release size. |
+| `RELEASE_NOTES` | Single canonical extensionless release note bundled with web/PWA and desktop builds. |
 | `assets/i18n/` | Interface catalogs, generator, and catalog-audit tool. |
 | `functions/api/image/[[id]].js` | Content-addressed managed raster image and GIF API. |
 | `functions/api/media/[[id]].js` | Route alias for content-addressed managed video uploads and delivery. |
