@@ -10,6 +10,7 @@ const CRITICAL_ASSETS = [
   './preview-worker.js',
   './styles.css',
   './assets/lucide-icons.css',
+  './RELEASE_NOTES',
   './sample.md',
   './assets/icon.jpg',
   './manifest.json'

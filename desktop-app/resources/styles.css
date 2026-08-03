@@ -2390,6 +2390,13 @@ body.document-sidebar-collapsed .document-sidebar {
   outline-offset: -2px;
 }
 
+.app-menu-item.disabled,
+.app-menu-item[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .app-menu-item > i:first-child {
   color: currentColor;
   font-size: var(--ui-icon-size-md);
@@ -4464,6 +4471,13 @@ a:focus {
   font-size: 13px;
 }
 
+.tab-app-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
 .tab-item.active .tab-file-icon {
   color: var(--accent-color);
 }
@@ -5160,7 +5174,9 @@ a:focus {
   border-radius: 8px;
   background: var(--button-bg);
   color: var(--text-color);
+  cursor: pointer;
   font-size: var(--ui-font-md);
+  font-family: inherit;
   line-height: 1.2;
   text-decoration: none;
   transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -11727,5 +11743,502 @@ html[data-theme="dark"] .mermaid svg {
     height: auto !important;
     overflow: visible !important;
     background: white !important;
+  }
+}
+
+/* ========================================
+   VERSIONED RELEASE NOTES
+   ======================================== */
+.tab-item.release-notes-tab {
+  width: max-content;
+  min-width: max-content;
+  max-width: none;
+  flex: 0 0 auto;
+}
+
+.tab-item.release-notes-tab .tab-title {
+  overflow: visible;
+  flex: 0 0 auto;
+  max-width: none;
+  text-overflow: clip;
+}
+
+.preview-pane.release-notes-surface {
+  padding: 0;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+#markdown-preview.release-notes-preview {
+  min-height: 100%;
+  padding: clamp(18px, 2.4vw, 28px) clamp(24px, 4vw, 52px);
+  background: var(--preview-bg);
+}
+
+.release-note-shell {
+  --release-note-accent-hsl: 212 92% 45%;
+  --release-note-accent: hsl(var(--release-note-accent-hsl));
+  --release-note-accent-soft: hsl(var(--release-note-accent-hsl) / 0.1);
+  --release-note-surface: color-mix(in srgb, var(--header-bg) 74%, var(--preview-bg));
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding-bottom: 72px;
+  color: var(--preview-text-color);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+[data-theme="dark"] .release-note-shell {
+  --release-note-accent-hsl: 210 100% 68%;
+}
+
+.release-note-shell *,
+.release-note-shell *::before,
+.release-note-shell *::after {
+  box-sizing: border-box;
+}
+
+.release-note-shell a {
+  touch-action: manipulation;
+}
+
+.release-note-intro {
+  padding: clamp(4px, 1vw, 10px) 0 clamp(30px, 4vw, 44px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.release-note-brandline,
+.markdown-body .release-note-brandline {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.release-note-brandline img {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.markdown-body .release-note-brandline > strong {
+  color: var(--preview-text-color);
+  font-weight: 650;
+}
+
+.markdown-body .release-note-brandline code {
+  padding: 3px 8px;
+  border: 1px solid hsl(var(--release-note-accent-hsl) / 0.28);
+  border-radius: 999px;
+  color: var(--release-note-accent);
+  background: var(--release-note-accent-soft);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.markdown-body .release-note-intro h1 {
+  max-width: none;
+  padding: 0;
+  margin: 0 0 12px;
+  border: 0;
+  color: var(--preview-text-color);
+  font-size: clamp(32px, 3.7vw, 44px);
+  font-weight: 690;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+  text-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.release-note-release-date,
+.markdown-body .release-note-release-date {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.release-note-intro > p:not(.release-note-brandline):not(.release-note-release-date):not(.release-note-actions),
+.markdown-body .release-note-intro > p:not(.release-note-brandline):not(.release-note-release-date):not(.release-note-actions) {
+  max-width: 75ch;
+  margin: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 17px;
+}
+
+.release-note-actions {
+  display: flex;
+  max-width: none;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 24px 0 0;
+}
+
+.markdown-body .release-note-actions a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  color: var(--preview-text-color);
+  background: var(--button-bg);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.markdown-body .release-note-actions a i {
+  flex: 0 0 auto;
+  font-size: 15px;
+}
+
+.markdown-body .release-note-actions a:first-child {
+  border-color: hsl(var(--release-note-accent-hsl) / 0.54);
+  color: var(--release-note-accent);
+  background: var(--release-note-accent-soft);
+}
+
+.markdown-body .release-note-actions a:hover,
+.markdown-body .release-note-actions a:focus-visible {
+  border-color: var(--release-note-accent);
+  background: var(--button-hover);
+}
+
+.release-note-intro > hr {
+  display: none;
+}
+
+.release-note-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(170px, 210px) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(34px, 6vw, 72px);
+  padding-top: clamp(42px, 7vw, 76px);
+}
+
+.release-note-skip-link {
+  position: absolute;
+  z-index: 6;
+  top: 8px;
+  left: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--preview-text-color);
+  background: var(--button-bg);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+}
+
+.release-note-skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.release-note-navigation {
+  position: sticky;
+  top: 18px;
+  max-height: calc(100vh - 132px);
+  overflow-y: auto;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+}
+
+.release-note-navigation-label,
+.markdown-body .release-note-navigation-label {
+  margin: 0 0 13px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.markdown-body .release-note-navigation a {
+  position: relative;
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 7px 10px 7px 15px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.markdown-body .release-note-navigation a::before {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+  content: '';
+}
+
+.markdown-body .release-note-navigation a:hover,
+.markdown-body .release-note-navigation a:focus-visible {
+  color: var(--preview-text-color);
+  background: var(--button-hover);
+}
+
+.markdown-body .release-note-navigation a.is-active,
+.markdown-body .release-note-navigation a[aria-current="location"] {
+  color: var(--release-note-accent);
+  background: var(--release-note-accent-soft);
+  font-weight: 650;
+}
+
+.markdown-body .release-note-navigation a.is-active::before,
+.markdown-body .release-note-navigation a[aria-current="location"]::before {
+  background: var(--release-note-accent);
+}
+
+.release-note-content {
+  min-width: 0;
+  max-width: 790px;
+}
+
+.release-note-section {
+  padding-bottom: clamp(48px, 7vw, 78px);
+  margin-bottom: clamp(48px, 7vw, 78px);
+  border-bottom: 1px solid var(--border-color);
+  scroll-margin-top: 28px;
+}
+
+.markdown-body .release-note-section h2 {
+  max-width: 720px;
+  padding: 0;
+  margin: 0 0 18px;
+  border: 0;
+  color: var(--preview-text-color);
+  font-size: clamp(25px, 3.2vw, 36px);
+  font-weight: 680;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.markdown-body .release-note-section h3 {
+  margin: 30px 0 10px;
+  color: var(--preview-text-color);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.release-note-section > p,
+.markdown-body .release-note-section > p {
+  max-width: 75ch;
+  color: var(--text-secondary);
+}
+
+.markdown-body .release-note-section:first-child > ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  margin: 26px 0;
+  list-style: none;
+}
+
+.markdown-body .release-note-section:first-child > ul > li {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: var(--release-note-surface);
+  font-size: 13px;
+}
+
+.markdown-body .release-note-section:first-child > ul > li strong {
+  color: var(--preview-text-color);
+}
+
+.markdown-body .release-note-section:first-child > ul > li:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.release-note-section:last-child {
+  padding: clamp(24px, 4vw, 36px);
+  margin-bottom: 0;
+  border: 1px solid hsl(var(--release-note-accent-hsl) / 0.3);
+  border-radius: 14px;
+  background: var(--release-note-accent-soft);
+}
+
+.markdown-body .release-note-back-to-top {
+  position: fixed;
+  z-index: 12;
+  right: 26px;
+  bottom: 46px;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  color: var(--preview-text-color);
+  background: color-mix(in srgb, var(--button-bg) 92%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text-color) 16%, transparent);
+  text-decoration: none;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.markdown-body .release-note-back-to-top:hover,
+.markdown-body .release-note-back-to-top:focus-visible {
+  border-color: var(--release-note-accent);
+  color: var(--release-note-accent);
+  background: var(--button-hover);
+}
+
+@media (max-width: 900px) {
+  .markdown-body .release-note-intro h1 {
+    text-wrap: balance;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 760px) {
+  #markdown-preview.release-notes-preview {
+    padding: 18px;
+  }
+
+  .release-note-layout {
+    display: block;
+    padding-top: 34px;
+  }
+
+  .release-note-navigation {
+    top: 0;
+    z-index: 5;
+    display: flex;
+    max-height: none;
+    gap: 3px;
+    margin: 0 -18px 44px;
+    padding: 9px 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--preview-bg) 94%, transparent);
+    backdrop-filter: blur(10px);
+    scrollbar-width: none;
+  }
+
+  .release-note-navigation::-webkit-scrollbar {
+    display: none;
+  }
+
+  .release-note-navigation-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .markdown-body .release-note-navigation a {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 9px 12px;
+    white-space: nowrap;
+  }
+
+  .markdown-body .release-note-navigation a::before {
+    top: auto;
+    right: 12px;
+    bottom: 3px;
+    left: 12px;
+    width: auto;
+    height: 2px;
+  }
+
+  .release-note-section {
+    scroll-margin-top: 72px;
+  }
+
+  .markdown-body .release-note-back-to-top {
+    right: 18px;
+    bottom: 42px;
+  }
+}
+
+@media (max-width: 520px) {
+  .markdown-body .release-note-intro h1 {
+    font-size: clamp(30px, 9vw, 40px);
+  }
+
+  .release-note-brandline {
+    flex-wrap: wrap;
+  }
+
+  .release-note-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .markdown-body .release-note-actions a {
+    width: 100%;
+  }
+
+  .markdown-body .release-note-section:first-child > ul {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-item.release-notes-tab {
+    max-width: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-pane.release-notes-surface {
+    scroll-behavior: auto;
+  }
+
+  .release-note-actions a,
+  .release-note-navigation a,
+  .release-note-back-to-top {
+    transition: none !important;
+  }
+}
+
+@media print {
+  .release-note-navigation,
+  .release-note-skip-link,
+  .release-note-back-to-top {
+    display: none !important;
+  }
+
+  .release-note-layout {
+    display: block;
+  }
+
+  .release-note-section {
+    break-inside: avoid;
   }
 }

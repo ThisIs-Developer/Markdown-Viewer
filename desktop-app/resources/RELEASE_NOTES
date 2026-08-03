@@ -1,0 +1,83 @@
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.0`
+
+# Welcome to Markdown Viewer 3.10.0
+
+_Released August 2, 2026_
+
+This release gives your workspace room to grow, makes complete backups practical, and rebuilds GitHub importing for large and private repositories.
+
+Everything here ships with the web, PWA, Docker, and desktop editions. **Happy coding!**
+
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.0) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+
+---
+
+## Highlights
+
+- **A workspace without a document-count ceiling.** Documents now use scalable per-document storage instead of one increasingly large browser record.
+- **Complete backup and recovery.** Export and restore folder-preserving ZIP backups on the web and desktop.
+- **A rebuilt GitHub importer.** Discover every Markdown file, work with branches and tags reliably, and save private-repository access securely.
+- **Polish across the product.** Faster bulk tab closing, clearer staged loading, responsive import selection, and an audit of all 14 interface languages.
+
+> [!TIP]
+> Start with **Workspace storage** if you manage a large library, or jump to **GitHub import** if your documentation lives in repositories.
+
+## Workspace storage
+
+Markdown Viewer no longer limits a workspace to a fixed number of documents. Browser documents are stored as individual IndexedDB records, loaded only when needed, retained in a bounded memory cache, and rendered in paged Explorer groups.
+
+Desktop documents remain ordinary Markdown files in the fixed **Documents/Markdown Viewer Vault** location, so the vault is predictable and easy to inspect outside the application.
+
+### What changed
+
+- Removed the former document-count limit.
+- Added on-demand document loading and a bounded cache.
+- Added paged Explorer rendering for large workspaces.
+- Added exact storage usage and document totals.
+- Preserved a normal Markdown-file vault for desktop users.
+
+## Backup and recovery
+
+Workspace backup now preserves documents and folder organization in a ZIP file. The same archive can restore a workspace on the web or desktop, with clearer confirmations before imports and destructive resets.
+
+Secret Workspace files can be included as encrypted data, while Private mode continues to pause persistence without silently removing saved work.
+
+> [!IMPORTANT]
+> A workspace reset removes documents, settings, and release-note visibility data. After a reset, Markdown Viewer treats the next launch as a first run and shows Welcome with this release-note tab beside it.
+
+## GitHub import
+
+The importer now finds all Markdown files even when GitHub truncates a large repository tree. It resolves branches, tags, slash-containing references, and commit selections to immutable SHAs before importing.
+
+Private access supports up to 50 named fine-grained or classic personal access tokens. Saved credentials stay in a local AES-GCM-encrypted vault and are sent only to `api.github.com` for the selected repository operation.
+
+### Import workflow improvements
+
+- Search and select files in a responsive picker.
+- Import files into Explorer without opening a flood of tabs.
+- See staged progress and clearer success or failure feedback.
+- Distinguish repository folders and their expanded state more easily.
+- Keep private credentials named, encrypted, and removable.
+
+## Interface, languages, and desktop
+
+The release completes a visual and localization pass across the importer and workspace. All 14 interface catalogs were audited, desktop resources were synchronized with the web build, and tagged prereleases now publish with the correct metadata.
+
+Bulk tab closing is batched so large sessions remain responsive, and small-screen import selection retains comfortable touch targets.
+
+## Thank you
+
+### Contributors
+
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Design, implementation, testing, documentation, and release work.
+
+### Changes included
+
+- [#230 — Unlimited storage, backup, reset, and fixed vault](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/230)
+- [#231 — Preserve the complete #230 commit history](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/231)
+- [#232 — Refine storage documentation highlights](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/232)
+- [#233 — Scale GitHub imports and simplify private access](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/233)
+
+Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
+
+**Happy coding!**

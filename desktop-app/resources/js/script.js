@@ -1,6 +1,12 @@
 document.addEventListener("DOMContentLoaded", async function () {
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
+  const APP_VERSION = '3.10.0';
+  const RELEASE_NOTES_TAB_KIND = 'release-notes';
+  const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
+  const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
+  const RELEASE_NOTES_PENDING_MODE_KEY = 'markdownViewerPendingReleaseNotesMode';
+  const RELEASE_NOTES_SEEN_VERSION_KEY = 'markdownViewerReleaseNotesSeenVersion';
   const DOCUMENT_STORAGE_KEYS = new Set([
     'markdownViewerGlobalState',
     'markdownViewerTabs',
@@ -46,6 +52,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       'markdownViewerUntitledCounter',
       'markdownViewerDocumentOrganization',
       'markdownViewerSecretWorkspace',
+      RELEASE_NOTES_LAST_VERSION_KEY,
+      RELEASE_NOTES_PENDING_VERSION_KEY,
+      RELEASE_NOTES_PENDING_MODE_KEY,
+      RELEASE_NOTES_SEEN_VERSION_KEY,
       'find-replace-docked',
       'app-lang'
     ];
@@ -288,7 +298,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const APP_VERSION = '3.10.0';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -429,6 +438,278 @@ document.addEventListener("DOMContentLoaded", async function () {
     return Boolean(activeTabId && isShareSnapshotTabId(activeTabId));
   }
 
+  function isReleaseNotesTab(tab) {
+    return Boolean(tab && tab.kind === RELEASE_NOTES_TAB_KIND);
+  }
+
+  function isReleaseNotesActive() {
+    return Boolean(activeTabId && tabs.some(function(tab) {
+      return tab.id === activeTabId && isReleaseNotesTab(tab);
+    }));
+  }
+
+  function readReleaseNotesStorage(key) {
+    try {
+      return localStorage.getItem(key) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function markReleaseNotesSeen(tab) {
+    if (!isReleaseNotesTab(tab)) return;
+    const version = tab.releaseVersion || APP_VERSION;
+    saveStorageItem(RELEASE_NOTES_SEEN_VERSION_KEY, version);
+    if (readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY) === version) {
+      removeStorageItem(RELEASE_NOTES_PENDING_VERSION_KEY);
+      removeStorageItem(RELEASE_NOTES_PENDING_MODE_KEY);
+    }
+  }
+
+  function queueCurrentReleaseNotes(hadExistingWorkspace) {
+    const previousVersion = readReleaseNotesStorage(RELEASE_NOTES_LAST_VERSION_KEY);
+    const seenVersion = readReleaseNotesStorage(RELEASE_NOTES_SEEN_VERSION_KEY);
+    let pendingVersion = readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY);
+    let pendingMode = readReleaseNotesStorage(RELEASE_NOTES_PENDING_MODE_KEY);
+    const firstRun = Boolean(!previousVersion && !hadExistingWorkspace);
+    const versionChanged = Boolean(previousVersion && previousVersion !== APP_VERSION);
+    const featureUpgrade = Boolean(!previousVersion && hadExistingWorkspace);
+
+    if ((firstRun || versionChanged || featureUpgrade) && seenVersion !== APP_VERSION) {
+      pendingVersion = APP_VERSION;
+      pendingMode = firstRun ? 'background' : 'foreground';
+      saveStorageItem(RELEASE_NOTES_PENDING_VERSION_KEY, APP_VERSION);
+      saveStorageItem(RELEASE_NOTES_PENDING_MODE_KEY, pendingMode);
+    }
+    saveStorageItem(RELEASE_NOTES_LAST_VERSION_KEY, APP_VERSION);
+    return {
+      shouldOpen: pendingVersion === APP_VERSION && seenVersion !== APP_VERSION,
+      activate: pendingMode !== 'background'
+    };
+  }
+
+  let releaseNotesContentPromise = null;
+  let releaseNotesPreviewCleanup = null;
+  let releaseNotesScrollFrame = null;
+
+  function clearReleaseNotesPreviewEnhancements() {
+    if (releaseNotesPreviewCleanup) {
+      releaseNotesPreviewCleanup();
+      releaseNotesPreviewCleanup = null;
+    }
+    if (releaseNotesScrollFrame !== null) {
+      cancelAnimationFrame(releaseNotesScrollFrame);
+      releaseNotesScrollFrame = null;
+    }
+    if (previewPane) previewPane.classList.remove('release-notes-surface');
+    if (markdownPreview) markdownPreview.classList.remove('release-notes-preview');
+  }
+
+  function enhanceReleaseNotesPreview() {
+    clearReleaseNotesPreviewEnhancements();
+    if (!isReleaseNotesActive() || !markdownPreview || !previewPane) return;
+
+    let shell = markdownPreview.querySelector('.release-note-shell');
+    if (!shell) {
+      const sourceNodes = Array.from(markdownPreview.childNodes);
+      const firstSectionIndex = sourceNodes.findIndex(function(node) {
+        return node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H2';
+      });
+      if (firstSectionIndex < 0) return;
+
+      shell = document.createElement('article');
+      shell.className = 'release-note-shell';
+      shell.setAttribute('aria-label', 'Markdown Viewer ' + APP_VERSION + ' release notes');
+
+      const intro = document.createElement('header');
+      intro.className = 'release-note-intro';
+      sourceNodes.slice(0, firstSectionIndex).forEach(function(node) {
+        intro.appendChild(node);
+      });
+
+      const introParagraphs = Array.from(intro.children).filter(function(node) {
+        return node.tagName === 'P';
+      });
+      const brandLine = introParagraphs.find(function(paragraph) {
+        return Boolean(paragraph.querySelector('img[src$="assets/icon.jpg"]'));
+      });
+      if (brandLine) brandLine.classList.add('release-note-brandline');
+
+      const releaseDate = introParagraphs.find(function(paragraph) {
+        return /^Released\s/i.test(paragraph.textContent.trim());
+      });
+      if (releaseDate) releaseDate.classList.add('release-note-release-date');
+
+      const releaseLink = intro.querySelector('a[href*="/releases/tag/"]');
+      const changelogLink = intro.querySelector('a[href*="/CHANGELOG.md"]');
+      if (releaseLink && changelogLink && releaseLink.parentElement === changelogLink.parentElement) {
+        releaseLink.parentElement.classList.add('release-note-actions');
+        const releaseIcon = document.createElement('i');
+        releaseIcon.className = 'bi bi-github';
+        releaseIcon.setAttribute('aria-hidden', 'true');
+        releaseLink.prepend(releaseIcon);
+        const changelogIcon = document.createElement('i');
+        changelogIcon.className = 'lucide lucide-history';
+        changelogIcon.setAttribute('aria-hidden', 'true');
+        changelogLink.prepend(changelogIcon);
+      }
+
+      const layout = document.createElement('div');
+      layout.className = 'release-note-layout';
+      const navigation = document.createElement('nav');
+      navigation.className = 'release-note-navigation';
+      navigation.setAttribute('aria-label', 'In this update');
+      const navigationLabel = document.createElement('p');
+      navigationLabel.className = 'release-note-navigation-label';
+      navigationLabel.textContent = 'In this update';
+      navigation.appendChild(navigationLabel);
+
+      const content = document.createElement('div');
+      content.className = 'release-note-content';
+      content.id = 'release-note-content';
+      let currentSection = null;
+      sourceNodes.slice(firstSectionIndex).forEach(function(node) {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'H2') {
+          currentSection = document.createElement('section');
+          currentSection.className = 'release-note-section';
+          currentSection.id = node.id || ('release-note-section-' + content.children.length);
+          node.id = currentSection.id + '-heading';
+          currentSection.setAttribute('aria-labelledby', node.id);
+          currentSection.appendChild(node);
+          content.appendChild(currentSection);
+
+          const link = document.createElement('a');
+          link.href = '#' + currentSection.id;
+          link.textContent = node.textContent || 'Section';
+          navigation.appendChild(link);
+          return;
+        }
+        if (currentSection) currentSection.appendChild(node);
+      });
+
+      const skipLink = document.createElement('a');
+      skipLink.className = 'release-note-skip-link';
+      skipLink.href = '#release-note-content';
+      skipLink.textContent = 'Skip update navigation';
+      layout.appendChild(skipLink);
+      layout.appendChild(navigation);
+      layout.appendChild(content);
+      shell.appendChild(intro);
+      shell.appendChild(layout);
+
+      const topLink = document.createElement('a');
+      topLink.className = 'release-note-back-to-top';
+      const topTarget = intro.querySelector('h1');
+      if (topTarget && !topTarget.id) topTarget.id = 'release-note-top';
+      topLink.href = '#' + (topTarget && topTarget.id ? topTarget.id : 'release-note-content');
+      topLink.setAttribute('aria-label', 'Back to the top of the release notes');
+      topLink.title = 'Back to top';
+      topLink.innerHTML = '<i class="lucide lucide-chevron-up" aria-hidden="true"></i>';
+      shell.appendChild(topLink);
+      markdownPreview.replaceChildren(shell);
+    }
+
+    previewPane.classList.add('release-notes-surface');
+    markdownPreview.classList.add('release-notes-preview');
+    const links = Array.from(shell.querySelectorAll('.release-note-navigation a[href^="#"]'));
+    const sections = links.map(function(link) {
+      const id = decodeURIComponent((link.getAttribute('href') || '').slice(1));
+      return { link: link, section: id ? shell.querySelector('#' + CSS.escape(id)) : null };
+    }).filter(function(item) {
+      return Boolean(item.section);
+    });
+
+    function updateActiveReleaseNotesSection() {
+      releaseNotesScrollFrame = null;
+      if (!isReleaseNotesActive() || !document.body.contains(shell) || sections.length === 0) return;
+      const paneTop = previewPane.getBoundingClientRect().top;
+      const activationLine = paneTop + Math.min(112, previewPane.clientHeight * 0.24);
+      let current = sections[0];
+      sections.forEach(function(item) {
+        if (item.section.getBoundingClientRect().top <= activationLine) current = item;
+      });
+      if (previewPane.scrollTop + previewPane.clientHeight >= previewPane.scrollHeight - 8) {
+        current = sections[sections.length - 1];
+      }
+      sections.forEach(function(item) {
+        const active = item === current;
+        item.link.classList.toggle('is-active', active);
+        if (active) item.link.setAttribute('aria-current', 'location');
+        else item.link.removeAttribute('aria-current');
+      });
+    }
+
+    function scheduleReleaseNotesSectionUpdate() {
+      if (releaseNotesScrollFrame !== null) return;
+      releaseNotesScrollFrame = requestAnimationFrame(updateActiveReleaseNotesSection);
+    }
+
+    const backToTopLink = shell.querySelector('.release-note-back-to-top');
+    function handleReleaseNotesBackToTop(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      previewPane.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    }
+
+    previewPane.addEventListener('scroll', scheduleReleaseNotesSectionUpdate, { passive: true });
+    window.addEventListener('resize', scheduleReleaseNotesSectionUpdate);
+    if (backToTopLink) backToTopLink.addEventListener('click', handleReleaseNotesBackToTop);
+    releaseNotesPreviewCleanup = function() {
+      previewPane.removeEventListener('scroll', scheduleReleaseNotesSectionUpdate);
+      window.removeEventListener('resize', scheduleReleaseNotesSectionUpdate);
+      if (backToTopLink) backToTopLink.removeEventListener('click', handleReleaseNotesBackToTop);
+    };
+    scheduleReleaseNotesSectionUpdate();
+  }
+
+  function loadCurrentReleaseNotes() {
+    if (!releaseNotesContentPromise) {
+      releaseNotesContentPromise = fetch('RELEASE_NOTES').then(function(response) {
+        if (!response.ok) throw new Error('Release notes returned ' + response.status);
+        return response.text();
+      }).catch(function(error) {
+        console.warn('Failed to load release notes:', error);
+        return '# Markdown Viewer ' + APP_VERSION + '\n\nThe release notes could not be loaded. Visit the [project releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases) for the latest changes.';
+      });
+    }
+    return releaseNotesContentPromise;
+  }
+
+  async function openReleaseNotes(options) {
+    const settings = options || {};
+    const shouldActivate = settings.activate !== false;
+    const existing = tabs.find(function(tab) {
+      return isReleaseNotesTab(tab) && tab.releaseVersion === APP_VERSION;
+    });
+    if (existing) {
+      if (shouldActivate) {
+        await switchTab(existing.id);
+        updateLiveEditorAccess();
+      } else {
+        renderTabBar(tabs, activeTabId);
+      }
+      return existing;
+    }
+
+    const content = await loadCurrentReleaseNotes();
+    const tab = createTab(content, 'Release Notes: ' + APP_VERSION, 'preview');
+    tab.kind = RELEASE_NOTES_TAB_KIND;
+    tab.temporary = true;
+    tab.releaseVersion = APP_VERSION;
+    tabs.push(tab);
+    if (shouldActivate) {
+      await switchTab(tab.id);
+      updateLiveEditorAccess();
+    } else {
+      renderTabBar(tabs, activeTabId);
+    }
+    if (!settings.silent) {
+      announceToScreenReader(shouldActivate ? 'Release notes opened.' : 'Release notes are available in the tab list.');
+    }
+    return tab;
+  }
+
   function stripTemporaryTabs(tabsArr) {
     return (tabsArr || []).filter(function(tab) {
       return !isShareSnapshotTab(tab) && tab.temporary !== true;
@@ -480,6 +761,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (isShareSnapshotViewOnlyActive()) {
       return 'This shared snapshot is view only.';
+    }
+    if (isReleaseNotesActive()) {
+      return 'Release notes are read only.';
     }
     if (isLiveViewOnlyParticipant()) {
       return 'This Live Share session is view only.';
@@ -592,6 +876,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutModalClose = document.getElementById("about-modal-close");
   const aboutModalCloseIcon = document.getElementById("about-modal-close-icon");
   const aboutVersion = document.getElementById("about-version");
+  const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
   const storageSettingsButton = document.getElementById("storage-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
@@ -3856,7 +4141,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentCountForLimit() {
-    return tabs.length + (isSecretWorkspaceUnlocked() ? 0 : secretWorkspaceDocumentCount);
+    return tabs.filter(function(tab) { return !isReleaseNotesTab(tab); }).length +
+      (isSecretWorkspaceUnlocked() ? 0 : secretWorkspaceDocumentCount);
   }
 
   function getWorkspaceById(workspaceId) {
@@ -5404,7 +5690,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function renderWorkspaceTree(tree) {
     let renderedDocuments = 0;
-    const temporaryTabs = tabs.filter(isTemporaryDocument).filter(documentMatchesSidebarSearch);
+    const temporaryTabs = tabs.filter(function(tab) {
+      return isTemporaryDocument(tab) && !isReleaseNotesTab(tab);
+    }).filter(documentMatchesSidebarSearch);
     if (temporaryTabs.length) {
       const temporaryLabel = document.createElement('p');
       temporaryLabel.className = 'document-tree-section-label';
@@ -5569,6 +5857,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     let renderedCount = filter === 'all' ? renderWorkspaceTree(tree) : renderFlatDocumentView(tree, filter);
     documentSidebarRenderBudget = null;
     let visibleDocumentCount = tabs.filter(function(tab) {
+      if (isReleaseNotesTab(tab)) return false;
       if (filter !== 'all' && isTemporaryDocument(tab)) return false;
       if (filter === 'favorites' && !tab.favorite) return false;
       return documentMatchesSidebarSearch(tab);
@@ -7725,29 +8014,33 @@ document.addEventListener("DOMContentLoaded", async function () {
     dropdown.className = 'tab-menu-dropdown';
     dropdown.setAttribute('data-tab-menu-dropdown', 'true');
     dropdown.setAttribute('role', 'menu');
-    const duplicateAction = isShareSnapshotTab(tab)
-      ? ''
-      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
-    const downloadAction = isShareSnapshotTab(tab)
-      ? ''
-      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
-    const favoriteAction = isShareSnapshotTab(tab)
-      ? ''
-      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
-    const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
-    const splitAction = isCombinedSplitTab
-      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
-      : tabs.length > 1
-      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
-      : '';
-    dropdown.innerHTML =
-      '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
-      duplicateAction +
-      favoriteAction +
-      splitAction +
-      downloadAction +
-      '<div class="tab-menu-separator" role="separator"></div>' +
-      '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
+    if (isReleaseNotesTab(tab)) {
+      dropdown.innerHTML = '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
+    } else {
+      const duplicateAction = isShareSnapshotTab(tab)
+        ? ''
+        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
+      const downloadAction = isShareSnapshotTab(tab)
+        ? ''
+        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
+      const favoriteAction = isShareSnapshotTab(tab)
+        ? ''
+        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
+      const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
+      const splitAction = isCombinedSplitTab
+        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
+        : tabs.length > 1
+        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
+        : '';
+      dropdown.innerHTML =
+        '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
+        duplicateAction +
+        favoriteAction +
+        splitAction +
+        downloadAction +
+        '<div class="tab-menu-separator" role="separator"></div>' +
+        '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
+    }
 
     menuBtn.addEventListener('click', function(e) {
       e.preventDefault();
@@ -7846,6 +8139,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!idsToClose.has(tab.id) || !isTabOpen(tab)) return;
       if (isTemporaryDocument(tab)) {
         temporaryIds.add(tab.id);
+        markReleaseNotesSeen(tab);
         shareSnapshotViewOnlyTabIds.delete(tab.id);
         if (tabHistories[tab.id]) delete tabHistories[tab.id];
         return;
@@ -7891,14 +8185,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     menu.setAttribute('aria-label', 'Tab actions for ' + (tab.title || 'Untitled'));
 
     const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
-    const actions = [{
-      id: isCombinedSplitTab ? 'split-close' : 'split',
-      icon: isCombinedSplitTab ? 'lucide-panel-right-close' : 'lucide-columns-2',
-      label: isCombinedSplitTab ? 'Exit split view' : 'Open in split view',
-      disabled: !isCombinedSplitTab && tabs.length < 2
-    }, {
-      separator: true
-    }, {
+    const closeActions = [{
       id: 'close', icon: 'lucide-x', label: 'Close'
     }, {
       id: 'others', icon: 'lucide-circle-x', label: 'Close others', disabled: openTabs.length < 2
@@ -7909,6 +8196,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, {
       id: 'all', icon: 'lucide-square-x', label: 'Close all'
     }];
+    const actions = isReleaseNotesTab(tab) ? closeActions : [{
+      id: isCombinedSplitTab ? 'split-close' : 'split',
+      icon: isCombinedSplitTab ? 'lucide-panel-right-close' : 'lucide-columns-2',
+      label: isCombinedSplitTab ? 'Exit split view' : 'Open in split view',
+      disabled: !isCombinedSplitTab && tabs.length < 2
+    }, {
+      separator: true
+    }].concat(closeActions);
 
     actions.forEach(function(action) {
       if (action.separator) {
@@ -7988,7 +8283,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         ? tabs.find(function(item) { return item.id === secondarySplitTabId && isTabOpen(item); })
         : null;
       const item = document.createElement('div');
-      item.className = 'tab-item' + (tab.id === currentActiveTabId ? ' active' : '') + (splitPartner ? ' is-document-split' : '');
+      item.className = 'tab-item' + (tab.id === currentActiveTabId ? ' active' : '') + (splitPartner ? ' is-document-split' : '') + (isReleaseNotesTab(tab) ? ' release-notes-tab' : '');
       item.setAttribute('data-tab-id', tab.id);
       if (splitPartner) item.setAttribute('data-split-tab-id', splitPartner.id);
       item.setAttribute('role', 'tab');
@@ -8002,9 +8297,18 @@ document.addEventListener("DOMContentLoaded", async function () {
         item.style.setProperty('--split-tab-preferred-width', Math.round(preferredWidth) + 'px');
       }
 
-      const fileIcon = document.createElement('i');
-      fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : 'lucide-file-text') + ' tab-file-icon';
-      fileIcon.setAttribute('aria-hidden', 'true');
+      let fileIcon;
+      if (isReleaseNotesTab(tab) && !splitPartner) {
+        fileIcon = document.createElement('img');
+        fileIcon.className = 'tab-file-icon tab-app-icon';
+        fileIcon.src = 'assets/icon.jpg';
+        fileIcon.alt = '';
+        fileIcon.setAttribute('aria-hidden', 'true');
+      } else {
+        fileIcon = document.createElement('i');
+        fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : 'lucide-file-text') + ' tab-file-icon';
+        fileIcon.setAttribute('aria-hidden', 'true');
+      }
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'tab-title' + (splitPartner ? ' tab-split-titles' : '');
@@ -8283,7 +8587,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (contentChanged && !isTemporaryDocument(tab)) {
       tab.lastEditedAt = Date.now();
     }
-    saveTabsToStorage(tabs, [tab.id]);
+    if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     if (contentChanged) renderDocumentSidebar();
   }
 
@@ -8418,7 +8722,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     documentSplitEditor.hidden = previewMode;
     documentSplitPreview.hidden = !previewMode;
     if (documentSplitEditor.value !== tab.content) documentSplitEditor.value = tab.content || '';
-    documentSplitEditor.readOnly = shareSnapshotViewOnlyTabIds.has(tab.id);
+    documentSplitEditor.readOnly = shareSnapshotViewOnlyTabIds.has(tab.id) || isReleaseNotesTab(tab);
     documentSplitEditor.setAttribute('aria-label', 'Edit ' + (tab.title || 'Untitled') + ' in split view');
     documentSplitPreview.setAttribute('aria-label', 'Preview ' + (tab.title || 'Untitled') + ' in split view');
     if (previewMode) renderDocumentSplitPreview(tab);
@@ -8477,7 +8781,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function openDocumentSplitView(sourceTabId, secondTabId) {
     const sourceTab = tabs.find(function(item) { return item.id === sourceTabId; });
     const secondTab = tabs.find(function(item) { return item.id === secondTabId; });
-    if (!sourceTab || !secondTab || sourceTab.id === secondTab.id) return;
+    if (!sourceTab || !secondTab || sourceTab.id === secondTab.id || isReleaseNotesTab(sourceTab) || isReleaseNotesTab(secondTab)) return;
     try {
       await Promise.all([ensureTabContent(sourceTab), ensureTabContent(secondTab)]);
     } catch (_) {
@@ -8499,8 +8803,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function openDocumentSplitPicker(sourceTabId) {
     const sourceTab = tabs.find(function(item) { return item.id === sourceTabId; });
-    const candidates = tabs.filter(function(item) { return item.id !== sourceTabId; });
-    if (!sourceTab || candidates.length === 0) {
+    const candidates = tabs.filter(function(item) { return item.id !== sourceTabId && !isReleaseNotesTab(item); });
+    if (!sourceTab || isReleaseNotesTab(sourceTab) || candidates.length === 0) {
       alert('Open or create another document before starting split view.');
       return;
     }
@@ -8682,6 +8986,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const idx = tabs.findIndex(function(t) { return t.id === tabId; });
     if (idx === -1) return;
+    const tab = tabs[idx];
     const wasActive = activeTabId === tabId;
     const splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) {
@@ -8694,6 +8999,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       closeDocumentSplitView({ silent: true, renderTabs: false });
     }
     shareSnapshotViewOnlyTabIds.delete(tabId);
+    markReleaseNotesSeen(tab);
     
     // Clean up history of the closed tab
     if (tabHistories[tabId]) {
@@ -9003,6 +9309,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     documentOrganization = await loadDocumentOrganization();
     initializeSecretWorkspaceState();
     tabs = await loadTabsFromStorage();
+    const hadExistingWorkspace = tabs.length > 0;
     activeTabId = loadActiveTabId();
 
     // Check if Neutralino passed an initial file via command line (early load)
@@ -9103,6 +9410,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         openDocumentSurfaceContextMenu(surface, event);
       });
     });
+    return hadExistingWorkspace;
   }
 
   // Late-load callback hook for Neutralino command-line files
@@ -10787,6 +11095,8 @@ ${selector} .arrowheadPath {
       processEmojis(root);
       enhancePreviewCodeBlocks(root);
     });
+
+    enhanceReleaseNotesPreview();
 
     queryPreviewRoots(roots, 'input[type="checkbox"]').forEach(function(input) {
       if (!input.hasAttribute('aria-label')) {
@@ -13080,7 +13390,7 @@ ${selector} .arrowheadPath {
   // View Mode Functions - Story 1.1 & 1.2
   function setViewMode(mode) {
     if (secondarySplitTabId && mode === 'split') mode = 'editor';
-    if (isShareSnapshotViewOnlyActive() && mode !== 'preview') {
+    if ((isShareSnapshotViewOnlyActive() || isReleaseNotesActive()) && mode !== 'preview') {
       mode = 'preview';
       announceToScreenReader(getEditorReadOnlyMessage());
     }
@@ -17973,6 +18283,18 @@ ${selector} .arrowheadPath {
     if (aboutModalCloseIcon) {
       aboutModalCloseIcon.addEventListener('click', function() { closeAppModal(aboutModal); });
     }
+    if (aboutReleaseNotes) {
+      aboutReleaseNotes.addEventListener('click', function() {
+        closeAppModal(aboutModal);
+        openReleaseNotes().catch(function(error) {
+          console.warn('Failed to open release notes:', error);
+          showAppToast('The release notes could not be opened.', {
+            tone: 'error',
+            title: 'Release notes unavailable'
+          });
+        });
+      });
+    }
   }
 
   function openHelpModal() {
@@ -18686,8 +19008,9 @@ ${selector} .arrowheadPath {
     });
   }
 
-  await initTabs();
+  const hadExistingWorkspace = await initTabs();
   initReviewMode();
+  const releaseNotesLaunch = queueCurrentReleaseNotes(hadExistingWorkspace);
   if (loadGlobalState().syncScrollingEnabled === false) toggleSyncScrolling();
   updateMobileStats();
   updateFindHighlights();
@@ -19201,6 +19524,7 @@ ${selector} .arrowheadPath {
 
   exportMd.addEventListener("click", function () {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     if (blockShareSnapshotSourceAccess()) return;
     if (typeof Neutralino !== 'undefined') {
       nativeSaveMarkdown();
@@ -19219,6 +19543,7 @@ ${selector} .arrowheadPath {
 
   exportHtml.addEventListener("click", function () {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     try {
       const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
       const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
@@ -20581,6 +20906,7 @@ ${selector} .arrowheadPath {
   exportPdf.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     openAppModal(pdfExportModal);
   });
 
@@ -20933,6 +21259,7 @@ ${selector} .arrowheadPath {
   exportPng.addEventListener("click", async function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     logPdfExportDebug("PNG export button clicked!");
     if (activePdfExport) {
       logPdfExportDebug("Export already active, ignoring click");
@@ -21432,6 +21759,7 @@ ${selector} .arrowheadPath {
 
   function openShareModal() {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     if (blockTemporarySnapshotShare()) return;
     if (blockLiveDocumentShareSnapshot()) return;
     // PERF-002: Lazy-load pako on first share
@@ -21773,7 +22101,7 @@ ${selector} .arrowheadPath {
   }
 
   function canMutateEditor() {
-    return hasActiveOpenDocument() && !reviewModeActive && !isLiveViewOnlyParticipant() && !isShareSnapshotViewOnlyActive();
+    return hasActiveOpenDocument() && !reviewModeActive && !isLiveViewOnlyParticipant() && !isShareSnapshotViewOnlyActive() && !isReleaseNotesActive();
   }
 
   function isLiveMutatingAction(action) {
@@ -21806,12 +22134,86 @@ ${selector} .arrowheadPath {
     setSelectedLiveAccessMode(mode);
   }
 
+  function updateReleaseNotesActionAvailability(releaseNotesActive) {
+    const actions = [
+      exportDropdown,
+      exportMd,
+      exportHtml,
+      exportPdf,
+      exportPng,
+      shareButton,
+      liveShareButton,
+      mobileExportToggle,
+      mobileExportMd,
+      mobileExportHtml,
+      mobileExportPdf,
+      mobileExportPng,
+      mobileShareButton,
+      mobileLiveShareButton
+    ];
+
+    actions.forEach(function(action) {
+      if (!action) return;
+      if (releaseNotesActive) {
+        if (action.dataset.releaseNotesDisabled !== 'true') {
+          action.dataset.releaseNotesWasDisabled = action.disabled ? 'true' : 'false';
+          if (action.tagName === 'A') {
+            action.dataset.releaseNotesOriginalTabindex = action.hasAttribute('tabindex')
+              ? action.getAttribute('tabindex')
+              : '__missing__';
+          }
+        }
+        action.dataset.releaseNotesDisabled = 'true';
+        if ('disabled' in action) action.disabled = true;
+        action.classList.add('disabled');
+        action.setAttribute('aria-disabled', 'true');
+        if (action.tagName === 'A') action.setAttribute('tabindex', '-1');
+        return;
+      }
+
+      if (action.dataset.releaseNotesDisabled !== 'true') return;
+      const wasDisabled = action.dataset.releaseNotesWasDisabled === 'true';
+      const hasAnotherDisabledState = Object.keys(action.dataset).some(function(key) {
+        return key !== 'releaseNotesDisabled' &&
+          key !== 'releaseNotesWasDisabled' &&
+          /Disabled$/.test(key) &&
+          action.dataset[key] === 'true';
+      });
+      const remainsDisabled = wasDisabled || hasAnotherDisabledState;
+      delete action.dataset.releaseNotesDisabled;
+      delete action.dataset.releaseNotesWasDisabled;
+      if ('disabled' in action) action.disabled = remainsDisabled;
+      action.classList.toggle('disabled', remainsDisabled);
+      action.setAttribute('aria-disabled', remainsDisabled ? 'true' : 'false');
+      if (action.tagName === 'A') {
+        const originalTabindex = action.dataset.releaseNotesOriginalTabindex;
+        delete action.dataset.releaseNotesOriginalTabindex;
+        if (originalTabindex && originalTabindex !== '__missing__') {
+          action.setAttribute('tabindex', originalTabindex);
+        } else {
+          action.removeAttribute('tabindex');
+        }
+      }
+    });
+
+    if (!releaseNotesActive) return;
+    if (exportDropdown) {
+      exportDropdown.setAttribute('aria-expanded', 'false');
+      const exportMenu = exportDropdown.parentElement && exportDropdown.parentElement.querySelector('.dropdown-menu');
+      if (exportMenu) exportMenu.classList.remove('show');
+    }
+    const mobileExportPanel = document.getElementById('mobile-menu-export-panel');
+    if (mobileExportToggle) mobileExportToggle.setAttribute('aria-expanded', 'false');
+    if (mobileExportPanel) mobileExportPanel.hidden = true;
+  }
+
   function updateLiveEditorAccess() {
     const snapshotViewOnly = isShareSnapshotViewOnlyActive();
+    const releaseNotesActive = isReleaseNotesActive();
     const snapshotActive = isShareSnapshotActive();
     const liveShareDocumentActive = isLiveShareDocumentActive();
     const liveShareGuestDocumentActive = liveShareDocumentActive && !isLiveShareHostDocumentActive();
-    const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly;
+    const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly || releaseNotesActive;
     const sourceReadOnly = viewOnly || reviewModeActive;
     if (markdownEditor) {
       markdownEditor.readOnly = sourceReadOnly;
@@ -21822,7 +22224,7 @@ ${selector} .arrowheadPath {
 
     viewModeButtons.forEach(function(button) {
       const mode = button.getAttribute('data-view-mode');
-      const shouldDisable = (snapshotViewOnly || reviewModeActive) && mode !== 'preview';
+      const shouldDisable = (snapshotViewOnly || releaseNotesActive || reviewModeActive) && mode !== 'preview';
       if (shouldDisable) {
         button.dataset.shareSnapshotDisabled = 'true';
         button.disabled = true;
@@ -21837,7 +22239,7 @@ ${selector} .arrowheadPath {
 
     mobileViewModeButtons.forEach(function(button) {
       const mode = button.getAttribute('data-mode');
-      const shouldDisable = (snapshotViewOnly || reviewModeActive) && mode !== 'preview';
+      const shouldDisable = (snapshotViewOnly || releaseNotesActive || reviewModeActive) && mode !== 'preview';
       if (shouldDisable) {
         button.dataset.shareSnapshotDisabled = 'true';
         button.disabled = true;
@@ -21950,6 +22352,7 @@ ${selector} .arrowheadPath {
       }
     }
     updateDocumentToolbarAvailability(hasActiveOpenDocument());
+    updateReleaseNotesActionAvailability(releaseNotesActive);
   }
 
   function getLiveRoomSocketUrl(roomId, secret, auth) {
@@ -23443,6 +23846,7 @@ ${selector} .arrowheadPath {
 
   function openLiveShareModal() {
     if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
     if (!liveShareModal) return;
     if (blockTemporarySnapshotLiveShare()) return;
     if (liveShareDisplayName && !liveShareDisplayName.value) {
@@ -26350,6 +26754,13 @@ ${selector} .arrowheadPath {
       navigator.serviceWorker.register('sw.js').catch(function(err) {
         console.log('ServiceWorker registration failed: ', err);
       });
+    });
+  }
+
+  // Wait until all editor and collaboration dependencies exist before adding the update tab.
+  if (releaseNotesLaunch.shouldOpen) {
+    await openReleaseNotes({
+      activate: releaseNotesLaunch.activate
     });
   }
 });

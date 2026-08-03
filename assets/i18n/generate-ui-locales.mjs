@@ -223,6 +223,7 @@ const EXTRA_STRINGS = [
   'All feedback resolved', 'Everything has been resolved. Switch to Resolved or All to review earlier feedback.',
   'Review item deleted.', 'Review item reopened.', 'Review item resolved.', 'Review item updated.',
   'Review mode keeps the Markdown source read only.',
+  'Release notes are read only.',
   'Creating link', 'Creating snapshot link...', 'Room active - waiting for collaborators',
   'Ending live room...', 'Live room disconnected', 'Live room ended by the host',
   'This Live Share session is view only.', 'This document is read only.',
