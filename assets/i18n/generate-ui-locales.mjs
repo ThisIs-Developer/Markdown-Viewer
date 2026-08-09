@@ -14,6 +14,7 @@ const REPAIR_TERMS = process.argv.includes('--repair-terms');
 const REPAIR_CORRUPT = process.argv.includes('--repair-corrupt');
 
 const LOCALES = {
+  bg: 'bg',
   zh: 'zh-CN',
   ja: 'ja',
   ko: 'ko',
@@ -35,6 +36,19 @@ const PROTECTED_TERMS = [
 ];
 
 const CURATED_OVERRIDES = {
+  bg: {
+    'Markdown Viewer': 'Markdown Viewer',
+    'GitHub Emojis': 'GitHub емоджита',
+    'JSON Viewer': 'Преглед на JSON',
+    'Replace All Diff Preview': 'Преглед на разликите при замяна на всички',
+    'Report': 'Докладване',
+    'Wireframe': 'Схематичен изглед',
+    'Wrap Around (Wrap)': 'Циклично търсене (Пренасяне)',
+    'Light mode': 'Светъл режим',
+    'Dark mode': 'Тъмен режим',
+    'Use light mode': 'Използване на светъл режим',
+    'Use dark mode': 'Използване на тъмен режим'
+  },
   de: {
     'Report': 'Melden', 'Light mode': 'Heller Modus', 'Use light mode': 'Hellen Modus verwenden',
     'Use dark mode': 'Dunklen Modus verwenden', 'Protect Secret Workspace': 'Geheimen Arbeitsbereich schützen',

@@ -22,6 +22,7 @@ The English interface and English documentation are the source text. The approve
 | `pl` | Polish |
 | `tw` | Traditional Chinese |
 | `uk` | Ukrainian |
+| `bg` | Bulgarian |
 
 ## Maintained Documentation Entry Points
 
