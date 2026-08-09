@@ -187,23 +187,55 @@ Mermaid, Markmap, maps, STL, ABC, and MathJax use client-side libraries. PlantUM
 
 ## Keyboard Shortcuts
 
+Markdown Viewer follows familiar Typora-style formatting shortcuts and Obsidian-style application navigation where the app has an equivalent command. `Ctrl` applies to Windows/Linux and `Cmd` applies to macOS unless a row says otherwise.
+
+### Editing
+
 | Action | Shortcut |
 | :--- | :--- |
-| Save/export Markdown | `Ctrl+S` / `Cmd+S` |
-| Copy selected text, or whole Markdown when nothing is selected | `Ctrl+C` / `Cmd+C` |
-| Toggle scroll sync in Split view | `Ctrl+Shift+S` / `Cmd+Shift+S` |
-| Find | `Ctrl+F` / `Cmd+F` |
-| Replace | `Ctrl+H` / `Cmd+H` |
-| Toggle bold | `Ctrl+B` / `Cmd+B` |
-| Toggle italic | `Ctrl+I` / `Cmd+I` |
 | Undo | `Ctrl+Z` / `Cmd+Z` |
 | Redo | `Ctrl+Shift+Z`, `Cmd+Shift+Z`, `Ctrl+Y`, or `Cmd+Y` |
-| New tab | Desktop: `Ctrl+T` / `Cmd+T`; web and desktop: `Alt+Shift+T` |
-| Close tab | Desktop: `Ctrl+W` / `Cmd+W`; web and desktop: `Alt+Shift+W` |
+| Toggle bold | `Ctrl+B` / `Cmd+B` |
+| Toggle italic | `Ctrl+I` / `Cmd+I` |
+| Toggle strikethrough | `Alt+Shift+5`; macOS also supports ``Ctrl+Shift+` `` |
+| Toggle inline code | Windows/Linux: ``Ctrl+Shift+` ``; macOS: ``Cmd+Shift+` `` |
+| Insert link | `Ctrl+K` / `Cmd+K` |
+| Clear Markdown formatting from the selection/current line | `Ctrl+\` / `Cmd+\` |
+| Apply paragraph style | Desktop: `Ctrl+0` / `Cmd+0` |
+| Apply Heading 1 through Heading 6 | Desktop: `Ctrl+1`&ndash;`Ctrl+6` / `Cmd+1`&ndash;`Cmd+6` |
+| Insert code block | Windows/Linux: `Ctrl+Shift+K`; macOS: `Cmd+Option+C` |
+| Apply blockquote | Windows/Linux: `Ctrl+Shift+Q`; macOS: `Cmd+Option+Q` |
+| Apply numbered list | Windows/Linux: `Ctrl+Shift+[`; macOS: `Cmd+Option+O` |
+| Apply bulleted list | Windows/Linux: `Ctrl+Shift+]`; macOS: `Cmd+Option+U` |
 | Indent | `Tab` |
 | Outdent | `Shift+Tab` |
+
+### Find and application navigation
+
+| Action | Shortcut |
+| :--- | :--- |
+| Find | `Ctrl+F` / `Cmd+F` |
+| Replace | `Ctrl+H` / `Cmd+H` |
+| Next find result | `F3` |
+| Previous find result | `Shift+F3` |
+| Quick open: show Explorer and focus file search | `Ctrl+P` / `Cmd+P` |
+| Import/open Markdown | `Ctrl+O` / `Cmd+O` |
+| Save/export Markdown | `Ctrl+S` / `Cmd+S` |
+| Copy selected text, or whole Markdown when nothing is selected | `Ctrl+C` / `Cmd+C` |
+| Copy raw Markdown directly | `Ctrl+Shift+C` / `Cmd+Shift+C` |
+| Toggle Edit/Preview | `Ctrl+E` / `Cmd+E` |
+| Toggle Explorer | `Ctrl+Shift+L` / `Cmd+Shift+L` |
+| Open Workspace settings | `Ctrl+,` / `Cmd+,` |
+| Toggle scroll sync in Split view | `Ctrl+Shift+S` / `Cmd+Shift+S` |
+| Toggle fullscreen | `F11`; macOS also supports `Cmd+Option+F` |
+| New document | Desktop: `Ctrl+N` / `Cmd+N` |
+| New tab | Desktop: `Ctrl+T` / `Cmd+T`; web and desktop: `Alt+Shift+T` |
+| Close tab | Desktop: `Ctrl+W` / `Cmd+W`; web and desktop: `Alt+Shift+W` |
+| Next/previous open document | Windows/Linux desktop: `Ctrl+Tab` / `Ctrl+Shift+Tab`; macOS desktop: ``Cmd+` `` / ``Cmd+Shift+` `` |
 | Close modals, panels, tab menus, and diagram modals | `Escape` |
 
-Browser shortcuts are intentionally not all intercepted on the web. For example, web tab creation/closing uses `Alt+Shift+T/W` so the app does not hijack browser tab shortcuts.
+When keyboard focus is on the tab bar, `ArrowLeft`, `ArrowRight`, `Home`, and `End` move focus; `Enter` or `Space` activates the focused tab.
+
+Browser shortcuts are intentionally not all intercepted on the web. For example, document heading shortcuts and `Ctrl/Cmd+T/W` are desktop-only so the app does not hijack browser tab controls; web tab creation/closing uses `Alt+Shift+T/W`.
 
 Related pages: [Features](Features.md), [Markdown Reference](Markdown-Reference.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md).
