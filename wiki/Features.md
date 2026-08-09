@@ -445,6 +445,8 @@ Common shortcuts:
 | Save/export Markdown | `Ctrl+S` / `Cmd+S` |
 | Find | `Ctrl+F` / `Cmd+F` |
 | Replace | `Ctrl+H` / `Cmd+H` |
+| Toggle bold | `Ctrl+B` / `Cmd+B` |
+| Toggle italic | `Ctrl+I` / `Cmd+I` |
 | Toggle scroll sync | `Ctrl+Shift+S` / `Cmd+Shift+S` in Split view |
 | Undo | `Ctrl+Z` / `Cmd+Z` |
 | Redo | `Ctrl+Shift+Z`, `Cmd+Shift+Z`, `Ctrl+Y`, or `Cmd+Y` |

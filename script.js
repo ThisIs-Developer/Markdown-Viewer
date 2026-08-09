@@ -13912,6 +13912,109 @@ ${selector} .arrowheadPath {
     replaceEditorRange(start, end, replacement, selectionStart, selectionEnd);
   }
 
+  function countRepeatedMarkerBefore(value, index, markerCharacter) {
+    let count = 0;
+    for (let cursor = index - 1; cursor >= 0 && value[cursor] === markerCharacter; cursor -= 1) {
+      count += 1;
+    }
+    return count;
+  }
+
+  function countRepeatedMarkerAfter(value, index, markerCharacter) {
+    let count = 0;
+    for (let cursor = index; cursor < value.length && value[cursor] === markerCharacter; cursor += 1) {
+      count += 1;
+    }
+    return count;
+  }
+
+  function markerRunIncludesFormat(runLength, markerLength) {
+    return markerLength === 1 ? runLength % 2 === 1 : runLength >= markerLength;
+  }
+
+  function selectionIncludesMarkdownMarkers(selected, prefix, suffix) {
+    if (!selected || selected.length < prefix.length + suffix.length) return false;
+    const repeatedMarker = prefix === suffix && prefix.split('').every(function(character) {
+      return character === prefix[0];
+    });
+    if (!repeatedMarker) return selected.startsWith(prefix) && selected.endsWith(suffix);
+
+    const leadingRun = countRepeatedMarkerAfter(selected, 0, prefix[0]);
+    const trailingRun = countRepeatedMarkerBefore(selected, selected.length, prefix[0]);
+    return markerRunIncludesFormat(leadingRun, prefix.length)
+      && markerRunIncludesFormat(trailingRun, suffix.length);
+  }
+
+  function selectionIsSurroundedByMarkdownMarkers(value, start, end, prefix, suffix) {
+    const repeatedMarker = prefix === suffix && prefix.split('').every(function(character) {
+      return character === prefix[0];
+    });
+    if (!repeatedMarker) {
+      return value.slice(Math.max(0, start - prefix.length), start) === prefix
+        && value.slice(end, end + suffix.length) === suffix;
+    }
+
+    const leadingRun = countRepeatedMarkerBefore(value, start, prefix[0]);
+    const trailingRun = countRepeatedMarkerAfter(value, end, suffix[0]);
+    return markerRunIncludesFormat(leadingRun, prefix.length)
+      && markerRunIncludesFormat(trailingRun, suffix.length);
+  }
+
+  function replaceMarkdownEditorRange(editor, start, end, replacement, selectionStart, selectionEnd) {
+    if (editor === markdownEditor) {
+      replaceEditorRange(start, end, replacement, selectionStart, selectionEnd);
+      return;
+    }
+    editor.focus();
+    editor.setRangeText(replacement, start, end, 'end');
+    editor.setSelectionRange(selectionStart, selectionEnd);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function toggleMarkdownSelection(editor, prefix, suffix, placeholder) {
+    const value = editor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = value.slice(start, end);
+
+    if (selectionIncludesMarkdownMarkers(selected, prefix, suffix)) {
+      const replacement = selected.slice(prefix.length, selected.length - suffix.length);
+      replaceMarkdownEditorRange(editor, start, end, replacement, start, start + replacement.length);
+      return;
+    }
+
+    if (selectionIsSurroundedByMarkdownMarkers(value, start, end, prefix, suffix)) {
+      const replacementStart = start - prefix.length;
+      const replacementEnd = end + suffix.length;
+      replaceMarkdownEditorRange(editor, replacementStart, replacementEnd, selected, replacementStart, replacementStart + selected.length);
+      return;
+    }
+
+    const content = selected || placeholder;
+    const replacement = prefix + content + suffix;
+    const selectionStart = start + prefix.length;
+    replaceMarkdownEditorRange(editor, start, end, replacement, selectionStart, selectionStart + content.length);
+  }
+
+  function handleMarkdownFormatShortcut(event) {
+    if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey)) return;
+    const key = event.key.toLowerCase();
+    if (key !== 'b' && key !== 'i') return;
+
+    event.preventDefault();
+    const editor = event.currentTarget;
+    const isEditable = editor === markdownEditor
+      ? canMutateEditor()
+      : editor === documentSplitEditor && Boolean(secondarySplitTabId) && !editor.readOnly;
+    if (!isEditable) {
+      announceToScreenReader(getEditorReadOnlyMessage());
+      return;
+    }
+
+    if (key === 'b') toggleMarkdownSelection(editor, '**', '**', 'bold text');
+    else toggleMarkdownSelection(editor, '*', '*', 'italic text');
+  }
+
   function getCurrentLineRange() {
     const value = markdownEditor.value;
     const start = markdownEditor.selectionStart;
@@ -18333,9 +18436,9 @@ ${selector} .arrowheadPath {
       return;
     }
 
-    if (action === 'bold') wrapEditorSelection('**', '**', 'bold text');
+    if (action === 'bold') toggleMarkdownSelection(markdownEditor, '**', '**', 'bold text');
     else if (action === 'strike') wrapEditorSelection('~~', '~~', 'struck text');
-    else if (action === 'italic') wrapEditorSelection('*', '*', 'italic text');
+    else if (action === 'italic') toggleMarkdownSelection(markdownEditor, '*', '*', 'italic text');
     else if (action === 'quote') transformEditorLines(function(line) { return line ? '> ' + line.replace(/^>\s?/, '') : '>'; });
     else if (action === 'align-left') insertAlignmentBlock('left');
     else if (action === 'align-center') insertAlignmentBlock('center');
@@ -19174,6 +19277,9 @@ ${selector} .arrowheadPath {
     headerAboutButton.addEventListener('click', openAboutModal);
   }
   
+  markdownEditor.addEventListener('keydown', handleMarkdownFormatShortcut);
+  if (documentSplitEditor) documentSplitEditor.addEventListener('keydown', handleMarkdownFormatShortcut);
+
   // Editor key handlers for list continuation and indentation
   markdownEditor.addEventListener("keydown", function(e) {
     if (!canMutateEditor()) return;

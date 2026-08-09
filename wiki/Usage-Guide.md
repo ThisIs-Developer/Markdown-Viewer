@@ -194,6 +194,8 @@ Mermaid, Markmap, maps, STL, ABC, and MathJax use client-side libraries. PlantUM
 | Toggle scroll sync in Split view | `Ctrl+Shift+S` / `Cmd+Shift+S` |
 | Find | `Ctrl+F` / `Cmd+F` |
 | Replace | `Ctrl+H` / `Cmd+H` |
+| Toggle bold | `Ctrl+B` / `Cmd+B` |
+| Toggle italic | `Ctrl+I` / `Cmd+I` |
 | Undo | `Ctrl+Z` / `Cmd+Z` |
 | Redo | `Ctrl+Shift+Z`, `Cmd+Shift+Z`, `Ctrl+Y`, or `Cmd+Y` |
 | New tab | Desktop: `Ctrl+T` / `Cmd+T`; web and desktop: `Alt+Shift+T` |
