@@ -1,8 +1,9 @@
 import { readFile, readdir } from 'node:fs/promises';
 
 const CATALOG_DIR = new URL('./', import.meta.url);
-const EXPECTED_LOCALES = ['de', 'en', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'tr', 'tw', 'uk', 'zh'];
+const EXPECTED_LOCALES = ['bg', 'de', 'en', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'tr', 'tw', 'uk', 'zh'];
 const ALLOWED_IDENTICAL_TRANSLATIONS = {
+  bg: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'Git Graph', 'GitHub', 'GitHub URL', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'Shift', 'SVG', 'ThisIs-Developer'],
   de: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Explorer', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Name', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer', 'Version', 'Wrap'],
   es: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG'],
   fr: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Actions', 'Ctrl', 'Description', 'Destination', 'Documents', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'Image (.png)', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Menu', 'Notifications', 'Participants', 'PDF', 'PNG', 'Session active', 'suggestion.', 'SVG', 'Version'],

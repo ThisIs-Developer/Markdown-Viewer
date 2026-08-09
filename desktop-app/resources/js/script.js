@@ -26090,6 +26090,45 @@ ${selector} .arrowheadPath {
       placeholder: "Введіть ваш markdown тут...",
       loadingEmojis: "Завантаження емодзі...",
       loadingFiles: "Отримання структури файлів..."
+    },
+    bg: {
+      title: "Markdown Viewer",
+      syncOff: "Изключване на синхронизацията",
+      syncOn: "Включване на синхронизацията",
+      import: "Импортиране",
+      importFile: "От файлове",
+      importGithub: "От GitHub",
+      export: "Експортиране",
+      exportMd: "Markdown (.md)",
+      exportHtml: "HTML",
+      exportPdf: "PDF",
+      exportPng: "Изображение (.png)",
+      copy: "Копиране",
+      copied: "Копирано!",
+      share: "Споделяне",
+      reset: "Нулиране",
+      editor: "Редактор",
+      split: "Разделен изглед",
+      preview: "Преглед",
+      minRead: "Мин. четене",
+      words: "Думи",
+      chars: "Знаци",
+      switchRtl: "Превключване към RTL",
+      switchLtr: "Превключване към LTR",
+      darkMode: "Тъмен режим",
+      lightMode: "Светъл режим",
+      helpTitle: "Помощ за Markdown Viewer",
+      aboutTitle: "Относно Markdown Viewer",
+      shareTitle: "Споделяне на документ",
+      renameTitle: "Преименуване на файл",
+      insertLink: "Вмъкване на връзка",
+      insertRef: "Вмъкване на препратка",
+      insertImg: "Вмъкване на изображение, GIF или видео",
+      insertTable: "Вмъкване на таблица",
+      findReplace: "Търсене и замяна",
+      placeholder: "Въведете Markdown тук...",
+      loadingEmojis: "Зареждане на емоджита...",
+      loadingFiles: "Зареждане на файловото дърво..."
     }
   };
 
@@ -26329,7 +26368,8 @@ ${selector} .arrowheadPath {
         tr: "Türkçe",
         pl: "Polski",
         tw: "繁體中文",
-        uk: "Українська"
+        uk: "Українська",
+        bg: "Български"
       };
       labelEl.textContent = languageNames[lang];
     }
@@ -26349,7 +26389,8 @@ ${selector} .arrowheadPath {
         tr: "Türkçe",
         pl: "Polski",
         tw: "繁體中文",
-        uk: "Українська"
+        uk: "Українська",
+        bg: "Български"
       };
       mobileLabelEl.textContent = languageNames[lang];
     }
@@ -26541,6 +26582,7 @@ ${selector} .arrowheadPath {
       else if (navLang.startsWith('tr')) lang = 'tr';
       else if (navLang.startsWith('pl')) lang = 'pl';
       else if (navLang.startsWith('uk')) lang = 'uk';
+      else if (navLang.startsWith('bg')) lang = 'bg';
     }
 
     if (!lang || !I18N_DICTS[lang]) {
