@@ -5965,7 +5965,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       openButton.setAttribute('aria-expanded', sidebarOpen ? 'true' : 'false');
       const icon = openButton.querySelector('i');
       if (icon) icon.className = sidebarOpen ? 'lucide lucide-panel-left-close' : 'lucide lucide-panel-left-open';
-      openButton.title = sidebarOpen ? 'Close Explorer' : 'Open Explorer';
+      openButton.title = (sidebarOpen ? 'Close Explorer' : 'Open Explorer') + ' (Ctrl/Cmd+Shift+L)';
       openButton.setAttribute('aria-label', sidebarOpen ? 'Close Explorer' : 'Open Explorer');
     }
     if (backdrop) backdrop.hidden = !mobileOpen;
@@ -13376,7 +13376,7 @@ ${selector} .arrowheadPath {
       : 'Enable synchronized scrolling';
     toggleSyncButton.setAttribute('aria-pressed', String(syncScrollingEnabled));
     toggleSyncButton.setAttribute('aria-label', syncActionLabel);
-    toggleSyncButton.setAttribute('title', syncActionLabel);
+    toggleSyncButton.setAttribute('title', syncActionLabel + ' (Ctrl/Cmd+Shift+S)');
     if (mobileToggleSyncButton) {
       mobileToggleSyncButton.classList.toggle('is-active', syncScrollingEnabled);
       mobileToggleSyncButton.setAttribute('aria-pressed', String(syncScrollingEnabled));
@@ -13902,45 +13902,268 @@ ${selector} .arrowheadPath {
     }
   }
 
-  function wrapEditorSelection(prefix, suffix, placeholder) {
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
-    const selected = markdownEditor.value.slice(start, end) || placeholder;
-    const replacement = prefix + selected + suffix;
-    const selectionStart = start + prefix.length;
-    const selectionEnd = selectionStart + selected.length;
-    replaceEditorRange(start, end, replacement, selectionStart, selectionEnd);
+  function countRepeatedMarkerBefore(value, index, markerCharacter) {
+    let count = 0;
+    for (let cursor = index - 1; cursor >= 0 && value[cursor] === markerCharacter; cursor -= 1) {
+      count += 1;
+    }
+    return count;
   }
 
-  function getCurrentLineRange() {
-    const value = markdownEditor.value;
-    const start = markdownEditor.selectionStart;
+  function countRepeatedMarkerAfter(value, index, markerCharacter) {
+    let count = 0;
+    for (let cursor = index; cursor < value.length && value[cursor] === markerCharacter; cursor += 1) {
+      count += 1;
+    }
+    return count;
+  }
+
+  function markerRunIncludesFormat(runLength, markerLength) {
+    return markerLength === 1 ? runLength % 2 === 1 : runLength >= markerLength;
+  }
+
+  function selectionIncludesMarkdownMarkers(selected, prefix, suffix) {
+    if (!selected || selected.length < prefix.length + suffix.length) return false;
+    const repeatedMarker = prefix === suffix && prefix.split('').every(function(character) {
+      return character === prefix[0];
+    });
+    if (!repeatedMarker) return selected.startsWith(prefix) && selected.endsWith(suffix);
+
+    const leadingRun = countRepeatedMarkerAfter(selected, 0, prefix[0]);
+    const trailingRun = countRepeatedMarkerBefore(selected, selected.length, prefix[0]);
+    return markerRunIncludesFormat(leadingRun, prefix.length)
+      && markerRunIncludesFormat(trailingRun, suffix.length);
+  }
+
+  function selectionIsSurroundedByMarkdownMarkers(value, start, end, prefix, suffix) {
+    const repeatedMarker = prefix === suffix && prefix.split('').every(function(character) {
+      return character === prefix[0];
+    });
+    if (!repeatedMarker) {
+      return value.slice(Math.max(0, start - prefix.length), start) === prefix
+        && value.slice(end, end + suffix.length) === suffix;
+    }
+
+    const leadingRun = countRepeatedMarkerBefore(value, start, prefix[0]);
+    const trailingRun = countRepeatedMarkerAfter(value, end, suffix[0]);
+    return markerRunIncludesFormat(leadingRun, prefix.length)
+      && markerRunIncludesFormat(trailingRun, suffix.length);
+  }
+
+  function replaceMarkdownEditorRange(editor, start, end, replacement, selectionStart, selectionEnd) {
+    if (editor === markdownEditor) {
+      replaceEditorRange(start, end, replacement, selectionStart, selectionEnd);
+      return;
+    }
+    editor.focus();
+    editor.setRangeText(replacement, start, end, 'end');
+    editor.setSelectionRange(selectionStart, selectionEnd);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function toggleMarkdownSelection(editor, prefix, suffix, placeholder) {
+    const value = editor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = value.slice(start, end);
+
+    if (selectionIncludesMarkdownMarkers(selected, prefix, suffix)) {
+      const replacement = selected.slice(prefix.length, selected.length - suffix.length);
+      replaceMarkdownEditorRange(editor, start, end, replacement, start, start + replacement.length);
+      return;
+    }
+
+    if (selectionIsSurroundedByMarkdownMarkers(value, start, end, prefix, suffix)) {
+      const replacementStart = start - prefix.length;
+      const replacementEnd = end + suffix.length;
+      replaceMarkdownEditorRange(editor, replacementStart, replacementEnd, selected, replacementStart, replacementStart + selected.length);
+      return;
+    }
+
+    const content = selected || placeholder;
+    const replacement = prefix + content + suffix;
+    const selectionStart = start + prefix.length;
+    replaceMarkdownEditorRange(editor, start, end, replacement, selectionStart, selectionStart + content.length);
+  }
+
+  function isMacShortcutPlatform() {
+    const platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+    return /mac|iphone|ipad|ipod/i.test(platform);
+  }
+
+  function isMarkdownEditorEditable(editor) {
+    if (editor === markdownEditor) return canMutateEditor();
+    return editor === documentSplitEditor && Boolean(secondarySplitTabId) && !editor.readOnly;
+  }
+
+  function getMarkdownEditorShortcutAction(event) {
+    if (event.defaultPrevented || event.isComposing) return null;
+    const key = event.key.toLowerCase();
+    const primary = event.ctrlKey || event.metaKey;
+    const isMac = isMacShortcutPlatform();
+    const desktop = typeof Neutralino !== 'undefined';
+
+    if (primary && !event.altKey && !event.shiftKey) {
+      if (key === 'b') return 'bold';
+      if (key === 'i') return 'italic';
+      if (key === 'k') return 'link';
+      if (event.code === 'Backslash' || key === '\\') return 'clear-formatting-selection';
+      if (desktop && /^Digit[0-6]$/.test(event.code)) {
+        const level = Number(event.code.slice(-1));
+        return level === 0 ? 'paragraph' : 'heading-' + level;
+      }
+    }
+
+    if (!isMac && event.ctrlKey && !event.metaKey && event.shiftKey && !event.altKey) {
+      if (event.code === 'Backquote') return 'inline-code';
+      if (key === 'k') return 'code-block';
+      if (key === 'q') return 'quote';
+      if (event.code === 'BracketLeft') return 'ordered-list';
+      if (event.code === 'BracketRight') return 'unordered-list';
+    }
+
+    if (isMac && event.metaKey && !event.ctrlKey && !event.shiftKey && event.altKey) {
+      if (key === 'c') return 'code-block';
+      if (key === 'q') return 'quote';
+      if (key === 'o') return 'ordered-list';
+      if (key === 'u') return 'unordered-list';
+    }
+
+    if (isMac && event.metaKey && !event.ctrlKey && event.shiftKey && !event.altKey && event.code === 'Backquote') {
+      return 'inline-code';
+    }
+    if (event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.code === 'Digit5') {
+      return 'strike';
+    }
+    if (isMac && event.ctrlKey && !event.metaKey && event.shiftKey && !event.altKey && event.code === 'Backquote') {
+      return 'strike';
+    }
+    return null;
+  }
+
+  function clearMarkdownFormattingSelection(editor) {
+    let start = editor.selectionStart;
+    let end = editor.selectionEnd;
+    const hadSelection = start !== end;
+    if (!hadSelection) {
+      const line = getCurrentLineRange(editor);
+      start = line.start;
+      end = line.end;
+    }
+    const replacement = stripMarkdownFormatting(editor.value.slice(start, end));
+    const nextStart = hadSelection ? start : start + replacement.length;
+    const nextEnd = hadSelection ? start + replacement.length : nextStart;
+    replaceMarkdownEditorRange(editor, start, end, replacement, nextStart, nextEnd);
+  }
+
+  function insertMarkdownCodeBlock(editor) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = editor.value.slice(start, end) || 'code';
+    insertMarkdownBlock('```\n' + selected + '\n```\n', start, end, editor);
+  }
+
+  function runMarkdownEditorShortcut(action, editor) {
+    if (action === 'bold') toggleMarkdownSelection(editor, '**', '**', 'bold text');
+    else if (action === 'italic') toggleMarkdownSelection(editor, '*', '*', 'italic text');
+    else if (action === 'strike') toggleMarkdownSelection(editor, '~~', '~~', 'struck text');
+    else if (action === 'inline-code') toggleMarkdownSelection(editor, '`', '`', 'code');
+    else if (action === 'link') insertMarkdownLink(editor);
+    else if (action === 'clear-formatting-selection') clearMarkdownFormattingSelection(editor);
+    else if (action === 'quote') transformEditorLines(function(line) { return line ? '> ' + line.replace(/^>\s?/, '') : '>'; }, editor);
+    else if (action === 'ordered-list') applyMarkdownList('ordered', editor);
+    else if (action === 'unordered-list') applyMarkdownList('unordered', editor);
+    else if (action === 'code-block') insertMarkdownCodeBlock(editor);
+    else if (action === 'paragraph') transformEditorLines(function(line) { return line.replace(/^#{1,6}\s+/, ''); }, editor);
+    else if (action.indexOf('heading-') === 0) {
+      const level = Math.max(1, Math.min(6, Number(action.slice('heading-'.length)) || 1));
+      const marker = '#'.repeat(level) + ' ';
+      transformEditorLines(function(line) { return marker + line.replace(/^#{1,6}\s+/, ''); }, editor);
+    }
+  }
+
+  function handleMarkdownFormatShortcut(event) {
+    const action = getMarkdownEditorShortcutAction(event);
+    if (!action) return;
+    event.preventDefault();
+    const editor = event.currentTarget;
+    if (!isMarkdownEditorEditable(editor)) {
+      announceToScreenReader(getEditorReadOnlyMessage());
+      return;
+    }
+    runMarkdownEditorShortcut(action, editor);
+  }
+
+  function adjustMarkdownEditorIndent(editor, outdent) {
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    if (!outdent && start === end) {
+      replaceMarkdownEditorRange(editor, start, end, '  ', start + 2, start + 2);
+      return;
+    }
+
+    const range = getSelectedLineRange(editor);
+    const replacement = range.text.split('\n').map(function(line) {
+      if (!outdent) return '  ' + line;
+      return line.replace(/^(?: {1,2}|\t)/, '');
+    }).join('\n');
+
+    if (start !== end) {
+      replaceMarkdownEditorRange(editor, range.start, range.end, replacement, range.start, range.start + replacement.length);
+      return;
+    }
+
+    const removedLength = range.text.length - replacement.length;
+    const caret = Math.max(range.start, start - Math.max(0, removedLength));
+    replaceMarkdownEditorRange(editor, range.start, range.end, replacement, caret, caret);
+  }
+
+  function handleMarkdownEditorStructureKeydown(event) {
+    const editor = event.currentTarget;
+    if (editor === markdownEditor && handleListEnter(event)) return;
+    if (event.key !== 'Tab') return;
+    if (!isMarkdownEditorEditable(editor)) {
+      event.preventDefault();
+      announceToScreenReader(getEditorReadOnlyMessage());
+      return;
+    }
+    event.preventDefault();
+    adjustMarkdownEditorIndent(editor, event.shiftKey);
+  }
+
+  function getCurrentLineRange(editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    const value = editor.value;
+    const start = editor.selectionStart;
     const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
     let lineEnd = value.indexOf('\n', start);
     if (lineEnd === -1) lineEnd = value.length;
     return { start: lineStart, end: lineEnd, text: value.slice(lineStart, lineEnd) };
   }
 
-  function getSelectedLineRange() {
-    const value = markdownEditor.value;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
+  function getSelectedLineRange(editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    const value = editor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
     const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
     let lineEnd = value.indexOf('\n', end);
     if (lineEnd === -1) lineEnd = value.length;
     return { start: lineStart, end: lineEnd, text: value.slice(lineStart, lineEnd) };
   }
 
-  function transformEditorLines(transformer) {
-    const range = getSelectedLineRange();
+  function transformEditorLines(transformer, editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    const range = getSelectedLineRange(editor);
     const replacement = range.text.split('\n').map(transformer).join('\n');
-    replaceEditorRange(range.start, range.end, replacement, range.start, range.start + replacement.length);
+    replaceMarkdownEditorRange(editor, range.start, range.end, replacement, range.start, range.start + replacement.length);
   }
 
-  function getListLineRange() {
-    const value = markdownEditor.value;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
+  function getListLineRange(editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    const value = editor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
     const effectiveEnd = end > start && value[end - 1] === '\n' ? end - 1 : end;
     const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
     let lineEnd = value.indexOf('\n', effectiveEnd);
@@ -13972,26 +14195,28 @@ ${selector} .arrowheadPath {
     return { indent: match ? match[1] : '', body: match ? match[2] : line };
   }
 
-  function getPreviousLineInfo(lineStart) {
+  function getPreviousLineInfo(lineStart, editorOverride) {
     if (lineStart <= 0) return null;
-    const value = markdownEditor.value;
+    const editor = editorOverride || markdownEditor;
+    const value = editor.value;
     const previousEnd = lineStart - 1;
     const previousStart = previousEnd > 0 ? value.lastIndexOf('\n', previousEnd - 1) + 1 : 0;
     return { start: previousStart, text: value.slice(previousStart, previousEnd) };
   }
 
-  function getOrderedListStartNumber(lineStart) {
-    const previousLine = getPreviousLineInfo(lineStart);
+  function getOrderedListStartNumber(lineStart, editorOverride) {
+    const previousLine = getPreviousLineInfo(lineStart, editorOverride);
     if (!previousLine || !previousLine.text.trim()) return 1;
     const parsed = parseMarkdownListItem(previousLine.text);
     return parsed && parsed.type === 'ordered' ? parsed.number + 1 : 1;
   }
 
-  function applyMarkdownList(type) {
-    const range = getListLineRange();
-    const hadSelection = markdownEditor.selectionStart !== markdownEditor.selectionEnd;
+  function applyMarkdownList(type, editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    const range = getListLineRange(editor);
+    const hadSelection = editor.selectionStart !== editor.selectionEnd;
     const lines = range.text.split('\n');
-    let nextNumber = type === 'ordered' ? getOrderedListStartNumber(range.start) : 1;
+    let nextNumber = type === 'ordered' ? getOrderedListStartNumber(range.start, editor) : 1;
     let firstPrefixLength = null;
 
     const replacement = lines.map(function(line) {
@@ -14008,7 +14233,7 @@ ${selector} .arrowheadPath {
       ? range.start + (firstPrefixLength || 0)
       : range.start + replacement.length;
 
-    replaceEditorRange(range.start, range.end, replacement, caret, caret);
+    replaceMarkdownEditorRange(editor, range.start, range.end, replacement, caret, caret);
   }
 
   function renumberOrderedListAfterPosition(position, nextNumber) {
@@ -14562,15 +14787,16 @@ ${selector} .arrowheadPath {
     replaceEditorRange(start, end, replacement, contentStart, hasSelection ? contentEnd : contentStart);
   }
 
-  function insertMarkdownBlock(block, startOverride, endOverride) {
-    const value = markdownEditor.value;
-    const start = typeof startOverride === 'number' ? startOverride : markdownEditor.selectionStart;
-    const end = typeof endOverride === 'number' ? endOverride : markdownEditor.selectionEnd;
+  function insertMarkdownBlock(block, startOverride, endOverride, editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    const value = editor.value;
+    const start = typeof startOverride === 'number' ? startOverride : editor.selectionStart;
+    const end = typeof endOverride === 'number' ? endOverride : editor.selectionEnd;
     const needsLeadingBreak = start > 0 && value[start - 1] !== '\n';
     const needsTrailingBreak = end < value.length && value[end] !== '\n';
     const replacement = (needsLeadingBreak ? '\n' : '') + block + (needsTrailingBreak ? '\n' : '');
     const caret = start + replacement.length;
-    replaceEditorRange(start, end, replacement, caret, caret);
+    replaceMarkdownEditorRange(editor, start, end, replacement, caret, caret);
   }
 
   function clampNumber(value, min, max, fallback) {
@@ -16478,16 +16704,17 @@ ${selector} .arrowheadPath {
     openAppModal(modal, { focusTarget: searchInput, returnFocus: opener, onClose: closeModal });
   }
 
-  function insertMarkdownLink() {
+  function insertMarkdownLink(editorOverride) {
+    const editor = editorOverride || markdownEditor;
     const modal = document.getElementById('link-modal');
     const urlInput = document.getElementById('link-modal-url');
     const textInput = document.getElementById('link-modal-text');
     const confirmBtn = document.getElementById('link-modal-apply');
     const cancelBtn = document.getElementById('link-modal-cancel');
     if (!modal || !urlInput || !textInput || !confirmBtn || !cancelBtn) return;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
-    const selected = markdownEditor.value.slice(start, end);
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = editor.value.slice(start, end);
     urlInput.value = 'https://';
     textInput.value = selected || '';
     modal.style.display = 'flex';
@@ -16498,7 +16725,7 @@ ${selector} .arrowheadPath {
       const replacement = '[' + linkText + '](' + url + ')';
       modal.style.display = 'none';
       cleanup();
-      replaceEditorRange(start, end, replacement, start + replacement.length, start + replacement.length);
+      replaceMarkdownEditorRange(editor, start, end, replacement, start + replacement.length, start + replacement.length);
     }
 
     function closeModal() {
@@ -18333,9 +18560,9 @@ ${selector} .arrowheadPath {
       return;
     }
 
-    if (action === 'bold') wrapEditorSelection('**', '**', 'bold text');
-    else if (action === 'strike') wrapEditorSelection('~~', '~~', 'struck text');
-    else if (action === 'italic') wrapEditorSelection('*', '*', 'italic text');
+    if (action === 'bold') toggleMarkdownSelection(markdownEditor, '**', '**', 'bold text');
+    else if (action === 'strike') toggleMarkdownSelection(markdownEditor, '~~', '~~', 'struck text');
+    else if (action === 'italic') toggleMarkdownSelection(markdownEditor, '*', '*', 'italic text');
     else if (action === 'quote') transformEditorLines(function(line) { return line ? '> ' + line.replace(/^>\s?/, '') : '>'; });
     else if (action === 'align-left') insertAlignmentBlock('left');
     else if (action === 'align-center') insertAlignmentBlock('center');
@@ -18358,7 +18585,7 @@ ${selector} .arrowheadPath {
     else if (action === 'link') insertMarkdownLink();
     else if (action === 'reference') insertMarkdownReference();
     else if (action === 'image') insertMarkdownImage();
-    else if (action === 'inline-code') wrapEditorSelection('`', '`', 'code');
+    else if (action === 'inline-code') toggleMarkdownSelection(markdownEditor, '`', '`', 'code');
     else if (action === 'code-block') insertMarkdownBlock('```js\n' + (markdownEditor.value.slice(markdownEditor.selectionStart, markdownEditor.selectionEnd) || 'console.log("Hello, Markdown!");') + '\n```\n');
     else if (action === 'table') openTableModal();
     else if (action === 'date-time') {
@@ -19165,7 +19392,7 @@ ${selector} .arrowheadPath {
     const isFullscreen = Boolean(document.fullscreenElement);
     const label = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
     const icon = fullscreenButton.querySelector('i');
-    fullscreenButton.setAttribute('title', label);
+    fullscreenButton.setAttribute('title', label + ' (F11 / Cmd+Option+F)');
     fullscreenButton.setAttribute('aria-label', label);
     if (icon) icon.className = isFullscreen ? 'lucide lucide-minimize' : 'lucide lucide-maximize';
   });
@@ -19174,33 +19401,12 @@ ${selector} .arrowheadPath {
     headerAboutButton.addEventListener('click', openAboutModal);
   }
   
-  // Editor key handlers for list continuation and indentation
-  markdownEditor.addEventListener("keydown", function(e) {
-    if (!canMutateEditor()) return;
-    if (handleListEnter(e)) {
-      return;
-    }
+  markdownEditor.addEventListener('keydown', handleMarkdownFormatShortcut);
+  if (documentSplitEditor) documentSplitEditor.addEventListener('keydown', handleMarkdownFormatShortcut);
 
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      
-      const start = this.selectionStart;
-      const end = this.selectionEnd;
-      const value = this.value;
-      
-      // Insert 2 spaces
-      const indent = '  '; // 2 spaces
-      
-      // Update textarea value
-      this.value = value.substring(0, start) + indent + value.substring(end);
-      
-      // Update cursor position
-      this.selectionStart = this.selectionEnd = start + indent.length;
-      
-      // Trigger input event to update preview
-      this.dispatchEvent(new Event('input'));
-    }
-  });
+  // Editor key handlers for list continuation and indentation
+  markdownEditor.addEventListener('keydown', handleMarkdownEditorStructureKeydown);
+  if (documentSplitEditor) documentSplitEditor.addEventListener('keydown', handleMarkdownEditorStructureKeydown);
   
   markdownEditor.addEventListener("scroll", function() {
     cachedScrollTop = this.scrollTop;
@@ -24218,8 +24424,94 @@ ${selector} .arrowheadPath {
   }
 
   document.addEventListener("keydown", function (e) {
+    if (e.defaultPrevented) return;
+    const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+    const isDesktop = typeof Neutralino !== 'undefined';
+    const key = e.key.toLowerCase();
+
+    if (e.key === 'F3') {
+      e.preventDefault();
+      if (!isFindModalOpen) openFindReplaceModal();
+      requestAnimationFrame(function() { cycleFindMatch(e.shiftKey ? -1 : 1); });
+      return;
+    }
+
+    if (isCmdOrCtrl && !e.shiftKey && !e.altKey && key === 'p') {
+      e.preventDefault();
+      openDocumentSidebar();
+      requestAnimationFrame(function() {
+        const searchInput = document.getElementById('document-sidebar-search');
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      });
+      return;
+    }
+
+    if (isCmdOrCtrl && !e.shiftKey && !e.altKey && (e.code === 'Comma' || key === ',')) {
+      e.preventDefault();
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle) settingsToggle.click();
+      return;
+    }
+
+    if (isCmdOrCtrl && !e.shiftKey && !e.altKey && key === 'e') {
+      e.preventDefault();
+      setViewMode(currentViewMode === 'preview' ? 'editor' : 'preview');
+      return;
+    }
+
+    if (isCmdOrCtrl && !e.shiftKey && !e.altKey && key === 'o') {
+      e.preventDefault();
+      if (isDesktop) nativeImportMarkdown();
+      else fileInput.click();
+      return;
+    }
+
+    if (isCmdOrCtrl && e.shiftKey && !e.altKey && key === 'c') {
+      e.preventDefault();
+      const focusedEditor = document.activeElement === documentSplitEditor ? documentSplitEditor : markdownEditor;
+      const selected = focusedEditor.value.slice(focusedEditor.selectionStart, focusedEditor.selectionEnd);
+      copyTextToClipboard(selected || focusedEditor.value)
+        .then(function() { announceToScreenReader(selected ? 'Selected Markdown copied.' : 'Markdown copied.'); })
+        .catch(function(error) { console.warn('Copy Markdown shortcut failed:', error); });
+      return;
+    }
+
+    if (isCmdOrCtrl && e.shiftKey && !e.altKey && key === 'l') {
+      e.preventDefault();
+      toggleDocumentSidebarFromTabBar();
+      return;
+    }
+
+    if (e.key === 'F11' || (isMacShortcutPlatform() && e.metaKey && e.altKey && !e.shiftKey && key === 'f')) {
+      e.preventDefault();
+      runMarkdownTool('fullscreen');
+      return;
+    }
+
+    if (isDesktop && isCmdOrCtrl && !e.shiftKey && !e.altKey && key === 'n') {
+      e.preventDefault();
+      newTab();
+      return;
+    }
+
+    const switchWithControlTab = isDesktop && e.ctrlKey && !e.metaKey && !e.altKey && e.code === 'Tab';
+    const switchWithCommandBackquote = isDesktop && isMacShortcutPlatform() && e.metaKey && !e.ctrlKey && !e.altKey && e.code === 'Backquote';
+    if (switchWithControlTab || switchWithCommandBackquote) {
+      e.preventDefault();
+      const openTabs = getOpenTabs();
+      const activeIndex = openTabs.findIndex(function(tab) { return tab.id === activeTabId; });
+      if (openTabs.length > 1 && activeIndex !== -1) {
+        const direction = e.shiftKey ? -1 : 1;
+        const nextIndex = (activeIndex + direction + openTabs.length) % openTabs.length;
+        switchTab(openTabs[nextIndex].id);
+      }
+      return;
+    }
+
     if (document.activeElement === markdownEditor) {
-      const isCmdOrCtrl = e.ctrlKey || e.metaKey;
       if (!canMutateEditor() && isCmdOrCtrl && ['z', 'y'].indexOf(e.key.toLowerCase()) !== -1) {
         e.preventDefault();
         announceToScreenReader(getEditorReadOnlyMessage());
@@ -24236,11 +24528,11 @@ ${selector} .arrowheadPath {
       }
     }
 
-    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+    if (isCmdOrCtrl && !e.shiftKey && key === 's') {
       e.preventDefault();
       exportMd.click();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+    if (isCmdOrCtrl && key === 'c') {
       const activeEl = document.activeElement;
       const isTextControl = activeEl && (activeEl.tagName === "TEXTAREA" || activeEl.tagName === "INPUT");
       const hasSelection = window.getSelection && window.getSelection().toString().trim().length > 0;
@@ -24251,20 +24543,19 @@ ${selector} .arrowheadPath {
       }
     }
     // Story 1.2: Only allow sync toggle shortcut when in split view
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "s") {
+    if (isCmdOrCtrl && e.shiftKey && key === 's') {
       e.preventDefault();
       if (currentViewMode === 'split') {
         toggleSyncScrolling();
       }
     }
-    const isDesktop = typeof Neutralino !== 'undefined';
     // New tab (Ctrl+T on desktop, Alt+Shift+T on web/desktop)
-    if ((isDesktop && (e.ctrlKey || e.metaKey) && e.key === "t") || (e.altKey && e.shiftKey && e.key.toLowerCase() === "t")) {
+    if ((isDesktop && isCmdOrCtrl && key === 't') || (e.altKey && e.shiftKey && key === 't')) {
       e.preventDefault();
       newTab();
     }
     // Close tab (Ctrl+W on desktop, Alt+Shift+W on web/desktop)
-    if ((isDesktop && (e.ctrlKey || e.metaKey) && e.key === "w") || (e.altKey && e.shiftKey && e.key.toLowerCase() === "w")) {
+    if ((isDesktop && isCmdOrCtrl && key === 'w') || (e.altKey && e.shiftKey && key === 'w')) {
       e.preventDefault();
       closeTab(activeTabId);
     }
@@ -26434,9 +26725,9 @@ ${selector} .arrowheadPath {
     if (mTabResetLabel) mTabResetLabel.textContent = translateUiString('Reset workspace');
 
     // View toggle buttons title tooltips
-    document.querySelectorAll('[data-view-mode="editor"]').forEach(b => b.title = translateUiString('Edit Markdown'));
+    document.querySelectorAll('[data-view-mode="editor"]').forEach(b => b.title = translateUiString('Edit Markdown') + ' (Ctrl/Cmd+E toggles Edit/Preview)');
     document.querySelectorAll('[data-view-mode="split"]').forEach(b => b.title = translateUiString('Split editor and live preview'));
-    document.querySelectorAll('[data-view-mode="preview"]').forEach(b => b.title = translateUiString('Markdown preview only'));
+    document.querySelectorAll('[data-view-mode="preview"]').forEach(b => b.title = translateUiString('Markdown preview only') + ' (Ctrl/Cmd+E toggles Edit/Preview)');
     document.querySelectorAll('.mobile-view-mode-btn[data-mode="editor"] span').forEach(s => s.textContent = translateUiString('Edit'));
     document.querySelectorAll('.mobile-view-mode-btn[data-mode="split"] span').forEach(s => s.textContent = translateUiString('Split'));
     document.querySelectorAll('.mobile-view-mode-btn[data-mode="preview"] span').forEach(s => s.textContent = translateUiString('Preview'));

@@ -438,21 +438,36 @@ Reading time is based on a simple words-per-minute estimate. Counts update as th
 
 ## Keyboard and Accessibility
 
-Common shortcuts:
+Supported shortcuts are grouped below. `Ctrl` applies to Windows/Linux and `Cmd` applies to macOS unless noted.
 
 | Action | Shortcut |
 | :--- | :--- |
-| Save/export Markdown | `Ctrl+S` / `Cmd+S` |
-| Find | `Ctrl+F` / `Cmd+F` |
-| Replace | `Ctrl+H` / `Cmd+H` |
-| Toggle scroll sync | `Ctrl+Shift+S` / `Cmd+Shift+S` in Split view |
 | Undo | `Ctrl+Z` / `Cmd+Z` |
 | Redo | `Ctrl+Shift+Z`, `Cmd+Shift+Z`, `Ctrl+Y`, or `Cmd+Y` |
+| Bold, italic, or link | `Ctrl/Cmd+B`, `Ctrl/Cmd+I`, or `Ctrl/Cmd+K` |
+| Strikethrough | `Alt+Shift+5`; macOS also supports ``Ctrl+Shift+` `` |
+| Inline code | Windows/Linux: ``Ctrl+Shift+` ``; macOS: ``Cmd+Shift+` `` |
+| Clear Markdown formatting | `Ctrl+\` / `Cmd+\` |
+| Paragraph or Heading 1&ndash;6 | Desktop: `Ctrl/Cmd+0` or `Ctrl/Cmd+1`&ndash;`6` |
+| Code block or blockquote | Windows/Linux: `Ctrl+Shift+K/Q`; macOS: `Cmd+Option+C/Q` |
+| Numbered or bulleted list | Windows/Linux: `Ctrl+Shift+[/]`; macOS: `Cmd+Option+O/U` |
+| Indent/outdent | `Tab` / `Shift+Tab` in an editor |
+| Find/replace | `Ctrl/Cmd+F` / `Ctrl/Cmd+H` |
+| Next/previous find result | `F3` / `Shift+F3` |
+| Quick open / import Markdown | `Ctrl/Cmd+P` / `Ctrl/Cmd+O` |
+| Save/export Markdown | `Ctrl+S` / `Cmd+S` |
+| Copy / copy raw Markdown | `Ctrl/Cmd+C` / `Ctrl/Cmd+Shift+C` |
+| Toggle Edit/Preview / Explorer | `Ctrl/Cmd+E` / `Ctrl/Cmd+Shift+L` |
+| Open Workspace settings | `Ctrl+,` / `Cmd+,` |
+| Toggle scroll sync | `Ctrl+Shift+S` / `Cmd+Shift+S` in Split view |
+| Fullscreen | `F11`; macOS also supports `Cmd+Option+F` |
+| New document | Desktop: `Ctrl+N` / `Cmd+N` |
 | New tab | Desktop: `Ctrl+T` / `Cmd+T`; web and desktop: `Alt+Shift+T` |
 | Close tab | Desktop: `Ctrl+W` / `Cmd+W`; web and desktop: `Alt+Shift+W` |
-| Indent | `Tab` in the editor |
-| Outdent | `Shift+Tab` in the editor |
+| Next/previous document | Windows/Linux desktop: `Ctrl+Tab` / `Ctrl+Shift+Tab`; macOS desktop: ``Cmd+` `` / ``Cmd+Shift+` `` |
 | Close modals/panels | `Escape` |
+
+The [Usage Guide](Usage-Guide.md#keyboard-shortcuts) lists every shortcut individually, including platform-specific variants and web/desktop notes.
 
 Accessibility behavior:
 
