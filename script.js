@@ -1583,13 +1583,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function updateThemeToggleUI(theme) {
     const darkModeEnabled = theme === "dark";
-    const themeIconName = darkModeEnabled ? 'moon' : 'sun-medium';
+    const themeIconName = darkModeEnabled ? 'moon' : 'sun';
     if (themeToggle) {
       const description = document.getElementById('theme-toggle-description');
       themeToggle.classList.toggle('is-active', darkModeEnabled);
       themeToggle.setAttribute('aria-pressed', String(darkModeEnabled));
       if (themeToggleIcon) themeToggleIcon.className = 'lucide lucide-' + themeIconName;
-      if (themeSwitchIcon) themeSwitchIcon.className = 'lucide lucide-' + themeIconName + ' theme-switch-icon';
+      if (themeSwitchIcon) themeSwitchIcon.className = 'lucide lucide-' + themeIconName + ' settings-switch-icon';
       if (description) description.textContent = darkModeEnabled ? 'Switch to light appearance' : 'Switch to dark appearance';
       themeToggle.setAttribute('aria-label', darkModeEnabled ? 'Use light appearance' : 'Use dark appearance');
       themeToggle.setAttribute('title', darkModeEnabled ? 'Use light appearance' : 'Use dark appearance');
@@ -1600,7 +1600,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       mobileThemeToggle.setAttribute('aria-label', darkModeEnabled ? 'Use light mode' : 'Use dark mode');
       mobileThemeToggle.setAttribute('title', darkModeEnabled ? 'Use light mode' : 'Use dark mode');
       if (mobileThemeIcon) mobileThemeIcon.className = 'lucide lucide-' + themeIconName;
-      if (mobileThemeSwitchIcon) mobileThemeSwitchIcon.className = 'lucide lucide-' + themeIconName + ' theme-switch-icon';
+      if (mobileThemeSwitchIcon) mobileThemeSwitchIcon.className = 'lucide lucide-' + themeIconName + ' settings-switch-icon';
       if (mobileThemeStatus) mobileThemeStatus.textContent = darkModeEnabled ? 'Dark mode' : 'Light mode';
     }
   }

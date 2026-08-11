@@ -2513,7 +2513,7 @@ body.document-sidebar-collapsed .document-sidebar {
   transition: transform 0.16s ease, background-color 0.16s ease;
 }
 
-.theme-settings-switch > span {
+.icon-settings-switch > span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2522,7 +2522,7 @@ body.document-sidebar-collapsed .document-sidebar {
   transition: color 0.16s ease, transform 0.16s ease;
 }
 
-.theme-switch-icon {
+.settings-switch-icon {
   width: 12px;
   height: 12px;
   color: currentColor;
@@ -2543,7 +2543,7 @@ body.document-sidebar-collapsed .document-sidebar {
   transform: translateX(18px);
 }
 
-.settings-menu-item.is-active .theme-settings-switch > span {
+.settings-menu-item.is-active .icon-settings-switch > span {
   color: var(--text-color);
   background: var(--bg-color);
 }
@@ -11143,7 +11143,7 @@ html[data-theme="dark"] .mermaid svg {
   transform: translateX(18px);
 }
 
-.mobile-settings-toggle.is-active .theme-settings-switch > span {
+.mobile-settings-toggle.is-active .icon-settings-switch > span {
   color: var(--text-color);
   background: var(--bg-color);
 }
