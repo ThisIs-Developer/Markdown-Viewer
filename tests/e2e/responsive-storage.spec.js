@@ -47,6 +47,26 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(toggledTheme);
 });
 
+test('dark mode keeps active settings switches dark and uses a heavier theme glyph', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await openApp(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  const themeSwitch = page.locator('#theme-toggle .settings-switch');
+  const privateModeToggle = page.locator('#private-mode-toggle');
+  const privateModeSwitch = privateModeToggle.locator('.settings-switch');
+  const darkTrackColor = await privateModeSwitch.evaluate(element => getComputedStyle(element).backgroundColor);
+
+  await expect(themeSwitch).toHaveCSS('background-color', darkTrackColor);
+  await privateModeToggle.click();
+  await expect(privateModeToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(privateModeSwitch).toHaveCSS('background-color', darkTrackColor);
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('width', '12px');
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('height', '12px');
+  await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('filter', 'none');
+});
+
 test('document tabs persist across reload in normal mode', async ({ page }) => {
   await openApp(page);
   await setEditorContent(page, '# Persistence Check\n\nSaved locally.');

@@ -2523,10 +2523,15 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .theme-switch-icon {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   color: currentColor;
-  font-size: 10px;
+  font-size: 12px;
+  filter:
+    drop-shadow(0.35px 0 0 currentColor)
+    drop-shadow(-0.35px 0 0 currentColor)
+    drop-shadow(0 0.35px 0 currentColor)
+    drop-shadow(0 -0.35px 0 currentColor);
 }
 
 .settings-menu-item.is-active .settings-switch {
@@ -11141,6 +11146,11 @@ html[data-theme="dark"] .mermaid svg {
 .mobile-settings-toggle.is-active .theme-settings-switch > span {
   color: var(--text-color);
   background: var(--bg-color);
+}
+
+html[data-theme="dark"] .settings-menu-item.is-active .settings-switch,
+html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
+  background: var(--button-active);
 }
 
 .mobile-menu-command.is-active .mobile-menu-item-label > i,
