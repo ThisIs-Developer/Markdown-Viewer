@@ -2513,7 +2513,7 @@ body.document-sidebar-collapsed .document-sidebar {
   transition: transform 0.16s ease, background-color 0.16s ease;
 }
 
-.icon-settings-switch > span {
+.themed-settings-switch > span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2543,7 +2543,7 @@ body.document-sidebar-collapsed .document-sidebar {
   transform: translateX(18px);
 }
 
-.settings-menu-item.is-active .icon-settings-switch > span {
+.settings-menu-item.is-active .themed-settings-switch > span {
   color: var(--text-color);
   background: var(--bg-color);
 }
@@ -11143,13 +11143,18 @@ html[data-theme="dark"] .mermaid svg {
   transform: translateX(18px);
 }
 
-.mobile-settings-toggle.is-active .icon-settings-switch > span {
+.mobile-settings-toggle.is-active .themed-settings-switch > span {
   color: var(--text-color);
   background: var(--bg-color);
 }
 
 html[data-theme="dark"] .settings-menu-item.is-active .settings-switch,
 html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
+  background: var(--button-active);
+}
+
+#private-mode-toggle.is-active .settings-switch,
+#mobile-private-mode-toggle.is-active .settings-switch {
   background: var(--button-active);
 }
 

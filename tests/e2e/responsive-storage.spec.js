@@ -65,11 +65,23 @@ test('dark mode keeps active settings switches dark and uses a heavier theme gly
   await expect(page.locator('#theme-switch-icon')).toHaveCSS('width', '12px');
   await expect(page.locator('#theme-switch-icon')).toHaveCSS('height', '12px');
   await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('filter', 'none');
-  await expect(page.locator('#private-mode-switch-icon')).toHaveClass(/lucide-hat-glasses/);
-  await expect(page.locator('#private-mode-switch-icon')).toHaveCSS('width', '12px');
-  await expect(page.locator('#private-mode-switch-icon')).toHaveCSS('height', '12px');
-  await expect(page.locator('#private-mode-switch-icon')).not.toHaveCSS('mask-image', 'none');
-  await expect(page.locator('#private-mode-switch-icon')).not.toHaveCSS('filter', 'none');
+  await expect(privateModeSwitch.locator('.lucide')).toHaveCount(0);
+});
+
+test('light mode keeps active private mode neutral without an inner icon', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await openApp(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  const privateModeToggle = page.locator('#private-mode-toggle');
+  const privateModeSwitch = privateModeToggle.locator('.settings-switch');
+  const neutralTrackColor = await privateModeSwitch.evaluate(element => getComputedStyle(element).backgroundColor);
+
+  await privateModeToggle.click();
+  await expect(privateModeToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(privateModeSwitch).toHaveCSS('background-color', neutralTrackColor);
+  await expect(privateModeSwitch.locator('.lucide')).toHaveCount(0);
 });
 
 test('document tabs persist across reload in normal mode', async ({ page }) => {
@@ -415,8 +427,7 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   await expect(page.locator('#mobile-theme-switch-icon')).toHaveClass(/lucide-(sun|moon)/);
   await expect(page.locator('#mobile-theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch')).toBeVisible();
-  await expect(page.locator('#mobile-private-mode-switch-icon')).toHaveClass(/lucide-hat-glasses/);
-  await expect(page.locator('#mobile-private-mode-switch-icon')).not.toHaveCSS('mask-image', 'none');
+  await expect(page.locator('#mobile-private-mode-toggle .settings-switch .lucide')).toHaveCount(0);
   const settingsOrder = await page.locator('#mobile-menu-settings-panel > *').evaluateAll(elements =>
     elements.filter(element => element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
   );
