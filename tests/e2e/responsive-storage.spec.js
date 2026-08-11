@@ -8,6 +8,17 @@ const {
   waitForAppReady
 } = require('../helpers/app');
 
+async function resolveCssColor(page, variableName) {
+  return page.evaluate(name => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, variableName);
+}
+
 test('theme switching stores and restores the selected theme', async ({ page }) => {
   await openApp(page);
 
@@ -47,7 +58,7 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(toggledTheme);
 });
 
-test('dark mode keeps active settings switches dark and uses a heavier theme glyph', async ({ page }) => {
+test('dark mode keeps the active theme switch dark and the private mode switch blue', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await openApp(page);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -57,18 +68,19 @@ test('dark mode keeps active settings switches dark and uses a heavier theme gly
   const privateModeToggle = page.locator('#private-mode-toggle');
   const privateModeSwitch = privateModeToggle.locator('.settings-switch');
   const darkTrackColor = await privateModeSwitch.evaluate(element => getComputedStyle(element).backgroundColor);
+  const accentTrackColor = await resolveCssColor(page, '--accent-color');
 
   await expect(themeSwitch).toHaveCSS('background-color', darkTrackColor);
   await privateModeToggle.click();
   await expect(privateModeToggle).toHaveAttribute('aria-pressed', 'true');
-  await expect(privateModeSwitch).toHaveCSS('background-color', darkTrackColor);
+  await expect(privateModeSwitch).toHaveCSS('background-color', accentTrackColor);
   await expect(page.locator('#theme-switch-icon')).toHaveCSS('width', '12px');
   await expect(page.locator('#theme-switch-icon')).toHaveCSS('height', '12px');
   await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('filter', 'none');
   await expect(privateModeSwitch.locator('.lucide')).toHaveCount(0);
 });
 
-test('light mode keeps active private mode neutral without an inner icon', async ({ page }) => {
+test('light mode uses the accent blue for active private mode without an inner icon', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'light' });
   await openApp(page);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -76,11 +88,11 @@ test('light mode keeps active private mode neutral without an inner icon', async
   await page.getByRole('button', { name: 'Open workspace settings' }).click();
   const privateModeToggle = page.locator('#private-mode-toggle');
   const privateModeSwitch = privateModeToggle.locator('.settings-switch');
-  const neutralTrackColor = await privateModeSwitch.evaluate(element => getComputedStyle(element).backgroundColor);
+  const accentTrackColor = await resolveCssColor(page, '--accent-color');
 
   await privateModeToggle.click();
   await expect(privateModeToggle).toHaveAttribute('aria-pressed', 'true');
-  await expect(privateModeSwitch).toHaveCSS('background-color', neutralTrackColor);
+  await expect(privateModeSwitch).toHaveCSS('background-color', accentTrackColor);
   await expect(privateModeSwitch.locator('.lucide')).toHaveCount(0);
 });
 

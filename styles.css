@@ -11155,7 +11155,7 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
 
 #private-mode-toggle.is-active .settings-switch,
 #mobile-private-mode-toggle.is-active .settings-switch {
-  background: var(--button-active);
+  background: var(--accent-color);
 }
 
 .mobile-menu-command.is-active .mobile-menu-item-label > i,
