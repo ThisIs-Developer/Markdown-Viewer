@@ -133,14 +133,25 @@ Before publishing a release:
 
 ## Testing
 
+Install the locked test dependencies and browser binaries once:
+
+```bash
+npm ci
+npm run test:install
+```
+
 Choose checks that match the change:
 
 ```bash
 npm run build
 npm run test:e2e
+npm run test:e2e:smoke
+npm run test:e2e:cross-browser
 ```
 
-`npm run build` runs the repository static asset validator. `npm run test:e2e` runs Playwright, and `npm test` runs both. Use a focused Playwright spec while iterating, then the broader applicable suite before a pull request.
+`npm run build` validates required assets, JSON, HTML references and IDs, and JavaScript syntax. `npm run test:e2e` runs the complete Chromium Playwright suite, `npm run test:e2e:cross-browser` runs smoke coverage in Chromium, Firefox, and WebKit, and `npm test` runs static validation plus the complete Chromium suite. Use a focused Playwright spec while iterating, then run `npm test` and the cross-browser smoke suite before a pull request.
+
+Tests start their own Node static server and must not depend on Python, machine-specific paths, developer credentials, or live third-party APIs. The suite is intentionally local-only: contributors must run the relevant checks before requesting review or merging a change. Playwright stores failure diagnostics in the ignored `test-results/` directory and writes its local HTML report to `playwright-report/`.
 
 For documentation:
 

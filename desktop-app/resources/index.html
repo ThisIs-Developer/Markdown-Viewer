@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME=' 'sha256-NnbK2LG1LUwYyZ1xgJN7k3oK4oTvHY4o9852VxwNA/o='; script-src-attr 'none'; worker-src 'self'; connect-src 'self' https://markdownviewer.pages.dev https://api.github.com https://raw.githubusercontent.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://kroki.io https://www.plantuml.com https://mermaid.ink https://paulrosen.github.io wss://markdownviewer.pages.dev ws://localhost:* ws://127.0.0.1:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'unsafe-inline'; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data: https:; manifest-src 'self'; frame-src 'none'; upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME=' 'sha256-NnbK2LG1LUwYyZ1xgJN7k3oK4oTvHY4o9852VxwNA/o='; script-src-attr 'none'; worker-src 'self'; connect-src 'self' https://markdownviewer.pages.dev https://api.github.com https://raw.githubusercontent.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://kroki.io https://www.plantuml.com https://mermaid.ink https://paulrosen.github.io wss://markdownviewer.pages.dev ws://localhost:* ws://127.0.0.1:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'unsafe-inline'; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data: https:; manifest-src 'self'; frame-src 'none'">
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
     <link rel="preload" href="/styles.css" as="style">
     <link rel="preload" href="/js/workspace-storage.js" as="script">
@@ -19,7 +19,7 @@
     <link href="/assets/icon.jpg" rel="icon" type="image/jpg">
     <!-- Updated libraries to latest versions with Subresource Integrity (SRI) -->
     <link rel="stylesheet" href="/libs/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <link rel="stylesheet" href="/libs/github-markdown.min.css" integrity="sha384-hZuxRjC/Dsr4zEx1JlUhDQqkvqBPp2VLHsgXfnxPq1ULDy1eIdWCiux7nvO1RIZP" crossorigin="anonymous">
+    <link rel="stylesheet" href="/libs/github-markdown.css" integrity="sha384-iACWXAClUhXj3tp/AQeas7im7qS6k8zAMbCeLrK+mfQ0YUsh41TpB+OhLRqAX5N3" crossorigin="anonymous">
     <link rel="stylesheet" href="/assets/lucide-icons.css">
     <link rel="stylesheet" href="/styles.css">
     
@@ -27,10 +27,10 @@
     <script src="/libs/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
     <script src="/libs/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous" defer></script>
     <script src="/libs/powershell.min.js" integrity="sha384-LWJZQx0dgGhEK7snfNYrQs5K+QKD1sOmE02sOQCz4br9UmqSJDvPLoUVFaUyFnjq" crossorigin="anonymous" defer></script>
-    <script src="/libs/purify.min.js" integrity="sha384-3HPB1XT51W3gGRxAmZ+qbZwRpRlFQL632y8x+adAqCr4Wp3TaWwCLSTAJJKbyWEK" crossorigin="anonymous" defer></script>
+    <script src="/libs/purify.min.js" integrity="sha384-ZuC+DIACqSIZTsp+7YF57cR5Y+6qXa7YFbEKdA/EHA/R0T+41dtorqucYl71Zp+t" crossorigin="anonymous" defer></script>
     <script src="/libs/FileSaver.min.js" integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy" crossorigin="anonymous" defer></script>
     <!-- PERF-002: MathJax, Mermaid, JoyPixels, jsPDF, html2canvas, pako are now lazy-loaded by script.js on first use -->
-    <script src="/libs/js-yaml.min.js" integrity="sha384-+pxiN6T7yvpryuJmE1gM9PX7yQit15auDb+ZwwvJOd/4be2Cie5/IuVXgQb/S9du" crossorigin="anonymous" defer></script>
+    <script src="/libs/js-yaml.min.js" integrity="sha384-S9ICdlb+JXmKnf3zbM1G+PBNWbhB7ARTUpJyvroFrHHHR8JsKt4oO+kPyfzbT+TM" crossorigin="anonymous" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -95,7 +95,7 @@
                     </button>
 
                     <div class="dropdown settings-dropdown">
-                        <button class="header-icon-command" type="button" id="workspaceSettingsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Workspace settings" aria-label="Open workspace settings">
+                        <button class="header-icon-command" type="button" id="workspaceSettingsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Workspace settings (Ctrl/Cmd+,)" aria-label="Open workspace settings" aria-keyshortcuts="Control+, Meta+,">
                             <i class="lucide lucide-settings" aria-hidden="true"></i>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end settings-menu" aria-labelledby="workspaceSettingsDropdown">
@@ -330,7 +330,7 @@
             <label class="visually-hidden" for="document-sidebar-search">Search files</label>
             <div class="document-sidebar-search-wrap">
               <i class="lucide lucide-search" aria-hidden="true"></i>
-              <input id="document-sidebar-search" type="search" autocomplete="off" placeholder="Search files" />
+              <input id="document-sidebar-search" type="search" autocomplete="off" placeholder="Search files" title="Quick open (Ctrl/Cmd+P)" aria-keyshortcuts="Control+P Meta+P" />
               <button id="document-sidebar-search-clear" type="button" aria-label="Clear document search" title="Clear search" hidden>
                 <i class="lucide lucide-x" aria-hidden="true"></i>
               </button>
@@ -366,7 +366,7 @@
           <div class="document-editor-area" id="document-editor-area">
             <!-- Tab Bar -->
             <div class="tab-bar" id="tab-bar">
-              <button id="document-sidebar-open" class="tool-button document-sidebar-open" type="button" title="Close Explorer" aria-label="Close Explorer" aria-controls="document-sidebar" aria-expanded="true">
+              <button id="document-sidebar-open" class="tool-button document-sidebar-open" type="button" title="Close Explorer (Ctrl/Cmd+Shift+L)" aria-label="Close Explorer" aria-keyshortcuts="Control+Shift+L Meta+Shift+L" aria-controls="document-sidebar" aria-expanded="true">
                 <i class="lucide lucide-panel-left-close" aria-hidden="true"></i>
               </button>
               <span class="document-sidebar-tab-divider" aria-hidden="true"></span>
@@ -379,8 +379,8 @@
         <!-- Markdown Formatting Toolbar -->
         <div class="markdown-format-toolbar" id="markdown-format-toolbar" role="toolbar" aria-label="Markdown formatting toolbar for plain-text editing">
           <div class="markdown-toolbar-group" role="group" aria-label="History">
-            <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo" aria-label="Undo"><i class="lucide lucide-undo-2"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo" aria-label="Redo"><i class="lucide lucide-redo-2"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" aria-keyshortcuts="Control+Z Meta+Z"><i class="lucide lucide-undo-2"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)" aria-label="Redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y Meta+Y"><i class="lucide lucide-redo-2"></i></button>
           </div>
           <div class="markdown-toolbar-group" role="group" aria-label="Common formatting">
             <div class="markdown-tool-dropdown">
@@ -388,17 +388,17 @@
                 <span class="markdown-tool-select-label">H</span><i class="lucide lucide-chevron-down" aria-hidden="true"></i>
               </button>
               <div class="markdown-tool-menu markdown-tool-menu--heading" data-toolbar-menu="heading" role="menu" aria-label="Heading levels">
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="1"><span class="markdown-tool-menu-symbol">H1</span><span>Heading 1</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="2"><span class="markdown-tool-menu-symbol">H2</span><span>Heading 2</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="3"><span class="markdown-tool-menu-symbol">H3</span><span>Heading 3</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="4"><span class="markdown-tool-menu-symbol">H4</span><span>Heading 4</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="5"><span class="markdown-tool-menu-symbol">H5</span><span>Heading 5</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="6"><span class="markdown-tool-menu-symbol">H6</span><span>Heading 6</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="1" title="Desktop: Ctrl/Cmd+1" aria-keyshortcuts="Control+1 Meta+1"><span class="markdown-tool-menu-symbol">H1</span><span>Heading 1</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="2" title="Desktop: Ctrl/Cmd+2" aria-keyshortcuts="Control+2 Meta+2"><span class="markdown-tool-menu-symbol">H2</span><span>Heading 2</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="3" title="Desktop: Ctrl/Cmd+3" aria-keyshortcuts="Control+3 Meta+3"><span class="markdown-tool-menu-symbol">H3</span><span>Heading 3</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="4" title="Desktop: Ctrl/Cmd+4" aria-keyshortcuts="Control+4 Meta+4"><span class="markdown-tool-menu-symbol">H4</span><span>Heading 4</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="5" title="Desktop: Ctrl/Cmd+5" aria-keyshortcuts="Control+5 Meta+5"><span class="markdown-tool-menu-symbol">H5</span><span>Heading 5</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="heading" data-md-level="6" title="Desktop: Ctrl/Cmd+6" aria-keyshortcuts="Control+6 Meta+6"><span class="markdown-tool-menu-symbol">H6</span><span>Heading 6</span></button>
               </div>
             </div>
-            <button type="button" class="markdown-tool-btn" data-md-action="bold" title="Bold" aria-label="Bold"><i class="lucide lucide-bold"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="italic" title="Italic" aria-label="Italic"><i class="lucide lucide-italic"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="strike" title="Strikethrough" aria-label="Strikethrough"><i class="lucide lucide-strikethrough"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="bold" title="Bold (Ctrl/Cmd+B)" aria-label="Bold" aria-keyshortcuts="Control+B Meta+B"><i class="lucide lucide-bold"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="italic" title="Italic (Ctrl/Cmd+I)" aria-label="Italic" aria-keyshortcuts="Control+I Meta+I"><i class="lucide lucide-italic"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="strike" title="Strikethrough (Alt+Shift+5)" aria-label="Strikethrough" aria-keyshortcuts="Alt+Shift+5"><i class="lucide lucide-strikethrough"></i></button>
           </div>
           <div class="markdown-toolbar-group" role="group" aria-label="Text layout">
             <div class="markdown-tool-dropdown">
@@ -421,12 +421,12 @@
             </div>
           </div>
           <div class="markdown-toolbar-group" role="group" aria-label="Content structure">
-            <button type="button" class="markdown-tool-btn" data-md-action="quote" title="Blockquote" aria-label="Blockquote"><i class="lucide lucide-quote" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list" aria-label="Bulleted list"><i class="lucide lucide-list"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list" aria-label="Numbered list"><i class="lucide lucide-list-ordered"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="inline-code" title="Inline code" aria-label="Inline code"><i class="lucide lucide-code-2" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="quote" title="Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)" aria-label="Blockquote" aria-keyshortcuts="Control+Shift+Q Meta+Alt+Q"><i class="lucide lucide-quote" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list (Ctrl+Shift+] / Cmd+Option+U)" aria-label="Bulleted list" aria-keyshortcuts="Control+Shift+] Meta+Alt+U"><i class="lucide lucide-list"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list (Ctrl+Shift+[ / Cmd+Option+O)" aria-label="Numbered list" aria-keyshortcuts="Control+Shift+[ Meta+Alt+O"><i class="lucide lucide-list-ordered"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="inline-code" title="Inline code (Ctrl/Cmd+Shift+`)" aria-label="Inline code" aria-keyshortcuts="Control+Shift+` Meta+Shift+`"><i class="lucide lucide-code-2" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="table" title="Table" aria-label="Table"><i class="lucide lucide-table-2" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link" aria-label="Link"><i class="lucide lucide-link-2"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link (Ctrl/Cmd+K)" aria-label="Link" aria-keyshortcuts="Control+K Meta+K"><i class="lucide lucide-link-2"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="image" title="Image, GIF, or video" aria-label="Insert image, GIF, or video"><i class="lucide lucide-image" aria-hidden="true"></i></button>
           </div>
           <div class="markdown-toolbar-group" role="group" aria-label="Advanced insertion">
@@ -435,7 +435,7 @@
               <button type="button" class="markdown-tool-btn markdown-tool-select markdown-tool-select--insert" data-toolbar-menu-toggle="insert" aria-haspopup="menu" aria-expanded="false" title="More tools" aria-label="More tools"><i class="lucide lucide-ellipsis" aria-hidden="true"></i></button>
               <div class="markdown-tool-menu markdown-tool-menu--wide" data-toolbar-menu="insert" role="menu" aria-label="More tools">
                 <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="reference"><i class="lucide lucide-bookmark" aria-hidden="true"></i><span>Reference</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="code-block"><i class="lucide lucide-square-code" aria-hidden="true"></i><span>Code block</span></button>
+                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="code-block" title="Ctrl+Shift+K / Cmd+Option+C" aria-keyshortcuts="Control+Shift+K Meta+Alt+C"><i class="lucide lucide-square-code" aria-hidden="true"></i><span>Code block</span></button>
                 <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="terminal-block"><i class="lucide lucide-square-terminal" aria-hidden="true"></i><span>Terminal block</span></button>
                 <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="horizontal-rule"><i class="lucide lucide-minus" aria-hidden="true"></i><span>Horizontal rule</span></button>
                 <div class="markdown-tool-menu-separator" role="separator"></div>
@@ -447,14 +447,14 @@
             </div>
           </div>
           <div class="markdown-toolbar-group workspace-format-actions" role="group" aria-label="Workspace actions">
-            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find and replace" aria-label="Find and replace"><i class="lucide lucide-search" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen" aria-label="Enter fullscreen"><i class="lucide lucide-maximize" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find and replace (Ctrl/Cmd+F)" aria-label="Find and replace" aria-keyshortcuts="Control+F Meta+F"><i class="lucide lucide-search" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen (F11 / Cmd+Option+F)" aria-label="Enter fullscreen" aria-keyshortcuts="F11 Meta+Alt+F"><i class="lucide lucide-maximize" aria-hidden="true"></i></button>
           </div>
           <div class="markdown-toolbar-group markdown-toolbar-group--document markdown-toolbar-group--utilities" role="group" aria-label="Document utilities and view mode">
-            <button id="toggle-sync" class="tool-button document-command-btn sync-enabled sync-active" type="button" title="Disable synchronized scrolling" aria-label="Disable synchronized scrolling" aria-pressed="true">
+            <button id="toggle-sync" class="tool-button document-command-btn sync-enabled sync-active" type="button" title="Disable synchronized scrolling (Ctrl/Cmd+Shift+S)" aria-label="Disable synchronized scrolling" aria-keyshortcuts="Control+Shift+S Meta+Shift+S" aria-pressed="true">
               <i class="lucide lucide-refresh-cw" aria-hidden="true"></i><span class="btn-text">Sync Off</span>
             </button>
-            <button id="copy-markdown-button" class="tool-button document-command-btn" type="button" title="Copy Markdown" aria-label="Copy Markdown">
+            <button id="copy-markdown-button" class="tool-button document-command-btn" type="button" title="Copy Markdown (Ctrl/Cmd+Shift+C)" aria-label="Copy Markdown" aria-keyshortcuts="Control+Shift+C Meta+Shift+C">
               <i class="lucide lucide-copy" aria-hidden="true"></i><span class="btn-text">Copy Markdown</span>
             </button>
             <button id="review-toggle" class="tool-button document-command-btn" type="button" title="Open comments and suggestions" aria-label="Open comments and suggestions" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
@@ -462,9 +462,9 @@
             </button>
             <span class="document-command-divider" aria-hidden="true"></span>
             <div class="view-toolbar markdown-view-toolbar" role="group" aria-label="View mode">
-              <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Edit" aria-label="Edit Markdown"><i class="lucide lucide-square-pen" aria-hidden="true"></i></button>
+              <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Edit (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Edit Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-square-pen" aria-hidden="true"></i></button>
               <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split" aria-label="Split editor and preview"><i class="lucide lucide-columns-2" aria-hidden="true"></i></button>
-              <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview" aria-label="Preview Markdown"><i class="lucide lucide-eye" aria-hidden="true"></i></button>
+              <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Preview Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-eye" aria-hidden="true"></i></button>
             </div>
           </div>
         </div>
@@ -815,10 +815,16 @@
               <div class="modal-section">
                 <h3 class="modal-section-title">Keyboard shortcuts</h3>
                 <ul class="modal-list">
-                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Z</kbd> &mdash; Undo</li>
-                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> &mdash; Redo</li>
-                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>F</kbd> &mdash; Open Find &amp; Replace</li>
-                  <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>C</kbd>/<kbd>V</kbd> &mdash; Copy/Paste</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Z</kbd> &mdash; Undo; add <kbd>Shift</kbd> (or use <kbd>Y</kbd>) to redo.</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>B</kbd>, <kbd>I</kbd>, or <kbd>K</kbd> &mdash; Toggle bold, toggle italic, or insert a link.</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>`</kbd> &mdash; Toggle inline code; <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>5</kbd> toggles strikethrough.</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd>/<kbd>Q</kbd> &mdash; Code block/blockquote on Windows and Linux; macOS uses <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>C</kbd>/<kbd>Q</kbd>.</li>
+                  <li><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>[</kbd>/<kbd>]</kbd> &mdash; Numbered/bulleted list on Windows and Linux; macOS uses <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>O</kbd>/<kbd>U</kbd>.</li>
+                  <li><kbd>Tab</kbd>/<kbd>Shift</kbd> + <kbd>Tab</kbd> &mdash; Indent/outdent; desktop <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>0</kbd>&ndash;<kbd>6</kbd> applies paragraph or heading levels.</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>F</kbd>/<kbd>H</kbd> &mdash; Find/replace; <kbd>F3</kbd>/<kbd>Shift</kbd> + <kbd>F3</kbd> moves through matches.</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>P</kbd>, <kbd>O</kbd>, <kbd>E</kbd>, or <kbd>,</kbd> &mdash; Quick open, import, toggle Edit/Preview, or open Settings.</li>
+                  <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd>/<kbd>L</kbd> &mdash; Copy Markdown or toggle Explorer.</li>
+                  <li><kbd>F11</kbd> (or <kbd>Cmd</kbd> + <kbd>Option</kbd> + <kbd>F</kbd>) &mdash; Fullscreen. Desktop also supports new, close, and next/previous document shortcuts.</li>
                 </ul>
               </div>
             </div>
@@ -1951,7 +1957,7 @@ Create bullet points:
 Add a [link](https://github.com/ThisIs-Developer/Markdown-Viewer) to important resources.
 
 Embed an image:
-<img alt="Markdown Logo" src="https://markdownviewer.pages.dev/assets/icon.jpg" width="120" height="120">
+<img alt="Markdown Logo" src="assets/icon.jpg" width="120" height="120">
 
 ### **Blockquotes**
 

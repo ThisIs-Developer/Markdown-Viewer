@@ -3,6 +3,14 @@
 All notable code changes to **Markdown Viewer** are documented here.
 Non-code commits (documentation, planning, README-only updates) are excluded.
 
+## Unreleased
+
+- **Testing:** Published the root Playwright harness for contributor-run local testing with locked dependencies, a cross-platform test server, static validation, documentation, Chromium end-to-end coverage, and cross-browser smoke coverage.
+- **Security & Compatibility:** Updated DOMPurify and js-yaml to patched releases, switched deterministic browser assets to valid integrity-checked CDN endpoints, kept the desktop offline bundle synchronized, and restored WebKit support for local HTTP development.
+- **Reliability:** Added an explicit application-ready lifecycle signal and made Markdown clipboard feedback wait for the actual copy result.
+
+---
+
 ## v3.10.0
 
 - **Description:** Introduced scalable local document storage, complete workspace backup and recovery, and a rebuilt GitHub importer with secure private-repository access.

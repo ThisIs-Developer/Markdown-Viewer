@@ -1,0 +1,34 @@
+{
+  "name": "markdown-viewer",
+  "version": "3.10.0",
+  "private": true,
+  "description": "Development and automated testing tools for Markdown Viewer.",
+  "engines": {
+    "node": ">=22 <27"
+  },
+  "scripts": {
+    "build": "npm run check:static",
+    "check:static": "node tests/helpers/static-build-check.mjs",
+    "test": "npm run check:static && npm run test:e2e",
+    "test:install": "playwright install chromium firefox webkit",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js --project=chromium",
+    "test:e2e:cross-browser": "playwright test tests/e2e/smoke.spec.js",
+    "test:e2e:ui": "playwright test --project=chromium --ui",
+    "test:e2e:headed": "playwright test --project=chromium --headed",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@highlightjs/cdn-assets": "11.9.0",
+    "@playwright/test": "1.61.1",
+    "bootstrap": "5.3.2",
+    "dompurify": "3.4.13",
+    "file-saver": "2.0.5",
+    "github-markdown-css": "5.3.0",
+    "highlight.js": "11.9.0",
+    "js-yaml": "4.3.1",
+    "jszip": "3.10.1",
+    "marked": "9.1.6",
+    "pako": "2.1.0"
+  }
+}
