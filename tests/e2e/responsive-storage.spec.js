@@ -29,7 +29,8 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));
   await expect(themeSwitch).toHaveCSS('height', await privateModeSwitch.evaluate(element => getComputedStyle(element).height));
   await expect(themeSwitch.locator(':scope > span')).toHaveCSS('border-radius', '50%');
-  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await privateModeSwitch.locator(':scope > span').evaluate(element => getComputedStyle(element).backgroundColor));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
 
   await themeToggle.click();
   const toggledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
@@ -37,6 +38,8 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   expect(toggledTheme).not.toBe(initialTheme);
   await expect(themeToggle).toHaveAttribute('aria-pressed', String(toggledTheme === 'dark'));
   await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${toggledThemeIcon}\\b`));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('markdownViewerGlobalState') || '{}').theme)).toBe(toggledTheme);
 
   await page.reload();

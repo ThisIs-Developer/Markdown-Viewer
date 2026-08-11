@@ -2517,7 +2517,8 @@ body.document-sidebar-collapsed .document-sidebar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--bg-color);
+  color: var(--text-color);
+  background: var(--bg-color);
   transition: color 0.16s ease, transform 0.16s ease;
 }
 
@@ -2538,7 +2539,8 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .settings-menu-item.is-active .theme-settings-switch > span {
-  color: var(--bg-color);
+  color: var(--text-color);
+  background: var(--bg-color);
 }
 
 .settings-language-dropdown {
@@ -11137,7 +11139,8 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .mobile-settings-toggle.is-active .theme-settings-switch > span {
-  color: var(--bg-color);
+  color: var(--text-color);
+  background: var(--bg-color);
 }
 
 .mobile-menu-command.is-active .mobile-menu-item-label > i,
