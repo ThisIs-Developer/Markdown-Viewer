@@ -14,6 +14,7 @@ const requiredFiles = [
   'styles.css',
   'sw.js',
   'manifest.json',
+  'vercel.json',
   'desktop-app/resources/index.html',
   'functions/api/share/[[id]].js',
   'workers/live-room-worker.js'
@@ -59,7 +60,7 @@ for (const [sourcePath, desktopPath] of [
   }
 }
 
-for (const relativePath of ['manifest.json', ...fs.readdirSync(path.join(rootDir, 'assets', 'i18n'))
+for (const relativePath of ['manifest.json', 'vercel.json', ...fs.readdirSync(path.join(rootDir, 'assets', 'i18n'))
   .filter(name => name.endsWith('.json'))
   .map(name => path.join('assets', 'i18n', name))]) {
   JSON.parse(fs.readFileSync(path.join(rootDir, relativePath), 'utf8'));
