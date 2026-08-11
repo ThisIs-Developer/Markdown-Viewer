@@ -2514,24 +2514,18 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .theme-settings-switch > span {
-  top: 2px;
-  left: 2px;
   display: inline-flex;
-  width: 14px;
-  height: 14px;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
-  color: var(--text-secondary);
-  background: transparent;
+  color: var(--bg-color);
   transition: color 0.16s ease, transform 0.16s ease;
 }
 
 .theme-switch-icon {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   color: currentColor;
-  font-size: 12px;
+  font-size: 8px;
 }
 
 .settings-menu-item.is-active .settings-switch {
@@ -2544,8 +2538,7 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .settings-menu-item.is-active .theme-settings-switch > span {
-  color: #fff;
-  background: transparent;
+  color: var(--bg-color);
 }
 
 .settings-language-dropdown {
@@ -11144,8 +11137,7 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .mobile-settings-toggle.is-active .theme-settings-switch > span {
-  color: #fff;
-  background: transparent;
+  color: var(--bg-color);
 }
 
 .mobile-menu-command.is-active .mobile-menu-item-label > i,

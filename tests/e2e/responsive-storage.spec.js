@@ -26,6 +26,8 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
   await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));
   await expect(themeSwitch).toHaveCSS('height', await privateModeSwitch.evaluate(element => getComputedStyle(element).height));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('border-radius', '50%');
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await privateModeSwitch.locator(':scope > span').evaluate(element => getComputedStyle(element).backgroundColor));
 
   await themeToggle.click();
   const toggledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
