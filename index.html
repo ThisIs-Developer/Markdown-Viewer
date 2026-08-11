@@ -146,11 +146,18 @@
                     </a>
                 </div>
 
-                <!-- Right section: Toolbar -->
-                <div class="toolbar d-none d-md-flex header-right">
-                    <div class="dropdown header-new-dropdown">
-                        <button class="tool-button header-command-btn dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Create or import a document" aria-label="Open new document menu">
-                            <i class="lucide lucide-plus" aria-hidden="true"></i><span class="btn-text">New</span>
+                <!-- Right section: Document and application toolbar -->
+                <div class="toolbar d-none d-md-flex header-right" role="toolbar" aria-label="Document and application actions">
+                    <div class="view-toolbar markdown-view-toolbar header-view-toolbar" role="group" aria-label="View mode">
+                        <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Edit (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Edit Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-square-pen" aria-hidden="true"></i></button>
+                        <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split" aria-label="Split editor and preview"><i class="lucide lucide-columns-2" aria-hidden="true"></i></button>
+                        <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Preview Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-eye" aria-hidden="true"></i></button>
+                    </div>
+                    <span class="header-toolbar-divider" aria-hidden="true"></span>
+
+                    <div class="dropdown header-new-dropdown header-icon-dropdown">
+                        <button class="tool-button header-icon-command dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Create or import a document" aria-label="Open new document menu">
+                            <i class="lucide lucide-file-plus-2" aria-hidden="true"></i>
                         </button>
                         <ul class="dropdown-menu app-command-menu header-command-menu header-new-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="header-new-document"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i><span class="app-menu-label">New document</span></a></li>
@@ -158,27 +165,40 @@
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-github"><i class="bi bi-github" aria-hidden="true"></i><span class="app-menu-label">From GitHub</span></a></li>
                         </ul>
                     </div>
-                    <div class="dropdown header-export-dropdown">
-                        <button class="tool-button header-command-btn dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Export document" aria-label="Open export menu">
-                            <i class="lucide lucide-download" aria-hidden="true"></i><span class="btn-text">Export</span>
+                    <input type="file" id="file-input" class="file-input" accept=".md,.markdown,text/markdown" multiple>
+
+                    <button id="copy-markdown-button" class="tool-button header-icon-command" type="button" title="Copy Markdown (Ctrl/Cmd+Shift+C)" aria-label="Copy Markdown" aria-keyshortcuts="Control+Shift+C Meta+Shift+C">
+                        <i class="lucide lucide-copy" aria-hidden="true"></i>
+                    </button>
+                    <button id="toggle-sync" class="tool-button header-icon-command sync-enabled sync-active" type="button" title="Disable synchronized scrolling (Ctrl/Cmd+Shift+S)" aria-label="Disable synchronized scrolling" aria-keyshortcuts="Control+Shift+S Meta+Shift+S" aria-pressed="true">
+                        <i class="lucide lucide-refresh-cw" aria-hidden="true"></i>
+                    </button>
+                    <button id="review-toggle" class="tool-button header-icon-command" type="button" title="Open comments and suggestions" aria-label="Open comments and suggestions" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
+                        <i class="lucide lucide-message-square-text" aria-hidden="true"></i><span id="review-toolbar-count" class="review-toolbar-count" aria-hidden="true" hidden>0</span>
+                    </button>
+
+                    <span class="header-toolbar-divider" aria-hidden="true"></span>
+
+                    <button id="share-button" class="tool-button header-icon-command" type="button" title="Share Snapshot" aria-label="Share snapshot">
+                        <i class="lucide lucide-share-2" aria-hidden="true"></i>
+                    </button>
+                    <button id="live-share-button" class="tool-button header-icon-command" type="button" title="Live Share" aria-label="Live Share">
+                        <i class="lucide lucide-radio" data-lucide="radio" aria-hidden="true"></i>
+                    </button>
+                    <div id="live-share-toolbar-participants" class="live-share-toolbar-participants" aria-label="Live Share participants" hidden></div>
+                    <div class="dropdown header-export-dropdown header-icon-dropdown">
+                        <button class="tool-button header-icon-command dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Export document" aria-label="Open export menu">
+                            <i class="lucide lucide-download" aria-hidden="true"></i>
                         </button>
-                        <ul class="dropdown-menu app-command-menu header-command-menu header-export-menu" aria-labelledby="exportDropdown">
+                        <ul class="dropdown-menu dropdown-menu-end app-command-menu header-command-menu header-export-menu" aria-labelledby="exportDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-md"><i class="lucide lucide-file-text" aria-hidden="true"></i><span class="app-menu-label">Markdown (.md)</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-html"><i class="lucide lucide-file-code-2" aria-hidden="true"></i><span class="app-menu-label">HTML</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-pdf"><i class="lucide lucide-file-text" aria-hidden="true"></i><span class="app-menu-label">PDF</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-png"><i class="lucide lucide-file-image" aria-hidden="true"></i><span class="app-menu-label">Image (.png)</span></a></li>
                         </ul>
                     </div>
-                    <input type="file" id="file-input" class="file-input" accept=".md,.markdown,text/markdown" multiple>
 
-                    <button id="share-button" class="tool-button header-command-btn" title="Share Snapshot" aria-label="Share snapshot">
-                        <i class="lucide lucide-share-2" aria-hidden="true"></i><span class="btn-text">Share</span>
-                    </button>
-
-                    <button id="live-share-button" class="tool-button header-command-btn" title="Live Share">
-                        <i class="lucide lucide-radio" data-lucide="radio" aria-hidden="true"></i><span class="btn-text">Live Share</span>
-                    </button>
-                    <div id="live-share-toolbar-participants" class="live-share-toolbar-participants" aria-label="Live Share participants" hidden></div>
+                    <span class="header-toolbar-divider" aria-hidden="true"></span>
 
                     <a class="header-icon-command report-command" href="https://github.com/ThisIs-Developer/Markdown-Viewer/issues/new" target="_blank" rel="noopener noreferrer" title="Report an issue" aria-label="Report an issue">
                         <i class="lucide lucide-bug" aria-hidden="true"></i>
@@ -522,43 +542,20 @@
             <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link (Ctrl/Cmd+K)" aria-label="Link" aria-keyshortcuts="Control+K Meta+K"><i class="lucide lucide-link-2"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="image" title="Image, GIF, or video" aria-label="Insert image, GIF, or video"><i class="lucide lucide-image" aria-hidden="true"></i></button>
           </div>
-          <div class="markdown-toolbar-group" role="group" aria-label="Advanced insertion">
+          <div class="markdown-toolbar-group markdown-toolbar-group--advanced" role="group" aria-label="Advanced insertion">
             <button type="button" class="markdown-tool-btn" data-md-action="diagram" title="Diagram and more" aria-label="Diagram and more"><i class="lucide lucide-workflow" aria-hidden="true"></i></button>
-            <div class="markdown-tool-dropdown">
-              <button type="button" class="markdown-tool-btn markdown-tool-select markdown-tool-select--insert" data-toolbar-menu-toggle="insert" aria-haspopup="menu" aria-expanded="false" title="More tools" aria-label="More tools"><i class="lucide lucide-ellipsis" aria-hidden="true"></i></button>
-              <div class="markdown-tool-menu markdown-tool-menu--wide" data-toolbar-menu="insert" role="menu" aria-label="More tools">
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="reference"><i class="lucide lucide-bookmark" aria-hidden="true"></i><span>Reference</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="code-block" title="Ctrl+Shift+K / Cmd+Option+C" aria-keyshortcuts="Control+Shift+K Meta+Alt+C"><i class="lucide lucide-square-code" aria-hidden="true"></i><span>Code block</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="terminal-block"><i class="lucide lucide-square-terminal" aria-hidden="true"></i><span>Terminal block</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="horizontal-rule"><i class="lucide lucide-minus" aria-hidden="true"></i><span>Horizontal rule</span></button>
-                <div class="markdown-tool-menu-separator" role="separator"></div>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="date-time"><i class="lucide lucide-clock-3" aria-hidden="true"></i><span>Date and time</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="emoji"><i class="lucide lucide-smile" aria-hidden="true"></i><span>Emoji shortcode</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="symbols"><i class="lucide lucide-braces" aria-hidden="true"></i><span>Symbols &amp; entities</span></button>
-                <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="alert"><i class="lucide lucide-badge-alert" aria-hidden="true"></i><span>Markdown alert</span></button>
-              </div>
-            </div>
+            <button type="button" class="markdown-tool-btn" data-md-action="reference" title="Reference" aria-label="Insert reference"><i class="lucide lucide-bookmark" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="code-block" title="Code block (Ctrl+Shift+K / Cmd+Option+C)" aria-label="Insert code block" aria-keyshortcuts="Control+Shift+K Meta+Alt+C"><i class="lucide lucide-square-code" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="terminal-block" title="Terminal block" aria-label="Insert terminal block"><i class="lucide lucide-square-terminal" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="horizontal-rule" title="Horizontal rule" aria-label="Insert horizontal rule"><i class="lucide lucide-minus" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="date-time" title="Date and time" aria-label="Insert date and time"><i class="lucide lucide-clock-3" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="emoji" title="Emoji shortcode" aria-label="Insert emoji shortcode"><i class="lucide lucide-smile" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="symbols" title="Symbols and entities" aria-label="Insert symbols and entities"><i class="lucide lucide-braces" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="alert" title="Markdown alert" aria-label="Insert Markdown alert"><i class="lucide lucide-badge-alert" aria-hidden="true"></i></button>
           </div>
           <div class="markdown-toolbar-group workspace-format-actions" role="group" aria-label="Workspace actions">
             <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find and replace (Ctrl/Cmd+F)" aria-label="Find and replace" aria-keyshortcuts="Control+F Meta+F"><i class="lucide lucide-search" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen (F11 / Cmd+Option+F)" aria-label="Enter fullscreen" aria-keyshortcuts="F11 Meta+Alt+F"><i class="lucide lucide-maximize" aria-hidden="true"></i></button>
-          </div>
-          <div class="markdown-toolbar-group markdown-toolbar-group--document markdown-toolbar-group--utilities" role="group" aria-label="Document utilities and view mode">
-            <button id="toggle-sync" class="tool-button document-command-btn sync-enabled sync-active" type="button" title="Disable synchronized scrolling (Ctrl/Cmd+Shift+S)" aria-label="Disable synchronized scrolling" aria-keyshortcuts="Control+Shift+S Meta+Shift+S" aria-pressed="true">
-              <i class="lucide lucide-refresh-cw" aria-hidden="true"></i><span class="btn-text">Sync Off</span>
-            </button>
-            <button id="copy-markdown-button" class="tool-button document-command-btn" type="button" title="Copy Markdown (Ctrl/Cmd+Shift+C)" aria-label="Copy Markdown" aria-keyshortcuts="Control+Shift+C Meta+Shift+C">
-              <i class="lucide lucide-copy" aria-hidden="true"></i><span class="btn-text">Copy Markdown</span>
-            </button>
-            <button id="review-toggle" class="tool-button document-command-btn" type="button" title="Open comments and suggestions" aria-label="Open comments and suggestions" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
-              <i class="lucide lucide-message-square-text" aria-hidden="true"></i><span id="review-toolbar-count" class="review-toolbar-count" aria-hidden="true" hidden>0</span>
-            </button>
-            <span class="document-command-divider" aria-hidden="true"></span>
-            <div class="view-toolbar markdown-view-toolbar" role="group" aria-label="View mode">
-              <button class="tool-button view-toggle-btn" data-view-mode="editor" aria-pressed="false" title="Edit (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Edit Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-square-pen" aria-hidden="true"></i></button>
-              <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split" aria-label="Split editor and preview"><i class="lucide lucide-columns-2" aria-hidden="true"></i></button>
-              <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Preview Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-eye" aria-hidden="true"></i></button>
-            </div>
           </div>
         </div>
 
@@ -884,8 +881,8 @@
                   <li>Use the view buttons in the toolbar to switch between Editor, Split, and Preview modes.</li>
                   <li>Sync scrolling is available in Split view to keep the editor and preview aligned.</li>
                   <li>Review opens a read-only preview where you can comment on or suggest changes to headings, paragraphs, code blocks, and diagrams.</li>
-                  <li>New, Share, Live Share, Report an Issue, About, and Settings are available in the header toolbar.</li>
-                  <li>Sync, Copy, Review, view modes, and Export stay with the document formatting toolbar.</li>
+                  <li>View modes, New, Copy, Sync, Review, Share, Live Share, and Export are grouped in the header toolbar.</li>
+                  <li>Report an Issue, About, and Settings follow the document actions in the header.</li>
                 </ul>
               </div>
               <div class="modal-section">
@@ -893,7 +890,7 @@
                 <ul class="modal-list">
                   <li>Undo and Redo keep editing history close at hand.</li>
                   <li>Use the Heading and Case menus for H1&ndash;H6 headings and capitalization.</li>
-                  <li>Quick formatting covers emphasis, quotes, alignment, and lists; Insert holds less frequent tools while Diagram &amp; More stays directly available.</li>
+                  <li>Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.</li>
                   <li>Find &amp; Replace and Fullscreen are direct toolbar actions; About Markdown Viewer opens project, Markdown, privacy, license, and support information.</li>
                 </ul>
               </div>

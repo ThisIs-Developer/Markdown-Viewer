@@ -2218,10 +2218,6 @@ body.document-sidebar-collapsed .document-sidebar {
   gap: 5px;
 }
 
-.header-right .header-command-btn .btn-text {
-  display: inline;
-}
-
 .header-command-btn {
   width: auto;
   padding-inline: 10px;
@@ -2233,6 +2229,19 @@ body.document-sidebar-collapsed .document-sidebar {
 .header-new-dropdown,
 .header-export-dropdown {
   display: inline-flex;
+}
+
+.header-icon-dropdown .dropdown-toggle::after {
+  display: none;
+}
+
+.header-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  flex: 0 0 1px;
+  margin-inline: 2px;
+  background: var(--border-color);
+  opacity: 0.72;
 }
 
 .app-command-menu.header-new-menu,
@@ -2281,6 +2290,59 @@ body.document-sidebar-collapsed .document-sidebar {
 .header-icon-command i {
   font-size: var(--icon-size-md);
   line-height: 1;
+}
+
+.header-icon-command.is-active,
+.header-icon-command.is-active:hover,
+.header-icon-command.is-live-active,
+.header-icon-command.is-live-active:hover,
+.header-icon-command.sync-active,
+.header-icon-command.sync-active:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 28%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  color: var(--accent-color);
+}
+
+.header-icon-command#review-toggle:has(.review-toolbar-count:not([hidden])) {
+  width: auto;
+  padding-inline: 6px;
+}
+
+.header-view-toolbar {
+  flex: 0 0 auto;
+}
+
+.header-view-toolbar .view-toggle-btn {
+  width: 27px;
+  min-width: 27px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.header-view-toolbar .view-toggle-btn:hover,
+.header-view-toolbar .view-toggle-btn:focus-visible {
+  border: 0;
+  background: var(--toolbar-control-hover);
+  color: var(--text-color);
+}
+
+.header-view-toolbar .view-toggle-btn.is-active,
+.header-view-toolbar .view-toggle-btn.is-active:hover {
+  border: 0;
+  background: var(--segmented-surface);
+  color: var(--accent-color);
+  box-shadow: var(--segmented-shadow);
+}
+
+.header-view-toolbar .view-toggle-btn:disabled,
+.header-view-toolbar .view-toggle-btn[aria-disabled="true"] {
+  background: transparent;
+  box-shadow: none;
 }
 
 .settings-dropdown {
@@ -2800,43 +2862,7 @@ body.document-sidebar-collapsed .document-sidebar {
   flex-shrink: 0;
 }
 
-.markdown-toolbar-group--utilities {
-  position: sticky;
-  z-index: 6;
-  inset-inline-end: 0;
-  margin-inline-start: auto;
-  border-right: 0;
-  background: var(--toolbar-surface);
-}
-
-.markdown-toolbar-group--document {
-  gap: 2px;
-  padding-inline-start: 6px;
-}
-
 .workspace-format-actions {
-  padding-inline: 5px;
-}
-
-.markdown-toolbar-group--document .tool-button {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  padding: 0;
-  border-color: transparent;
-  border-radius: 7px;
-  background: transparent;
-}
-
-.markdown-toolbar-group--document .tool-button:hover,
-.markdown-toolbar-group--document .tool-button:focus-visible {
-  border-color: transparent;
-  background: var(--toolbar-control-hover);
-}
-
-.markdown-toolbar-group--document #review-toggle:has(.review-toolbar-count:not([hidden])) {
-  width: auto;
   padding-inline: 5px;
 }
 
@@ -2860,14 +2886,6 @@ body.document-sidebar-collapsed .document-sidebar {
   z-index: var(--layer-menu);
 }
 
-.document-command-divider {
-  width: 1px;
-  height: 18px;
-  margin-inline: 4px;
-  background: var(--border-color);
-  opacity: 0.75;
-}
-
 .markdown-view-toolbar {
   display: inline-flex;
   align-items: center;
@@ -2877,44 +2895,6 @@ body.document-sidebar-collapsed .document-sidebar {
   border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent);
   border-radius: 10px;
   background: var(--segmented-bg);
-}
-
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn {
-  width: 27px;
-  height: 26px;
-  min-width: 27px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--text-secondary);
-  box-shadow: none;
-}
-
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn:hover,
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn:focus-visible {
-  border: 0;
-  background: var(--toolbar-control-hover);
-  color: var(--text-color);
-}
-
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn.is-active,
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn.is-active:hover {
-  border: 0;
-  background: var(--segmented-surface);
-  color: var(--accent-color);
-  box-shadow: var(--segmented-shadow);
-}
-
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn:disabled,
-.markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn[aria-disabled="true"] {
-  background: transparent;
-  box-shadow: none;
-}
-
-.markdown-toolbar-group--utilities .tool-button {
-  flex: 0 0 auto;
-  height: 30px;
-  min-width: 30px;
 }
 
 .markdown-toolbar-group:first-child {
@@ -3015,17 +2995,6 @@ body.document-sidebar-collapsed .document-sidebar {
 .markdown-tool-select--icon {
   min-width: 46px;
   gap: 5px;
-}
-
-.markdown-tool-select--insert {
-  width: 30px;
-  min-width: 30px;
-  gap: 0;
-  padding: 0;
-}
-
-.markdown-tool-select--insert .lucide-ellipsis {
-  font-size: var(--ui-icon-size-lg);
 }
 
 .markdown-tool-select-label {
@@ -3680,12 +3649,6 @@ a:focus {
     min-width: 44px;
   }
 
-  .markdown-tool-select--insert {
-    width: 30px !important;
-    min-width: 30px;
-    padding-inline: 0 !important;
-  }
-
   .markdown-format-toolbar {
     height: 40px !important;
   }
@@ -3697,23 +3660,6 @@ a:focus {
 
   .tab-item {
     height: 40px !important;
-  }
-
-  .markdown-toolbar-group--document .tool-button {
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
-    padding: 0;
-  }
-
-  .markdown-view-toolbar {
-    height: 32px;
-  }
-
-  .markdown-toolbar-group--document .markdown-view-toolbar .view-toggle-btn {
-    width: 27px;
-    height: 26px;
-    min-width: 27px;
   }
 
   .document-action-item {
@@ -4059,15 +4005,6 @@ a:focus {
   .markdown-format-toolbar {
     padding-inline: 6px;
     scroll-padding-inline: 6px;
-  }
-
-  .markdown-toolbar-group--utilities {
-    position: static;
-    margin-inline-start: 0;
-  }
-
-  .markdown-tool-select--insert {
-    min-width: 30px;
   }
 
   .markdown-tool-menu-item,

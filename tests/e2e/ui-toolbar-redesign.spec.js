@@ -71,8 +71,7 @@ test('shared application overlays use compact type, spacing, and surface styling
   await expect(page.locator('.about-support')).toContainText('Developed and maintained by ThisIs-Developer.');
   await page.locator('#about-modal-close').click();
 
-  await page.locator('.markdown-tool-select--insert').click();
-  await page.locator('[data-toolbar-menu="insert"] [data-md-action="alert"]').click();
+  await page.locator('.markdown-toolbar-group--advanced [data-md-action="alert"]').click();
   await expect(page.locator('#alert-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#alert-modal .alert-option').first()).toBeFocused();
   await page.keyboard.press('Escape');
@@ -110,36 +109,33 @@ test('every application dialog uses the shared alert modal shell', async ({ page
   expect(dialogShells.filter(dialog => !dialog.sharedShell || !dialog.header || !dialog.close || !dialog.footer || dialog.padding !== '0px')).toEqual([]);
 });
 
-test('toolbar groups preserve actions while simplifying Insert and promoting diagrams', async ({ page }) => {
+test('header orders document actions and formatting toolbar exposes advanced tools', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  const header = page.locator('.header-right');
   const toolbar = page.locator('#markdown-format-toolbar');
-  const utilityOrder = await toolbar.locator('.markdown-toolbar-group--utilities').evaluate(group =>
-    Array.from(group.children).map(element => element.id || element.className)
+  const documentActionOrder = await header.locator(':scope > button, :scope > .dropdown > button').evaluateAll(elements =>
+    elements.map(element => element.id)
   );
-  expect(utilityOrder.slice(0, 4)).toEqual([
-    'toggle-sync',
+  expect(documentActionOrder.slice(0, 7)).toEqual([
+    'importDropdown',
     'copy-markdown-button',
+    'toggle-sync',
     'review-toggle',
-    'document-command-divider'
+    'share-button',
+    'live-share-button',
+    'exportDropdown'
   ]);
 
-  const insertToggle = toolbar.locator('.markdown-tool-select--insert');
-  await expect(insertToggle).toHaveText('');
-  await expect(insertToggle).toHaveAttribute('title', 'More tools');
-  await expect(insertToggle.locator('.lucide-ellipsis')).toHaveCount(1);
-  await expect(toolbar.locator('[data-md-action="diagram"]')).toHaveCount(1);
-  await expect(toolbar.locator('[data-toolbar-menu="insert"] [data-md-action="diagram"]')).toHaveCount(0);
+  const advancedActions = await toolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn').evaluateAll(buttons =>
+    buttons.map(button => button.getAttribute('data-md-action'))
+  );
+  expect(advancedActions).toEqual([
+    'diagram', 'reference', 'code-block', 'terminal-block', 'horizontal-rule',
+    'date-time', 'emoji', 'symbols', 'alert'
+  ]);
+  await expect(toolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
 
-  await insertToggle.press('Enter');
-  const insertMenu = toolbar.locator('[data-toolbar-menu="insert"]');
-  await expect(insertMenu).toHaveClass(/open/);
-  await expect(insertMenu.locator('.markdown-tool-menu-item').first()).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(insertMenu).not.toHaveClass(/open/);
-  await expect(insertToggle).toBeFocused();
-
-  await insertToggle.click();
-  await insertMenu.locator('[data-md-action="emoji"]').click();
+  await toolbar.locator('[data-md-action="emoji"]').click();
   await expect(page.locator('#emoji-modal')).toBeVisible();
   await page.locator('#emoji-modal-search').press('Escape');
   await expect(page.locator('#emoji-modal')).toBeHidden();
@@ -227,7 +223,7 @@ test('shared interface roles use the application type and icon scale', async ({ 
   expect(sizing.mobileIcons).toEqual(['14px']);
 });
 
-test('New, Export, and formatting menus share one visual system and keyboard dismissal', async ({ page }) => {
+test('New and Export menus share one visual system and keyboard dismissal', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.locator('#importDropdown').click();
@@ -250,16 +246,7 @@ test('New, Export, and formatting menus share one visual system and keyboard dis
   expect(exportSurface).toEqual(newSurface);
   await page.keyboard.press('Escape');
 
-  const insertToggle = page.locator('.markdown-tool-select--insert');
-  await insertToggle.click();
-  const insertMenu = page.locator('[data-toolbar-menu="insert"]');
-  const insertSurface = await insertMenu.evaluate(menu => {
-    const style = getComputedStyle(menu);
-    return [style.backgroundColor, style.borderColor, style.borderRadius, style.boxShadow];
-  });
-  expect(insertSurface).toEqual(newSurface);
-  await page.locator('#markdown-editor').click();
-  await expect(insertMenu).not.toHaveClass(/open/);
+  await expect(page.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
 });
 
 test('toolbar uses theme surfaces and remains usable at desktop and phone widths', async ({ page }) => {
@@ -269,8 +256,8 @@ test('toolbar uses theme surfaces and remains usable at desktop and phone widths
   const desktopSizing = await page.evaluate(() => {
     const toolbar = document.querySelector('#markdown-format-toolbar');
     const formatButton = toolbar.querySelector('.markdown-tool-btn');
-    const utilityButton = toolbar.querySelector('.markdown-toolbar-group--document .tool-button');
-    const viewButton = toolbar.querySelector('.markdown-view-toolbar .view-toggle-btn');
+    const utilityButton = document.querySelector('.header-right #copy-markdown-button');
+    const viewButton = document.querySelector('.header-view-toolbar .view-toggle-btn');
     return {
       toolbarHeight: toolbar.getBoundingClientRect().height,
       formatButton: [formatButton.getBoundingClientRect().width, formatButton.getBoundingClientRect().height],
@@ -294,14 +281,6 @@ test('toolbar uses theme surfaces and remains usable at desktop and phone widths
         const button = toolbar.querySelector('.markdown-tool-btn');
         return [button.getBoundingClientRect().width, button.getBoundingClientRect().height];
       })(),
-      utilityButton: (() => {
-        const button = toolbar.querySelector('.markdown-toolbar-group--document .tool-button');
-        return [button.getBoundingClientRect().width, button.getBoundingClientRect().height];
-      })(),
-      viewButton: (() => {
-        const button = toolbar.querySelector('.markdown-view-toolbar .view-toggle-btn');
-        return [button.getBoundingClientRect().width, button.getBoundingClientRect().height];
-      })(),
       minimumTarget: Math.min(...buttons.map(button => button.getBoundingClientRect().height))
     };
   });
@@ -309,8 +288,8 @@ test('toolbar uses theme surfaces and remains usable at desktop and phone widths
   expect(mobileSizing.toolbarScrollable).toBe(true);
   expect(mobileSizing.toolbarHeight).toBe(desktopSizing.toolbarHeight);
   expect(mobileSizing.formatButton).toEqual(desktopSizing.formatButton);
-  expect(mobileSizing.utilityButton).toEqual(desktopSizing.utilityButton);
-  expect(mobileSizing.viewButton).toEqual(desktopSizing.viewButton);
+  expect(desktopSizing.utilityButton).toEqual([30, 30]);
+  expect(desktopSizing.viewButton).toEqual([27, 26]);
   expect(mobileSizing.minimumTarget).toBeGreaterThanOrEqual(26);
 
   await page.evaluate(() => { document.documentElement.style.fontSize = '20px'; });
