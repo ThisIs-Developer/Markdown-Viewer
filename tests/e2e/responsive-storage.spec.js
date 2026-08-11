@@ -22,6 +22,8 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect(themeToggle).toHaveClass(/settings-menu-item--toggle/);
   await expect(themeToggle).toHaveAttribute('aria-pressed', String(initialTheme === 'dark'));
   await expect(themeSwitch).toBeVisible();
+  await expect(themeSwitch).toHaveCSS('width', '40px');
+  await expect(themeSwitch).toHaveCSS('height', '22px');
   await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${initialThemeIcon}\\b`));
   await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
   await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));

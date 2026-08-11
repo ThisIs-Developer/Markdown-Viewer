@@ -2495,8 +2495,8 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .settings-switch {
   position: relative;
-  width: 32px;
-  height: 18px;
+  width: 40px;
+  height: 22px;
   border-radius: 999px;
   background: var(--button-active);
   transition: background-color 0.16s ease;
@@ -2506,8 +2506,8 @@ body.document-sidebar-collapsed .document-sidebar {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--text-secondary);
   transition: transform 0.16s ease, background-color 0.16s ease;
@@ -2522,10 +2522,10 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .theme-switch-icon {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   color: currentColor;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .settings-menu-item.is-active .settings-switch {
@@ -2534,7 +2534,7 @@ body.document-sidebar-collapsed .document-sidebar {
 
 .settings-menu-item.is-active .settings-switch > span {
   background: #fff;
-  transform: translateX(14px);
+  transform: translateX(18px);
 }
 
 .settings-menu-item.is-active .theme-settings-switch > span {
@@ -11133,7 +11133,7 @@ html[data-theme="dark"] .mermaid svg {
 
 .mobile-settings-toggle.is-active .settings-switch > span {
   background: #fff;
-  transform: translateX(14px);
+  transform: translateX(18px);
 }
 
 .mobile-settings-toggle.is-active .theme-settings-switch > span {
