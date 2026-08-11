@@ -10,12 +10,6 @@ test-results/
 .pytest_cache/
 __pycache__/
 
-# Local-only generated test harness
-/package.json
-/package-lock.json
-/playwright.config.*
-/tests/
-
 # Local AI/tooling state
 .agents/
 

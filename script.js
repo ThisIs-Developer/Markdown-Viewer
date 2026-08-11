@@ -21675,11 +21675,11 @@ ${selector} .arrowheadPath {
     }
   });
 
-  copyMarkdownButton.addEventListener("click", function () {
+  copyMarkdownButton.addEventListener("click", async function () {
     if (blockShareSnapshotSourceAccess()) return;
     try {
-      const markdownText = markdownEditor.value;
-      copyToClipboard(markdownText);
+      await copyTextToClipboard(markdownEditor.value);
+      showCopiedMessage();
     } catch (e) {
       console.error("Copy failed:", e);
       alert("Failed to copy Markdown: " + e.message);
@@ -21702,16 +21702,6 @@ ${selector} .arrowheadPath {
     document.body.removeChild(textArea);
     if (!successful) {
       throw new Error("Copy command was unsuccessful");
-    }
-  }
-
-  async function copyToClipboard(text) {
-    try {
-      await copyTextToClipboard(text);
-      showCopiedMessage();
-    } catch (err) {
-      console.error("Copy failed:", err);
-      alert("Failed to copy HTML: " + err.message);
     }
   }
 
@@ -27096,4 +27086,6 @@ ${selector} .arrowheadPath {
       activate: releaseNotesLaunch.activate
     });
   }
+  document.documentElement.dataset.appReady = 'true';
+  window.dispatchEvent(new Event('markdown-viewer:ready'));
 });
