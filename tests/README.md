@@ -53,7 +53,7 @@ The Playwright configuration starts a cross-platform Node static server automati
 - Workspace storage, migration, backup/restore, Private mode, and responsive behavior
 - Explorer, toolbar, dialogs, keyboard interaction, accessible names, and focus management
 
-Live Share tests use a local WebSocket/Yjs substitute and do not replace a Cloudflare Durable Object integration test. Production CDN availability and deployed Cloudflare bindings should be monitored separately from the deterministic pull-request suite.
+Live Share tests use a local WebSocket/Yjs substitute and do not replace a Cloudflare Durable Object integration test. Production CDN availability and deployed Cloudflare bindings should be monitored separately from the deterministic local suite.
 
 ## Contributor Workflow
 
@@ -64,4 +64,6 @@ npm test
 npm run test:e2e:cross-browser
 ```
 
-Tests must be isolated, deterministic, and runnable on Windows, macOS, Linux, and CI. Prefer user-facing roles and labels over DOM implementation selectors. Store fixtures under `tests/fixtures/`; never write artifacts to user-specific paths. Playwright captures screenshots and videos on failure and CI uploads the report and test results.
+Tests must be isolated, deterministic, and runnable locally on Windows, macOS, and Linux. Prefer user-facing roles and labels over DOM implementation selectors. Store fixtures under `tests/fixtures/`; never write artifacts to user-specific paths. Playwright captures screenshots and videos on failure under the ignored `test-results/` directory and writes its local HTML report to `playwright-report/`.
+
+This repository intentionally does not run the Playwright suite in GitHub Actions. Contributors are responsible for running the checks locally before requesting review or merging a change.

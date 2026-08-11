@@ -10,7 +10,6 @@
     "build": "npm run check:static",
     "check:static": "node tests/helpers/static-build-check.mjs",
     "test": "npm run check:static && npm run test:e2e",
-    "test:ci": "npm run check:static && npm run test:e2e",
     "test:install": "playwright install chromium firefox webkit",
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js --project=chromium",
