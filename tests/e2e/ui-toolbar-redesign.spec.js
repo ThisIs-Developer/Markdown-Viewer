@@ -30,18 +30,15 @@ test('Explorer labels and sidebar toggle describe the next action', async ({ pag
 
 test('application header keeps its height while showing the compact product identity', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator('.app-brand-icon')).toHaveAttribute('src', 'assets/icon.jpg');
+  await expect(page.locator('.app-brand-icon')).toHaveCount(0);
   await expect(page.locator('.app-brand-title-row h1')).toContainText('Markdown Viewer');
   await expect(page.locator('.app-brand-subtitle')).toHaveText('Write. Preview. Share.');
 
   const geometry = await page.evaluate(() => ({
-    headerHeight: document.querySelector('.app-header').getBoundingClientRect().height,
-    iconWidth: document.querySelector('.app-brand-icon').getBoundingClientRect().width,
-    iconHeight: document.querySelector('.app-brand-icon').getBoundingClientRect().height
+    headerHeight: document.querySelector('.app-header').getBoundingClientRect().height
   }));
   expect(geometry.headerHeight).toBeGreaterThanOrEqual(40);
   expect(geometry.headerHeight).toBeLessThanOrEqual(45);
-  expect([geometry.iconWidth, geometry.iconHeight]).toEqual([32, 32]);
   await expect(page.locator('.app-brand .github-link i')).toHaveCSS('font-size', '20px');
   await expect(page.locator('#tab-new-btn')).toHaveCSS('width', '25px');
   await expect(page.locator('#tab-new-btn')).toHaveCSS('height', '25px');

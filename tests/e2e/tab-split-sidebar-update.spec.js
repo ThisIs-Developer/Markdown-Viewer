@@ -134,13 +134,13 @@ test('header groups document actions before application preferences', async ({ p
     elements.map(element => element.id || element.getAttribute('aria-label'))
   );
   expect(headerActions).toEqual([
+    'toggle-sync',
     'importDropdown',
     'copy-markdown-button',
-    'toggle-sync',
-    'review-toggle',
+    'exportDropdown',
     'share-button',
     'live-share-button',
-    'exportDropdown',
+    'review-toggle',
     'Report an issue',
     'header-about-button',
     'workspaceSettingsDropdown'

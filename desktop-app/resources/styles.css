@@ -3784,16 +3784,6 @@ a:focus {
   gap: 8px;
 }
 
-.app-brand-icon {
-  display: block;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
-  border-radius: 8px;
-  object-fit: cover;
-}
-
 .app-brand-copy {
   display: flex;
   min-width: 0;

@@ -22,13 +22,13 @@ test('header consolidates icon document actions in the requested order', async (
     elements.map(element => element.id || element.getAttribute('aria-label'))
   );
   expect(headerOrder).toEqual([
+    'toggle-sync',
     'importDropdown',
     'copy-markdown-button',
-    'toggle-sync',
-    'review-toggle',
+    'exportDropdown',
     'share-button',
     'live-share-button',
-    'exportDropdown',
+    'review-toggle',
     'Report an issue',
     'header-about-button',
     'workspaceSettingsDropdown'
