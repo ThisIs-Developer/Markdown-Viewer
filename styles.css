@@ -2513,6 +2513,27 @@ body.document-sidebar-collapsed .document-sidebar {
   transition: transform 0.16s ease, background-color 0.16s ease;
 }
 
+.theme-settings-switch > span {
+  top: 2px;
+  left: 2px;
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.theme-switch-icon {
+  width: 12px;
+  height: 12px;
+  color: currentColor;
+  font-size: 12px;
+}
+
 .settings-menu-item.is-active .settings-switch {
   background: var(--accent-color);
 }
@@ -2520,6 +2541,11 @@ body.document-sidebar-collapsed .document-sidebar {
 .settings-menu-item.is-active .settings-switch > span {
   background: #fff;
   transform: translateX(14px);
+}
+
+.settings-menu-item.is-active .theme-settings-switch > span {
+  color: #fff;
+  background: transparent;
 }
 
 .settings-language-dropdown {
@@ -11115,6 +11141,11 @@ html[data-theme="dark"] .mermaid svg {
 .mobile-settings-toggle.is-active .settings-switch > span {
   background: #fff;
   transform: translateX(14px);
+}
+
+.mobile-settings-toggle.is-active .theme-settings-switch > span {
+  color: #fff;
+  background: transparent;
 }
 
 .mobile-menu-command.is-active .mobile-menu-item-label > i,

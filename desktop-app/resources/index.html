@@ -122,8 +122,8 @@
                             <div class="settings-menu-header">
                                 <strong>Workspace settings</strong>
                             </div>
-                            <button id="theme-toggle" class="settings-menu-item app-menu-item" type="button" title="Toggle appearance">
-                                <i class="lucide lucide-moon" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Appearance</span><span id="theme-toggle-description" class="app-menu-description">Switch to dark appearance</span></span>
+                            <button id="theme-toggle" class="settings-menu-item app-menu-item settings-menu-item--toggle" type="button" aria-pressed="false" title="Toggle appearance">
+                                <i id="theme-toggle-icon" class="lucide lucide-sun-medium" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Appearance</span><span id="theme-toggle-description" class="app-menu-description">Switch to dark appearance</span></span><span class="settings-switch theme-settings-switch" aria-hidden="true"><span><i id="theme-switch-icon" class="lucide lucide-sun-medium theme-switch-icon"></i></span></span>
                             </button>
                             <div class="dropdown dropstart settings-language-dropdown">
                                 <button class="settings-menu-item app-menu-item dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Switch language">
@@ -278,8 +278,8 @@
                                     </button>
                                     <div id="mobile-menu-settings-panel" class="mobile-menu-section-panel" data-mobile-menu-section hidden>
                                         <button id="mobile-theme-toggle" class="mobile-menu-item mobile-settings-item mobile-settings-toggle" type="button" aria-pressed="false" title="Use dark mode">
-                                            <span class="mobile-menu-item-label"><i id="mobile-theme-icon" class="lucide lucide-sun" aria-hidden="true"></i><span>Theme</span></span>
-                                            <span class="mobile-menu-trailing-control"><span id="mobile-theme-status" class="mobile-menu-item-status">Light mode</span><span class="settings-switch" aria-hidden="true"><span></span></span></span>
+                                            <span class="mobile-menu-item-label"><i id="mobile-theme-icon" class="lucide lucide-sun-medium" aria-hidden="true"></i><span>Theme</span></span>
+                                            <span class="mobile-menu-trailing-control"><span id="mobile-theme-status" class="mobile-menu-item-status">Light mode</span><span class="settings-switch theme-settings-switch" aria-hidden="true"><span><i id="mobile-theme-switch-icon" class="lucide lucide-sun-medium theme-switch-icon"></i></span></span></span>
                                         </button>
                                         <div class="mobile-menu-language dropdown w-100">
                                             <button class="mobile-menu-item w-100 text-start dropdown-toggle" type="button" id="mobileLanguageDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Switch Language">

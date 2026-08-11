@@ -12,11 +12,27 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await openApp(page);
 
   const initialTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  const initialThemeIcon = initialTheme === 'dark' ? 'lucide-moon' : 'lucide-sun-medium';
+  const toggledThemeIcon = initialTheme === 'dark' ? 'lucide-sun-medium' : 'lucide-moon';
   await page.getByRole('button', { name: 'Open workspace settings' }).click();
-  await page.locator('#theme-toggle').click();
+  const themeToggle = page.locator('#theme-toggle');
+  const themeSwitch = themeToggle.locator('.settings-switch');
+  const privateModeSwitch = page.locator('#private-mode-toggle .settings-switch');
+
+  await expect(themeToggle).toHaveClass(/settings-menu-item--toggle/);
+  await expect(themeToggle).toHaveAttribute('aria-pressed', String(initialTheme === 'dark'));
+  await expect(themeSwitch).toBeVisible();
+  await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${initialThemeIcon}\\b`));
+  await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
+  await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));
+  await expect(themeSwitch).toHaveCSS('height', await privateModeSwitch.evaluate(element => getComputedStyle(element).height));
+
+  await themeToggle.click();
   const toggledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
 
   expect(toggledTheme).not.toBe(initialTheme);
+  await expect(themeToggle).toHaveAttribute('aria-pressed', String(toggledTheme === 'dark'));
+  await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${toggledThemeIcon}\\b`));
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('markdownViewerGlobalState') || '{}').theme)).toBe(toggledTheme);
 
   await page.reload();
@@ -364,6 +380,8 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   await expect(page.locator('#mobile-review-toggle')).toBeVisible();
   await expect(page.locator('#mobile-private-mode-toggle')).toBeVisible();
   await expect(page.locator('#mobile-theme-toggle .settings-switch')).toBeVisible();
+  await expect(page.locator('#mobile-theme-switch-icon')).toHaveClass(/lucide-(sun-medium|moon)/);
+  await expect(page.locator('#mobile-theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch')).toBeVisible();
   const settingsOrder = await page.locator('#mobile-menu-settings-panel > *').evaluateAll(elements =>
     elements.filter(element => element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
