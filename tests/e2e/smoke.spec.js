@@ -53,6 +53,7 @@ test('release notes behave as an application surface instead of a document', asy
   await expect(page.locator('.header-view-toolbar button:not(:disabled)')).toHaveCount(0);
   await expect(page.locator('#toggle-sync')).toBeVisible();
   await expect(page.locator('#toggle-sync')).toBeDisabled();
+  await expect(page.locator('#toggle-sync')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(page.locator('#copy-markdown-button')).toBeVisible();
   await expect(page.locator('#copy-markdown-button')).toBeDisabled();
   await expect(page.locator('#exportDropdown')).toBeVisible();

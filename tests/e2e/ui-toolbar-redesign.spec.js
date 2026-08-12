@@ -234,9 +234,22 @@ test('shared interface roles use the application type and icon scale', async ({ 
 test('New and Export menus share one visual system and keyboard dismissal', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
+  const activeSyncStyle = await page.locator('#toggle-sync').evaluate(button => {
+    const style = getComputedStyle(button);
+    return [style.backgroundColor, style.borderColor, style.color];
+  });
+  const expectActiveDropdownStyle = async locator => {
+    await expect.poll(() => locator.evaluate(button => {
+      const style = getComputedStyle(button);
+      return [style.backgroundColor, style.borderColor, style.color];
+    })).toEqual(activeSyncStyle);
+  };
+
   await page.locator('#importDropdown').click();
   const newMenu = page.locator('[aria-labelledby="importDropdown"]');
   await expect(newMenu).toBeVisible();
+  await expect(page.locator('#importDropdown')).toHaveAttribute('aria-expanded', 'true');
+  await expectActiveDropdownStyle(page.locator('#importDropdown'));
   const newSurface = await newMenu.evaluate(menu => {
     const style = getComputedStyle(menu);
     return [style.backgroundColor, style.borderColor, style.borderRadius, style.boxShadow];
@@ -247,11 +260,18 @@ test('New and Export menus share one visual system and keyboard dismissal', asyn
   await page.locator('#exportDropdown').click();
   const exportMenu = page.locator('[aria-labelledby="exportDropdown"]');
   await expect(exportMenu).toBeVisible();
+  await expect(page.locator('#exportDropdown')).toHaveAttribute('aria-expanded', 'true');
+  await expectActiveDropdownStyle(page.locator('#exportDropdown'));
   const exportSurface = await exportMenu.evaluate(menu => {
     const style = getComputedStyle(menu);
     return [style.backgroundColor, style.borderColor, style.borderRadius, style.boxShadow];
   });
   expect(exportSurface).toEqual(newSurface);
+  await page.keyboard.press('Escape');
+
+  await page.locator('#workspaceSettingsDropdown').click();
+  await expect(page.locator('#workspaceSettingsDropdown')).toHaveAttribute('aria-expanded', 'true');
+  await expectActiveDropdownStyle(page.locator('#workspaceSettingsDropdown'));
   await page.keyboard.press('Escape');
 
   await expect(page.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);

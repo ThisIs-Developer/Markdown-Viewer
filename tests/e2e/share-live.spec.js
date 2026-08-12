@@ -29,6 +29,8 @@ test('Share Snapshot creates a view-only hash link that opens without permanent 
   await expect(sharedPage.locator('.content-container')).toHaveClass(/view-preview-only/);
   await expect(sharedPage.locator('#markdown-editor')).toHaveJSProperty('readOnly', true);
   await expect(sharedPage.locator('#markdown-preview')).toContainText('This text should survive a snapshot round trip.');
+  await expect(sharedPage.locator('#toggle-sync')).toBeDisabled();
+  await expect(sharedPage.locator('#toggle-sync')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
   const formatMenuToggles = sharedPage.locator('#markdown-format-toolbar [data-toolbar-menu-toggle]');
   await expect(formatMenuToggles).toHaveCount(3);

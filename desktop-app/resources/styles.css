@@ -2297,10 +2297,22 @@ body.document-sidebar-collapsed .document-sidebar {
 .header-icon-command.is-live-active,
 .header-icon-command.is-live-active:hover,
 .header-icon-command.sync-active,
-.header-icon-command.sync-active:hover {
+.header-icon-command.sync-active:hover,
+.header-icon-dropdown.show > .header-icon-command:not(:disabled):not([aria-disabled="true"]),
+.header-icon-dropdown > .header-icon-command.show:not(:disabled):not([aria-disabled="true"]),
+.settings-dropdown.show > .header-icon-command:not(:disabled):not([aria-disabled="true"]),
+.settings-dropdown > .header-icon-command.show:not(:disabled):not([aria-disabled="true"]) {
   border-color: color-mix(in srgb, var(--accent-color) 28%, var(--border-color));
   background: color-mix(in srgb, var(--accent-color) 10%, transparent);
   color: var(--accent-color);
+}
+
+.header-icon-command.sync-active:disabled,
+.header-icon-command.sync-active[aria-disabled="true"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-color);
+  box-shadow: none;
 }
 
 .header-icon-command#review-toggle:has(.review-toolbar-count:not([hidden])) {
