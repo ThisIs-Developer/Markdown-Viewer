@@ -59,7 +59,7 @@
                         <button class="tool-button view-toggle-btn is-active" data-view-mode="split" aria-pressed="true" title="Split" aria-label="Split editor and preview"><i class="lucide lucide-columns-2" aria-hidden="true"></i></button>
                         <button class="tool-button view-toggle-btn" data-view-mode="preview" aria-pressed="false" title="Preview (Ctrl/Cmd+E toggles Edit/Preview)" aria-label="Preview Markdown" aria-keyshortcuts="Control+E Meta+E"><i class="lucide lucide-eye" aria-hidden="true"></i></button>
                     </div>
-                    <span class="header-toolbar-divider" aria-hidden="true"></span>
+                    <span class="header-toolbar-divider header-view-divider" aria-hidden="true"></span>
 
                     <button id="toggle-sync" class="tool-button header-icon-command sync-enabled sync-active" type="button" title="Disable synchronized scrolling (Ctrl/Cmd+Shift+S)" aria-label="Disable synchronized scrolling" aria-keyshortcuts="Control+Shift+S Meta+Shift+S" aria-pressed="true">
                         <i class="lucide lucide-refresh-cw" aria-hidden="true"></i>
@@ -200,8 +200,8 @@
                             </section>
 
                         <nav class="mobile-menu-items" aria-label="Application menu">
-                            <h3 class="mobile-menu-group-label">Document tools</h3>
-                            <div class="mobile-menu-command-group" role="group" aria-label="Document tools">
+                            <h3 id="mobile-document-tools-heading" class="mobile-menu-group-label">Document tools</h3>
+                            <div id="mobile-document-tools" class="mobile-menu-command-group" role="group" aria-label="Document tools">
                                 <button id="mobile-toggle-sync" class="mobile-menu-item mobile-menu-command mobile-settings-item is-active" type="button" title="Disable synchronized scrolling" aria-label="Disable synchronized scrolling" aria-pressed="true">
                                     <span class="mobile-menu-item-label"><i class="lucide lucide-refresh-cw" aria-hidden="true"></i><span>Sync scrolling</span></span>
                                     <span id="mobile-sync-status" class="mobile-menu-item-status">On</span>
@@ -234,7 +234,7 @@
                                     </div>
                                 </section>
 
-                                <section class="mobile-menu-section">
+                                <section id="mobile-export-section" class="mobile-menu-section">
                                     <button class="mobile-menu-section-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu-export-panel" data-mobile-menu-section-toggle>
                                         <span><i class="lucide lucide-download" aria-hidden="true"></i>Export</span><i class="lucide lucide-chevron-down mobile-menu-section-chevron" aria-hidden="true"></i>
                                     </button>
@@ -389,7 +389,7 @@
                 <i class="lucide lucide-panel-left-close" aria-hidden="true"></i>
               </button>
               <span class="document-sidebar-tab-divider" aria-hidden="true"></span>
-              <div class="tab-list" id="tab-list" role="tablist" aria-label="Open document tabs"></div>
+              <div class="tab-list" id="tab-list" role="tablist" aria-label="Open tabs"></div>
               <button class="tab-new-btn" id="tab-new-btn" title="New file (Ctrl+T)" aria-label="Create new file">
                 <i class="lucide lucide-plus" aria-hidden="true"></i>
               </button>

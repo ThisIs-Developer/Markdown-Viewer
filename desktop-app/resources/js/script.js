@@ -7347,6 +7347,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   function setReviewMode(enabled, options) {
     options = options || {};
     const nextState = Boolean(enabled);
+    if (nextState && isReleaseNotesActive()) {
+      announceToScreenReader('Release notes do not support comments or suggestions.');
+      return;
+    }
     const wasActive = reviewModeActive;
     if (nextState && !wasActive) {
       reviewPreviousViewModes.set(activeTabId, currentViewMode || 'split');
@@ -7885,6 +7889,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     updateMissingDocumentControlState([
+      copyMarkdownButton,
+      reviewToggle,
       exportDropdown,
       shareButton,
       liveShareButton,
@@ -7928,6 +7934,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   function clearActiveDocument() {
     activeTabId = null;
     selectedDocumentId = null;
+    document.body.classList.remove('release-notes-active');
+    updateReleaseNotesActionAvailability(false);
     removeStorageItem(ACTIVE_TAB_KEY);
     closeReviewComposer();
     clearReviewDecorations();
@@ -8007,12 +8015,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const menuBtn = document.createElement('button');
     menuBtn.type = 'button';
     menuBtn.className = 'tab-menu-btn';
-    menuBtn.setAttribute('aria-label', 'File options for ' + (tab.title || 'Untitled'));
+    menuBtn.setAttribute('aria-label', (isReleaseNotesTab(tab) ? 'Release notes options for ' : 'File options for ') + (tab.title || 'Untitled'));
     menuBtn.setAttribute('aria-haspopup', 'menu');
     menuBtn.setAttribute('aria-expanded', 'false');
     menuBtn.setAttribute('aria-controls', menuId);
     menuBtn.setAttribute('draggable', 'false');
-    menuBtn.title = 'File options';
+    menuBtn.title = isReleaseNotesTab(tab) ? 'Release notes options' : 'File options';
     menuBtn.innerHTML = '<i class="lucide lucide-ellipsis" aria-hidden="true"></i>';
 
     const dropdown = document.createElement('div');
@@ -8202,7 +8210,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, {
       id: 'all', icon: 'lucide-square-x', label: 'Close all'
     }];
-    const actions = isReleaseNotesTab(tab) ? closeActions : [{
+    const actions = isReleaseNotesTab(tab) ? closeActions.slice(0, 1) : [{
       id: isCombinedSplitTab ? 'split-close' : 'split',
       icon: isCombinedSplitTab ? 'lucide-panel-right-close' : 'lucide-columns-2',
       label: isCombinedSplitTab ? 'Exit split view' : 'Open in split view',
@@ -8919,6 +8927,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     saveSecondarySplitState();
     closeReviewComposer();
     clearReviewDecorations();
+    if (isReleaseNotesTab(tab) && reviewModeActive) setReviewMode(false);
     
     // Clear typing timeout and reset tracking for the new tab
     if (typingTimeout) {
@@ -8929,11 +8938,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     pendingState = null;
     
     activeTabId = tabId;
+    const releaseNotesActive = isReleaseNotesTab(tab);
+    document.body.classList.toggle('release-notes-active', releaseNotesActive);
     if (swapSplitPanes) secondarySplitTabId = previousActiveTabId;
     saveActiveTabId(activeTabId);
     updateNoOpenDocumentState();
-    selectedDocumentId = tabId;
-    setSingleDocumentTreeSelection('document', tabId);
+    selectedDocumentId = releaseNotesActive ? null : tabId;
+    if (releaseNotesActive) clearDocumentTreeSelection({ announce: false });
+    else setSingleDocumentTreeSelection('document', tabId);
     tab.lastOpenedAt = Date.now();
     if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     markdownEditor.value = tab.content;
@@ -21682,6 +21694,7 @@ ${selector} .arrowheadPath {
   });
 
   copyMarkdownButton.addEventListener("click", async function () {
+    if (isReleaseNotesActive()) return;
     if (blockShareSnapshotSourceAccess()) return;
     try {
       await copyTextToClipboard(markdownEditor.value);
@@ -22338,6 +22351,8 @@ ${selector} .arrowheadPath {
 
   function updateReleaseNotesActionAvailability(releaseNotesActive) {
     const actions = [
+      copyMarkdownButton,
+      reviewToggle,
       exportDropdown,
       exportMd,
       exportHtml,
@@ -22350,6 +22365,8 @@ ${selector} .arrowheadPath {
       mobileExportHtml,
       mobileExportPdf,
       mobileExportPng,
+      mobileCopyMarkdownButton,
+      mobileReviewToggle,
       mobileShareButton,
       mobileLiveShareButton
     ];
@@ -22416,6 +22433,7 @@ ${selector} .arrowheadPath {
     const liveShareDocumentActive = isLiveShareDocumentActive();
     const liveShareGuestDocumentActive = liveShareDocumentActive && !isLiveShareHostDocumentActive();
     const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly || releaseNotesActive;
+    document.body.classList.toggle('release-notes-active', releaseNotesActive);
     const sourceReadOnly = viewOnly || reviewModeActive;
     if (markdownEditor) {
       markdownEditor.readOnly = sourceReadOnly;
@@ -24467,6 +24485,10 @@ ${selector} .arrowheadPath {
 
     if (isCmdOrCtrl && e.shiftKey && !e.altKey && key === 'c') {
       e.preventDefault();
+      if (isReleaseNotesActive()) {
+        announceToScreenReader('Release notes do not expose Markdown source.');
+        return;
+      }
       const focusedEditor = document.activeElement === documentSplitEditor ? documentSplitEditor : markdownEditor;
       const selected = focusedEditor.value.slice(focusedEditor.selectionStart, focusedEditor.selectionEnd);
       copyTextToClipboard(selected || focusedEditor.value)
