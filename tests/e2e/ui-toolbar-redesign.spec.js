@@ -106,7 +106,7 @@ test('every application dialog uses the shared alert modal shell', async ({ page
   expect(dialogShells.filter(dialog => !dialog.sharedShell || !dialog.header || !dialog.close || !dialog.footer || dialog.padding !== '0px')).toEqual([]);
 });
 
-test('header orders document actions and formatting toolbar exposes advanced tools', async ({ page }) => {
+test('header orders document actions and formatting toolbar follows the recommended grouping', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const header = page.locator('.header-right');
   const toolbar = page.locator('#markdown-format-toolbar');
@@ -114,21 +114,32 @@ test('header orders document actions and formatting toolbar exposes advanced too
     elements.map(element => element.id)
   );
   expect(documentActionOrder.slice(0, 7)).toEqual([
+    'toggle-sync',
     'importDropdown',
     'copy-markdown-button',
-    'toggle-sync',
-    'review-toggle',
+    'exportDropdown',
     'share-button',
     'live-share-button',
-    'exportDropdown'
+    'review-toggle'
   ]);
 
-  const advancedActions = await toolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn').evaluateAll(buttons =>
-    buttons.map(button => button.getAttribute('data-md-action'))
+  const toolbarGroups = await toolbar.locator(':scope > .markdown-toolbar-group').evaluateAll(groups =>
+    groups.map(group => ({
+      label: group.getAttribute('aria-label'),
+      actions: Array.from(group.children).map(child => {
+        const control = child.matches('button') ? child : child.querySelector(':scope > button');
+        return control?.getAttribute('data-md-action') || control?.getAttribute('data-toolbar-menu-toggle');
+      }).filter(Boolean)
+    }))
   );
-  expect(advancedActions).toEqual([
-    'diagram', 'reference', 'code-block', 'terminal-block', 'horizontal-rule',
-    'date-time', 'emoji', 'symbols', 'alert'
+  expect(toolbarGroups).toEqual([
+    { label: 'History', actions: ['undo', 'redo'] },
+    { label: 'Text formatting', actions: ['heading', 'bold', 'italic', 'strike', 'inline-code', 'case'] },
+    { label: 'Paragraph formatting', actions: ['quote', 'unordered-list', 'ordered-list', 'alignment'] },
+    { label: 'Content insertion', actions: ['link', 'image', 'table', 'reference'] },
+    { label: 'Technical content', actions: ['code-block', 'terminal-block', 'diagram'] },
+    { label: 'Additional insertion', actions: ['horizontal-rule', 'alert', 'date-time', 'symbols', 'emoji'] },
+    { label: 'Workspace actions', actions: ['find', 'fullscreen'] }
   ]);
   await expect(toolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
 

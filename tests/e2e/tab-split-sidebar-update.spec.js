@@ -187,7 +187,9 @@ test('header groups document actions before application preferences', async ({ p
   await page.locator('#workspaceSettingsDropdown').click();
 
   await expect(formatToolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
-  await expect(formatToolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(9);
+  await expect(formatToolbar.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
+  await expect(formatToolbar.locator('.markdown-toolbar-group--technical > .markdown-tool-btn')).toHaveCount(3);
+  await expect(formatToolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(5);
 
   await header.locator('#exportDropdown').click();
   const exportMenu = page.locator('[aria-labelledby="exportDropdown"]');
@@ -249,7 +251,7 @@ test('closing a tab keeps the document in Files and reopening restores the tab',
   await expect(reopenedRow).toHaveCount(0);
 });
 
-test('format toolbar keeps compact selectors and exposes advanced insert actions', async ({ page }) => {
+test('format toolbar keeps compact selectors and exposes grouped insert actions', async ({ page }) => {
   await expect(page.locator('[data-md-action="clear-formatting"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="help"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="info"]')).toBeVisible();
@@ -257,7 +259,9 @@ test('format toolbar keeps compact selectors and exposes advanced insert actions
   await expect(page.locator('[data-toolbar-menu-toggle="case"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="insert"], [data-toolbar-menu="insert"]')).toHaveCount(0);
-  await expect(page.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(9);
+  await expect(page.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
+  await expect(page.locator('.markdown-toolbar-group--technical > .markdown-tool-btn')).toHaveCount(3);
+  await expect(page.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(5);
 
   await setEditorContent(page, 'toolbar heading');
   await page.locator('[data-toolbar-menu-toggle="heading"]').click();

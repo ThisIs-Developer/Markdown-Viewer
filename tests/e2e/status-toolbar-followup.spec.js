@@ -45,7 +45,9 @@ test('header consolidates icon document actions in the requested order', async (
   await expect(toolbar.locator('#review-toggle, #toggle-sync, #copy-markdown-button')).toHaveCount(0);
   await expect(toolbar.locator('#exportDropdown')).toHaveCount(0);
   await expect(toolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
-  await expect(toolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(9);
+  await expect(toolbar.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
+  await expect(toolbar.locator('.markdown-toolbar-group--technical > .markdown-tool-btn')).toHaveCount(3);
+  await expect(toolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(5);
 
   await toolbar.locator('.workspace-format-actions [data-md-action="find"]').click();
   await expect(page.locator('#find-replace-modal')).toBeVisible();

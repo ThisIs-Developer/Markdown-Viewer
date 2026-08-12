@@ -401,7 +401,7 @@
             <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" aria-keyshortcuts="Control+Z Meta+Z"><i class="lucide lucide-undo-2"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)" aria-label="Redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y Meta+Y"><i class="lucide lucide-redo-2"></i></button>
           </div>
-          <div class="markdown-toolbar-group" role="group" aria-label="Common formatting">
+          <div class="markdown-toolbar-group" role="group" aria-label="Text formatting">
             <div class="markdown-tool-dropdown">
               <button type="button" class="markdown-tool-btn markdown-tool-select markdown-tool-select--heading" data-toolbar-menu-toggle="heading" aria-haspopup="menu" aria-expanded="false" title="Text style" aria-label="Choose text style">
                 <span class="markdown-tool-select-label">H</span><i class="lucide lucide-chevron-down" aria-hidden="true"></i>
@@ -418,8 +418,7 @@
             <button type="button" class="markdown-tool-btn" data-md-action="bold" title="Bold (Ctrl/Cmd+B)" aria-label="Bold" aria-keyshortcuts="Control+B Meta+B"><i class="lucide lucide-bold"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="italic" title="Italic (Ctrl/Cmd+I)" aria-label="Italic" aria-keyshortcuts="Control+I Meta+I"><i class="lucide lucide-italic"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="strike" title="Strikethrough (Alt+Shift+5)" aria-label="Strikethrough" aria-keyshortcuts="Alt+Shift+5"><i class="lucide lucide-strikethrough"></i></button>
-          </div>
-          <div class="markdown-toolbar-group" role="group" aria-label="Text layout">
+            <button type="button" class="markdown-tool-btn" data-md-action="inline-code" title="Inline code (Ctrl/Cmd+Shift+`)" aria-label="Inline code" aria-keyshortcuts="Control+Shift+` Meta+Shift+`"><i class="lucide lucide-code-2" aria-hidden="true"></i></button>
             <div class="markdown-tool-dropdown">
               <button type="button" class="markdown-tool-btn markdown-tool-select markdown-tool-select--compact" data-toolbar-menu-toggle="case" aria-haspopup="menu" aria-expanded="false" title="Change text case" aria-label="Change text case"><span>Aa</span><i class="lucide lucide-chevron-down" aria-hidden="true"></i></button>
               <div class="markdown-tool-menu" data-toolbar-menu="case" role="menu" aria-label="Text case">
@@ -428,6 +427,11 @@
                 <button type="button" class="markdown-tool-menu-item" role="menuitem" data-md-action="lowercase"><span class="markdown-tool-menu-symbol">aa</span><span>lowercase</span></button>
               </div>
             </div>
+          </div>
+          <div class="markdown-toolbar-group" role="group" aria-label="Paragraph formatting">
+            <button type="button" class="markdown-tool-btn" data-md-action="quote" title="Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)" aria-label="Blockquote" aria-keyshortcuts="Control+Shift+Q Meta+Alt+Q"><i class="lucide lucide-quote" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list (Ctrl+Shift+] / Cmd+Option+U)" aria-label="Bulleted list" aria-keyshortcuts="Control+Shift+] Meta+Alt+U"><i class="lucide lucide-list"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list (Ctrl+Shift+[ / Cmd+Option+O)" aria-label="Numbered list" aria-keyshortcuts="Control+Shift+[ Meta+Alt+O"><i class="lucide lucide-list-ordered"></i></button>
             <div class="markdown-tool-dropdown">
               <button type="button" class="markdown-tool-btn markdown-tool-select markdown-tool-select--icon" data-toolbar-menu-toggle="alignment" aria-haspopup="menu" aria-expanded="false" title="Alignment and direction" aria-label="Alignment and direction"><i class="lucide lucide-align-left" aria-hidden="true"></i><i class="lucide lucide-chevron-down" aria-hidden="true"></i></button>
               <div class="markdown-tool-menu" data-toolbar-menu="alignment" role="menu" aria-label="Alignment and direction">
@@ -439,25 +443,23 @@
               </div>
             </div>
           </div>
-          <div class="markdown-toolbar-group" role="group" aria-label="Content structure">
-            <button type="button" class="markdown-tool-btn" data-md-action="quote" title="Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)" aria-label="Blockquote" aria-keyshortcuts="Control+Shift+Q Meta+Alt+Q"><i class="lucide lucide-quote" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="unordered-list" title="Bulleted list (Ctrl+Shift+] / Cmd+Option+U)" aria-label="Bulleted list" aria-keyshortcuts="Control+Shift+] Meta+Alt+U"><i class="lucide lucide-list"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="ordered-list" title="Numbered list (Ctrl+Shift+[ / Cmd+Option+O)" aria-label="Numbered list" aria-keyshortcuts="Control+Shift+[ Meta+Alt+O"><i class="lucide lucide-list-ordered"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="inline-code" title="Inline code (Ctrl/Cmd+Shift+`)" aria-label="Inline code" aria-keyshortcuts="Control+Shift+` Meta+Shift+`"><i class="lucide lucide-code-2" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="table" title="Table" aria-label="Table"><i class="lucide lucide-table-2" aria-hidden="true"></i></button>
+          <div class="markdown-toolbar-group markdown-toolbar-group--content" role="group" aria-label="Content insertion">
             <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link (Ctrl/Cmd+K)" aria-label="Link" aria-keyshortcuts="Control+K Meta+K"><i class="lucide lucide-link-2"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="image" title="Image, GIF, or video" aria-label="Insert image, GIF, or video"><i class="lucide lucide-image" aria-hidden="true"></i></button>
-          </div>
-          <div class="markdown-toolbar-group markdown-toolbar-group--advanced" role="group" aria-label="Advanced insertion">
-            <button type="button" class="markdown-tool-btn" data-md-action="diagram" title="Diagram and more" aria-label="Diagram and more"><i class="lucide lucide-workflow" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="table" title="Table" aria-label="Table"><i class="lucide lucide-table-2" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="reference" title="Reference" aria-label="Insert reference"><i class="lucide lucide-bookmark" aria-hidden="true"></i></button>
+          </div>
+          <div class="markdown-toolbar-group markdown-toolbar-group--technical" role="group" aria-label="Technical content">
             <button type="button" class="markdown-tool-btn" data-md-action="code-block" title="Code block (Ctrl+Shift+K / Cmd+Option+C)" aria-label="Insert code block" aria-keyshortcuts="Control+Shift+K Meta+Alt+C"><i class="lucide lucide-square-code" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="terminal-block" title="Terminal block" aria-label="Insert terminal block"><i class="lucide lucide-square-terminal" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="diagram" title="Diagram and more" aria-label="Diagram and more"><i class="lucide lucide-workflow" aria-hidden="true"></i></button>
+          </div>
+          <div class="markdown-toolbar-group markdown-toolbar-group--advanced" role="group" aria-label="Additional insertion">
             <button type="button" class="markdown-tool-btn" data-md-action="horizontal-rule" title="Horizontal rule" aria-label="Insert horizontal rule"><i class="lucide lucide-minus" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="date-time" title="Date and time" aria-label="Insert date and time"><i class="lucide lucide-clock-3" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="emoji" title="Emoji shortcode" aria-label="Insert emoji shortcode"><i class="lucide lucide-smile" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="symbols" title="Symbols and entities" aria-label="Insert symbols and entities"><i class="lucide lucide-braces" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="alert" title="Markdown alert" aria-label="Insert Markdown alert"><i class="lucide lucide-badge-alert" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="date-time" title="Date and time" aria-label="Insert date and time"><i class="lucide lucide-clock-3" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="symbols" title="Symbols and entities" aria-label="Insert symbols and entities"><i class="lucide lucide-braces" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="emoji" title="Emoji shortcode" aria-label="Insert emoji shortcode"><i class="lucide lucide-smile" aria-hidden="true"></i></button>
           </div>
           <div class="markdown-toolbar-group workspace-format-actions" role="group" aria-label="Workspace actions">
             <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find and replace (Ctrl/Cmd+F)" aria-label="Find and replace" aria-keyshortcuts="Control+F Meta+F"><i class="lucide lucide-search" aria-hidden="true"></i></button>
