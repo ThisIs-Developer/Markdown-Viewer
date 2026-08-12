@@ -22572,9 +22572,10 @@ ${selector} .arrowheadPath {
 
     if (markdownFormatToolbar) {
       markdownFormatToolbar.classList.toggle('is-live-view-only', sourceReadOnly);
-      markdownFormatToolbar.querySelectorAll('[data-md-action]').forEach(function(button) {
+      markdownFormatToolbar.querySelectorAll('[data-md-action], [data-toolbar-menu-toggle]').forEach(function(button) {
         const action = button.getAttribute('data-md-action');
-        const shouldDisable = sourceReadOnly && isLiveMutatingAction(action);
+        const isMenuToggle = button.hasAttribute('data-toolbar-menu-toggle');
+        const shouldDisable = sourceReadOnly && (isMenuToggle || isLiveMutatingAction(action));
         if (shouldDisable) {
           button.dataset.liveViewOnlyDisabled = 'true';
           button.disabled = true;
