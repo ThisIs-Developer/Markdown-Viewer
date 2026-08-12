@@ -11188,6 +11188,10 @@ ${selector} .arrowheadPath {
     options = options || {};
     const rawVal = markdownEditor.value;
     const force = options.force === true;
+    // Stats must reflect the current editor content on every render call, even when
+    // the preview HTML itself is skipped below because it's already up to date
+    // (e.g. switching back to a tab whose content didn't change).
+    updateDocumentStats();
     const previewDocumentId = getActivePreviewDocumentId();
     const hasCurrentPreview =
       previewHasCommittedRender &&
