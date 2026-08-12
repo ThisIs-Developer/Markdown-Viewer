@@ -8015,12 +8015,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const menuBtn = document.createElement('button');
     menuBtn.type = 'button';
     menuBtn.className = 'tab-menu-btn';
-    menuBtn.setAttribute('aria-label', (isReleaseNotesTab(tab) ? 'Release notes options for ' : 'File options for ') + (tab.title || 'Untitled'));
+    menuBtn.setAttribute('aria-label', 'File options for ' + (tab.title || 'Untitled'));
     menuBtn.setAttribute('aria-haspopup', 'menu');
     menuBtn.setAttribute('aria-expanded', 'false');
     menuBtn.setAttribute('aria-controls', menuId);
     menuBtn.setAttribute('draggable', 'false');
-    menuBtn.title = isReleaseNotesTab(tab) ? 'Release notes options' : 'File options';
+    menuBtn.title = 'File options';
     menuBtn.innerHTML = '<i class="lucide lucide-ellipsis" aria-hidden="true"></i>';
 
     const dropdown = document.createElement('div');
@@ -8028,33 +8028,29 @@ document.addEventListener("DOMContentLoaded", async function () {
     dropdown.className = 'tab-menu-dropdown';
     dropdown.setAttribute('data-tab-menu-dropdown', 'true');
     dropdown.setAttribute('role', 'menu');
-    if (isReleaseNotesTab(tab)) {
-      dropdown.innerHTML = '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
-    } else {
-      const duplicateAction = isShareSnapshotTab(tab)
-        ? ''
-        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
-      const downloadAction = isShareSnapshotTab(tab)
-        ? ''
-        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
-      const favoriteAction = isShareSnapshotTab(tab)
-        ? ''
-        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
-      const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
-      const splitAction = isCombinedSplitTab
-        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
-        : tabs.length > 1
-        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
-        : '';
-      dropdown.innerHTML =
-        '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
-        duplicateAction +
-        favoriteAction +
-        splitAction +
-        downloadAction +
-        '<div class="tab-menu-separator" role="separator"></div>' +
-        '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
-    }
+    const duplicateAction = isShareSnapshotTab(tab)
+      ? ''
+      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
+    const downloadAction = isShareSnapshotTab(tab)
+      ? ''
+      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
+    const favoriteAction = isShareSnapshotTab(tab)
+      ? ''
+      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
+    const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
+    const splitAction = isCombinedSplitTab
+      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
+      : tabs.length > 1
+      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
+      : '';
+    dropdown.innerHTML =
+      '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
+      duplicateAction +
+      favoriteAction +
+      splitAction +
+      downloadAction +
+      '<div class="tab-menu-separator" role="separator"></div>' +
+      '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
 
     menuBtn.addEventListener('click', function(e) {
       e.preventDefault();
@@ -8347,7 +8343,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         titleSpan.title = getDocumentTabHoverTitle(tab);
       }
 
-      const tabMenu = createTabActionMenu(tab, { menuIdPrefix: 'desktop-tab-menu' });
+      const tabMenu = isReleaseNotesTab(tab)
+        ? null
+        : createTabActionMenu(tab, { menuIdPrefix: 'desktop-tab-menu' });
 
       const closeButton = document.createElement('button');
       closeButton.type = 'button';
@@ -8365,7 +8363,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       item.appendChild(fileIcon);
       item.appendChild(titleSpan);
-      item.appendChild(tabMenu.button);
+      if (tabMenu) item.appendChild(tabMenu.button);
       item.appendChild(closeButton);
 
       item.addEventListener('contextmenu', function(event) {
@@ -22351,6 +22349,7 @@ ${selector} .arrowheadPath {
 
   function updateReleaseNotesActionAvailability(releaseNotesActive) {
     const actions = [
+      toggleSyncButton,
       copyMarkdownButton,
       reviewToggle,
       exportDropdown,
@@ -22365,11 +22364,20 @@ ${selector} .arrowheadPath {
       mobileExportHtml,
       mobileExportPdf,
       mobileExportPng,
+      mobileToggleSyncButton,
       mobileCopyMarkdownButton,
       mobileReviewToggle,
       mobileShareButton,
       mobileLiveShareButton
     ];
+
+    viewModeButtons.forEach(function(action) { actions.push(action); });
+    mobileViewModeButtons.forEach(function(action) { actions.push(action); });
+    if (markdownFormatToolbar) {
+      markdownFormatToolbar.querySelectorAll('button').forEach(function(action) { actions.push(action); });
+      markdownFormatToolbar.classList.toggle('is-release-notes-disabled', releaseNotesActive);
+      markdownFormatToolbar.setAttribute('aria-disabled', releaseNotesActive ? 'true' : 'false');
+    }
 
     actions.forEach(function(action) {
       if (!action) return;
@@ -22381,11 +22389,15 @@ ${selector} .arrowheadPath {
               ? action.getAttribute('tabindex')
               : '__missing__';
           }
+          action.dataset.releaseNotesOriginalTitle = action.hasAttribute('title')
+            ? action.getAttribute('title')
+            : '__missing__';
         }
         action.dataset.releaseNotesDisabled = 'true';
         if ('disabled' in action) action.disabled = true;
         action.classList.add('disabled');
         action.setAttribute('aria-disabled', 'true');
+        action.setAttribute('title', 'Unavailable in Release Notes');
         if (action.tagName === 'A') action.setAttribute('tabindex', '-1');
         return;
       }
@@ -22401,9 +22413,16 @@ ${selector} .arrowheadPath {
       const remainsDisabled = wasDisabled || hasAnotherDisabledState;
       delete action.dataset.releaseNotesDisabled;
       delete action.dataset.releaseNotesWasDisabled;
+      const originalTitle = action.dataset.releaseNotesOriginalTitle;
+      delete action.dataset.releaseNotesOriginalTitle;
       if ('disabled' in action) action.disabled = remainsDisabled;
       action.classList.toggle('disabled', remainsDisabled);
       action.setAttribute('aria-disabled', remainsDisabled ? 'true' : 'false');
+      if (originalTitle && originalTitle !== '__missing__') {
+        action.setAttribute('title', originalTitle);
+      } else {
+        action.removeAttribute('title');
+      }
       if (action.tagName === 'A') {
         const originalTabindex = action.dataset.releaseNotesOriginalTabindex;
         delete action.dataset.releaseNotesOriginalTabindex;
@@ -22434,6 +22453,7 @@ ${selector} .arrowheadPath {
     const liveShareGuestDocumentActive = liveShareDocumentActive && !isLiveShareHostDocumentActive();
     const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly || releaseNotesActive;
     document.body.classList.toggle('release-notes-active', releaseNotesActive);
+    if (!releaseNotesActive) updateReleaseNotesActionAvailability(false);
     const sourceReadOnly = viewOnly || reviewModeActive;
     if (markdownEditor) {
       markdownEditor.readOnly = sourceReadOnly;
@@ -22571,8 +22591,9 @@ ${selector} .arrowheadPath {
         updateUndoRedoButtons();
       }
     }
+    updateSyncToggleVisibility(currentViewMode);
     updateDocumentToolbarAvailability(hasActiveOpenDocument());
-    updateReleaseNotesActionAvailability(releaseNotesActive);
+    if (releaseNotesActive) updateReleaseNotesActionAvailability(true);
   }
 
   function getLiveRoomSocketUrl(roomId, secret, auth) {

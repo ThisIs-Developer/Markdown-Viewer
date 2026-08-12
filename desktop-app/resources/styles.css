@@ -11717,28 +11717,16 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
 /* ========================================
    VERSIONED RELEASE NOTES
    ======================================== */
-body.release-notes-active .header-view-toolbar,
-body.release-notes-active .header-view-divider,
-body.release-notes-active #toggle-sync,
-body.release-notes-active #copy-markdown-button,
-body.release-notes-active .header-export-dropdown,
-body.release-notes-active #share-button,
-body.release-notes-active #live-share-button,
-body.release-notes-active #live-share-toolbar-participants,
-body.release-notes-active #review-toggle,
-body.release-notes-active #markdown-format-toolbar,
-body.release-notes-active .app-status-bar,
-body.release-notes-active .mobile-menu-overview,
-body.release-notes-active #mobile-document-tools-heading,
-body.release-notes-active #mobile-document-tools,
-body.release-notes-active #mobile-export-section,
-body.release-notes-active #mobile-share-button,
-body.release-notes-active #mobile-live-share-button,
 body.release-notes-active #review-panel,
 body.release-notes-active #review-panel-backdrop,
 body.release-notes-active #review-composer,
 body.release-notes-active #review-pins-layer {
   display: none !important;
+}
+
+body.release-notes-active .app-status-bar,
+body.release-notes-active .mobile-stats-container {
+  opacity: 0.5;
 }
 
 .tab-item.release-notes-tab {
