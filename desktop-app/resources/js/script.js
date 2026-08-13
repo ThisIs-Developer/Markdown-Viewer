@@ -11139,7 +11139,6 @@ ${selector} .arrowheadPath {
     renderMathJaxNodes(roots, rawVal, context, { snapshotReviewTargets: true });
 
     decorateReviewTargets();
-    updateDocumentStats();
     updateFindHighlights();
     scheduleLineNumberUpdate();
     scheduleAdvancedPostProcessRecovery(rawVal, context);
