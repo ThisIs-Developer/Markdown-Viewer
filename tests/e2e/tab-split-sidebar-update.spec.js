@@ -251,7 +251,25 @@ test('closing a tab keeps the document in Files and reopening restores the tab',
   await expect(reopenedRow).toHaveCount(0);
 });
 
-test('format toolbar keeps compact selectors and exposes grouped insert actions', async ({ page }) => {
+test('reopening the only closed tab restores the word/char/reading-time stats', async ({ page }) => {
+  const closedTabId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+  await setEditorContent(page, '# Kept document\n\nSome words to count here.');
+
+  await expect(page.locator('#word-count')).toHaveText('8');
+  await expect(page.locator('#char-count')).toHaveText('42');
+
+  await page.locator('#tab-list .tab-item.active .tab-close-btn').click();
+  await expect(page.locator('#word-count')).toHaveText('0');
+  await expect(page.locator('#char-count')).toHaveText('0');
+
+  await page.locator(`.document-tree-row[data-document-id="${closedTabId}"] .document-tree-main`).click();
+  await expect(page.locator('#markdown-editor')).toHaveValue('# Kept document\n\nSome words to count here.');
+  await expect(page.locator('#word-count')).toHaveText('8');
+  await expect(page.locator('#char-count')).toHaveText('42');
+  await expect(page.locator('#reading-time')).toHaveText('1');
+});
+
+test('format toolbar consolidates heading, case, alignment, and insert actions', async ({ page }) => {
   await expect(page.locator('[data-md-action="clear-formatting"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="help"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="info"]')).toBeVisible();
