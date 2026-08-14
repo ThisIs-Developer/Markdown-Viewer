@@ -18780,6 +18780,55 @@ ${selector} .arrowheadPath {
     });
   }
 
+  function initDropdownMenuMotion() {
+    if (!window.bootstrap || !window.bootstrap.Dropdown) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const closeDurationMs = 120;
+
+    document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function(toggle) {
+      if (toggle.dataset.dropdownMotionReady === 'true') return;
+      const dropdown = toggle.closest('.dropdown');
+      const menu = dropdown && Array.from(dropdown.children).find(function(child) {
+        return child.classList && child.classList.contains('dropdown-menu');
+      });
+      if (!dropdown || !menu) return;
+
+      toggle.dataset.dropdownMotionReady = 'true';
+      const instance = window.bootstrap.Dropdown.getOrCreateInstance(toggle);
+      let closeTimer = null;
+      let allowImmediateHide = false;
+
+      toggle.addEventListener('show.bs.dropdown', function() {
+        if (closeTimer !== null) window.clearTimeout(closeTimer);
+        closeTimer = null;
+        allowImmediateHide = false;
+        menu.classList.remove('is-closing');
+      });
+
+      toggle.addEventListener('hide.bs.dropdown', function(event) {
+        if (allowImmediateHide || reducedMotion.matches) return;
+        event.preventDefault();
+        if (closeTimer !== null) return;
+
+        menu.classList.add('is-closing');
+        closeTimer = window.setTimeout(function() {
+          closeTimer = null;
+          allowImmediateHide = true;
+          instance.hide();
+          allowImmediateHide = false;
+        }, closeDurationMs);
+      });
+
+      toggle.addEventListener('hidden.bs.dropdown', function() {
+        if (closeTimer !== null) window.clearTimeout(closeTimer);
+        closeTimer = null;
+        allowImmediateHide = false;
+        menu.classList.remove('is-closing');
+      });
+    });
+  }
+
   // Story 1.3: Resize Divider Functions
   function initResizer() {
     if (!resizeDivider) return;
@@ -19403,6 +19452,7 @@ ${selector} .arrowheadPath {
 
   initMarkdownFormatToolbar();
   initToolbarDropdownPortals();
+  initDropdownMenuMotion();
   initFindReplaceModal();
   initAppModals();
   document.addEventListener('fullscreenchange', function() {

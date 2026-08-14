@@ -7759,26 +7759,72 @@ html[lang="ko"] .markdown-body h3 {
   margin-bottom: 0.6em;
 }
 
-/* Consistent, position-safe menu motion. Popper owns menu transforms. */
+/* Consistent, position-safe menu motion. Popper owns transform; the individual
+   translate/scale properties compose with it without disturbing placement. */
 @keyframes app-menu-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 .dropdown-menu {
+  --app-menu-shift-x: 0px;
+  --app-menu-shift-y: -4px;
   opacity: 0;
   display: block;
   visibility: hidden;
-  transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
+  pointer-events: none;
+  translate: var(--app-menu-shift-x) var(--app-menu-shift-y);
+  scale: 0.985;
+  transform-origin: top center;
+  transition:
+    opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    translate 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    scale 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.18s;
+}
+
+.dropdown-menu[data-popper-placement^="top"] {
+  --app-menu-shift-y: 4px;
+  transform-origin: bottom center;
+}
+
+.dropdown-menu[data-popper-placement^="left"] {
+  --app-menu-shift-x: 4px;
+  --app-menu-shift-y: 0px;
+  transform-origin: center right;
+}
+
+.dropdown-menu[data-popper-placement^="right"] {
+  --app-menu-shift-x: -4px;
+  --app-menu-shift-y: 0px;
+  transform-origin: center left;
 }
 
 .dropdown-menu.show {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
+  translate: 0 0;
+  scale: 1;
+  transition-delay: 0s;
+}
+
+.dropdown-menu.show.is-closing {
+  opacity: 0;
+  visibility: visible;
+  pointer-events: none;
+  translate: var(--app-menu-shift-x) var(--app-menu-shift-y);
+  scale: 0.985;
+  transition-duration: 0.12s;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dropdown-menu {
+  .dropdown-menu,
+  .dropdown-menu.show,
+  .dropdown-menu.show.is-closing {
+    translate: 0 0;
+    scale: 1;
     transition: none;
   }
 

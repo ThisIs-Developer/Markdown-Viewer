@@ -255,6 +255,8 @@ test('New and Export menus share one visual system and keyboard dismissal', asyn
     return [style.backgroundColor, style.borderColor, style.borderRadius, style.boxShadow];
   });
   await page.keyboard.press('Escape');
+  await expect(newMenu).toHaveClass(/is-closing/);
+  await expect(newMenu).toHaveCSS('pointer-events', 'none');
   await expect(newMenu).toBeHidden();
 
   await page.locator('#exportDropdown').click();
@@ -275,6 +277,20 @@ test('New and Export menus share one visual system and keyboard dismissal', asyn
   await page.keyboard.press('Escape');
 
   await expect(page.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
+});
+
+test('dropdown motion respects reduced-motion preferences', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const toggle = page.locator('#importDropdown');
+  const menu = page.locator('[aria-labelledby="importDropdown"]');
+
+  await toggle.click();
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveCSS('transition-duration', '0s');
+
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(menu).not.toHaveClass(/is-closing/);
 });
 
 test('toolbar uses theme surfaces and remains usable at desktop and phone widths', async ({ page }) => {
