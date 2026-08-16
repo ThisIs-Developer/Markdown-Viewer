@@ -74,19 +74,65 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
 
   await page.locator('#review-pins-layer .review-target-button[data-review-anchor^="heading:"]').click();
   await expect(page.locator('#review-composer')).toBeVisible();
+  await expect(page.locator('.review-panel-eyebrow')).toHaveCount(0);
+  await expect(page.locator('#review-composer')).not.toContainText('Feedback for');
+  await expect(page.locator('.review-kind-btn i')).toHaveCount(0);
 
-  const selectedKindColor = await page.locator('.review-kind-btn.is-active').evaluate((button) => (
-    getComputedStyle(button).backgroundColor
-  ));
-  expect(neutralState.reviewFilter.backgroundColor).not.toBe(selectedKindColor);
-  expect(neutralState.emptyIcon).not.toBe(selectedKindColor);
-  expect(neutralState.disabledSubmit).not.toBe(selectedKindColor);
+  const composerState = await page.locator('#review-composer').evaluate((composer) => {
+    const activeKind = composer.querySelector('.review-kind-btn.is-active');
+    const kindGroup = composer.querySelector('.review-kind-group');
+    const kindButtons = Array.from(kindGroup.querySelectorAll('.review-kind-btn'));
+    const heading = composer.querySelector('.review-composer-heading');
+    const body = composer.querySelector('.review-composer-body');
+    const footer = composer.querySelector('.review-composer-footer');
+    const kindStyle = getComputedStyle(activeKind);
+    const groupStyle = getComputedStyle(kindGroup);
+    return {
+      activeKind: {
+        backgroundColor: kindStyle.backgroundColor,
+        color: kindStyle.color,
+        fontSize: kindStyle.fontSize,
+        fontWeight: kindStyle.fontWeight,
+        borderRadius: kindStyle.borderRadius
+      },
+      groupGap: groupStyle.columnGap,
+      groupPadding: [
+        groupStyle.paddingTop,
+        groupStyle.paddingRight,
+        groupStyle.paddingBottom,
+        groupStyle.paddingLeft
+      ],
+      kindWidths: kindButtons.map((button) => button.getBoundingClientRect().width),
+      headingHeight: heading.getBoundingClientRect().height,
+      hasStructuredSections: body?.parentElement === composer && footer?.parentElement === composer
+    };
+  });
+  expect(composerState.activeKind).toEqual(neutralState.reviewFilter);
+  expect(composerState.groupGap).toBe('3px');
+  expect(composerState.groupPadding).toEqual(['3px', '3px', '3px', '3px']);
+  expect(Math.max(...composerState.kindWidths) - Math.min(...composerState.kindWidths)).toBeLessThan(0.5);
+  expect(composerState.headingHeight).toBeLessThanOrEqual(44);
+  expect(composerState.hasStructuredSections).toBe(true);
+
+  const kindWidths = [];
+  for (const kind of ['suggestion', 'comment']) {
+    await page.locator(`[data-review-kind="${kind}"]`).click();
+    kindWidths.push(await page.locator('.review-kind-btn.is-active').evaluate((button) => (
+      button.getBoundingClientRect().width
+    )));
+  }
+  expect(Math.max(...kindWidths) - Math.min(...kindWidths)).toBeLessThan(0.5);
 
   await page.locator('#review-feedback-input').fill('Make the heading more specific.');
   await expect(page.locator('#review-feedback-submit')).toBeEnabled();
   await expect.poll(() => page.locator('#review-feedback-submit').evaluate((button) => (
     getComputedStyle(button).backgroundColor
-  ))).toBe(selectedKindColor);
+  ))).not.toBe(neutralState.disabledSubmit);
+  const primaryColor = await page.locator('#review-feedback-submit').evaluate((button) => (
+    getComputedStyle(button).backgroundColor
+  ));
+  expect(primaryColor).not.toBe(composerState.activeKind.backgroundColor);
+  expect(neutralState.emptyIcon).not.toBe(primaryColor);
   await page.locator('#review-feedback-submit').click();
 
   const threadState = await page.locator('.review-thread').evaluate((thread) => {
@@ -112,7 +158,7 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
       actionsRightAligned: actionsRect.left > metaRect.right && actionsRect.right <= threadRect.right
     };
   });
-  expect(threadState.border).not.toBe(selectedKindColor);
+  expect(threadState.border).not.toBe(primaryColor);
   expect(threadState.bodyFontSize).toBe(threadState.anchorFontSize);
   expect(threadState.hasStructuredContent).toBe(true);
   expect(threadState.headerContainsActions).toBe(true);
@@ -135,7 +181,17 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
   await expect(page.locator('[data-review-action="toggle-resolved"] i')).toHaveClass('lucide lucide-refresh-cw');
 
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-  await page.waitForTimeout(180);
+  const colorChannels = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
+  await expect.poll(() => page.evaluate(() => ({
+    reviewFilter: getComputedStyle(document.querySelector('.review-filter-btn.is-active')).backgroundColor,
+    sidebarFilter: getComputedStyle(document.querySelector('.document-filter-btn.is-active')).backgroundColor
+  })).then(({ reviewFilter, sidebarFilter }) => ({
+    reviewFilter: colorChannels(reviewFilter),
+    sidebarFilter: colorChannels(sidebarFilter)
+  }))).toEqual({
+    reviewFilter: [13, 17, 23],
+    sidebarFilter: [13, 17, 23]
+  });
   const darkState = await page.evaluate(() => {
     const activeFilter = document.querySelector('.review-filter-btn.is-active');
     const sidebarFilter = document.querySelector('.document-filter-btn.is-active');
@@ -146,9 +202,8 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
       threadBorder: getComputedStyle(thread).borderInlineStartColor
     };
   });
-  const colorChannels = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
   expect(colorChannels(darkState.reviewFilter)).toEqual(colorChannels(darkState.sidebarFilter));
-  expect(darkState.threadBorder).not.toBe(selectedKindColor);
+  expect(darkState.threadBorder).not.toBe(darkState.reviewFilter);
 });
 
 test('keeps the review sheet touch-friendly and stable in narrow layouts', async ({ page }) => {
@@ -181,6 +236,19 @@ test('keeps the review sheet touch-friendly and stable in narrow layouts', async
   portraitMetrics.targetHeights.forEach((height) => expect(height).toBeGreaterThanOrEqual(44));
 
   await page.locator('#review-pins-layer .review-target-button[data-review-anchor^="heading:"]').evaluate((button) => button.click());
+  const mobileComposerMetrics = await page.locator('#review-composer').evaluate((composer) => ({
+    scrollWidth: composer.scrollWidth,
+    clientWidth: composer.clientWidth,
+    kindTargets: Array.from(composer.querySelectorAll('.review-kind-btn'), (button) => {
+      const rect = button.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    })
+  }));
+  expect(mobileComposerMetrics.scrollWidth).toBeLessThanOrEqual(mobileComposerMetrics.clientWidth);
+  mobileComposerMetrics.kindTargets.forEach(({ width, height }) => {
+    expect(width).toBeGreaterThanOrEqual(44);
+    expect(height).toBeGreaterThanOrEqual(44);
+  });
   await page.locator('#review-feedback-input').fill('Keep the mobile review card compact.');
   await page.locator('#review-feedback-submit').click();
   const mobileThreadMetrics = await page.locator('.review-thread').evaluate((thread) => {

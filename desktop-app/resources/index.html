@@ -1531,25 +1531,20 @@
 
                     <section id="review-composer" class="review-composer" aria-labelledby="review-composer-title" hidden>
                         <div class="review-composer-heading">
-                            <div>
-                                <p class="review-panel-eyebrow">Feedback for</p>
-                                <h3 id="review-composer-title">Add feedback</h3>
-                            </div>
+                            <h3 id="review-composer-title">Add feedback</h3>
                             <button id="review-composer-cancel" class="review-icon-btn" type="button" aria-label="Cancel feedback" title="Cancel">
                                 <i class="lucide lucide-x" aria-hidden="true"></i>
                             </button>
                         </div>
-                        <p id="review-composer-anchor" class="review-anchor-preview"></p>
-                        <div class="review-kind-group" role="group" aria-label="Feedback type">
-                            <button class="review-kind-btn is-active" type="button" data-review-kind="comment" aria-pressed="true">
-                                <i class="lucide lucide-message-square-text" aria-hidden="true"></i> Comment
-                            </button>
-                            <button class="review-kind-btn" type="button" data-review-kind="suggestion" aria-pressed="false">
-                                <i class="lucide lucide-square-pen" aria-hidden="true"></i> Suggestion
-                            </button>
+                        <div class="review-composer-body">
+                            <p id="review-composer-anchor" class="review-anchor-preview"></p>
+                            <div class="review-kind-group segmented-control" role="group" aria-label="Feedback type">
+                                <button class="review-kind-btn segmented-control-btn is-active" type="button" data-review-kind="comment" aria-pressed="true">Comment</button>
+                                <button class="review-kind-btn segmented-control-btn" type="button" data-review-kind="suggestion" aria-pressed="false">Suggestion</button>
+                            </div>
+                            <label id="review-feedback-label" class="review-feedback-label" for="review-feedback-input">Comment</label>
+                            <textarea id="review-feedback-input" class="review-feedback-input" rows="4" maxlength="2000" placeholder="Leave a focused comment for the author..."></textarea>
                         </div>
-                        <label id="review-feedback-label" class="review-feedback-label" for="review-feedback-input">Comment</label>
-                        <textarea id="review-feedback-input" class="review-feedback-input" rows="4" maxlength="2000" placeholder="Leave a focused comment for the author..."></textarea>
                         <div class="review-composer-footer">
                             <span id="review-feedback-count" class="review-feedback-count">0 / 2000</span>
                             <button id="review-feedback-submit" class="review-primary-btn" type="button" disabled>Add comment</button>

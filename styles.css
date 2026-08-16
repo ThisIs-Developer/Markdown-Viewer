@@ -9861,15 +9861,6 @@ html[data-theme="dark"] .mermaid svg {
   border-bottom: 1px solid var(--border-color);
 }
 
-.review-panel-eyebrow {
-  margin: 0 0 4px;
-  color: var(--text-secondary);
-  font-size: var(--ui-font-sm);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 .review-panel-header h2,
 .review-composer-heading h3,
 .review-empty-state h3 {
@@ -9972,50 +9963,39 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-kind-group {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px;
-  background: var(--segmented-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--menu-item-radius);
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  margin: 0 0 11px;
+  padding: 3px;
 }
 
 .review-kind-btn {
-  color: var(--text-secondary);
-  background: transparent;
-  border: 0;
-  border-radius: calc(var(--menu-item-radius) - 2px);
-  cursor: pointer;
-  font-weight: 600;
-  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
-}
-
-.review-kind-btn:hover:not(.is-active) {
-  color: var(--text-color);
-  background: var(--toolbar-control-hover);
-}
-
-.review-kind-btn.is-active {
-  color: var(--bg-color);
-  background: var(--accent-color);
-  box-shadow: var(--segmented-shadow);
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0;
 }
 
 .review-composer {
   flex: 0 0 auto;
   margin: 12px 12px 2px;
-  padding: 13px;
+  padding: 0;
+  overflow: hidden;
   background: var(--menu-surface);
   border: 1px solid var(--menu-border);
   border-radius: var(--menu-radius);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--text-color) 10%, transparent);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--text-color) 11%, transparent);
 }
 
 .review-composer-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-height: 40px;
+  padding: 6px 7px 6px 11px;
+  background: color-mix(in srgb, var(--header-bg) 68%, var(--menu-surface));
+  border-bottom: 1px solid var(--border-color);
 }
 
 .review-composer-heading h3 {
@@ -10023,10 +10003,14 @@ html[data-theme="dark"] .mermaid svg {
   line-height: 1.35;
 }
 
+.review-composer-body {
+  padding: 10px 12px;
+}
+
 .review-anchor-preview {
   display: -webkit-box;
-  margin: 10px 0 12px;
-  padding: 8px 9px;
+  margin: 0 0 10px;
+  padding: 7px 9px;
   overflow: hidden;
   color: var(--text-secondary);
   background: var(--button-bg);
@@ -10036,23 +10020,6 @@ html[data-theme="dark"] .mermaid svg {
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.review-kind-group {
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.review-kind-btn {
-  flex: 1;
-  min-height: 32px;
-  padding: 7px 8px;
-  font-size: var(--ui-font-md);
-}
-
-.review-kind-btn i {
-  margin-inline-end: 4px;
-  font-size: var(--ui-icon-size-sm);
 }
 
 .review-feedback-label {
@@ -10089,7 +10056,10 @@ html[data-theme="dark"] .mermaid svg {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 9px;
+  margin: 0;
+  padding: 9px 12px 10px;
+  background: color-mix(in srgb, var(--header-bg) 52%, var(--menu-surface));
+  border-top: 1px solid var(--border-color);
 }
 
 .review-feedback-count {
@@ -10577,7 +10547,7 @@ html[data-theme="dark"] .mermaid svg {
 
   .review-composer {
     margin: 10px 10px 4px;
-    padding: 12px;
+    padding: 0;
   }
 
   .review-list {
