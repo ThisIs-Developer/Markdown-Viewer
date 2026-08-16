@@ -6941,12 +6941,12 @@ document.addEventListener("DOMContentLoaded", async function () {
         copy.textContent = 'Resolved comments and suggestions will appear here.';
       } else if (reviewFilter === 'all') {
         title.textContent = 'No feedback yet';
-        copy.textContent = 'Select a comment pin in the preview to add feedback.';
+        copy.textContent = 'Choose the comment button beside any block to start a review.';
       } else {
         title.textContent = 'No open feedback';
         copy.textContent = threads.length > 0
           ? 'Everything has been resolved. Switch to Resolved or All to review earlier feedback.'
-          : 'Select a comment pin in the preview to add feedback.';
+          : 'Choose the comment button beside any block to start a review.';
       }
     }
   }

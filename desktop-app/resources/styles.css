@@ -9819,9 +9819,10 @@ html[data-theme="dark"] .mermaid svg {
   flex-direction: column;
   overflow: hidden;
   color: var(--text-color);
-  background: var(--bg-color);
-  border-inline-start: 1px solid var(--border-color);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  background: var(--menu-surface);
+  border-inline-start: 1px solid var(--menu-border);
+  box-shadow: var(--menu-shadow);
+  animation: review-panel-enter 180ms ease-out;
 }
 
 .review-panel-backdrop {
@@ -9831,25 +9832,27 @@ html[data-theme="dark"] .mermaid svg {
   width: 100%;
   height: 100%;
   border: 0;
-  background: rgba(31, 35, 40, 0.38);
+  background: color-mix(in srgb, var(--text-color) 36%, transparent);
   cursor: default;
+  animation: review-backdrop-enter 140ms ease-out;
 }
 
 .review-panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px;
+  min-height: 64px;
+  padding: 13px 14px 13px 16px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .review-panel-eyebrow {
-  margin: 0 0 3px;
-  color: var(--accent-color);
-  font-size: 0.7rem;
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -9862,18 +9865,20 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-panel-header h2 {
-  font-size: 1rem;
+  font-size: var(--ui-font-xl);
+  line-height: 1.25;
 }
 
 .review-panel-summary {
   margin: 4px 0 0;
   color: var(--text-secondary);
-  font-size: 0.78rem;
+  font-size: var(--ui-font-md);
+  line-height: 1.35;
 }
 
 .review-icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -9881,13 +9886,18 @@ html[data-theme="dark"] .mermaid svg {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--menu-item-radius);
   cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.review-icon-btn i {
+  font-size: var(--ui-icon-size-md);
 }
 
 .review-icon-btn:hover:not(:disabled) {
   color: var(--text-color);
-  background: var(--button-hover);
+  background: var(--toolbar-control-hover);
   border-color: var(--border-color);
 }
 
@@ -9898,7 +9908,8 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-icon-btn:disabled {
-  opacity: 0.45;
+  color: color-mix(in srgb, var(--text-secondary) 50%, transparent);
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -9906,8 +9917,9 @@ html[data-theme="dark"] .mermaid svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 9px 12px;
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -9923,6 +9935,11 @@ html[data-theme="dark"] .mermaid svg {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  background: var(--menu-surface);
+}
+
+.review-panel-body:has(.review-composer:not([hidden])) .review-empty-state {
+  display: none;
 }
 
 .review-filter-group,
@@ -9930,9 +9947,9 @@ html[data-theme="dark"] .mermaid svg {
   display: inline-flex;
   align-items: center;
   padding: 2px;
-  background: var(--button-bg);
+  background: var(--segmented-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--menu-item-radius);
 }
 
 .review-filter-btn,
@@ -9940,30 +9957,39 @@ html[data-theme="dark"] .mermaid svg {
   color: var(--text-secondary);
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: calc(var(--menu-item-radius) - 2px);
   cursor: pointer;
   font-weight: 600;
+  transition: color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .review-filter-btn {
-  padding: 5px 10px;
-  font-size: 0.74rem;
+  min-height: 28px;
+  padding: 5px 9px;
+  font-size: var(--ui-font-md);
+}
+
+.review-filter-btn:hover:not(.is-active),
+.review-kind-btn:hover:not(.is-active) {
+  color: var(--text-color);
+  background: var(--toolbar-control-hover);
 }
 
 .review-filter-btn.is-active,
 .review-kind-btn.is-active {
-  color: var(--accent-color);
-  background: color-mix(in srgb, var(--accent-color) 8%, transparent);
-  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
+  color: var(--bg-color);
+  background: var(--accent-color);
+  box-shadow: var(--segmented-shadow);
 }
 
 .review-composer {
   flex: 0 0 auto;
-  margin: 14px 14px 4px;
-  padding: 14px;
-  background: var(--header-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  margin: 12px 12px 2px;
+  padding: 13px;
+  background: var(--menu-surface);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-radius);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text-color) 10%, transparent);
 }
 
 .review-composer-heading {
@@ -9974,15 +10000,20 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-composer-heading h3 {
-  font-size: 0.9rem;
+  font-size: var(--ui-font-lg);
+  line-height: 1.35;
 }
 
 .review-anchor-preview {
   display: -webkit-box;
   margin: 10px 0 12px;
+  padding: 8px 9px;
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 0.78rem;
+  background: var(--button-bg);
+  border-inline-start: 2px solid var(--border-color);
+  border-radius: 0 var(--menu-item-radius) var(--menu-item-radius) 0;
+  font-size: var(--ui-font-md);
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -9995,15 +10026,21 @@ html[data-theme="dark"] .mermaid svg {
 
 .review-kind-btn {
   flex: 1;
+  min-height: 32px;
   padding: 7px 8px;
-  font-size: 0.76rem;
+  font-size: var(--ui-font-md);
+}
+
+.review-kind-btn i {
+  margin-inline-end: 4px;
+  font-size: var(--ui-icon-size-sm);
 }
 
 .review-feedback-label {
   display: block;
   margin-bottom: 6px;
   color: var(--text-color);
-  font-size: 0.76rem;
+  font-size: var(--ui-font-md);
   font-weight: 650;
 }
 
@@ -10014,11 +10051,12 @@ html[data-theme="dark"] .mermaid svg {
   resize: vertical;
   color: var(--text-color);
   background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 7px;
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-item-radius);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--ui-font-lg);
   line-height: 1.45;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .review-feedback-input:focus {
@@ -10037,47 +10075,57 @@ html[data-theme="dark"] .mermaid svg {
 
 .review-feedback-count {
   color: var(--text-secondary);
-  font-size: 0.7rem;
+  font-size: var(--ui-font-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .review-primary-btn {
-  min-height: 32px;
-  padding: 6px 12px;
-  color: var(--accent-color);
-  background: var(--button-bg);
+  min-height: 34px;
+  padding: 7px 13px;
+  color: var(--bg-color);
+  background: var(--accent-color);
   border: 1px solid var(--accent-color);
-  border-radius: 6px;
+  border-radius: var(--menu-item-radius);
   cursor: pointer;
-  font-size: 0.76rem;
+  font-size: var(--ui-font-md);
   font-weight: 650;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .review-primary-btn:hover:not(:disabled) {
-  background: var(--button-hover);
+  background: color-mix(in srgb, var(--accent-color) 88%, var(--text-color));
+  border-color: color-mix(in srgb, var(--accent-color) 88%, var(--text-color));
 }
 
 .review-primary-btn:disabled {
-  opacity: 0.5;
+  color: var(--text-secondary);
+  background: var(--button-bg);
+  border-color: var(--border-color);
+  opacity: 0.62;
   cursor: not-allowed;
 }
 
 .review-list {
   flex: 0 0 auto;
   overflow: visible;
-  padding: 10px 14px 18px;
+  padding: 8px 12px 16px;
 }
 
 .review-thread {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 12px;
-  background: var(--bg-color);
+  background: var(--menu-surface);
   border: 1px solid var(--border-color);
-  border-inline-start: 3px solid var(--accent-color);
-  border-radius: 8px;
+  border-radius: var(--menu-radius);
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .review-thread.is-resolved {
-  opacity: 0.72;
+  background: color-mix(in srgb, var(--button-bg) 52%, var(--menu-surface));
+}
+
+.review-thread.is-resolved .review-thread-body {
+  color: var(--text-secondary);
 }
 
 .review-thread.is-orphaned {
@@ -10106,42 +10154,49 @@ html[data-theme="dark"] .mermaid svg {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border-radius: 999px;
-  font-size: 0.67rem;
-  font-weight: 700;
+  font-size: var(--ui-font-sm);
+  font-weight: 650;
   line-height: 1;
 }
 
 .review-kind-label {
-  padding: 5px 7px;
   color: var(--text-secondary);
-  background: var(--button-bg);
-  border: 1px solid var(--border-color);
+}
+
+.review-kind-label i {
+  font-size: var(--ui-icon-size-sm);
 }
 
 .review-status-label {
+  padding-inline-start: 7px;
   color: var(--text-secondary);
+  border-inline-start: 1px solid var(--border-color);
 }
 
 .review-thread-anchor {
   width: 100%;
-  margin: 9px 0 8px;
-  padding: 0;
+  margin: 10px 0;
+  padding: 8px 9px;
   overflow: hidden;
   color: var(--text-secondary);
-  background: transparent;
-  border: 0;
+  background: var(--button-bg);
+  border: 1px solid transparent;
+  border-inline-start-color: var(--border-color);
+  border-inline-start-width: 2px;
+  border-radius: 0 var(--menu-item-radius) var(--menu-item-radius) 0;
   cursor: pointer;
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: var(--ui-font-md);
+  line-height: 1.4;
   text-align: start;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 
 .review-thread-anchor:hover:not(:disabled) {
-  color: var(--accent-color);
-  text-decoration: underline;
+  color: var(--text-color);
+  background: var(--button-hover);
+  border-color: var(--border-color);
 }
 
 .review-thread-anchor:disabled {
@@ -10152,7 +10207,7 @@ html[data-theme="dark"] .mermaid svg {
 .review-thread-body {
   margin: 0;
   color: var(--text-color);
-  font-size: 0.82rem;
+  font-size: var(--ui-font-lg);
   line-height: 1.5;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -10162,36 +10217,39 @@ html[data-theme="dark"] .mermaid svg {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
-  margin-top: 9px;
+  margin-top: 10px;
 }
 
 .review-thread-time {
   color: var(--text-secondary);
-  font-size: 0.67rem;
+  font-size: var(--ui-font-sm);
 }
 
 .review-thread-actions {
   justify-content: flex-end;
-  gap: 4px;
-  margin-top: 8px;
-  padding-top: 8px;
+  gap: 3px;
+  margin-top: 10px;
+  padding-top: 9px;
   border-top: 1px solid var(--border-color);
 }
 
 .review-thread-action {
-  padding: 5px 7px;
+  min-height: 30px;
+  padding: 5px 8px;
   color: var(--text-secondary);
   background: transparent;
-  border: 0;
-  border-radius: 5px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--menu-item-radius) - 1px);
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: var(--ui-font-sm);
   font-weight: 600;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
 
 .review-thread-action:hover {
   color: var(--text-color);
-  background: var(--button-hover);
+  background: var(--toolbar-control-hover);
+  border-color: var(--border-color);
 }
 
 .review-thread-action.is-danger:hover {
@@ -10200,27 +10258,34 @@ html[data-theme="dark"] .mermaid svg {
 
 .review-empty-state {
   margin: auto;
-  padding: 30px 26px;
+  padding: 36px 26px;
   color: var(--text-secondary);
   text-align: center;
 }
 
 .review-empty-state i {
-  display: block;
-  margin-bottom: 10px;
-  color: var(--accent-color);
-  font-size: 1.7rem;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  background: var(--button-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  font-size: var(--ui-icon-size-xl);
 }
 
 .review-empty-state h3 {
-  font-size: 0.9rem;
+  font-size: var(--ui-font-lg);
 }
 
 .review-empty-state p {
   margin: 7px auto 0;
   max-width: 270px;
-  font-size: 0.76rem;
-  line-height: 1.45;
+  font-size: var(--ui-font-md);
+  line-height: 1.5;
 }
 
 #markdown-preview .review-target {
@@ -10311,6 +10376,24 @@ html[data-theme="dark"] .mermaid svg {
 
 .review-thread.is-review-thread-active {
   border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 7%, var(--menu-surface));
+  box-shadow: inset 3px 0 0 var(--accent-color);
+}
+
+@keyframes review-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes review-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .review-filter-btn:focus-visible,
@@ -10375,7 +10458,7 @@ html[data-theme="dark"] .mermaid svg {
     height: min(68%, 620px);
     border-inline-start: 0;
     border-top: 1px solid var(--border-color);
-    box-shadow: 0 -12px 32px rgba(31, 35, 40, 0.2);
+    box-shadow: var(--menu-shadow);
   }
 
   .content-container.is-reviewing .preview-pane {
@@ -10397,6 +10480,12 @@ html[data-theme="dark"] .mermaid svg {
   }
 
   .review-panel-actions .review-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .review-panel-header .review-icon-btn,
+  .review-composer-heading .review-icon-btn {
     width: 44px;
     height: 44px;
   }
@@ -10448,7 +10537,10 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .review-panel,
+  .review-panel-backdrop,
   .review-target-button {
+    animation: none;
     transition: none;
   }
 }
