@@ -167,7 +167,7 @@ test('resolves feedback and retains an orphaned thread when its block changes', 
   await page.locator('#review-feedback-input').fill('Rework this heading.');
   await page.locator('#review-feedback-submit').click();
 
-  await page.locator('.review-thread-action', { hasText: 'Resolve' }).click();
+  await page.locator('[data-review-action="toggle-resolved"]').click();
   await expect(page.locator('#review-toolbar-count')).toBeHidden();
   await page.locator('[data-review-filter="resolved"]').click();
   await expect(page.locator('.review-thread')).toContainText('Resolved');

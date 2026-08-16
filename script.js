@@ -6835,7 +6835,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (thread.resolved) {
       const status = document.createElement('span');
       status.className = 'review-status-label';
-      status.textContent = 'Resolved';
+      const statusIcon = document.createElement('i');
+      statusIcon.className = 'lucide lucide-check';
+      statusIcon.setAttribute('aria-hidden', 'true');
+      status.appendChild(statusIcon);
+      status.appendChild(document.createTextNode('Resolved'));
       meta.appendChild(status);
     }
     header.appendChild(meta);
@@ -6880,29 +6884,37 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const actions = document.createElement('div');
     actions.className = 'review-thread-actions';
-    const editButton = document.createElement('button');
-    editButton.type = 'button';
-    editButton.className = 'review-thread-action';
-    editButton.dataset.reviewAction = 'edit';
-    editButton.dataset.reviewId = thread.id;
-    editButton.textContent = 'Edit';
-    editButton.setAttribute('aria-label', 'Edit ' + (thread.kind === 'suggestion' ? 'suggestion' : 'comment'));
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Review item actions');
+
+    function createThreadAction(action, iconClass, label, danger) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'review-thread-action' + (danger ? ' is-danger' : '');
+      button.dataset.reviewAction = action;
+      button.dataset.reviewId = thread.id;
+      button.title = label;
+      button.setAttribute('aria-label', label);
+      const icon = document.createElement('i');
+      icon.className = iconClass;
+      icon.setAttribute('aria-hidden', 'true');
+      button.appendChild(icon);
+      return button;
+    }
+
+    const itemLabel = thread.kind === 'suggestion' ? 'suggestion' : 'comment';
+    const editButton = createThreadAction('edit', 'lucide lucide-square-pen', 'Edit ' + itemLabel, false);
     actions.appendChild(editButton);
-    const statusButton = document.createElement('button');
-    statusButton.type = 'button';
-    statusButton.className = 'review-thread-action';
-    statusButton.dataset.reviewAction = 'toggle-resolved';
-    statusButton.dataset.reviewId = thread.id;
-    statusButton.textContent = thread.resolved ? 'Reopen' : 'Resolve';
+    const statusButton = createThreadAction(
+      'toggle-resolved',
+      thread.resolved ? 'lucide lucide-refresh-cw' : 'lucide lucide-check',
+      (thread.resolved ? 'Reopen ' : 'Resolve ') + itemLabel,
+      false
+    );
     actions.appendChild(statusButton);
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'review-thread-action is-danger';
-    deleteButton.dataset.reviewAction = 'delete';
-    deleteButton.dataset.reviewId = thread.id;
-    deleteButton.textContent = 'Delete';
+    const deleteButton = createThreadAction('delete', 'lucide lucide-trash-2', 'Delete ' + itemLabel, true);
     actions.appendChild(deleteButton);
-    item.appendChild(actions);
+    header.appendChild(actions);
 
     return item;
   }
