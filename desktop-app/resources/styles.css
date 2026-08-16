@@ -9957,9 +9957,18 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-filter-group {
-  width: 164px;
+  width: 180px;
   flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
   margin: 0;
+  padding: 3px;
+}
+
+.review-filter-btn {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0;
 }
 
 .review-kind-group {
@@ -10117,17 +10126,29 @@ html[data-theme="dark"] .mermaid svg {
 
 .review-list {
   flex: 0 0 auto;
+  display: grid;
+  gap: 10px;
   overflow: visible;
-  padding: 8px 12px 16px;
+  padding: 10px 12px 16px;
 }
 
 .review-thread {
-  margin-bottom: 8px;
-  padding: 12px;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   background: var(--menu-surface);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--menu-border);
   border-radius: var(--menu-radius);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 8%, transparent);
   transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+@media (hover: hover) {
+  .review-thread:hover {
+    border-color: color-mix(in srgb, var(--text-secondary) 42%, var(--menu-border));
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--text-color) 9%, transparent);
+  }
 }
 
 .review-thread.is-resolved {
@@ -10150,13 +10171,21 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-thread-header {
+  min-height: 40px;
   justify-content: space-between;
   gap: 8px;
+  padding: 6px 7px 6px 11px;
+  background: color-mix(in srgb, var(--header-bg) 68%, var(--menu-surface));
+  border-bottom: 1px solid var(--border-color);
 }
 
 .review-thread-meta {
   min-width: 0;
   gap: 6px;
+}
+
+.review-thread-content {
+  padding: 10px 12px 11px;
 }
 
 .review-kind-label,
@@ -10170,7 +10199,7 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .review-kind-label {
-  color: var(--text-secondary);
+  color: var(--text-color);
 }
 
 .review-kind-label i {
@@ -10189,8 +10218,8 @@ html[data-theme="dark"] .mermaid svg {
 
 .review-thread-anchor {
   width: 100%;
-  margin: 10px 0;
-  padding: 8px 9px;
+  margin: 0 0 10px;
+  padding: 7px 9px;
   overflow: hidden;
   color: var(--text-secondary);
   background: var(--button-bg);
@@ -10230,13 +10259,24 @@ html[data-theme="dark"] .mermaid svg {
 .review-thread-dates {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  margin-top: 10px;
+  gap: 6px 12px;
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-color);
 }
 
 .review-thread-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--text-secondary);
   font-size: var(--ui-font-sm);
+  line-height: 1.3;
+}
+
+.review-thread-time i {
+  flex: 0 0 auto;
+  font-size: var(--ui-icon-size-xs);
 }
 
 .review-thread-actions {
@@ -10244,15 +10284,17 @@ html[data-theme="dark"] .mermaid svg {
   justify-content: flex-end;
   gap: 2px;
   margin: 0;
-  padding: 0;
-  border: 0;
+  padding: 2px;
+  background: var(--menu-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--menu-item-radius);
 }
 
 .review-thread-action {
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  flex: 0 0 28px;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  flex: 0 0 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10260,7 +10302,7 @@ html[data-theme="dark"] .mermaid svg {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: calc(var(--menu-item-radius) - 1px);
+  border-radius: calc(var(--menu-item-radius) - 3px);
   cursor: pointer;
   font-size: var(--ui-icon-size-sm);
   line-height: 1;
@@ -10274,7 +10316,7 @@ html[data-theme="dark"] .mermaid svg {
 .review-thread-action:hover {
   color: var(--text-color);
   background: var(--toolbar-control-hover);
-  border-color: var(--border-color);
+  border-color: transparent;
 }
 
 .review-thread-action.is-danger:hover {
@@ -10480,6 +10522,10 @@ html[data-theme="dark"] .mermaid svg {
     height: 40px;
     flex-basis: 40px;
   }
+
+  .review-thread-actions {
+    gap: 6px;
+  }
 }
 
 @media (max-width: 767px) {
@@ -10543,6 +10589,10 @@ html[data-theme="dark"] .mermaid svg {
     width: 44px;
     height: 44px;
     flex-basis: 44px;
+  }
+
+  .review-thread-actions {
+    gap: 8px;
   }
 
   .review-target-button {

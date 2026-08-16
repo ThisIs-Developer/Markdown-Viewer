@@ -6845,6 +6845,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     header.appendChild(meta);
     item.appendChild(header);
 
+    const content = document.createElement('div');
+    content.className = 'review-thread-content';
+    item.appendChild(content);
+
     const anchor = document.createElement('button');
     anchor.type = 'button';
     anchor.className = 'review-thread-anchor';
@@ -6854,33 +6858,45 @@ document.addEventListener("DOMContentLoaded", async function () {
     anchor.textContent = target
       ? thread.anchor.label + ': ' + thread.anchor.excerpt
       : 'Anchor no longer in preview - ' + thread.anchor.label + ': ' + thread.anchor.excerpt;
-    item.appendChild(anchor);
+    content.appendChild(anchor);
 
     const body = document.createElement('p');
     body.className = 'review-thread-body';
     body.textContent = thread.body;
-    item.appendChild(body);
+    content.appendChild(body);
 
     const dates = document.createElement('div');
     dates.className = 'review-thread-dates';
     const openedTime = document.createElement('time');
     openedTime.className = 'review-thread-time';
     openedTime.dateTime = new Date(thread.createdAt).toISOString();
-    openedTime.textContent = 'Opened: ' + formatReviewTime(thread.createdAt);
+    const openedIcon = document.createElement('i');
+    openedIcon.className = 'lucide lucide-clock-3';
+    openedIcon.setAttribute('aria-hidden', 'true');
+    openedTime.appendChild(openedIcon);
+    openedTime.appendChild(document.createTextNode('Opened: ' + formatReviewTime(thread.createdAt)));
     dates.appendChild(openedTime);
     if (thread.resolvedAt) {
       const closedTime = document.createElement('time');
-      closedTime.className = 'review-thread-time';
+      closedTime.className = 'review-thread-time is-closed';
       closedTime.dateTime = new Date(thread.resolvedAt).toISOString();
-      closedTime.textContent = 'Closed: ' + formatReviewTime(thread.resolvedAt);
+      const closedIcon = document.createElement('i');
+      closedIcon.className = 'lucide lucide-check';
+      closedIcon.setAttribute('aria-hidden', 'true');
+      closedTime.appendChild(closedIcon);
+      closedTime.appendChild(document.createTextNode('Closed: ' + formatReviewTime(thread.resolvedAt)));
       dates.appendChild(closedTime);
     } else {
       const closedTime = document.createElement('span');
-      closedTime.className = 'review-thread-time';
-      closedTime.textContent = thread.resolved ? 'Closed: Unavailable' : 'Closed: Not closed';
+      closedTime.className = 'review-thread-time ' + (thread.resolved ? 'is-closed' : 'is-open');
+      const closedIcon = document.createElement('i');
+      closedIcon.className = thread.resolved ? 'lucide lucide-check' : 'lucide lucide-circle';
+      closedIcon.setAttribute('aria-hidden', 'true');
+      closedTime.appendChild(closedIcon);
+      closedTime.appendChild(document.createTextNode(thread.resolved ? 'Closed: Unavailable' : 'Closed: Not closed'));
       dates.appendChild(closedTime);
     }
-    item.appendChild(dates);
+    content.appendChild(dates);
 
     const actions = document.createElement('div');
     actions.className = 'review-thread-actions';

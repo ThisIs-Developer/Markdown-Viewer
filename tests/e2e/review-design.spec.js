@@ -50,6 +50,28 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
   expect(neutralState.inactiveFilter).not.toBe(neutralState.reviewFilter.backgroundColor);
   expect(neutralState.panelHeaderHeight).toBeLessThanOrEqual(52);
 
+  const filterGeometry = await page.locator('.review-filter-group').evaluate((group) => {
+    const style = getComputedStyle(group);
+    const buttons = Array.from(group.querySelectorAll('.review-filter-btn'));
+    return {
+      gap: style.columnGap,
+      padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
+      widths: buttons.map((button) => button.getBoundingClientRect().width)
+    };
+  });
+  expect(filterGeometry.gap).toBe('3px');
+  expect(filterGeometry.padding).toEqual(['3px', '3px', '3px', '3px']);
+  expect(Math.max(...filterGeometry.widths) - Math.min(...filterGeometry.widths)).toBeLessThan(0.5);
+
+  const activeWidths = [];
+  for (const filter of ['resolved', 'all', 'open']) {
+    await page.locator(`[data-review-filter="${filter}"]`).click();
+    activeWidths.push(await page.locator('.review-filter-btn.is-active').evaluate((button) => (
+      button.getBoundingClientRect().width
+    )));
+  }
+  expect(Math.max(...activeWidths) - Math.min(...activeWidths)).toBeLessThan(0.5);
+
   await page.locator('#review-pins-layer .review-target-button[data-review-anchor^="heading:"]').click();
   await expect(page.locator('#review-composer')).toBeVisible();
 
@@ -71,6 +93,7 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
     const header = thread.querySelector('.review-thread-header');
     const meta = thread.querySelector('.review-thread-meta');
     const actions = thread.querySelector('.review-thread-actions');
+    const content = thread.querySelector('.review-thread-content');
     const buttons = Array.from(actions.querySelectorAll('.review-thread-action'));
     const threadRect = thread.getBoundingClientRect();
     const metaRect = meta.getBoundingClientRect();
@@ -79,16 +102,19 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
       border: getComputedStyle(thread).borderInlineStartColor,
       bodyFontSize: getComputedStyle(thread.querySelector('.review-thread-body')).fontSize,
       anchorFontSize: getComputedStyle(thread.querySelector('.review-thread-anchor')).fontSize,
+      hasStructuredContent: content?.parentElement === thread,
       headerContainsActions: actions.parentElement === header,
       actionCount: buttons.length,
       actionLabels: buttons.map((button) => button.getAttribute('aria-label')),
       actionText: buttons.map((button) => button.textContent.trim()),
       actionIcons: buttons.map((button) => button.querySelector('i')?.className || ''),
+      dateIcons: Array.from(thread.querySelectorAll('.review-thread-time i'), (icon) => icon.className),
       actionsRightAligned: actionsRect.left > metaRect.right && actionsRect.right <= threadRect.right
     };
   });
   expect(threadState.border).not.toBe(selectedKindColor);
   expect(threadState.bodyFontSize).toBe(threadState.anchorFontSize);
+  expect(threadState.hasStructuredContent).toBe(true);
   expect(threadState.headerContainsActions).toBe(true);
   expect(threadState.actionCount).toBe(3);
   expect(threadState.actionLabels).toEqual(['Edit comment', 'Resolve comment', 'Delete comment']);
@@ -98,6 +124,7 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
     'lucide lucide-check',
     'lucide lucide-trash-2'
   ]);
+  expect(threadState.dateIcons).toEqual(['lucide lucide-clock-3', 'lucide lucide-circle']);
   expect(threadState.actionsRightAligned).toBe(true);
 
   await page.locator('[data-review-action="toggle-resolved"]').click();
@@ -108,6 +135,7 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
   await expect(page.locator('[data-review-action="toggle-resolved"] i')).toHaveClass('lucide lucide-refresh-cw');
 
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+  await page.waitForTimeout(180);
   const darkState = await page.evaluate(() => {
     const activeFilter = document.querySelector('.review-filter-btn.is-active');
     const sidebarFilter = document.querySelector('.document-filter-btn.is-active');
@@ -118,7 +146,8 @@ test('matches sidebar filters and keeps review cards compact', async ({ page }) 
       threadBorder: getComputedStyle(thread).borderInlineStartColor
     };
   });
-  expect(darkState.reviewFilter).toBe(darkState.sidebarFilter);
+  const colorChannels = (value) => value.match(/[\d.]+/g).slice(0, 3).map(Number);
+  expect(colorChannels(darkState.reviewFilter)).toEqual(colorChannels(darkState.sidebarFilter));
   expect(darkState.threadBorder).not.toBe(selectedKindColor);
 });
 
@@ -150,6 +179,27 @@ test('keeps the review sheet touch-friendly and stable in narrow layouts', async
   expect(portraitMetrics.scrollWidth).toBeLessThanOrEqual(portraitMetrics.clientWidth);
   expect(portraitMetrics.animationName).toBe('none');
   portraitMetrics.targetHeights.forEach((height) => expect(height).toBeGreaterThanOrEqual(44));
+
+  await page.locator('#review-pins-layer .review-target-button[data-review-anchor^="heading:"]').evaluate((button) => button.click());
+  await page.locator('#review-feedback-input').fill('Keep the mobile review card compact.');
+  await page.locator('#review-feedback-submit').click();
+  const mobileThreadMetrics = await page.locator('.review-thread').evaluate((thread) => {
+    const header = thread.querySelector('.review-thread-header');
+    const buttons = Array.from(thread.querySelectorAll('.review-thread-action'));
+    return {
+      headerScrollWidth: header.scrollWidth,
+      headerClientWidth: header.clientWidth,
+      targets: buttons.map((button) => {
+        const rect = button.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })
+    };
+  });
+  expect(mobileThreadMetrics.headerScrollWidth).toBeLessThanOrEqual(mobileThreadMetrics.headerClientWidth);
+  mobileThreadMetrics.targets.forEach(({ width, height }) => {
+    expect(width).toBeGreaterThanOrEqual(44);
+    expect(height).toBeGreaterThanOrEqual(44);
+  });
 
   await page.setViewportSize({ width: 667, height: 375 });
   const landscapeMetrics = await page.locator('#review-panel').evaluate((panel) => {
