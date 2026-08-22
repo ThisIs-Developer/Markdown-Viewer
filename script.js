@@ -298,18 +298,19 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
+  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, pre, blockquote, img, mjx-container, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
+  const REVIEW_ELEMENT_SELECTOR = 'img, mjx-container, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
   const reviewPreviousViewModes = new Map();
   let reviewFilter = 'open';
-  let reviewComposerKind = 'comment';
   let activeReviewAnchor = null;
   let activeReviewEditId = null;
+  let activeReviewId = null;
+  let hoveredReviewId = null;
+  let pendingReviewSelection = null;
   let pendingReviewDelete = null;
   let pendingWorkspaceBackupInput = null;
-  let reviewPinsResizeObserver = null;
-  let reviewPinsLayoutFrame = null;
   let reviewTargetSourceSnapshots = new WeakMap();
   let activeModal = null;
   let lastFocusedElement = null;
@@ -340,7 +341,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   const markdownEditor = document.getElementById("markdown-editor");
   const markdownPreview = document.getElementById("markdown-preview");
-  const reviewPinsLayer = document.getElementById('review-pins-layer');
   const markdownFormatToolbar = document.getElementById("markdown-format-toolbar");
   const themeToggle = document.getElementById("theme-toggle");
   const themeToggleIcon = document.getElementById("theme-toggle-icon");
@@ -376,6 +376,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const reviewPanelBackdrop = document.getElementById('review-panel-backdrop');
   const reviewPanelClose = document.getElementById('review-panel-close');
   const reviewPanelSummary = document.getElementById('review-panel-summary');
+  const reviewNewComment = document.getElementById('review-new-comment');
   const reviewCopySummary = document.getElementById('review-copy-summary');
   const reviewResolveAll = document.getElementById('review-resolve-all');
   const reviewDeleteAll = document.getElementById('review-delete-all');
@@ -389,6 +390,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const reviewComposer = document.getElementById('review-composer');
   const reviewComposerTitle = document.getElementById('review-composer-title');
   const reviewComposerAnchor = document.getElementById('review-composer-anchor');
+  const reviewComposerAuthor = document.getElementById('review-composer-author');
+  const reviewComposerAvatar = document.getElementById('review-composer-avatar');
   const reviewComposerCancel = document.getElementById('review-composer-cancel');
   const reviewFeedbackLabel = document.getElementById('review-feedback-label');
   const reviewFeedbackInput = document.getElementById('review-feedback-input');
@@ -759,7 +762,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return 'Open or create a document to use editing tools.';
     }
     if (reviewModeActive) {
-      return 'Review mode keeps the Markdown source read only.';
+      return 'Comments keeps the Markdown source read only.';
     }
     if (isShareSnapshotViewOnlyActive()) {
       return 'This shared snapshot is view only.';
@@ -3269,6 +3272,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
         mjx.removeAttribute('tabindex');
       });
+      if (reviewModeActive) decorateReviewTargets();
     }).catch(function(err) {
       console.warn('MathJax typesetting failed:', err);
     });
@@ -7562,6 +7566,1224 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (reviewComposer && !reviewComposer.hidden) {
         event.preventDefault();
         closeReviewComposer({ restoreFocus: true });
+      } else {
+        event.preventDefault();
+        setReviewMode(false, { restoreFocus: true });
+      }
+    });
+  }
+
+  // Comments v2 keeps the persisted reviewThreads collection compatible while
+  // replacing block-side actions with a selection-first, Word-style workflow.
+  function normalizeReviewSelection(rawSelection) {
+    if (!rawSelection || typeof rawSelection !== 'object') return null;
+    const kind = ['text', 'element', 'block'].includes(rawSelection.kind)
+      ? rawSelection.kind
+      : null;
+    if (!kind) return null;
+    if (kind === 'text') {
+      const start = Math.max(0, Number(rawSelection.start) || 0);
+      const end = Math.max(start, Number(rawSelection.end) || start);
+      const quote = typeof rawSelection.quote === 'string'
+        ? rawSelection.quote.slice(0, 1000)
+        : '';
+      if (!quote || end <= start) return null;
+      return {
+        kind: 'text',
+        start: start,
+        end: end,
+        quote: quote,
+        prefix: typeof rawSelection.prefix === 'string' ? rawSelection.prefix.slice(-64) : '',
+        suffix: typeof rawSelection.suffix === 'string' ? rawSelection.suffix.slice(0, 64) : ''
+      };
+    }
+    return {
+      kind: kind,
+      elementType: typeof rawSelection.elementType === 'string'
+        ? rawSelection.elementType.slice(0, 40)
+        : null
+    };
+  }
+
+  function normalizeReviewThreads(rawThreads) {
+    if (!Array.isArray(rawThreads)) return [];
+    return rawThreads.slice(-500).map(function(thread) {
+      if (!thread || typeof thread !== 'object' || !thread.anchor || typeof thread.anchor.key !== 'string') {
+        return null;
+      }
+      const body = typeof thread.body === 'string' ? thread.body.trim().slice(0, REVIEW_TEXT_LIMIT) : '';
+      if (!body) return null;
+      const createdAt = Number.isFinite(Number(thread.createdAt)) ? Number(thread.createdAt) : Date.now();
+      const updatedAt = Number.isFinite(Number(thread.updatedAt)) ? Number(thread.updatedAt) : createdAt;
+      const resolved = thread.resolved === true;
+      return {
+        id: typeof thread.id === 'string' && thread.id ? thread.id.slice(0, 120) : createReviewId(),
+        anchor: {
+          key: thread.anchor.key.slice(0, 240),
+          type: typeof thread.anchor.type === 'string' ? thread.anchor.type.slice(0, 40) : 'block',
+          label: typeof thread.anchor.label === 'string' ? thread.anchor.label.slice(0, 120) : 'Document content',
+          excerpt: typeof thread.anchor.excerpt === 'string' ? thread.anchor.excerpt.slice(0, 240) : '',
+          duplicateCount: Number.isFinite(Number(thread.anchor.duplicateCount))
+            ? Math.max(1, Number(thread.anchor.duplicateCount))
+            : null,
+          context: typeof thread.anchor.context === 'string' ? thread.anchor.context.slice(0, 80) : null,
+          selection: normalizeReviewSelection(thread.anchor.selection)
+        },
+        // Keep legacy suggestion data intact. New comments are always stored as comments.
+        kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
+        author: typeof thread.author === 'string' ? thread.author.trim().slice(0, 120) : '',
+        body: body,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        resolved: resolved,
+        resolvedAt: resolved && Number.isFinite(Number(thread.resolvedAt))
+          ? Number(thread.resolvedAt)
+          : null
+      };
+    }).filter(Boolean);
+  }
+
+  function cloneReviewThreadForLiveShare(thread) {
+    return {
+      id: thread.id,
+      anchor: Object.assign({}, thread.anchor, {
+        selection: thread.anchor && thread.anchor.selection
+          ? Object.assign({}, thread.anchor.selection)
+          : null
+      }),
+      kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
+      author: thread.author || '',
+      body: thread.body,
+      createdAt: thread.createdAt,
+      updatedAt: thread.updatedAt,
+      resolved: thread.resolved === true,
+      resolvedAt: Number.isFinite(Number(thread.resolvedAt)) ? Number(thread.resolvedAt) : null
+    };
+  }
+
+  function liveReviewThreadsMatch(left, right) {
+    if (!left || !right) return false;
+    return left.id === right.id &&
+      left.kind === right.kind &&
+      (left.author || '') === (right.author || '') &&
+      left.body === right.body &&
+      left.createdAt === right.createdAt &&
+      left.updatedAt === right.updatedAt &&
+      left.resolved === right.resolved &&
+      left.resolvedAt === right.resolvedAt &&
+      JSON.stringify(left.anchor || {}) === JSON.stringify(right.anchor || {});
+  }
+
+  function getCurrentReviewAuthor() {
+    if (liveCollaboration && liveCollaboration.localParticipant && liveCollaboration.localParticipant.name) {
+      return String(liveCollaboration.localParticipant.name).trim().slice(0, 120);
+    }
+    const parsed = parseFrontmatter(markdownEditor ? markdownEditor.value : '');
+    let author = parsed.frontmatter && parsed.frontmatter.author;
+    if (Array.isArray(author)) author = author[0];
+    if (author && typeof author === 'object') author = author.name || author.displayName || '';
+    const normalized = String(author || '').trim();
+    return normalized ? normalized.slice(0, 120) : 'Document author';
+  }
+
+  function getReviewAvatarLabel(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return (parts[0] || 'A').slice(0, 2).toUpperCase();
+  }
+
+  function getReviewTargetType(target) {
+    if (!target) return 'block';
+    if (target.matches('img')) return 'image';
+    if (target.matches('mjx-container')) return 'math';
+    if (target.matches('.diagram-viewer, .geojson-container, .topojson-container, .stl-container')) return 'diagram';
+    if (target.matches('.frontmatter-table')) return 'table';
+    if (target.tagName === 'PRE') return 'code';
+    if (target.tagName === 'LI') return 'list-item';
+    if (target.tagName === 'BLOCKQUOTE') return 'quote';
+    if (/^H[1-6]$/.test(target.tagName)) return 'heading';
+    if (target.tagName === 'P') return 'paragraph';
+    return 'block';
+  }
+
+  function computeReviewTargetSource(target, type) {
+    if (!target) return '';
+    if (type === 'image') {
+      return normalizeReviewSource([
+        target.getAttribute('alt') || '',
+        target.getAttribute('src') || '',
+        target.getAttribute('title') || ''
+      ].join('\n'), true);
+    }
+    if (type === 'math') {
+      return normalizeReviewSource(
+        target.getAttribute('aria-label') || target.getAttribute('data-latex') || target.textContent,
+        false
+      );
+    }
+    if (type === 'diagram') {
+      const sourceNode = target.hasAttribute('data-original-code')
+        ? target
+        : target.querySelector('[data-original-code]');
+      return normalizeReviewSource(sourceNode ? decodeReviewSource(sourceNode.getAttribute('data-original-code')) : '', true);
+    }
+    if (type === 'code') {
+      const code = target.querySelector('code');
+      return normalizeReviewSource(code ? code.textContent : target.textContent, true);
+    }
+    const clone = target.cloneNode(true);
+    clone.querySelectorAll('.review-comment-highlight, .review-pending-highlight').forEach(function(mark) {
+      mark.replaceWith(document.createTextNode(mark.textContent || ''));
+    });
+    clone.querySelectorAll('.review-target-button, .footnote-backref').forEach(function(node) {
+      node.remove();
+    });
+    clone.querySelectorAll('img').forEach(function(image) {
+      image.replaceWith(document.createTextNode(image.getAttribute('alt') || ''));
+    });
+    return normalizeReviewSource(clone.textContent, false);
+  }
+
+  function getReviewTargetLabel(target, type) {
+    if (type === 'heading') return 'Heading ' + target.tagName;
+    if (type === 'paragraph') return 'Paragraph';
+    if (type === 'list-item') return 'List item';
+    if (type === 'quote') return 'Quote';
+    if (type === 'image') return target.getAttribute('alt') ? 'Image: ' + target.getAttribute('alt') : 'Image';
+    if (type === 'math') return 'Math expression';
+    if (type === 'table') return 'YAML frontmatter';
+    if (type === 'code') {
+      const code = target.querySelector('code');
+      const languageClass = code ? Array.from(code.classList).find(function(className) {
+        return className !== 'hljs' && className !== 'language-plaintext' && className !== 'plaintext';
+      }) : '';
+      const language = languageClass ? languageClass.replace(/^language-/, '') : '';
+      return language ? language + ' code block' : 'Code block';
+    }
+    if (type === 'diagram') {
+      let engine = target.getAttribute('data-diagram-engine');
+      if (!engine && target.matches('.geojson-container')) engine = 'geojson';
+      if (!engine && target.matches('.topojson-container')) engine = 'topojson';
+      if (!engine && target.matches('.stl-container')) engine = 'stl';
+      const labels = { geojson: 'GeoJSON map', topojson: 'TopoJSON map', stl: 'STL model' };
+      if (labels[engine]) return labels[engine];
+      const engineLabel = engine ? getDiagramEngineLabel(engine) : 'Diagram';
+      return engineLabel === 'Diagram' ? engineLabel : engineLabel + ' diagram';
+    }
+    return 'Document content';
+  }
+
+  function getReviewAnchorDescriptor(target, selection) {
+    if (!target || !target.dataset.reviewAnchor) return null;
+    const type = target.dataset.reviewType || getReviewTargetType(target);
+    const source = getReviewTargetSource(target, type);
+    const normalizedSelection = normalizeReviewSelection(selection);
+    const selectedExcerpt = normalizedSelection && normalizedSelection.quote
+      ? normalizeReviewSource(normalizedSelection.quote, false)
+      : '';
+    const excerptSource = selectedExcerpt || source;
+    return {
+      key: target.dataset.reviewAnchor,
+      type: type,
+      label: target.dataset.reviewLabel || getReviewTargetLabel(target, type),
+      excerpt: excerptSource.length > 180 ? excerptSource.slice(0, 177) + '...' : (excerptSource || 'Selected content'),
+      duplicateCount: Math.max(1, Number(target.dataset.reviewDuplicateCount) || 1),
+      context: target.dataset.reviewContext || null,
+      selection: normalizedSelection
+    };
+  }
+
+  function getReviewTargets() {
+    if (!markdownPreview) return [];
+    return Array.from(markdownPreview.querySelectorAll(REVIEW_TARGET_SELECTOR)).filter(function(target) {
+      const diagram = target.closest('.diagram-viewer, .geojson-container, .topojson-container, .stl-container');
+      if (diagram && diagram !== target) return false;
+      const table = target.closest('.frontmatter-table');
+      if (table && table !== target) return false;
+      return !target.closest('button, .review-composer, .review-target-button');
+    });
+  }
+
+  function unwrapReviewMarks() {
+    if (!markdownPreview) return;
+    const parents = new Set();
+    markdownPreview.querySelectorAll('.review-comment-highlight, .review-pending-highlight').forEach(function(mark) {
+      const parent = mark.parentNode;
+      if (parent) parents.add(parent);
+      mark.replaceWith(document.createTextNode(mark.textContent || ''));
+    });
+    parents.forEach(function(parent) { parent.normalize(); });
+  }
+
+  function clearReviewDecorations() {
+    if (!markdownPreview) return;
+    unwrapReviewMarks();
+    markdownPreview.querySelectorAll('.review-comment-element, .review-pending-element').forEach(function(element) {
+      element.classList.remove(
+        'review-comment-element',
+        'review-pending-element',
+        'is-review-highlight-active',
+        'is-review-highlight-hover'
+      );
+      delete element.dataset.reviewIds;
+    });
+    markdownPreview.querySelectorAll('[data-review-anchor]').forEach(function(target) {
+      target.classList.remove(
+        'review-target',
+        'review-target--heading',
+        'review-target--paragraph',
+        'review-target--list-item',
+        'review-target--quote',
+        'review-target--code',
+        'review-target--table',
+        'review-target--diagram',
+        'review-target--image',
+        'review-target--math',
+        'has-review-thread',
+        'is-review-target-active'
+      );
+      delete target.dataset.reviewAnchor;
+      delete target.dataset.reviewType;
+      delete target.dataset.reviewLabel;
+      delete target.dataset.reviewDuplicateCount;
+      delete target.dataset.reviewContext;
+      delete target.dataset.reviewIds;
+    });
+  }
+
+  function findReviewTarget(anchor) {
+    const anchorKey = typeof anchor === 'string' ? anchor : (anchor && anchor.key);
+    if (!markdownPreview || !anchorKey) return null;
+    let target = Array.from(markdownPreview.querySelectorAll('[data-review-anchor]')).find(function(candidate) {
+      if (candidate.dataset.reviewAnchor !== anchorKey) return false;
+      if (!anchor || typeof anchor === 'string') return true;
+      if (anchor.duplicateCount && Number(candidate.dataset.reviewDuplicateCount) !== Number(anchor.duplicateCount)) return false;
+      if (anchor.context && candidate.dataset.reviewContext !== anchor.context) return false;
+      return true;
+    }) || null;
+    if (target || !anchor || typeof anchor === 'string') return target;
+
+    const selection = normalizeReviewSelection(anchor.selection);
+    const quote = selection && selection.quote;
+    if (quote) {
+      const matches = getReviewTargets().filter(function(candidate) {
+        if (anchor.type && candidate.dataset.reviewType !== anchor.type) return false;
+        return (candidate.textContent || '').includes(quote);
+      });
+      if (matches.length === 1) return matches[0];
+      target = matches.find(function(candidate) {
+        const text = candidate.textContent || '';
+        const index = text.indexOf(quote);
+        const prefix = text.slice(Math.max(0, index - (selection.prefix || '').length), index);
+        const suffix = text.slice(index + quote.length, index + quote.length + (selection.suffix || '').length);
+        return (!selection.prefix || prefix.endsWith(selection.prefix)) &&
+          (!selection.suffix || suffix.startsWith(selection.suffix));
+      }) || null;
+      if (target) return target;
+    }
+
+    const excerpt = normalizeReviewSource(anchor.excerpt || '', false);
+    if (!excerpt) return null;
+    const sourceMatches = getReviewTargets().filter(function(candidate) {
+      if (anchor.type && candidate.dataset.reviewType !== anchor.type) return false;
+      const source = getReviewTargetSource(candidate, candidate.dataset.reviewType);
+      return source === excerpt || source.startsWith(excerpt.replace(/\.\.\.$/, ''));
+    });
+    return sourceMatches.length === 1 ? sourceMatches[0] : null;
+  }
+
+  function addReviewId(element, reviewId) {
+    if (!element || !reviewId) return;
+    const ids = new Set(String(element.dataset.reviewIds || '').split(/\s+/).filter(Boolean));
+    ids.add(reviewId);
+    element.dataset.reviewIds = Array.from(ids).join(' ');
+  }
+
+  function resolveTextSelectionOffsets(target, selection) {
+    if (!target || !selection || selection.kind !== 'text') return null;
+    const text = target.textContent || '';
+    let start = Math.max(0, Math.min(text.length, Number(selection.start) || 0));
+    let end = Math.max(start, Math.min(text.length, Number(selection.end) || start));
+    if (text.slice(start, end) === selection.quote) return { start: start, end: end };
+    const matches = [];
+    let cursor = 0;
+    while (selection.quote && cursor <= text.length) {
+      const index = text.indexOf(selection.quote, cursor);
+      if (index < 0) break;
+      matches.push(index);
+      cursor = index + Math.max(1, selection.quote.length);
+    }
+    if (matches.length === 0) return null;
+    let best = matches[0];
+    let bestScore = -1;
+    matches.forEach(function(index) {
+      let score = 0;
+      const prefix = text.slice(Math.max(0, index - (selection.prefix || '').length), index);
+      const suffix = text.slice(index + selection.quote.length, index + selection.quote.length + (selection.suffix || '').length);
+      if (selection.prefix && prefix.endsWith(selection.prefix)) score += 2;
+      if (selection.suffix && suffix.startsWith(selection.suffix)) score += 2;
+      score -= Math.abs(index - start) / Math.max(1, text.length);
+      if (score > bestScore) {
+        bestScore = score;
+        best = index;
+      }
+    });
+    return { start: best, end: best + selection.quote.length };
+  }
+
+  function applyTextReviewHighlights(target, entries) {
+    if (!target || !entries || entries.length === 0) return;
+    const textNodes = [];
+    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        const parent = node.parentElement;
+        if (!node.nodeValue || !parent || parent.closest('script, style, button, textarea')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node;
+    let offset = 0;
+    while ((node = walker.nextNode())) {
+      textNodes.push({ node: node, start: offset, end: offset + node.nodeValue.length });
+      offset += node.nodeValue.length;
+    }
+
+    textNodes.forEach(function(entry) {
+      const boundaries = new Set([0, entry.node.nodeValue.length]);
+      entries.forEach(function(highlight) {
+        const start = Math.max(entry.start, highlight.start);
+        const end = Math.min(entry.end, highlight.end);
+        if (end > start) {
+          boundaries.add(start - entry.start);
+          boundaries.add(end - entry.start);
+        }
+      });
+      const cuts = Array.from(boundaries).sort(function(a, b) { return a - b; });
+      if (cuts.length <= 2) return;
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < cuts.length - 1; index += 1) {
+        const localStart = cuts[index];
+        const localEnd = cuts[index + 1];
+        const globalStart = entry.start + localStart;
+        const globalEnd = entry.start + localEnd;
+        const covering = entries.filter(function(highlight) {
+          return highlight.start < globalEnd && highlight.end > globalStart;
+        });
+        const text = entry.node.nodeValue.slice(localStart, localEnd);
+        if (covering.length === 0) {
+          fragment.appendChild(document.createTextNode(text));
+          continue;
+        }
+        const mark = document.createElement('mark');
+        mark.className = covering.some(function(item) { return item.pending; })
+          ? 'review-pending-highlight'
+          : 'review-comment-highlight';
+        covering.filter(function(item) { return !item.pending; }).forEach(function(item) {
+          addReviewId(mark, item.id);
+        });
+        mark.textContent = text;
+        fragment.appendChild(mark);
+      }
+      entry.node.replaceWith(fragment);
+    });
+  }
+
+  function decorateReviewTargets() {
+    clearReviewDecorations();
+    if (!reviewModeActive || !markdownPreview || previewContainsSkeleton()) {
+      updateReviewNewButton();
+      return;
+    }
+
+    const targetEntries = getReviewTargets().map(function(target) {
+      const type = getReviewTargetType(target);
+      const source = getReviewTargetSource(target, type);
+      const signature = type + '\u241f' + source;
+      return { target: target, type: type, source: source, signature: signature };
+    });
+    targetEntries.forEach(function(entry, index) {
+      const before = index > 0 ? targetEntries[index - 1].signature : 'review-start';
+      const after = index < targetEntries.length - 1 ? targetEntries[index + 1].signature : 'review-end';
+      entry.context = hashReviewSource(before) + ':' + hashReviewSource(after);
+    });
+    const signatureCounts = new Map();
+    targetEntries.forEach(function(entry) {
+      signatureCounts.set(entry.signature, (signatureCounts.get(entry.signature) || 0) + 1);
+    });
+    const occurrences = new Map();
+    targetEntries.forEach(function(entry) {
+      const occurrence = occurrences.get(entry.signature) || 0;
+      occurrences.set(entry.signature, occurrence + 1);
+      const duplicateCount = signatureCounts.get(entry.signature) || 1;
+      const context = duplicateCount > 1 ? entry.context : '';
+      entry.target.dataset.reviewAnchor = entry.type + ':' + hashReviewSource(entry.signature) + ':' + occurrence;
+      entry.target.dataset.reviewType = entry.type;
+      entry.target.dataset.reviewLabel = getReviewTargetLabel(entry.target, entry.type);
+      entry.target.dataset.reviewDuplicateCount = String(duplicateCount);
+      entry.target.dataset.reviewContext = context;
+      entry.target.classList.add('review-target', 'review-target--' + entry.type);
+    });
+
+    const textHighlights = new Map();
+    getActiveReviewThreads().forEach(function(thread) {
+      const target = findReviewTarget(thread.anchor);
+      if (!target) return;
+      const selection = normalizeReviewSelection(thread.anchor.selection);
+      target.classList.add('has-review-thread');
+      addReviewId(target, thread.id);
+      if (selection && selection.kind === 'text') {
+        const offsets = resolveTextSelectionOffsets(target, selection);
+        if (!offsets) return;
+        if (!textHighlights.has(target)) textHighlights.set(target, []);
+        textHighlights.get(target).push({ id: thread.id, start: offsets.start, end: offsets.end, pending: false });
+        return;
+      }
+      target.classList.add('review-comment-element');
+      addReviewId(target, thread.id);
+    });
+
+    if (pendingReviewSelection) {
+      const pendingTarget = findReviewTarget(pendingReviewSelection);
+      const pendingSelection = normalizeReviewSelection(pendingReviewSelection.selection);
+      if (pendingTarget && pendingSelection && pendingSelection.kind === 'text') {
+        const offsets = resolveTextSelectionOffsets(pendingTarget, pendingSelection);
+        if (offsets) {
+          if (!textHighlights.has(pendingTarget)) textHighlights.set(pendingTarget, []);
+          textHighlights.get(pendingTarget).push({ id: '', start: offsets.start, end: offsets.end, pending: true });
+        }
+      } else if (pendingTarget) {
+        pendingTarget.classList.add('review-pending-element');
+      }
+    }
+
+    textHighlights.forEach(function(entries, target) {
+      applyTextReviewHighlights(target, entries);
+    });
+    syncReviewInteractionState();
+    updateReviewNewButton();
+  }
+
+  function elementHasReviewId(element, reviewId) {
+    return Boolean(element && reviewId && String(element.dataset.reviewIds || '').split(/\s+/).includes(reviewId));
+  }
+
+  function getReviewDocumentNodes(reviewId) {
+    if (!markdownPreview || !reviewId) return [];
+    return Array.from(markdownPreview.querySelectorAll('[data-review-ids]')).filter(function(element) {
+      return elementHasReviewId(element, reviewId);
+    });
+  }
+
+  function syncReviewInteractionState() {
+    if (markdownPreview) {
+      markdownPreview.querySelectorAll('[data-review-ids]').forEach(function(element) {
+        const isActive = elementHasReviewId(element, activeReviewId);
+        const isHovered = elementHasReviewId(element, hoveredReviewId);
+        element.classList.toggle('is-review-highlight-active', isActive);
+        element.classList.toggle('is-review-highlight-hover', !isActive && isHovered);
+      });
+    }
+    if (reviewList) {
+      reviewList.querySelectorAll('.review-thread').forEach(function(item) {
+        const isActive = item.dataset.reviewId === activeReviewId;
+        const isHovered = item.dataset.reviewId === hoveredReviewId;
+        item.classList.toggle('is-review-thread-active', isActive);
+        item.classList.toggle('is-review-thread-hover', !isActive && isHovered);
+        item.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+      });
+    }
+  }
+
+  function setReviewHover(reviewId) {
+    hoveredReviewId = reviewId || null;
+    syncReviewInteractionState();
+  }
+
+  function activateReviewThread(thread, options) {
+    if (!thread) return;
+    options = options || {};
+    activeReviewId = thread.id;
+    pendingReviewSelection = null;
+    if (!activeReviewEditId) closeReviewComposer({ keepSelection: false });
+    if (reviewFilter === 'resolved' && !thread.resolved) setReviewFilter('all');
+    if (reviewFilter === 'open' && thread.resolved) setReviewFilter('all');
+    syncReviewInteractionState();
+
+    const card = reviewList && reviewList.querySelector('.review-thread[data-review-id="' + thread.id + '"]');
+    if (options.scrollPanel !== false && card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (options.focusCard) card.focus({ preventScroll: true });
+    }
+    const nodes = getReviewDocumentNodes(thread.id);
+    const documentNode = nodes.find(function(node) {
+      return node.classList.contains('review-comment-highlight') || node.classList.contains('review-comment-element');
+    }) || nodes[0] || findReviewTarget(thread.anchor);
+    if (options.scrollDocument && documentNode) {
+      documentNode.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+    announceToScreenReader('Comment by ' + (thread.author || getCurrentReviewAuthor()) + ' selected.');
+  }
+
+  function updateReviewToggleActiveState(openCount) {
+    const count = typeof openCount === 'number'
+      ? openCount
+      : getActiveReviewThreads().filter(function(thread) { return !thread.resolved; }).length;
+    if (reviewToggle) reviewToggle.classList.toggle('is-active', reviewModeActive || count > 0);
+    if (mobileReviewToggle) mobileReviewToggle.classList.toggle('is-active', reviewModeActive || count > 0);
+    if (mobileReviewStatus) mobileReviewStatus.textContent = reviewModeActive ? 'Open' : 'Off';
+  }
+
+  function updateReviewCountBadges() {
+    const openCount = getActiveReviewThreads().filter(function(thread) { return !thread.resolved; }).length;
+    const countLabel = openCount + ' open comment' + (openCount === 1 ? '' : 's');
+    if (reviewToolbarCount) {
+      reviewToolbarCount.textContent = String(openCount);
+      reviewToolbarCount.hidden = openCount === 0;
+    }
+    if (reviewToggle) {
+      reviewToggle.setAttribute('aria-label', openCount > 0 ? 'Open comments. ' + countLabel + '.' : 'Open comments');
+      reviewToggle.title = openCount > 0 ? 'Open comments (' + countLabel + ')' : 'Open comments';
+    }
+    updateReviewToggleActiveState(openCount);
+  }
+
+  function createReviewThreadAction(action, iconClass, label, danger, reviewId) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'review-thread-action' + (danger ? ' is-danger' : '');
+    button.dataset.reviewAction = action;
+    button.dataset.reviewId = reviewId;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    icon.setAttribute('aria-hidden', 'true');
+    button.appendChild(icon);
+    return button;
+  }
+
+  function createReviewThreadElement(thread) {
+    const target = findReviewTarget(thread.anchor);
+    const author = thread.author || getCurrentReviewAuthor();
+    const item = document.createElement('article');
+    item.className = 'review-thread' + (thread.resolved ? ' is-resolved' : '') + (!target ? ' is-orphaned' : '');
+    item.dataset.reviewId = thread.id;
+    item.dataset.kind = thread.kind;
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-expanded', thread.id === activeReviewId ? 'true' : 'false');
+    item.setAttribute('aria-label', 'Comment by ' + author + ': ' + thread.body);
+
+    const header = document.createElement('div');
+    header.className = 'review-thread-header';
+    const authorRow = document.createElement('div');
+    authorRow.className = 'review-thread-author';
+    const avatar = document.createElement('span');
+    avatar.className = 'review-author-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = getReviewAvatarLabel(author);
+    const name = document.createElement('strong');
+    name.className = 'review-author-name';
+    name.textContent = author;
+    authorRow.appendChild(avatar);
+    authorRow.appendChild(name);
+    if (thread.resolved) {
+      const resolved = document.createElement('span');
+      resolved.className = 'review-status-label';
+      resolved.title = 'Resolved';
+      resolved.setAttribute('aria-label', 'Resolved');
+      const icon = document.createElement('i');
+      icon.className = 'lucide lucide-check';
+      icon.setAttribute('aria-hidden', 'true');
+      resolved.appendChild(icon);
+      authorRow.appendChild(resolved);
+    }
+    header.appendChild(authorRow);
+
+    const actions = document.createElement('div');
+    actions.className = 'review-thread-actions';
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Comment actions');
+    actions.appendChild(createReviewThreadAction('edit', 'lucide lucide-square-pen', 'Edit comment', false, thread.id));
+    actions.appendChild(createReviewThreadAction(
+      'toggle-resolved',
+      thread.resolved ? 'lucide lucide-refresh-cw' : 'lucide lucide-check',
+      thread.resolved ? 'Reopen comment' : 'Resolve comment',
+      false,
+      thread.id
+    ));
+    actions.appendChild(createReviewThreadAction('delete', 'lucide lucide-trash-2', 'Delete comment', true, thread.id));
+    header.appendChild(actions);
+    item.appendChild(header);
+
+    const body = document.createElement('p');
+    body.className = 'review-thread-body';
+    body.textContent = thread.body;
+    item.appendChild(body);
+
+    const details = document.createElement('div');
+    details.className = 'review-thread-details';
+    const anchor = document.createElement('button');
+    anchor.type = 'button';
+    anchor.className = 'review-thread-anchor';
+    anchor.dataset.reviewAction = 'focus-anchor';
+    anchor.dataset.reviewId = thread.id;
+    anchor.disabled = !target;
+    anchor.textContent = target
+      ? thread.anchor.excerpt
+      : 'Anchor no longer in preview · ' + thread.anchor.excerpt;
+    details.appendChild(anchor);
+
+    const dates = document.createElement('div');
+    dates.className = 'review-thread-dates';
+    const opened = document.createElement('time');
+    opened.className = 'review-thread-time';
+    opened.dateTime = new Date(thread.createdAt).toISOString();
+    opened.textContent = 'Opened: ' + formatReviewTime(thread.createdAt);
+    dates.appendChild(opened);
+    if (thread.resolvedAt) {
+      const closed = document.createElement('time');
+      closed.className = 'review-thread-time is-closed';
+      closed.dateTime = new Date(thread.resolvedAt).toISOString();
+      closed.textContent = 'Closed: ' + formatReviewTime(thread.resolvedAt);
+      dates.appendChild(closed);
+    }
+    details.appendChild(dates);
+    item.appendChild(details);
+    return item;
+  }
+
+  function renderReviewPanel() {
+    updateReviewCountBadges();
+    if (!reviewPanel || !reviewList || !reviewEmptyState) return;
+    const threads = getActiveReviewThreads();
+    if (reviewPanelSummary) {
+      reviewPanelSummary.textContent = threads.length + ' comment' + (threads.length === 1 ? '' : 's');
+    }
+    const filteredThreads = threads.filter(function(thread) {
+      if (reviewFilter === 'resolved') return thread.resolved;
+      if (reviewFilter === 'all') return true;
+      return !thread.resolved;
+    }).sort(function(a, b) { return b.createdAt - a.createdAt; });
+
+    reviewList.textContent = '';
+    filteredThreads.forEach(function(thread) { reviewList.appendChild(createReviewThreadElement(thread)); });
+    reviewList.hidden = filteredThreads.length === 0;
+    reviewEmptyState.hidden = filteredThreads.length > 0 || (reviewComposer && !reviewComposer.hidden);
+    if (filteredThreads.length === 0) {
+      const title = reviewEmptyState.querySelector('h3');
+      const copy = reviewEmptyState.querySelector('p');
+      if (reviewFilter === 'resolved') {
+        title.textContent = 'No resolved comments';
+        copy.textContent = 'Resolved comments will appear here.';
+      } else if (reviewFilter === 'all') {
+        title.textContent = 'No comments yet';
+        copy.textContent = 'Select content in the document, then choose New.';
+      } else {
+        title.textContent = threads.length ? 'No open comments' : 'No comments yet';
+        copy.textContent = threads.length
+          ? 'All comments are resolved. Use All to review them.'
+          : 'Select content in the document, then choose New.';
+      }
+    }
+    syncReviewInteractionState();
+    updateReviewNewButton();
+  }
+
+  function setReviewFilter(nextFilter) {
+    reviewFilter = ['open', 'resolved', 'all'].includes(nextFilter) ? nextFilter : 'open';
+    document.querySelectorAll('[data-review-filter]').forEach(function(button) {
+      const active = button.dataset.reviewFilter === reviewFilter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    renderReviewPanel();
+  }
+
+  function getReviewThreadsForAnchor(anchor) {
+    const target = findReviewTarget(anchor);
+    if (!target) return [];
+    return getActiveReviewThreads().filter(function(thread) {
+      return findReviewTarget(thread.anchor) === target;
+    });
+  }
+
+  function showReviewThreadsForAnchor(anchor) {
+    const threads = getReviewThreadsForAnchor(anchor).sort(function(a, b) { return b.createdAt - a.createdAt; });
+    if (!threads.length) return false;
+    activateReviewThread(threads[0], { scrollPanel: true, focusCard: true });
+    return true;
+  }
+
+  function updateReviewNewButton() {
+    if (!reviewNewComment) return;
+    const hasSelection = Boolean(pendingReviewSelection && findReviewTarget(pendingReviewSelection));
+    const composerOpen = Boolean(reviewComposer && !reviewComposer.hidden);
+    reviewNewComment.disabled = !reviewModeActive || !hasSelection || composerOpen;
+    reviewNewComment.title = hasSelection
+      ? 'Create a comment for the selected content'
+      : 'Select document content first';
+    reviewNewComment.setAttribute('aria-label', hasSelection
+      ? 'New comment for selected content'
+      : 'New comment. Select document content first.');
+  }
+
+  function buildTextReviewSelection(target, range) {
+    if (!target || !range || range.collapsed) return null;
+    const before = document.createRange();
+    before.selectNodeContents(target);
+    before.setEnd(range.startContainer, range.startOffset);
+    const through = document.createRange();
+    through.selectNodeContents(target);
+    through.setEnd(range.endContainer, range.endOffset);
+    let start = before.toString().length;
+    let end = through.toString().length;
+    const rawQuote = range.toString();
+    const leading = (rawQuote.match(/^\s*/) || [''])[0].length;
+    const trailing = (rawQuote.match(/\s*$/) || [''])[0].length;
+    start += leading;
+    end -= trailing;
+    if (end <= start) return null;
+    const text = target.textContent || '';
+    const quote = text.slice(start, end) || rawQuote.trim();
+    if (!quote) return null;
+    return {
+      kind: 'text',
+      start: start,
+      end: end,
+      quote: quote.slice(0, 1000),
+      prefix: text.slice(Math.max(0, start - 48), start),
+      suffix: text.slice(end, end + 48)
+    };
+  }
+
+  function setPendingReviewSelection(descriptor, options) {
+    if (!descriptor) return;
+    options = options || {};
+    pendingReviewSelection = descriptor;
+    activeReviewId = null;
+    hoveredReviewId = null;
+    decorateReviewTargets();
+    renderReviewPanel();
+    if (options.announce !== false) {
+      announceToScreenReader('Content selected. Choose New to add a comment.');
+    }
+  }
+
+  function captureReviewTextSelection() {
+    if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return false;
+    const selection = window.getSelection && window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+    const range = selection.getRangeAt(0);
+    const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer
+      : range.startContainer.parentElement;
+    const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE
+      ? range.endContainer
+      : range.endContainer.parentElement;
+    if (!startElement || !endElement || !markdownPreview.contains(startElement) || !markdownPreview.contains(endElement)) return false;
+    const startTarget = startElement.closest('[data-review-anchor]');
+    const endTarget = endElement.closest('[data-review-anchor]');
+    if (!startTarget || startTarget !== endTarget) {
+      announceToScreenReader('Select content within one paragraph, heading, list item, or content block.');
+      return false;
+    }
+    const textSelection = buildTextReviewSelection(startTarget, range);
+    if (!textSelection) return false;
+    const descriptor = getReviewAnchorDescriptor(startTarget, textSelection);
+    if (!descriptor) return false;
+    setPendingReviewSelection(descriptor);
+    return true;
+  }
+
+  function selectReviewElement(target) {
+    if (!target || !target.dataset.reviewAnchor) return;
+    const type = target.dataset.reviewType || getReviewTargetType(target);
+    const descriptor = getReviewAnchorDescriptor(target, { kind: 'element', elementType: type });
+    if (descriptor) setPendingReviewSelection(descriptor);
+  }
+
+  function focusReviewComposerInput() {
+    if (!reviewFeedbackInput) return;
+    reviewFeedbackInput.focus();
+    requestAnimationFrame(function() {
+      if (reviewComposer && !reviewComposer.hidden && reviewPanelBody) reviewPanelBody.scrollTop = 0;
+    });
+  }
+
+  function closeReviewComposer(options) {
+    options = options || {};
+    const wasEditing = Boolean(activeReviewEditId);
+    activeReviewAnchor = null;
+    activeReviewEditId = null;
+    if (reviewComposer) reviewComposer.hidden = true;
+    if (reviewFeedbackInput) reviewFeedbackInput.value = '';
+    if (reviewFeedbackCount) reviewFeedbackCount.textContent = '0 / ' + REVIEW_TEXT_LIMIT;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = true;
+    if (!options.keepSelection && wasEditing) pendingReviewSelection = null;
+    decorateReviewTargets();
+    renderReviewPanel();
+    if (options.restoreFocus && reviewModeActive) {
+      if (reviewNewComment && !reviewNewComment.disabled) reviewNewComment.focus();
+      else if (reviewPanelClose) reviewPanelClose.focus();
+    }
+  }
+
+  function populateReviewComposer(author, anchor, isEditing) {
+    if (reviewComposerTitle) reviewComposerTitle.textContent = isEditing ? 'Edit comment' : 'New comment';
+    if (reviewComposerAuthor) reviewComposerAuthor.textContent = author;
+    if (reviewComposerAvatar) reviewComposerAvatar.textContent = getReviewAvatarLabel(author);
+    if (reviewComposerAnchor) reviewComposerAnchor.textContent = anchor.excerpt || anchor.label;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.textContent = isEditing ? 'Save' : 'Submit';
+  }
+
+  function openNewReviewComposer() {
+    if (!pendingReviewSelection) {
+      announceToScreenReader('Select document content before creating a comment.');
+      return;
+    }
+    const target = findReviewTarget(pendingReviewSelection);
+    if (!target) {
+      pendingReviewSelection = null;
+      updateReviewNewButton();
+      announceToScreenReader('The selected content is no longer available. Select it again.');
+      return;
+    }
+    activeReviewEditId = null;
+    activeReviewAnchor = Object.assign({}, pendingReviewSelection, {
+      selection: pendingReviewSelection.selection ? Object.assign({}, pendingReviewSelection.selection) : null
+    });
+    activeReviewId = null;
+    populateReviewComposer(getCurrentReviewAuthor(), activeReviewAnchor, false);
+    if (reviewComposer) reviewComposer.hidden = false;
+    if (reviewFeedbackInput) reviewFeedbackInput.value = '';
+    if (reviewFeedbackCount) reviewFeedbackCount.textContent = '0 / ' + REVIEW_TEXT_LIMIT;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = true;
+    renderReviewPanel();
+    focusReviewComposerInput();
+  }
+
+  function openReviewComposer() {
+    openNewReviewComposer();
+  }
+
+  function openReviewEditor(thread) {
+    if (!thread || !reviewComposer || !reviewFeedbackInput) return;
+    pendingReviewSelection = null;
+    activeReviewEditId = thread.id;
+    activeReviewId = thread.id;
+    activeReviewAnchor = Object.assign({}, thread.anchor, {
+      selection: thread.anchor.selection ? Object.assign({}, thread.anchor.selection) : null
+    });
+    populateReviewComposer(thread.author || getCurrentReviewAuthor(), activeReviewAnchor, true);
+    reviewComposer.hidden = false;
+    reviewFeedbackInput.value = thread.body;
+    if (reviewFeedbackCount) reviewFeedbackCount.textContent = reviewFeedbackInput.value.length + ' / ' + REVIEW_TEXT_LIMIT;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = false;
+    decorateReviewTargets();
+    renderReviewPanel();
+    focusReviewComposerInput();
+    reviewFeedbackInput.setSelectionRange(reviewFeedbackInput.value.length, reviewFeedbackInput.value.length);
+    announceToScreenReader('Editing comment.');
+  }
+
+  function updateReviewComposerKind() {
+    // Retained as a compatibility no-op for legacy callers. The v2 UI only creates comments.
+  }
+
+  function focusReviewPin() {
+    if (reviewNewComment && !reviewNewComment.disabled) {
+      reviewNewComment.focus({ preventScroll: true });
+      return true;
+    }
+    return false;
+  }
+
+  function submitReviewFeedback() {
+    if (!activeReviewAnchor || !reviewFeedbackInput) return;
+    const body = reviewFeedbackInput.value.trim();
+    if (!body) return;
+    if (activeReviewEditId) {
+      const reviewId = activeReviewEditId;
+      const thread = getActiveReviewThreads().find(function(item) { return item.id === reviewId; });
+      if (!thread) {
+        closeReviewComposer();
+        announceToScreenReader('This comment is no longer available.');
+        return;
+      }
+      thread.body = body.slice(0, REVIEW_TEXT_LIMIT);
+      thread.updatedAt = Date.now();
+      activeReviewEditId = null;
+      activeReviewAnchor = null;
+      if (reviewComposer) reviewComposer.hidden = true;
+      persistReviewThreads('Comment updated.');
+      activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+      return;
+    }
+
+    const now = Date.now();
+    const thread = {
+      id: createReviewId(),
+      anchor: Object.assign({}, activeReviewAnchor, {
+        selection: activeReviewAnchor.selection ? Object.assign({}, activeReviewAnchor.selection) : null
+      }),
+      kind: 'comment',
+      author: getCurrentReviewAuthor(),
+      body: body.slice(0, REVIEW_TEXT_LIMIT),
+      createdAt: now,
+      updatedAt: now,
+      resolved: false,
+      resolvedAt: null
+    };
+    getActiveReviewThreads().push(thread);
+    pendingReviewSelection = null;
+    activeReviewAnchor = null;
+    activeReviewId = thread.id;
+    if (reviewComposer) reviewComposer.hidden = true;
+    if (reviewFeedbackInput) reviewFeedbackInput.value = '';
+    persistReviewThreads('Comment added.');
+    activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+  }
+
+  function focusReviewAnchor(thread) {
+    activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
+  }
+
+  function buildReviewSummary() {
+    const tab = getActiveReviewTab();
+    const threads = getActiveReviewThreads().slice().sort(function(a, b) { return a.createdAt - b.createdAt; });
+    const resolvedCount = threads.filter(function(thread) { return thread.resolved; }).length;
+    const lines = [
+      '# Comments: ' + (tab && tab.title ? tab.title : 'Markdown document'),
+      '',
+      '- Generated: ' + formatReviewTime(Date.now()),
+      '- Total comments: ' + threads.length,
+      '- Open comments: ' + (threads.length - resolvedCount),
+      '- Resolved comments: ' + resolvedCount,
+      ''
+    ];
+    threads.forEach(function(thread, index) {
+      lines.push((index + 1) + '. **' + (thread.author || getCurrentReviewAuthor()) + '**');
+      lines.push('   - Status: ' + (thread.resolved ? 'Resolved' : 'Open'));
+      lines.push('   - Opened: ' + formatReviewTime(thread.createdAt));
+      if (thread.resolvedAt) lines.push('   - Closed: ' + formatReviewTime(thread.resolvedAt));
+      if (thread.anchor.excerpt) lines.push('   > ' + thread.anchor.excerpt.replace(/\n/g, ' '));
+      thread.body.split('\n').forEach(function(line) { lines.push('   ' + line); });
+      lines.push('');
+    });
+    return lines.join('\n').trim();
+  }
+
+  function requestReviewDeleteConfirmation(reviewId) {
+    if (!reviewDeleteModal || !reviewDeleteCancel || !reviewDeleteConfirm) return;
+    const threads = getActiveReviewThreads();
+    const thread = reviewId ? threads.find(function(item) { return item.id === reviewId; }) : null;
+    if ((reviewId && !thread) || (!reviewId && threads.length === 0)) return;
+    pendingReviewDelete = { tabId: activeTabId, reviewId: reviewId || null };
+    if (reviewDeleteTitle) reviewDeleteTitle.textContent = reviewId ? 'Delete comment?' : 'Delete all comments?';
+    if (reviewDeleteDescription) {
+      reviewDeleteDescription.textContent = reviewId
+        ? 'This comment will be permanently deleted. This cannot be undone.'
+        : 'All ' + threads.length + ' comments in this document will be permanently deleted. This cannot be undone.';
+    }
+    reviewDeleteConfirm.textContent = reviewId ? 'Delete comment' : 'Delete all';
+    openAppModal(reviewDeleteModal, {
+      focusTarget: reviewDeleteCancel,
+      onClose: cancelReviewDeleteConfirmation
+    });
+  }
+
+  function updateReviewBackdrop() {
+    if (reviewPanelBackdrop) reviewPanelBackdrop.hidden = true;
+  }
+
+  function setReviewMode(enabled, options) {
+    options = options || {};
+    const nextState = Boolean(enabled);
+    if (nextState && isReleaseNotesActive()) {
+      announceToScreenReader('Release notes do not support comments.');
+      return;
+    }
+    const wasActive = reviewModeActive;
+    if (nextState && !wasActive) reviewPreviousViewModes.set(activeTabId, currentViewMode || 'split');
+    reviewModeActive = nextState;
+    if (reviewModeActive && currentViewMode !== 'preview') setViewMode('preview');
+    if (reviewPanel) reviewPanel.hidden = !reviewModeActive;
+    if (contentContainer) contentContainer.classList.toggle('is-reviewing', reviewModeActive);
+    [reviewToggle, mobileReviewToggle].forEach(function(button) {
+      if (!button) return;
+      button.setAttribute('aria-expanded', reviewModeActive ? 'true' : 'false');
+      button.setAttribute('aria-pressed', reviewModeActive ? 'true' : 'false');
+    });
+    updateReviewToggleActiveState();
+    updateReviewBackdrop();
+    updateLiveEditorAccess();
+    if (reviewModeActive) {
+      decorateReviewTargets();
+      renderReviewPanel();
+      if (options.focusPanel && reviewPanelClose) reviewPanelClose.focus();
+    } else {
+      cancelReviewDeleteConfirmation();
+      pendingReviewSelection = null;
+      activeReviewId = null;
+      hoveredReviewId = null;
+      closeReviewComposer({ keepSelection: false });
+      clearReviewDecorations();
+      const restoreMode = reviewPreviousViewModes.get(activeTabId);
+      reviewPreviousViewModes.clear();
+      if (restoreMode && restoreMode !== currentViewMode) {
+        setViewMode(restoreMode);
+        saveCurrentTabState();
+      }
+      if (options.restoreFocus) {
+        const returnTarget = window.innerWidth < 768 ? mobileMenuToggle : reviewToggle;
+        if (returnTarget) returnTarget.focus();
+      }
+    }
+  }
+
+  function initReviewMode() {
+    tabs.forEach(function(tab) { tab.reviewThreads = normalizeReviewThreads(tab.reviewThreads); });
+    updateReviewCountBadges();
+    renderReviewPanel();
+
+    if (reviewToggle) reviewToggle.addEventListener('click', function() {
+      setReviewMode(!reviewModeActive, { focusPanel: !reviewModeActive });
+    });
+    if (mobileReviewToggle) mobileReviewToggle.addEventListener('click', function() {
+      closeMobileMenu(false);
+      setReviewMode(!reviewModeActive, { focusPanel: !reviewModeActive });
+    });
+    if (reviewPanelClose) reviewPanelClose.addEventListener('click', function() {
+      setReviewMode(false, { restoreFocus: true });
+    });
+    if (reviewPanelBackdrop) reviewPanelBackdrop.addEventListener('click', function() {
+      setReviewMode(false, { restoreFocus: true });
+    });
+    if (reviewNewComment) reviewNewComment.addEventListener('click', openNewReviewComposer);
+    if (reviewComposerCancel) reviewComposerCancel.addEventListener('click', function() {
+      closeReviewComposer({ restoreFocus: true, keepSelection: true });
+    });
+    if (reviewFeedbackInput) {
+      reviewFeedbackInput.addEventListener('input', function() {
+        const length = reviewFeedbackInput.value.length;
+        if (reviewFeedbackCount) reviewFeedbackCount.textContent = length + ' / ' + REVIEW_TEXT_LIMIT;
+        if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = reviewFeedbackInput.value.trim().length === 0;
+      });
+      reviewFeedbackInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          submitReviewFeedback();
+        }
+      });
+    }
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.addEventListener('click', submitReviewFeedback);
+    document.querySelectorAll('[data-review-filter]').forEach(function(button) {
+      button.addEventListener('click', function() { setReviewFilter(button.dataset.reviewFilter); });
+    });
+    if (reviewDeleteClose) reviewDeleteClose.addEventListener('click', cancelReviewDeleteConfirmation);
+    if (reviewDeleteCancel) reviewDeleteCancel.addEventListener('click', cancelReviewDeleteConfirmation);
+    if (reviewDeleteConfirm) reviewDeleteConfirm.addEventListener('click', confirmReviewDeletion);
+
+    if (markdownPreview) {
+      markdownPreview.addEventListener('mouseup', function() {
+        requestAnimationFrame(captureReviewTextSelection);
+      });
+      markdownPreview.addEventListener('keyup', function() {
+        requestAnimationFrame(captureReviewTextSelection);
+      });
+      markdownPreview.addEventListener('click', function(event) {
+        if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return;
+        const highlighted = event.target.closest('[data-review-ids]');
+        if (highlighted && markdownPreview.contains(highlighted)) {
+          const reviewId = String(highlighted.dataset.reviewIds || '').split(/\s+/).filter(Boolean)[0];
+          const thread = getActiveReviewThreads().find(function(item) { return item.id === reviewId; });
+          if (thread) {
+            event.preventDefault();
+            activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+            return;
+          }
+        }
+        const selectable = event.target.closest(REVIEW_ELEMENT_SELECTOR);
+        if (selectable && markdownPreview.contains(selectable) && selectable.dataset.reviewAnchor) {
+          event.preventDefault();
+          selectReviewElement(selectable);
+        }
+      });
+      markdownPreview.addEventListener('pointerover', function(event) {
+        const highlighted = event.target.closest('[data-review-ids]');
+        if (!highlighted || !markdownPreview.contains(highlighted)) return;
+        const reviewId = String(highlighted.dataset.reviewIds || '').split(/\s+/).filter(Boolean)[0];
+        setReviewHover(reviewId);
+      });
+      markdownPreview.addEventListener('pointerout', function(event) {
+        const from = event.target.closest('[data-review-ids]');
+        const to = event.relatedTarget && event.relatedTarget.closest
+          ? event.relatedTarget.closest('[data-review-ids]')
+          : null;
+        if (from && from !== to) setReviewHover(null);
+      });
+    }
+
+    if (reviewList) {
+      reviewList.addEventListener('click', function(event) {
+        const card = event.target.closest('.review-thread');
+        if (!card) return;
+        const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
+        if (!thread) return;
+        const actionButton = event.target.closest('[data-review-action]');
+        if (!actionButton) {
+          activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
+          return;
+        }
+        const action = actionButton.dataset.reviewAction;
+        if (action === 'focus-anchor') {
+          focusReviewAnchor(thread);
+        } else if (action === 'edit') {
+          openReviewEditor(thread);
+        } else if (action === 'toggle-resolved') {
+          thread.resolved = !thread.resolved;
+          const changedAt = Date.now();
+          thread.updatedAt = changedAt;
+          thread.resolvedAt = thread.resolved ? changedAt : null;
+          persistReviewThreads(thread.resolved ? 'Comment resolved.' : 'Comment reopened.');
+          if ((reviewFilter === 'open' && thread.resolved) || (reviewFilter === 'resolved' && !thread.resolved)) {
+            activeReviewId = null;
+            renderReviewPanel();
+          } else {
+            activateReviewThread(thread, { scrollPanel: true });
+          }
+        } else if (action === 'delete') {
+          requestReviewDeleteConfirmation(thread.id);
+        }
+      });
+      reviewList.addEventListener('keydown', function(event) {
+        const card = event.target.closest('.review-thread');
+        if (!card || event.target.closest('[data-review-action]')) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
+        if (thread) activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
+      });
+      reviewList.addEventListener('pointerover', function(event) {
+        const card = event.target.closest('.review-thread');
+        if (card) setReviewHover(card.dataset.reviewId);
+      });
+      reviewList.addEventListener('pointerout', function(event) {
+        const from = event.target.closest('.review-thread');
+        const to = event.relatedTarget && event.relatedTarget.closest
+          ? event.relatedTarget.closest('.review-thread')
+          : null;
+        if (from && from !== to) setReviewHover(null);
+      });
+    }
+
+    window.addEventListener('resize', updateReviewBackdrop);
+    document.addEventListener('keydown', function(event) {
+      if (event.defaultPrevented || event.key !== 'Escape' || !reviewModeActive || activeModal) return;
+      if (reviewComposer && !reviewComposer.hidden) {
+        event.preventDefault();
+        closeReviewComposer({ restoreFocus: true, keepSelection: true });
       } else {
         event.preventDefault();
         setReviewMode(false, { restoreFocus: true });
@@ -13443,7 +14665,7 @@ ${selector} .arrowheadPath {
     }
     if (reviewModeActive && mode !== 'preview') {
       mode = 'preview';
-      announceToScreenReader('Review mode uses the read-only preview.');
+    announceToScreenReader('Comments uses the read-only preview.');
     }
     if (mode === currentViewMode) return;
 

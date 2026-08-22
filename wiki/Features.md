@@ -67,24 +67,25 @@ On the web, document data lives in IndexedDB while small preferences remain in `
 
 Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Storage and Backup** reports usage, separate normal and secret document counts, a logical browser storage location or fixed desktop vault path, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. Import permanently replaces the current workspace after confirmation. Backups exclude trash, desktop history, and recovery journals. Browser storage is best-effort by default and is shown as read-only status. **Reset workspace** permanently clears all local workspace data after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
 
-## Comments and Suggestion Mode
+## Comments
 
-Review mode adds structured feedback to the rendered document without inserting or changing Markdown.
+Comments add anchored feedback to the rendered document without inserting or changing Markdown.
 
 User flow:
 
-- Open **Review** from the desktop document toolbar or mobile menu.
-- Select the plus beside a rendered YAML table, heading, paragraph, code block, or diagram.
-- Add a comment or suggestion. Reviewed blocks show one control for reading existing feedback and a separate plus for adding another item.
-- Edit, resolve, reopen, or delete individual threads. The panel can also copy a Markdown summary, resolve all open items, or delete all feedback after confirmation.
-- Close Review to restore the previous Editor, Split, or Preview layout. Opening a new tab closes Review automatically.
+- Open **Comments** from the desktop document toolbar or mobile menu.
+- Select text in a heading, paragraph, list, quote, or code block, or click an image, diagram, map, model, or rendered math expression.
+- Choose **New**, write the comment, and submit it. The selected content receives an anchored highlight.
+- Hover or click between document highlights and compact comment cards to synchronize both sides.
+- Edit, resolve, reopen, or delete individual comments. Open, Resolved, and All filters keep completed feedback accessible.
+- Close Comments to restore the previous Editor, Split, or Preview layout. Opening a new tab closes Comments automatically.
 
 Storage and sharing:
 
-- Review threads stay with normal local tabs and survive reloads. Private mode pauses new persistence; workspace backups retain review data, while Reset workspace deletes it.
+- Comments stay with normal local tabs and survive reloads. Private mode pauses new persistence; workspace backups retain comment data, while Reset workspace deletes it.
 - Feedback is excluded from Markdown, HTML, PDF, PNG, print, duplicated tabs, and Share Snapshot links.
 - If the related source block changes, the thread remains visible as unanchored feedback instead of moving to the wrong block.
-- Live Share synchronizes Review threads through a separate Yjs document. View-only participants can review without receiving Markdown edit permission.
+- Live Share synchronizes comments through a separate Yjs document. View-only participants can comment without receiving Markdown edit permission.
 - The panel is a side panel on desktop, a drawer on tablet, and a touch-friendly bottom sheet on mobile, using the app's existing colors, controls, themes, and accessibility patterns.
 
 ## Editing and Formatting Tools
@@ -552,7 +553,7 @@ Security limitations:
 | :--- | :--- | :--- | :--- |
 | Typing and local preview | No | Browser memory and per-document storage | Sanitized before preview insertion. |
 | Normal tab autosave | No | Per-document IndexedDB records or desktop vault `.md` files | Content is written independently rather than serializing the whole Workspace. |
-| Comments and suggestions | Only during Live Share | Normal document metadata plus temporary Live Share relay state | Excluded from document exports and Share Snapshot; synchronized between active Live Share participants. |
+| Comments | Only during Live Share | Normal document metadata plus temporary Live Share relay state | Excluded from document exports and Share Snapshot; synchronized between active Live Share participants. |
 | Private mode | No | No new document-state persistence during the session | Existing saved documents and Secret Workspace remain intact. |
 | Local file import | No | Current tab/workspace | Reads selected files only. |
 | Managed media upload | Yes, after first-use consent | Cloudflare KV, content-addressed, 90-day TTL | Publicly retrievable by its unguessable HTTPS URL until expiry; still images 300 KiB optimized, GIF 5 MiB, video 10 MiB. |

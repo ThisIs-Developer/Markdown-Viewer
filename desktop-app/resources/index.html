@@ -100,7 +100,7 @@
                         <i class="lucide lucide-radio" data-lucide="radio" aria-hidden="true"></i>
                     </button>
                     <div id="live-share-toolbar-participants" class="live-share-toolbar-participants" aria-label="Live Share participants" hidden></div>
-                    <button id="review-toggle" class="tool-button header-icon-command" type="button" title="Open comments and suggestions" aria-label="Open comments and suggestions" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
+                    <button id="review-toggle" class="tool-button header-icon-command" type="button" title="Open comments" aria-label="Open comments" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
                         <i class="lucide lucide-message-square-text" aria-hidden="true"></i><span id="review-toolbar-count" class="review-toolbar-count" aria-hidden="true" hidden>0</span>
                     </button>
 
@@ -209,8 +209,8 @@
                                 <button id="mobile-copy-markdown" class="mobile-menu-item mobile-menu-command" type="button" title="Copy Markdown" aria-label="Copy Markdown">
                                     <span class="mobile-menu-item-label"><i class="lucide lucide-copy" aria-hidden="true"></i><span>Copy Markdown</span></span>
                                 </button>
-                                <button id="mobile-review-toggle" class="mobile-menu-item mobile-menu-command mobile-settings-item" type="button" title="Open comments and suggestions" aria-label="Open comments and suggestions" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
-                                    <span class="mobile-menu-item-label"><i class="lucide lucide-message-square-text" aria-hidden="true"></i><span>Review mode</span></span>
+                                <button id="mobile-review-toggle" class="mobile-menu-item mobile-menu-command mobile-settings-item" type="button" title="Open comments" aria-label="Open comments" aria-controls="review-panel" aria-expanded="false" aria-pressed="false">
+                                    <span class="mobile-menu-item-label"><i class="lucide lucide-message-square-text" aria-hidden="true"></i><span>Comments</span></span>
                                     <span id="mobile-review-status" class="mobile-menu-item-status">Off</span>
                                 </button>
                             </div>
@@ -587,7 +587,7 @@
               </button>
             </div>
             <div class="modal-body">
-              <p id="review-delete-description" class="modal-subtext">This comment or suggestion will be permanently deleted.</p>
+              <p id="review-delete-description" class="modal-subtext">This comment will be permanently deleted.</p>
             </div>
             <div class="reset-modal-actions">
               <button type="button" class="reset-modal-btn reset-modal-cancel" id="review-delete-cancel">Cancel</button>
@@ -788,8 +788,8 @@
                 <ul class="modal-list">
                   <li>Use the view buttons in the toolbar to switch between Editor, Split, and Preview modes.</li>
                   <li>Sync scrolling is available in Split view to keep the editor and preview aligned.</li>
-                  <li>Review opens a read-only preview where you can comment on or suggest changes to headings, paragraphs, code blocks, and diagrams.</li>
-                  <li>View modes, New, Copy, Sync, Review, Share, Live Share, and Export are grouped in the header toolbar.</li>
+                  <li>Comments opens a read-only preview. Select text, an image, a diagram, or math, then choose New to add a comment.</li>
+                  <li>View modes, New, Copy, Sync, Comments, Share, Live Share, and Export are grouped in the header toolbar.</li>
                   <li>Report an Issue, About, and Settings follow the document actions in the header.</li>
                 </ul>
               </div>
@@ -1483,73 +1483,63 @@
                         <div class="skeleton-placeholder skeleton-line skeleton-w45"></div>
                     </div>
                 </div>
-                <div id="review-pins-layer" class="review-pins-layer" role="group" aria-label="Review pins" hidden></div>
             </div>
             <div id="document-split-divider" class="document-split-divider" role="separator" aria-orientation="vertical" aria-label="Split document divider" hidden></div>
             <section id="document-split-pane" class="document-split-pane" aria-label="Secondary document" hidden>
                 <textarea id="document-split-editor" aria-label="Secondary Markdown document"></textarea>
                 <div id="document-split-preview" class="markdown-body document-split-preview" aria-label="Secondary Markdown preview" hidden></div>
             </section>
-            <button id="review-panel-backdrop" class="review-panel-backdrop" type="button" aria-label="Close comments and suggestions" hidden></button>
+            <button id="review-panel-backdrop" class="review-panel-backdrop" type="button" aria-label="Close comments" hidden></button>
             <aside id="review-panel" class="review-panel" aria-labelledby="review-panel-title" hidden>
                 <div class="review-panel-header">
-                    <div>
-                        <h2 id="review-panel-title">Comments &amp; suggestions</h2>
-                        <p id="review-panel-summary" class="review-panel-summary">No open feedback</p>
-                    </div>
-                    <button id="review-panel-close" class="review-icon-btn" type="button" aria-label="Close comments and suggestions" title="Close review mode">
+                    <h2 id="review-panel-title">Comments</h2>
+                    <button id="review-panel-close" class="review-icon-btn" type="button" aria-label="Close comments" title="Close comments">
                         <i class="lucide lucide-x" aria-hidden="true"></i>
                     </button>
                 </div>
 
                 <div class="review-panel-toolbar">
+                    <button id="review-new-comment" class="review-new-btn" type="button" disabled>
+                        <i class="lucide lucide-plus" aria-hidden="true"></i>
+                        <span>New</span>
+                    </button>
+                    <p id="review-panel-summary" class="review-panel-summary" aria-live="polite">0 comments</p>
                     <div class="review-filter-group segmented-control" role="group" aria-label="Filter review items">
                         <button class="review-filter-btn segmented-control-btn is-active" type="button" data-review-filter="open" aria-pressed="true">Open</button>
                         <button class="review-filter-btn segmented-control-btn" type="button" data-review-filter="resolved" aria-pressed="false">Resolved</button>
                         <button class="review-filter-btn segmented-control-btn" type="button" data-review-filter="all" aria-pressed="false">All</button>
                     </div>
-                    <div class="review-panel-actions" role="group" aria-label="Review actions">
-                        <button id="review-copy-summary" class="review-icon-btn" type="button" aria-label="Copy review summary" title="Copy review summary" disabled>
-                            <i class="lucide lucide-copy" aria-hidden="true"></i>
-                        </button>
-                        <button id="review-resolve-all" class="review-icon-btn" type="button" aria-label="Resolve all open review items" title="Resolve all open review items" disabled>
-                            <i class="lucide lucide-check-check" aria-hidden="true"></i>
-                        </button>
-                        <button id="review-delete-all" class="review-icon-btn is-danger" type="button" aria-label="Delete all review items" title="Delete all review items" disabled>
-                            <i class="lucide lucide-trash-2" aria-hidden="true"></i>
-                        </button>
-                    </div>
                 </div>
 
                 <div class="review-panel-body">
-                    <div id="review-list" class="review-list" aria-live="polite"></div>
-                    <div id="review-empty-state" class="review-empty-state">
-                        <i class="lucide lucide-message-square-more" aria-hidden="true"></i>
-                        <h3>No open feedback</h3>
-                        <p>Choose the comment button beside any block to start a review.</p>
-                    </div>
-
                     <section id="review-composer" class="review-composer" aria-labelledby="review-composer-title" hidden>
                         <div class="review-composer-heading">
-                            <h3 id="review-composer-title">Add feedback</h3>
-                            <button id="review-composer-cancel" class="review-icon-btn" type="button" aria-label="Cancel feedback" title="Cancel">
-                                <i class="lucide lucide-x" aria-hidden="true"></i>
-                            </button>
+                            <h3 id="review-composer-title">New comment</h3>
                         </div>
                         <div class="review-composer-body">
-                            <p id="review-composer-anchor" class="review-anchor-preview"></p>
-                            <div class="review-kind-group segmented-control" role="group" aria-label="Feedback type">
-                                <button class="review-kind-btn segmented-control-btn is-active" type="button" data-review-kind="comment" aria-pressed="true">Comment</button>
-                                <button class="review-kind-btn segmented-control-btn" type="button" data-review-kind="suggestion" aria-pressed="false">Suggestion</button>
+                            <div class="review-composer-author">
+                                <span id="review-composer-avatar" class="review-author-avatar" aria-hidden="true">A</span>
+                                <strong id="review-composer-author">Document author</strong>
                             </div>
-                            <label id="review-feedback-label" class="review-feedback-label" for="review-feedback-input">Comment</label>
-                            <textarea id="review-feedback-input" class="review-feedback-input" rows="4" maxlength="2000" placeholder="Leave a focused comment for the author..."></textarea>
+                            <p id="review-composer-anchor" class="review-anchor-preview"></p>
+                            <label id="review-feedback-label" class="visually-hidden" for="review-feedback-input">Comment</label>
+                            <textarea id="review-feedback-input" class="review-feedback-input" rows="4" maxlength="2000" placeholder="Add a comment..."></textarea>
                         </div>
                         <div class="review-composer-footer">
                             <span id="review-feedback-count" class="review-feedback-count">0 / 2000</span>
-                            <button id="review-feedback-submit" class="review-primary-btn" type="button" disabled>Add comment</button>
+                            <div class="review-composer-actions">
+                                <button id="review-composer-cancel" class="review-secondary-btn" type="button">Cancel</button>
+                                <button id="review-feedback-submit" class="review-primary-btn" type="button" disabled>Submit</button>
+                            </div>
                         </div>
                     </section>
+
+                    <div id="review-list" class="review-list" aria-live="polite"></div>
+                    <div id="review-empty-state" class="review-empty-state">
+                        <i class="lucide lucide-scan-text" aria-hidden="true"></i>
+                        <h3>No comments yet</h3>
+                        <p>Select content in the document, then choose New.</p>
+                    </div>
                 </div>
             </aside>
             </main>
