@@ -75,18 +75,20 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
 
   await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
   await expect(page.locator('#review-new-comment')).toBeEnabled();
-  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
+  await expect(page.locator('.review-pending-highlight, .review-pending-element')).toHaveCount(0);
+  await expect(page.locator('.review-comment-highlight, .review-comment-element')).toHaveCount(0);
 
   await page.locator('#review-new-comment').click();
   await expect(page.locator('#review-composer')).toBeVisible();
-  await expect(page.locator('#review-composer-author')).toHaveText('Baivab Sarkar');
-  await expect(page.locator('#review-composer-anchor')).toHaveText('precise phrase');
+  await expect(page.locator('#review-composer-author')).toHaveText('ThisIs-Developer');
+  await expect(page.locator('.review-composer-heading, #review-composer-anchor')).toHaveCount(0);
+  await expect(page.locator('.review-comment-highlight, .review-comment-element')).toHaveCount(0);
   await page.locator('#review-feedback-input').fill('This wording is clear.');
   await page.locator('#review-feedback-submit').click();
 
   const card = page.locator('.review-thread');
   await expect(card).toHaveCount(1);
-  await expect(card.locator('.review-author-name')).toHaveText('Baivab Sarkar');
+  await expect(card.locator('.review-author-name').first()).toHaveText('ThisIs-Developer');
   await expect(card.locator('.review-thread-body')).toHaveText('This wording is clear.');
   await expect(page.locator('.review-comment-highlight')).toHaveText('precise phrase');
   await expect(card.locator('.review-thread-details')).toBeVisible();
@@ -121,10 +123,38 @@ test('synchronizes hover and click states in both directions', async ({ page }) 
   await highlight.click();
   await expect(card).toHaveClass(/is-review-thread-active/);
   await expect(card.locator('.review-thread-details')).toBeVisible();
+  await expect(card).toHaveCSS('border-color', 'rgb(130, 80, 223)');
 
   await page.locator('.review-panel-header').hover();
   await card.click();
   await expect(highlight).toHaveClass(/is-review-highlight-active/);
+});
+
+test('adds nested replies and persists their author and timestamp', async ({ page }) => {
+  await page.locator('#review-toggle').click();
+  await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
+  await page.locator('#review-new-comment').click();
+  await page.locator('#review-feedback-input').fill('Top-level comment.');
+  await page.locator('#review-feedback-submit').click();
+
+  const card = page.locator('.review-thread');
+  await expect(card.locator('.review-reply-input')).toBeVisible();
+  await card.locator('.review-reply-input').fill('First nested reply.');
+  await card.locator('.review-reply-submit').click();
+  await expect(card.locator('.review-reply')).toHaveCount(1);
+  await expect(card.locator('.review-reply .review-author-name')).toHaveText('ThisIs-Developer');
+  await expect(card.locator('.review-reply-body')).toHaveText('First nested reply.');
+  await expect(card.locator('.review-reply-time')).not.toBeEmpty();
+
+  await card.locator('.review-reply-input').fill('Second nested reply.');
+  await card.locator('.review-reply-input').press('Enter');
+  await expect(card.locator('.review-reply')).toHaveCount(2);
+
+  await page.reload();
+  await page.locator('#review-toggle').click();
+  await page.locator('.review-thread').click();
+  await expect(page.locator('.review-reply')).toHaveCount(2);
+  expect(JSON.stringify(await storedDocuments(page))).toContain('Second nested reply.');
 });
 
 test('comments on images, rendered math, diagrams, and resolves without empty closed metadata', async ({ page }) => {

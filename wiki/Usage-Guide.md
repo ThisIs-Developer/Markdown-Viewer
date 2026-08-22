@@ -66,13 +66,13 @@ Use Comments when you want to leave anchored feedback without editing the Markdo
 
 1. Open **Comments** from the desktop document toolbar or mobile menu.
 2. Select text in a heading, paragraph, list, quote, or code block, or click an image, rendered diagram, map, model, or math expression.
-3. Choose **New** in the Comments panel.
+3. Choose **New** in the Comments panel. The review highlight is added only after the comment is submitted.
 4. Enter the comment, then choose **Submit** or press `Ctrl+Enter`/`Cmd+Enter`.
 5. Click a comment card or its highlighted document content to activate and synchronize both sides. Hovering either side temporarily highlights the other.
 
-Open, Resolved, and All filters keep completed feedback available without letting it dominate the panel. Active cards reveal their anchor, opened time, and—only when resolved—the closed time. Comments can be edited, resolved, reopened, or deleted. The interface uses a side panel on desktop, a drawer on tablet, and a bottom sheet on mobile. Opening a new tab closes Comments automatically.
+Open, Resolved, and All filters keep completed feedback available without letting it dominate the panel. Active cards reveal their anchor, opened time, nested replies, a compact Reply field, and—only when resolved—the closed time. Comments can be edited, resolved, reopened, or deleted. The interface uses a side panel on desktop, a drawer on tablet, and a bottom sheet on mobile. Opening a new tab closes Comments automatically.
 
-Comments stay with normal local tabs and are excluded from document exports, duplicated tabs, and Share Snapshot links. Live Share synchronizes them while the room is active, including for view-only participants; Private mode pauses new local persistence, workspace backups retain comment data, and Reset workspace deletes it. Legacy stored comments and suggestions remain readable.
+Comments stay with normal local tabs and are excluded from document exports, duplicated tabs, and Share Snapshot links. Owner comments use **ThisIs-Developer**. Live Share comments and replies use the participant display name and follow later name changes while the room is active, including for view-only participants. Private mode pauses new local persistence, workspace backups retain comment data, and Reset workspace deletes it. Legacy stored comments and suggestions remain readable.
 
 ## Find and Replace
 

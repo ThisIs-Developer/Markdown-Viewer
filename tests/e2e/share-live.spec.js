@@ -132,6 +132,9 @@ test('Live Share synchronizes Review feedback with view-only participants', asyn
   await expect(guestPage.locator('#markdown-preview h1')).toHaveText('Live review sync');
   await expect(guestPage.locator('#markdown-editor')).toHaveJSProperty('readOnly', true);
 
+  await guestPage.locator('#live-share-button').click();
+  await guestPage.locator('#live-share-display-name').fill('Guest reviewer');
+  await guestPage.locator('#live-share-modal-close-icon').click();
   await guestPage.locator('#review-toggle').click();
   await selectLiveReviewText(guestPage, '#markdown-preview h1', 'Live review sync');
   await guestPage.locator('#review-new-comment').click();
@@ -152,6 +155,14 @@ test('Live Share synchronizes Review feedback with view-only participants', asyn
   await expect(guestPage.locator('.review-thread').filter({ hasText: 'Host comment for the participant.' })).toBeVisible();
 
   const participantComment = page.locator('.review-thread').filter({ hasText: 'Participant comment for the host.' });
+  await expect(participantComment.locator('.review-author-name').first()).toHaveText('Guest reviewer');
+  await expect(guestPage.locator('.review-thread').filter({ hasText: 'Host comment for the participant.' }).locator('.review-author-name').first()).toHaveText('Host');
+
+  await guestPage.locator('#live-share-button').click();
+  await guestPage.locator('#live-share-display-name').fill('Guest reviewer renamed');
+  await guestPage.locator('#live-share-modal-close-icon').click();
+  await expect(participantComment.locator('.review-author-name').first()).toHaveText('Guest reviewer renamed');
+
   await participantComment.locator('[data-review-action="toggle-resolved"]').click();
   await expect(guestPage.locator('#review-toolbar-count')).toHaveText('1');
   await guestPage.locator('[data-review-filter="resolved"]').click();

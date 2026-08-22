@@ -7616,6 +7616,38 @@ document.addEventListener("DOMContentLoaded", async function () {
       const createdAt = Number.isFinite(Number(thread.createdAt)) ? Number(thread.createdAt) : Date.now();
       const updatedAt = Number.isFinite(Number(thread.updatedAt)) ? Number(thread.updatedAt) : createdAt;
       const resolved = thread.resolved === true;
+      const authorId = typeof thread.authorId === 'string' && thread.authorId
+        ? thread.authorId.slice(0, 160)
+        : null;
+      const replies = Array.isArray(thread.replies)
+        ? thread.replies.slice(-200).map(function(reply) {
+          if (!reply || typeof reply !== 'object') return null;
+          const replyBody = typeof reply.body === 'string'
+            ? reply.body.trim().slice(0, REVIEW_TEXT_LIMIT)
+            : '';
+          if (!replyBody) return null;
+          const replyCreatedAt = Number.isFinite(Number(reply.createdAt))
+            ? Number(reply.createdAt)
+            : createdAt;
+          const replyAuthorId = typeof reply.authorId === 'string' && reply.authorId
+            ? reply.authorId.slice(0, 160)
+            : null;
+          return {
+            id: typeof reply.id === 'string' && reply.id
+              ? reply.id.slice(0, 120)
+              : createReviewId(),
+            author: replyAuthorId && typeof reply.author === 'string' && reply.author.trim()
+              ? reply.author.trim().slice(0, 120)
+              : 'ThisIs-Developer',
+            authorId: replyAuthorId,
+            body: replyBody,
+            createdAt: replyCreatedAt,
+            updatedAt: Number.isFinite(Number(reply.updatedAt))
+              ? Number(reply.updatedAt)
+              : replyCreatedAt
+          };
+        }).filter(Boolean)
+        : [];
       return {
         id: typeof thread.id === 'string' && thread.id ? thread.id.slice(0, 120) : createReviewId(),
         anchor: {
@@ -7631,14 +7663,18 @@ document.addEventListener("DOMContentLoaded", async function () {
         },
         // Keep legacy suggestion data intact. New comments are always stored as comments.
         kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
-        author: typeof thread.author === 'string' ? thread.author.trim().slice(0, 120) : '',
+        author: authorId && typeof thread.author === 'string' && thread.author.trim()
+          ? thread.author.trim().slice(0, 120)
+          : 'ThisIs-Developer',
+        authorId: authorId,
         body: body,
         createdAt: createdAt,
         updatedAt: updatedAt,
         resolved: resolved,
         resolvedAt: resolved && Number.isFinite(Number(thread.resolvedAt))
           ? Number(thread.resolvedAt)
-          : null
+          : null,
+        replies: replies
       };
     }).filter(Boolean);
   }
@@ -7652,12 +7688,23 @@ document.addEventListener("DOMContentLoaded", async function () {
           : null
       }),
       kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
-      author: thread.author || '',
+      author: thread.author || 'ThisIs-Developer',
+      authorId: thread.authorId || null,
       body: thread.body,
       createdAt: thread.createdAt,
       updatedAt: thread.updatedAt,
       resolved: thread.resolved === true,
-      resolvedAt: Number.isFinite(Number(thread.resolvedAt)) ? Number(thread.resolvedAt) : null
+      resolvedAt: Number.isFinite(Number(thread.resolvedAt)) ? Number(thread.resolvedAt) : null,
+      replies: (thread.replies || []).map(function(reply) {
+        return {
+          id: reply.id,
+          author: reply.author || 'ThisIs-Developer',
+          authorId: reply.authorId || null,
+          body: reply.body,
+          createdAt: reply.createdAt,
+          updatedAt: reply.updatedAt
+        };
+      })
     };
   }
 
@@ -7666,24 +7713,53 @@ document.addEventListener("DOMContentLoaded", async function () {
     return left.id === right.id &&
       left.kind === right.kind &&
       (left.author || '') === (right.author || '') &&
+      (left.authorId || '') === (right.authorId || '') &&
       left.body === right.body &&
       left.createdAt === right.createdAt &&
       left.updatedAt === right.updatedAt &&
       left.resolved === right.resolved &&
       left.resolvedAt === right.resolvedAt &&
-      JSON.stringify(left.anchor || {}) === JSON.stringify(right.anchor || {});
+      JSON.stringify(left.anchor || {}) === JSON.stringify(right.anchor || {}) &&
+      JSON.stringify(left.replies || []) === JSON.stringify(right.replies || []);
+  }
+
+  function getCurrentReviewAuthorIdentity() {
+    if (liveCollaboration && liveCollaboration.localParticipantId && liveCollaboration.localParticipant) {
+      const liveName = String(liveCollaboration.localParticipant.name || '').trim();
+      return {
+        id: String(liveCollaboration.localParticipantId).slice(0, 160),
+        name: (liveName || 'Live Share participant').slice(0, 120)
+      };
+    }
+    return { id: 'document-owner', name: 'ThisIs-Developer' };
   }
 
   function getCurrentReviewAuthor() {
-    if (liveCollaboration && liveCollaboration.localParticipant && liveCollaboration.localParticipant.name) {
-      return String(liveCollaboration.localParticipant.name).trim().slice(0, 120);
-    }
-    const parsed = parseFrontmatter(markdownEditor ? markdownEditor.value : '');
-    let author = parsed.frontmatter && parsed.frontmatter.author;
-    if (Array.isArray(author)) author = author[0];
-    if (author && typeof author === 'object') author = author.name || author.displayName || '';
-    const normalized = String(author || '').trim();
-    return normalized ? normalized.slice(0, 120) : 'Document author';
+    return getCurrentReviewAuthorIdentity().name;
+  }
+
+  function updateReviewAuthorIdentity(authorId, authorName) {
+    if (!authorId || !authorName) return false;
+    const tab = getActiveReviewTab();
+    if (!tab || !Array.isArray(tab.reviewThreads)) return false;
+    let changed = false;
+    tab.reviewThreads.forEach(function(thread) {
+      if (thread.authorId === authorId && thread.author !== authorName) {
+        thread.author = authorName;
+        changed = true;
+      }
+      (thread.replies || []).forEach(function(reply) {
+        if (reply.authorId === authorId && reply.author !== authorName) {
+          reply.author = authorName;
+          changed = true;
+        }
+      });
+    });
+    if (!changed) return false;
+    syncLiveReviewThreadsFromTab();
+    if (activeTabId) saveTabsToStorage(tabs, [activeTabId]);
+    renderReviewPanel();
+    return true;
   }
 
   function getReviewAvatarLabel(name) {
@@ -7975,10 +8051,8 @@ document.addEventListener("DOMContentLoaded", async function () {
           continue;
         }
         const mark = document.createElement('mark');
-        mark.className = covering.some(function(item) { return item.pending; })
-          ? 'review-pending-highlight'
-          : 'review-comment-highlight';
-        covering.filter(function(item) { return !item.pending; }).forEach(function(item) {
+        mark.className = 'review-comment-highlight';
+        covering.forEach(function(item) {
           addReviewId(mark, item.id);
         });
         mark.textContent = text;
@@ -8041,20 +8115,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       target.classList.add('review-comment-element');
       addReviewId(target, thread.id);
     });
-
-    if (pendingReviewSelection) {
-      const pendingTarget = findReviewTarget(pendingReviewSelection);
-      const pendingSelection = normalizeReviewSelection(pendingReviewSelection.selection);
-      if (pendingTarget && pendingSelection && pendingSelection.kind === 'text') {
-        const offsets = resolveTextSelectionOffsets(pendingTarget, pendingSelection);
-        if (offsets) {
-          if (!textHighlights.has(pendingTarget)) textHighlights.set(pendingTarget, []);
-          textHighlights.get(pendingTarget).push({ id: '', start: offsets.start, end: offsets.end, pending: true });
-        }
-      } else if (pendingTarget) {
-        pendingTarget.classList.add('review-pending-element');
-      }
-    }
 
     textHighlights.forEach(function(entries, target) {
       applyTextReviewHighlights(target, entries);
@@ -8162,15 +8222,87 @@ document.addEventListener("DOMContentLoaded", async function () {
     return button;
   }
 
+  function createReviewReplyElement(reply) {
+    const author = reply.author || 'ThisIs-Developer';
+    const item = document.createElement('div');
+    item.className = 'review-reply';
+    item.dataset.reviewReplyId = reply.id;
+
+    const header = document.createElement('div');
+    header.className = 'review-reply-header';
+    const avatar = document.createElement('span');
+    avatar.className = 'review-author-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = getReviewAvatarLabel(author);
+    const name = document.createElement('strong');
+    name.className = 'review-author-name';
+    name.textContent = author;
+    header.appendChild(avatar);
+    header.appendChild(name);
+    item.appendChild(header);
+
+    const body = document.createElement('p');
+    body.className = 'review-reply-body';
+    body.textContent = reply.body;
+    item.appendChild(body);
+
+    const timestamp = document.createElement('time');
+    timestamp.className = 'review-reply-time';
+    timestamp.dateTime = new Date(reply.createdAt).toISOString();
+    timestamp.textContent = formatReviewTime(reply.createdAt);
+    item.appendChild(timestamp);
+    return item;
+  }
+
+  function createReviewConversation(thread) {
+    const conversation = document.createElement('section');
+    conversation.className = 'review-thread-conversation';
+    conversation.setAttribute('aria-label', 'Replies');
+
+    const replies = document.createElement('div');
+    replies.className = 'review-replies';
+    (thread.replies || []).forEach(function(reply) {
+      replies.appendChild(createReviewReplyElement(reply));
+    });
+    conversation.appendChild(replies);
+
+    if (!thread.resolved) {
+      const form = document.createElement('form');
+      form.className = 'review-reply-composer';
+      form.dataset.reviewId = thread.id;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'review-reply-input';
+      input.maxLength = REVIEW_TEXT_LIMIT;
+      input.placeholder = 'Reply';
+      input.setAttribute('aria-label', 'Reply to comment');
+      const submit = document.createElement('button');
+      submit.type = 'submit';
+      submit.className = 'review-reply-submit';
+      submit.dataset.reviewAction = 'submit-reply';
+      submit.dataset.reviewId = thread.id;
+      submit.title = 'Post reply';
+      submit.setAttribute('aria-label', 'Post reply');
+      const icon = document.createElement('i');
+      icon.className = 'lucide lucide-check';
+      icon.setAttribute('aria-hidden', 'true');
+      submit.appendChild(icon);
+      form.appendChild(input);
+      form.appendChild(submit);
+      conversation.appendChild(form);
+    }
+    return conversation;
+  }
+
   function createReviewThreadElement(thread) {
     const target = findReviewTarget(thread.anchor);
-    const author = thread.author || getCurrentReviewAuthor();
+    const author = thread.author || 'ThisIs-Developer';
     const item = document.createElement('article');
     item.className = 'review-thread' + (thread.resolved ? ' is-resolved' : '') + (!target ? ' is-orphaned' : '');
     item.dataset.reviewId = thread.id;
     item.dataset.kind = thread.kind;
     item.tabIndex = 0;
-    item.setAttribute('role', 'button');
+    item.setAttribute('role', 'group');
     item.setAttribute('aria-expanded', thread.id === activeReviewId ? 'true' : 'false');
     item.setAttribute('aria-label', 'Comment by ' + author + ': ' + thread.body);
 
@@ -8250,6 +8382,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     details.appendChild(dates);
     item.appendChild(details);
+    item.appendChild(createReviewConversation(thread));
     return item;
   }
 
@@ -8363,7 +8496,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     pendingReviewSelection = descriptor;
     activeReviewId = null;
     hoveredReviewId = null;
-    decorateReviewTargets();
     renderReviewPanel();
     if (options.announce !== false) {
       announceToScreenReader('Content selected. Choose New to add a comment.');
@@ -8430,6 +8562,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function populateReviewComposer(author, anchor, isEditing) {
+    if (reviewComposer) reviewComposer.setAttribute('aria-label', isEditing ? 'Edit comment' : 'New comment');
     if (reviewComposerTitle) reviewComposerTitle.textContent = isEditing ? 'Edit comment' : 'New comment';
     if (reviewComposerAuthor) reviewComposerAuthor.textContent = author;
     if (reviewComposerAvatar) reviewComposerAvatar.textContent = getReviewAvatarLabel(author);
@@ -8522,18 +8655,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     const now = Date.now();
+    const authorIdentity = getCurrentReviewAuthorIdentity();
     const thread = {
       id: createReviewId(),
       anchor: Object.assign({}, activeReviewAnchor, {
         selection: activeReviewAnchor.selection ? Object.assign({}, activeReviewAnchor.selection) : null
       }),
       kind: 'comment',
-      author: getCurrentReviewAuthor(),
+      author: authorIdentity.name,
+      authorId: authorIdentity.id,
       body: body.slice(0, REVIEW_TEXT_LIMIT),
       createdAt: now,
       updatedAt: now,
       resolved: false,
-      resolvedAt: null
+      resolvedAt: null,
+      replies: []
     };
     getActiveReviewThreads().push(thread);
     pendingReviewSelection = null;
@@ -8543,6 +8679,35 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (reviewFeedbackInput) reviewFeedbackInput.value = '';
     persistReviewThreads('Comment added.');
     activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+  }
+
+  function submitReviewReply(thread, form) {
+    if (!thread || thread.resolved || !form) return;
+    const input = form.querySelector('.review-reply-input');
+    const body = input ? input.value.trim() : '';
+    if (!body) {
+      if (input) input.focus();
+      return;
+    }
+    const now = Date.now();
+    const authorIdentity = getCurrentReviewAuthorIdentity();
+    if (!Array.isArray(thread.replies)) thread.replies = [];
+    thread.replies.push({
+      id: createReviewId(),
+      author: authorIdentity.name,
+      authorId: authorIdentity.id,
+      body: body.slice(0, REVIEW_TEXT_LIMIT),
+      createdAt: now,
+      updatedAt: now
+    });
+    thread.updatedAt = now;
+    activeReviewId = thread.id;
+    persistReviewThreads('Reply added.');
+    requestAnimationFrame(function() {
+      const card = reviewList && reviewList.querySelector('.review-thread[data-review-id="' + thread.id + '"]');
+      const nextInput = card && card.querySelector('.review-reply-input');
+      if (nextInput) nextInput.focus();
+    });
   }
 
   function focusReviewAnchor(thread) {
@@ -8569,6 +8734,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (thread.resolvedAt) lines.push('   - Closed: ' + formatReviewTime(thread.resolvedAt));
       if (thread.anchor.excerpt) lines.push('   > ' + thread.anchor.excerpt.replace(/\n/g, ' '));
       thread.body.split('\n').forEach(function(line) { lines.push('   ' + line); });
+      (thread.replies || []).forEach(function(reply) {
+        lines.push('   - Reply by **' + (reply.author || 'ThisIs-Developer') + '** (' + formatReviewTime(reply.createdAt) + ')');
+        reply.body.split('\n').forEach(function(line) { lines.push('     ' + line); });
+      });
       lines.push('');
     });
     return lines.join('\n').trim();
@@ -8731,6 +8900,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!card) return;
         const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
         if (!thread) return;
+        if (event.target.closest('.review-reply-input')) {
+          activeReviewId = thread.id;
+          syncReviewInteractionState();
+          return;
+        }
         const actionButton = event.target.closest('[data-review-action]');
         if (!actionButton) {
           activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
@@ -8755,11 +8929,21 @@ document.addEventListener("DOMContentLoaded", async function () {
           }
         } else if (action === 'delete') {
           requestReviewDeleteConfirmation(thread.id);
+        } else if (action === 'submit-reply') {
+          event.preventDefault();
+          submitReviewReply(thread, actionButton.closest('.review-reply-composer'));
         }
+      });
+      reviewList.addEventListener('submit', function(event) {
+        const form = event.target.closest('.review-reply-composer');
+        if (!form) return;
+        event.preventDefault();
+        const thread = getActiveReviewThreads().find(function(item) { return item.id === form.dataset.reviewId; });
+        if (thread) submitReviewReply(thread, form);
       });
       reviewList.addEventListener('keydown', function(event) {
         const card = event.target.closest('.review-thread');
-        if (!card || event.target.closest('[data-review-action]')) return;
+        if (!card || event.target.closest('input, textarea, button, [data-review-action]')) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
@@ -24263,6 +24447,7 @@ ${selector} .arrowheadPath {
     };
     liveCollaboration.localParticipant = updatedParticipant;
     liveCollaboration.participants.set(liveCollaboration.localParticipantId, updatedParticipant);
+    updateReviewAuthorIdentity(liveCollaboration.localParticipantId, safeName);
     if (liveCollaboration.connection) {
       liveCollaboration.connection.publishPresence(liveCollaboration.localCursor);
     }
