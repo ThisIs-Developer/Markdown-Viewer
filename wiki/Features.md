@@ -75,7 +75,7 @@ User flow:
 
 - Open **Comments** from the desktop document toolbar or mobile menu.
 - Select text in a heading, paragraph, list, quote, or code block, or click an image, diagram, map, model, or rendered math expression.
-- Choose **New**, write the comment, and submit it. Comment highlighting begins only after submission; selecting an anchor does not add a review highlight.
+- Choose **New** to preview the selected anchor with the app's blue review highlight, then write and submit the comment. Cancel removes the temporary highlight.
 - Hover or click between document highlights and compact comment cards to synchronize both sides.
 - Activate a comment to read its conversation or add nested replies from the compact **Reply** field.
 - Edit, resolve, reopen, or delete individual comments. Open, Resolved, and All filters keep completed feedback accessible.
@@ -86,7 +86,7 @@ Storage and sharing:
 - Comments stay with normal local tabs and survive reloads. Private mode pauses new persistence; workspace backups retain comment data, while Reset workspace deletes it.
 - Feedback is excluded from Markdown, HTML, PDF, PNG, print, duplicated tabs, and Share Snapshot links.
 - If the related source block changes, the thread remains visible as unanchored feedback instead of moving to the wrong block.
-- Local owner comments use **ThisIs-Developer**. Live Share comments and replies use each participant's current display name and update when that participant renames themself.
+- Local owner comments use **Author**. Live Share comments and replies use each participant's current display name and update when that participant renames themself.
 - Live Share synchronizes comments and replies through a separate Yjs document. View-only participants can comment without receiving Markdown edit permission.
 - The panel is a side panel on desktop, a drawer on tablet, and a touch-friendly bottom sheet on mobile, using the app's existing colors, controls, themes, and accessibility patterns.
 

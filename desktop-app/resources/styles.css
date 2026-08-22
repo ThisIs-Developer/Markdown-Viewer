@@ -43,7 +43,6 @@
   --scrollbar-thumb: #c1c1c1;
   --scrollbar-track: #f1f1f1;
   --accent-color: #0366d6;
-  --review-active-color: #8250df;
   --success-color: #116329;
   --warning-note-bg: #fff8c5;
   --warning-note-border: #d4a72c;
@@ -105,7 +104,6 @@
   --scrollbar-thumb: #484f58;
   --scrollbar-track: #21262d;
   --accent-color: #58a6ff;
-  --review-active-color: #ab7df8;
   --success-color: #3fb950;
   --warning-note-bg: #2d220c;
   --warning-note-border: #9e6a03;
@@ -2039,7 +2037,7 @@ body {
 .review-composer {
   order: -1;
   margin: 10px 10px 4px;
-  border-color: var(--review-active-color);
+  border-color: var(--accent-color);
   border-radius: var(--menu-item-radius);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--text-color) 9%, transparent);
 }
@@ -2134,6 +2132,7 @@ body {
 .review-thread-header {
   min-height: 24px;
   padding: 0;
+  padding-inline-end: 88px;
   background: transparent;
   border: 0;
 }
@@ -2145,7 +2144,8 @@ body {
 }
 
 .review-thread-body {
-  margin: 7px 0 0 29px;
+  margin: 7px 0 0;
+  margin-inline-start: 29px;
   font-size: var(--ui-font-md);
   line-height: 1.45;
 }
@@ -2155,9 +2155,28 @@ body {
   z-index: 1;
   inset-block-start: 5px;
   inset-inline-end: 5px;
+  width: auto;
+  min-width: 0;
+  height: 30px;
+  display: inline-flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
   opacity: 0;
   background: var(--menu-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--menu-item-radius);
   transition: opacity 140ms ease;
+}
+
+.review-thread-action {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  flex: 0 0 24px;
+  padding: 0;
 }
 
 .review-thread:hover .review-thread-actions,
@@ -2166,27 +2185,11 @@ body {
   opacity: 1;
 }
 
-.review-thread-details {
-  display: none;
-  margin: 9px 0 0 29px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-color);
-}
-
-.review-thread.is-review-thread-active .review-thread-details {
-  display: block;
-}
-
-.review-thread-anchor {
-  margin: 0 0 7px;
-  padding: 4px 6px;
-  font-size: var(--ui-font-sm);
-}
-
 .review-thread-dates {
   display: grid;
   gap: 3px;
-  margin: 0;
+  margin: 3px 0 0;
+  margin-inline-start: 29px;
   padding: 0;
   border: 0;
 }
@@ -2196,14 +2199,14 @@ body {
 }
 
 .review-thread.is-review-thread-active {
-  border-color: var(--review-active-color);
-  background: color-mix(in srgb, var(--review-active-color) 5%, var(--menu-surface));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--review-active-color) 22%, transparent);
+  border-color: var(--accent-color);
+  background: var(--menu-surface);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 22%, transparent);
 }
 
 .review-thread.is-review-thread-hover:not(.is-review-thread-active) {
-  border-color: color-mix(in srgb, var(--review-active-color) 48%, var(--menu-border));
-  background: color-mix(in srgb, var(--review-active-color) 3%, var(--menu-surface));
+  border-color: color-mix(in srgb, var(--accent-color) 48%, var(--menu-border));
+  background: var(--menu-surface);
 }
 
 .review-thread-conversation {
@@ -2220,6 +2223,7 @@ body {
 .review-replies {
   display: grid;
   gap: 11px;
+  margin-inline-start: 18px;
 }
 
 .review-reply-header {
@@ -2235,7 +2239,8 @@ body {
 }
 
 .review-reply-body {
-  margin: 5px 0 0 29px;
+  margin: 5px 0 0;
+  margin-inline-start: 29px;
   color: var(--text-color);
   font-size: var(--ui-font-md);
   line-height: 1.45;
@@ -2245,7 +2250,8 @@ body {
 
 .review-reply-time {
   display: block;
-  margin: 3px 0 0 29px;
+  margin: 3px 0 0;
+  margin-inline-start: 29px;
   color: var(--text-secondary);
   font-size: var(--ui-font-sm);
   line-height: 1.35;
@@ -2255,7 +2261,8 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 11px;
+  margin: 11px 0 0;
+  margin-inline-start: 18px;
 }
 
 .review-reply-input {
@@ -2272,8 +2279,8 @@ body {
 }
 
 .review-reply-input:focus {
-  border-color: var(--review-active-color);
-  outline: 2px solid color-mix(in srgb, var(--review-active-color) 22%, transparent);
+  border-color: var(--accent-color);
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 22%, transparent);
   outline-offset: 0;
 }
 
@@ -2285,8 +2292,8 @@ body {
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  background: var(--review-active-color);
-  border: 1px solid var(--review-active-color);
+  background: var(--accent-color);
+  border: 1px solid var(--accent-color);
   border-radius: var(--menu-item-radius);
   cursor: pointer;
   font-size: var(--ui-icon-size-md);
@@ -2389,23 +2396,23 @@ body {
 }
 
 #markdown-preview .is-review-highlight-hover:not(.is-review-highlight-active) {
-  background-color: color-mix(in srgb, var(--review-active-color) 20%, transparent);
-  outline-color: color-mix(in srgb, var(--review-active-color) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-active-color) 12%, transparent);
+  background-color: color-mix(in srgb, var(--accent-color) 20%, transparent);
+  outline-color: color-mix(in srgb, var(--accent-color) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 12%, transparent);
 }
 
 #markdown-preview .review-comment-highlight.is-review-highlight-hover:not(.is-review-highlight-active) {
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--review-active-color) 70%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent-color) 70%, transparent);
 }
 
 #markdown-preview .is-review-highlight-active {
-  background-color: color-mix(in srgb, var(--review-active-color) 25%, transparent);
-  outline-color: var(--review-active-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-active-color) 17%, transparent);
+  background-color: color-mix(in srgb, var(--accent-color) 25%, transparent);
+  outline-color: var(--accent-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 17%, transparent);
 }
 
 #markdown-preview .review-comment-highlight.is-review-highlight-active {
-  box-shadow: inset 0 -2px 0 var(--review-active-color);
+  box-shadow: inset 0 -2px 0 var(--accent-color);
 }
 
 .review-new-btn:focus-visible,
@@ -2470,20 +2477,17 @@ body {
   }
 
   .review-thread-action {
-    min-width: 40px;
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    flex-basis: 24px;
   }
 
   .review-thread-actions {
-    position: static;
-    opacity: 1;
-  }
-
-  .review-thread-body,
-  .review-thread-details {
-    margin-inline-start: 29px;
+    position: absolute;
+    gap: 2px;
+    opacity: 0;
   }
 
   #markdown-preview .review-target,

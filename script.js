@@ -299,7 +299,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
   const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, pre, blockquote, img, mjx-container, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
-  const REVIEW_ELEMENT_SELECTOR = 'img, mjx-container, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
   const reviewPreviousViewModes = new Map();
@@ -7632,13 +7631,14 @@ document.addEventListener("DOMContentLoaded", async function () {
           const replyAuthorId = typeof reply.authorId === 'string' && reply.authorId
             ? reply.authorId.slice(0, 160)
             : null;
+          const isOwnerReply = !replyAuthorId || replyAuthorId === 'document-owner';
           return {
             id: typeof reply.id === 'string' && reply.id
               ? reply.id.slice(0, 120)
               : createReviewId(),
-            author: replyAuthorId && typeof reply.author === 'string' && reply.author.trim()
+            author: !isOwnerReply && typeof reply.author === 'string' && reply.author.trim()
               ? reply.author.trim().slice(0, 120)
-              : 'ThisIs-Developer',
+              : 'Author',
             authorId: replyAuthorId,
             body: replyBody,
             createdAt: replyCreatedAt,
@@ -7648,6 +7648,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           };
         }).filter(Boolean)
         : [];
+      const isOwnerThread = !authorId || authorId === 'document-owner';
       return {
         id: typeof thread.id === 'string' && thread.id ? thread.id.slice(0, 120) : createReviewId(),
         anchor: {
@@ -7663,9 +7664,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         },
         // Keep legacy suggestion data intact. New comments are always stored as comments.
         kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
-        author: authorId && typeof thread.author === 'string' && thread.author.trim()
+        author: !isOwnerThread && typeof thread.author === 'string' && thread.author.trim()
           ? thread.author.trim().slice(0, 120)
-          : 'ThisIs-Developer',
+          : 'Author',
         authorId: authorId,
         body: body,
         createdAt: createdAt,
@@ -7688,7 +7689,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           : null
       }),
       kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
-      author: thread.author || 'ThisIs-Developer',
+      author: thread.author || 'Author',
       authorId: thread.authorId || null,
       body: thread.body,
       createdAt: thread.createdAt,
@@ -7698,7 +7699,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       replies: (thread.replies || []).map(function(reply) {
         return {
           id: reply.id,
-          author: reply.author || 'ThisIs-Developer',
+          author: reply.author || 'Author',
           authorId: reply.authorId || null,
           body: reply.body,
           createdAt: reply.createdAt,
@@ -7731,7 +7732,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         name: (liveName || 'Live Share participant').slice(0, 120)
       };
     }
-    return { id: 'document-owner', name: 'ThisIs-Developer' };
+    return { id: 'document-owner', name: 'Author' };
   }
 
   function getCurrentReviewAuthor() {
@@ -7765,7 +7766,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getReviewAvatarLabel(name) {
     const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
     if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return (parts[0] || 'A').slice(0, 2).toUpperCase();
+    return (parts[0] || 'A').slice(0, 1).toUpperCase();
   }
 
   function getReviewTargetType(target) {
@@ -8051,8 +8052,10 @@ document.addEventListener("DOMContentLoaded", async function () {
           continue;
         }
         const mark = document.createElement('mark');
-        mark.className = 'review-comment-highlight';
-        covering.forEach(function(item) {
+        mark.className = covering.some(function(item) { return item.pending; })
+          ? 'review-pending-highlight'
+          : 'review-comment-highlight';
+        covering.filter(function(item) { return !item.pending; }).forEach(function(item) {
           addReviewId(mark, item.id);
         });
         mark.textContent = text;
@@ -8104,7 +8107,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!target) return;
       const selection = normalizeReviewSelection(thread.anchor.selection);
       target.classList.add('has-review-thread');
-      addReviewId(target, thread.id);
       if (selection && selection.kind === 'text') {
         const offsets = resolveTextSelectionOffsets(target, selection);
         if (!offsets) return;
@@ -8115,6 +8117,23 @@ document.addEventListener("DOMContentLoaded", async function () {
       target.classList.add('review-comment-element');
       addReviewId(target, thread.id);
     });
+
+    const composerAnchor = reviewComposer && !reviewComposer.hidden && !activeReviewEditId
+      ? activeReviewAnchor
+      : null;
+    if (composerAnchor) {
+      const pendingTarget = findReviewTarget(composerAnchor);
+      const pendingSelection = normalizeReviewSelection(composerAnchor.selection);
+      if (pendingTarget && pendingSelection && pendingSelection.kind === 'text') {
+        const offsets = resolveTextSelectionOffsets(pendingTarget, pendingSelection);
+        if (offsets) {
+          if (!textHighlights.has(pendingTarget)) textHighlights.set(pendingTarget, []);
+          textHighlights.get(pendingTarget).push({ id: '', start: offsets.start, end: offsets.end, pending: true });
+        }
+      } else if (pendingTarget) {
+        pendingTarget.classList.add('review-pending-element');
+      }
+    }
 
     textHighlights.forEach(function(entries, target) {
       applyTextReviewHighlights(target, entries);
@@ -8223,7 +8242,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function createReviewReplyElement(reply) {
-    const author = reply.author || 'ThisIs-Developer';
+    const author = reply.author || 'Author';
     const item = document.createElement('div');
     item.className = 'review-reply';
     item.dataset.reviewReplyId = reply.id;
@@ -8296,7 +8315,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function createReviewThreadElement(thread) {
     const target = findReviewTarget(thread.anchor);
-    const author = thread.author || 'ThisIs-Developer';
+    const author = thread.author || 'Author';
     const item = document.createElement('article');
     item.className = 'review-thread' + (thread.resolved ? ' is-resolved' : '') + (!target ? ' is-orphaned' : '');
     item.dataset.reviewId = thread.id;
@@ -8353,25 +8372,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     body.textContent = thread.body;
     item.appendChild(body);
 
-    const details = document.createElement('div');
-    details.className = 'review-thread-details';
-    const anchor = document.createElement('button');
-    anchor.type = 'button';
-    anchor.className = 'review-thread-anchor';
-    anchor.dataset.reviewAction = 'focus-anchor';
-    anchor.dataset.reviewId = thread.id;
-    anchor.disabled = !target;
-    anchor.textContent = target
-      ? thread.anchor.excerpt
-      : 'Anchor no longer in preview · ' + thread.anchor.excerpt;
-    details.appendChild(anchor);
-
     const dates = document.createElement('div');
     dates.className = 'review-thread-dates';
     const opened = document.createElement('time');
     opened.className = 'review-thread-time';
     opened.dateTime = new Date(thread.createdAt).toISOString();
-    opened.textContent = 'Opened: ' + formatReviewTime(thread.createdAt);
+    opened.textContent = formatReviewTime(thread.createdAt);
+    opened.title = 'Opened ' + formatReviewTime(thread.createdAt);
+    opened.setAttribute('aria-label', opened.title);
     dates.appendChild(opened);
     if (thread.resolvedAt) {
       const closed = document.createElement('time');
@@ -8380,8 +8388,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       closed.textContent = 'Closed: ' + formatReviewTime(thread.resolvedAt);
       dates.appendChild(closed);
     }
-    details.appendChild(dates);
-    item.appendChild(details);
+    item.appendChild(dates);
     item.appendChild(createReviewConversation(thread));
     return item;
   }
@@ -8592,6 +8599,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (reviewFeedbackInput) reviewFeedbackInput.value = '';
     if (reviewFeedbackCount) reviewFeedbackCount.textContent = '0 / ' + REVIEW_TEXT_LIMIT;
     if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = true;
+    decorateReviewTargets();
     renderReviewPanel();
     focusReviewComposerInput();
   }
@@ -8735,7 +8743,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (thread.anchor.excerpt) lines.push('   > ' + thread.anchor.excerpt.replace(/\n/g, ' '));
       thread.body.split('\n').forEach(function(line) { lines.push('   ' + line); });
       (thread.replies || []).forEach(function(reply) {
-        lines.push('   - Reply by **' + (reply.author || 'ThisIs-Developer') + '** (' + formatReviewTime(reply.createdAt) + ')');
+        lines.push('   - Reply by **' + (reply.author || 'Author') + '** (' + formatReviewTime(reply.createdAt) + ')');
         reply.body.split('\n').forEach(function(line) { lines.push('     ' + line); });
       });
       lines.push('');
@@ -8873,8 +8881,9 @@ document.addEventListener("DOMContentLoaded", async function () {
             return;
           }
         }
-        const selectable = event.target.closest(REVIEW_ELEMENT_SELECTOR);
-        if (selectable && markdownPreview.contains(selectable) && selectable.dataset.reviewAnchor) {
+        const selectable = event.target.closest('[data-review-anchor]');
+        const selectableType = selectable && selectable.dataset.reviewType;
+        if (selectable && markdownPreview.contains(selectable) && ['image', 'diagram', 'math'].includes(selectableType)) {
           event.preventDefault();
           selectReviewElement(selectable);
         }
