@@ -1967,6 +1967,11 @@ body.document-sidebar-collapsed .document-sidebar {
   }
 }
 
+::highlight(review-pending-native-selection) {
+  color: HighlightText;
+  background-color: Highlight;
+}
+
 /* ========================================
    COMMENTS — SELECTION-FIRST EXPERIENCE
    ======================================== */
@@ -2495,8 +2500,8 @@ body {
 }
 
 #markdown-preview .review-comment-highlight {
-  background: color-mix(in srgb, var(--accent-color) 13%, transparent);
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent-color) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-color) 22%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent-color) 60%, transparent);
   cursor: pointer;
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }

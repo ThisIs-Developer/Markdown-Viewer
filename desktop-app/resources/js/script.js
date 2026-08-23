@@ -8659,11 +8659,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
-  function restoreReviewNativeTextSelection(anchor) {
+  function getReviewNativeTextRange(anchor) {
     const selection = anchor && normalizeReviewSelection(anchor.selection);
     const target = selection && selection.kind === 'text' ? findReviewTarget(anchor) : null;
     const offsets = target && resolveTextSelectionOffsets(target, selection);
-    if (!target || !offsets || !window.getSelection) return false;
+    if (!target || !offsets) return null;
     const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
       acceptNode: function(node) {
         const parent = node.parentElement;
@@ -8688,10 +8688,26 @@ document.addEventListener("DOMContentLoaded", async function () {
       cursor = nextCursor;
       if (startBoundary && endBoundary) break;
     }
-    if (!startBoundary || !endBoundary) return false;
+    if (!startBoundary || !endBoundary) return null;
     const range = document.createRange();
     range.setStart(startBoundary.node, startBoundary.offset);
     range.setEnd(endBoundary.node, endBoundary.offset);
+    return range;
+  }
+
+  function clearReviewComposerSelection() {
+    if (window.CSS && CSS.highlights) CSS.highlights.delete('review-pending-native-selection');
+  }
+
+  function showReviewComposerSelection(anchor) {
+    clearReviewComposerSelection();
+    const range = getReviewNativeTextRange(anchor);
+    if (!range) return false;
+    if (window.CSS && CSS.highlights && typeof window.Highlight === 'function') {
+      CSS.highlights.set('review-pending-native-selection', new Highlight(range));
+      return true;
+    }
+    if (!window.getSelection) return false;
     const nativeSelection = window.getSelection();
     nativeSelection.removeAllRanges();
     nativeSelection.addRange(range);
@@ -8759,15 +8775,33 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function focusReviewComposerInput() {
     if (!reviewFeedbackInput) return;
-    reviewFeedbackInput.focus();
+    reviewFeedbackInput.focus({ preventScroll: true });
+    const cursorPosition = reviewFeedbackInput.value.length;
+    reviewFeedbackInput.setSelectionRange(cursorPosition, cursorPosition);
     requestAnimationFrame(function() {
       if (reviewComposer && !reviewComposer.hidden && reviewPanelBody) reviewPanelBody.scrollTop = 0;
     });
   }
 
+  function clearReviewNativeSelection() {
+    const selection = window.getSelection && window.getSelection();
+    if (selection && selection.rangeCount > 0) selection.removeAllRanges();
+  }
+
+  function dismissEmptyNewReviewComposer() {
+    if (!reviewComposer || reviewComposer.hidden || activeReviewEditId) return false;
+    if (reviewFeedbackInput && reviewFeedbackInput.value.trim()) return false;
+    pendingReviewSelection = null;
+    clearReviewNativeSelection();
+    closeReviewComposer({ keepSelection: false });
+    announceToScreenReader('Empty comment cancelled and content selection cleared.');
+    return true;
+  }
+
   function closeReviewComposer(options) {
     options = options || {};
     const wasEditing = Boolean(activeReviewEditId);
+    clearReviewComposerSelection();
     activeReviewAnchor = null;
     activeReviewEditId = null;
     if (reviewComposer) reviewComposer.hidden = true;
@@ -8819,7 +8853,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     renderReviewPanel();
     focusReviewComposerInput();
     if (selection && selection.kind === 'text') {
-      requestAnimationFrame(function() { restoreReviewNativeTextSelection(activeReviewAnchor); });
+      showReviewComposerSelection(activeReviewAnchor);
+      clearReviewNativeSelection();
     }
   }
 
@@ -8829,6 +8864,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function openReviewEditor(thread) {
     if (!thread || !reviewComposer || !reviewFeedbackInput) return;
+    clearReviewComposerSelection();
     pendingReviewSelection = null;
     activeReviewEditId = thread.id;
     activeReviewId = thread.id;
@@ -8873,6 +8909,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
       thread.body = body.slice(0, REVIEW_TEXT_LIMIT);
       thread.updatedAt = Date.now();
+      clearReviewComposerSelection();
       activeReviewEditId = null;
       activeReviewAnchor = null;
       if (reviewComposer) reviewComposer.hidden = true;
@@ -8899,6 +8936,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       replies: []
     };
     getActiveReviewThreads().push(thread);
+    clearReviewComposerSelection();
     pendingReviewSelection = null;
     activeReviewAnchor = null;
     activeReviewId = thread.id;
@@ -9189,7 +9227,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     document.addEventListener('click', function(event) {
-      if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return;
+      if (!reviewModeActive) return;
+      if (reviewComposer && !reviewComposer.hidden) {
+        const clickedComposer = reviewComposer.contains(event.target);
+        const clickedNewButton = reviewNewComment && reviewNewComment.contains(event.target);
+        if (!clickedComposer && !clickedNewButton) dismissEmptyNewReviewComposer();
+        return;
+      }
       const selection = pendingReviewSelection && normalizeReviewSelection(pendingReviewSelection.selection);
       if (!selection) return;
       if (selection.kind === 'text' && reviewClickIsInsideNativeSelection(event, selection)) return;

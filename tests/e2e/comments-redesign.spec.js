@@ -112,12 +112,38 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   await expect(page.locator('#review-composer-avatar')).toHaveText('A');
   await expect(page.locator('.review-composer-heading, #review-composer-anchor')).toHaveCount(0);
   await expect(page.locator('.review-pending-highlight')).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => window.getSelection().toString())).toBe('precise phrase');
   await expect(page.locator('#review-feedback-input')).toBeFocused();
+  await expect.poll(() => page.evaluate(() => {
+    const highlight = CSS.highlights.get('review-pending-native-selection');
+    const range = highlight ? Array.from(highlight)[0] : null;
+    return {
+      nativeSelection: window.getSelection().toString(),
+      selectedText: range ? range.toString() : '',
+      inputFocused: document.activeElement === document.querySelector('#review-feedback-input')
+    };
+  })).toEqual({ nativeSelection: '', selectedText: 'precise phrase', inputFocused: true });
+  await expect.poll(() => page.locator('#review-feedback-input').evaluate(input => ({
+    start: input.selectionStart,
+    end: input.selectionEnd
+  }))).toEqual({ start: 0, end: 0 });
 
-  await page.locator('#review-composer-cancel').click();
-  await expect(page.locator('.review-pending-highlight')).toHaveCount(0);
+  await page.locator('.review-panel-header').click();
+  await expect(page.locator('#review-composer')).toBeHidden();
   await expect(page.locator('#review-new-comment')).toBeDisabled();
+  await expect.poll(() => page.evaluate(() => window.getSelection().isCollapsed)).toBe(true);
+  await expect.poll(() => page.evaluate(() => CSS.highlights.has('review-pending-native-selection'))).toBe(false);
+
+  await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
+  await page.locator('#review-new-comment').click();
+  await expect(page.locator('#review-composer')).toBeVisible();
+  await page.keyboard.type('Unsaved draft');
+  await page.locator('.review-panel-header').click();
+  await expect(page.locator('#review-composer')).toBeVisible();
+  await expect(page.locator('#review-feedback-input')).toHaveValue('Unsaved draft');
+  await page.locator('#review-composer-cancel').click();
+  await expect(page.locator('#review-composer')).toBeHidden();
+  await expect(page.locator('#review-new-comment')).toBeDisabled();
+
   await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
   await page.locator('#review-new-comment').click();
   await expect(page.locator('#review-composer')).toBeVisible();
@@ -177,7 +203,17 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   await page.locator('#review-toggle').click();
   await expect(page.locator('.review-thread')).toContainText('This wording is clear.');
   await expect(page.locator('.review-thread-dates')).toBeVisible();
-  await expect(page.locator('.review-comment-highlight')).toHaveText('precise phrase');
+  const persistedHighlight = page.locator('.review-comment-highlight');
+  await expect(persistedHighlight).toHaveText('precise phrase');
+  const persistedHighlightStyle = await persistedHighlight.evaluate(element => ({
+    background: getComputedStyle(element).backgroundColor,
+    underline: getComputedStyle(element).boxShadow,
+    visibleRects: element.getClientRects().length
+  }));
+  expect(persistedHighlightStyle.background).not.toBe('rgba(0, 0, 0, 0)');
+  expect(persistedHighlightStyle.background).not.toBe('transparent');
+  expect(persistedHighlightStyle.underline).not.toBe('none');
+  expect(persistedHighlightStyle.visibleRects).toBeGreaterThan(0);
   expect(JSON.stringify(await storedDocuments(page))).toContain('This wording is clear.');
 });
 
