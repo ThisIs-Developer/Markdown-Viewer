@@ -43,6 +43,7 @@
   --scrollbar-thumb: #c1c1c1;
   --scrollbar-track: #f1f1f1;
   --accent-color: #0366d6;
+  --review-accent: #7c3aed;
   --success-color: #116329;
   --warning-note-bg: #fff8c5;
   --warning-note-border: #d4a72c;
@@ -104,6 +105,7 @@
   --scrollbar-thumb: #484f58;
   --scrollbar-track: #21262d;
   --accent-color: #58a6ff;
+  --review-accent: #a78bfa;
   --success-color: #3fb950;
   --warning-note-bg: #2d220c;
   --warning-note-border: #9e6a03;
@@ -1954,6 +1956,11 @@ body.document-sidebar-collapsed .document-sidebar {
   }
 }
 
+@keyframes review-selection-caret-blink {
+  0%, 48% { opacity: 1; }
+  49%, 100% { opacity: 0; }
+}
+
 /* ========================================
    COMMENTS — SELECTION-FIRST EXPERIENCE
    ======================================== */
@@ -2054,6 +2061,17 @@ body {
   gap: 7px;
 }
 
+.review-thread-author {
+  align-items: flex-start;
+}
+
+.review-author-meta {
+  min-width: 0;
+  display: grid;
+  flex: 1;
+  gap: 1px;
+}
+
 .review-composer-author {
   margin-bottom: 8px;
 }
@@ -2137,6 +2155,10 @@ body {
   border: 0;
 }
 
+.review-thread.has-collapsible-replies .review-thread-header {
+  padding-inline-end: 116px;
+}
+
 .review-thread .review-author-avatar {
   width: 22px;
   height: 22px;
@@ -2187,26 +2209,26 @@ body {
 
 .review-thread-dates {
   display: grid;
-  gap: 3px;
-  margin: 3px 0 0;
-  margin-inline-start: 29px;
+  gap: 1px;
+  margin: 0;
   padding: 0;
   border: 0;
 }
 
 .review-thread-time {
-  font-size: var(--ui-font-sm);
+  font-size: var(--ui-font-xs);
+  line-height: 1.25;
 }
 
 .review-thread.is-review-thread-active {
-  border-color: var(--accent-color);
-  background: var(--menu-surface);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 22%, transparent);
+  border-color: var(--review-accent);
+  background: color-mix(in srgb, var(--review-accent) 5%, var(--menu-surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--review-accent) 24%, transparent);
 }
 
 .review-thread.is-review-thread-hover:not(.is-review-thread-active) {
-  border-color: color-mix(in srgb, var(--accent-color) 48%, var(--menu-border));
-  background: var(--menu-surface);
+  border-color: color-mix(in srgb, var(--review-accent) 62%, var(--menu-border));
+  background: color-mix(in srgb, var(--review-accent) 4%, var(--menu-surface));
 }
 
 .review-thread-conversation {
@@ -2228,7 +2250,7 @@ body {
 
 .review-reply-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 7px;
 }
 
@@ -2250,11 +2272,30 @@ body {
 
 .review-reply-time {
   display: block;
-  margin: 3px 0 0;
-  margin-inline-start: 29px;
+  margin: 0;
   color: var(--text-secondary);
+  font-size: var(--ui-font-xs);
+  line-height: 1.25;
+}
+
+.review-replies-more {
+  justify-self: start;
+  margin-inline-start: 29px;
+  padding: 2px 0;
+  color: var(--review-accent);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
   font-size: var(--ui-font-sm);
-  line-height: 1.35;
+  font-weight: 650;
+}
+
+.review-replies-more:hover,
+.review-replies-more:focus-visible {
+  color: color-mix(in srgb, var(--review-accent) 82%, var(--text-color));
+  text-decoration: underline;
+  outline: none;
 }
 
 .review-reply-composer {
@@ -2364,15 +2405,16 @@ body {
 }
 
 #markdown-preview .review-comment-highlight {
-  background: color-mix(in srgb, var(--accent-color) 13%, transparent);
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent-color) 42%, transparent);
+  background: color-mix(in srgb, var(--review-accent) 13%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--review-accent) 42%, transparent);
   cursor: pointer;
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
 
 #markdown-preview .review-pending-highlight {
-  background: color-mix(in srgb, var(--accent-color) 18%, transparent);
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent-color) 64%, transparent);
+  position: relative;
+  background: color-mix(in srgb, var(--review-accent) 18%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--review-accent) 64%, transparent);
 }
 
 #markdown-preview .review-comment-element,
@@ -2383,36 +2425,86 @@ body {
 }
 
 #markdown-preview .review-comment-element {
-  outline: 1px solid color-mix(in srgb, var(--accent-color) 40%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--review-accent) 40%, transparent);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 7%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-accent) 7%, transparent);
   cursor: pointer;
 }
 
 #markdown-preview .review-pending-element {
-  outline: 2px dashed color-mix(in srgb, var(--accent-color) 68%, transparent);
+  outline: 2px dashed color-mix(in srgb, var(--review-accent) 68%, transparent);
   outline-offset: 3px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-color) 8%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--review-accent) 8%, transparent);
 }
 
 #markdown-preview .is-review-highlight-hover:not(.is-review-highlight-active) {
-  background-color: color-mix(in srgb, var(--accent-color) 20%, transparent);
-  outline-color: color-mix(in srgb, var(--accent-color) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 12%, transparent);
+  background-color: color-mix(in srgb, var(--review-accent) 20%, transparent);
+  outline-color: color-mix(in srgb, var(--review-accent) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-accent) 12%, transparent);
 }
 
 #markdown-preview .review-comment-highlight.is-review-highlight-hover:not(.is-review-highlight-active) {
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent-color) 70%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--review-accent) 70%, transparent);
 }
 
 #markdown-preview .is-review-highlight-active {
-  background-color: color-mix(in srgb, var(--accent-color) 25%, transparent);
-  outline-color: var(--accent-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 17%, transparent);
+  background-color: color-mix(in srgb, var(--review-accent) 25%, transparent);
+  outline-color: var(--review-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-accent) 17%, transparent);
 }
 
 #markdown-preview .review-comment-highlight.is-review-highlight-active {
-  box-shadow: inset 0 -2px 0 var(--accent-color);
+  position: relative;
+  box-shadow: inset 0 -2px 0 var(--review-accent);
+}
+
+#markdown-preview .review-element-selectable {
+  cursor: pointer;
+}
+
+#markdown-preview .review-element-selectable:hover:not(.review-comment-element):not(.review-pending-element):not(.is-review-element-selected) {
+  outline: 2px dotted var(--review-accent);
+  outline-offset: 3px;
+}
+
+#markdown-preview .review-element-selectable.is-review-element-selected {
+  outline: 2px solid var(--review-accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--review-accent) 10%, transparent);
+}
+
+#markdown-preview .review-pending-highlight.review-selection-start::before,
+#markdown-preview .review-comment-highlight.is-review-selection-start::before,
+#markdown-preview .review-pending-highlight.review-selection-end::after,
+#markdown-preview .review-comment-highlight.is-review-selection-end::after {
+  position: absolute;
+  z-index: 1;
+  color: var(--review-accent);
+  content: "|";
+  font-family: var(--font-mono);
+  font-weight: 900;
+  line-height: 1;
+  animation: review-selection-caret-blink 900ms steps(1, end) infinite;
+  pointer-events: none;
+}
+
+#markdown-preview .review-pending-highlight.review-selection-start::before,
+#markdown-preview .review-comment-highlight.is-review-selection-start::before {
+  inset-inline-start: -0.24em;
+}
+
+#markdown-preview .review-pending-highlight.review-selection-end::after,
+#markdown-preview .review-comment-highlight.is-review-selection-end::after {
+  inset-inline-end: -0.24em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #markdown-preview .review-pending-highlight.review-selection-start::before,
+  #markdown-preview .review-comment-highlight.is-review-selection-start::before,
+  #markdown-preview .review-pending-highlight.review-selection-end::after,
+  #markdown-preview .review-comment-highlight.is-review-selection-end::after {
+    animation: none;
+  }
 }
 
 .review-new-btn:focus-visible,

@@ -59,6 +59,10 @@ Select this precise phrase for a focused comment.
 
 Equation $x^2$ remains reviewable.
 
+\`\`\`js
+console.log('reviewable code');
+\`\`\`
+
 \`\`\`mermaid
 graph LR
   A --> B
@@ -75,7 +79,7 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
 
   await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
   await expect(page.locator('#review-new-comment')).toBeEnabled();
-  await expect(page.locator('.review-pending-highlight, .review-pending-element')).toHaveCount(0);
+  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
   await expect(page.locator('.review-comment-highlight, .review-comment-element')).toHaveCount(0);
 
   await page.locator('#review-new-comment').click();
@@ -83,10 +87,15 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   await expect(page.locator('#review-composer-author')).toHaveText('Author');
   await expect(page.locator('#review-composer-avatar')).toHaveText('A');
   await expect(page.locator('.review-composer-heading, #review-composer-anchor')).toHaveCount(0);
-  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
+  const pendingHighlight = page.locator('.review-pending-highlight');
+  await expect(pendingHighlight).toHaveText('precise phrase');
+  await expect(pendingHighlight).toHaveClass(/review-selection-start/);
+  await expect(pendingHighlight).toHaveClass(/review-selection-end/);
+  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::before').content)).toBe('"|"');
+  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::after').content)).toBe('"|"');
 
   await page.locator('#review-composer-cancel').click();
-  await expect(page.locator('.review-pending-highlight, .review-pending-element')).toHaveCount(0);
+  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
   await expect(page.locator('#review-new-comment')).toBeEnabled();
   await page.locator('#review-new-comment').click();
   await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
@@ -103,6 +112,20 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   await expect(card.locator('.review-thread-dates')).toBeVisible();
   await expect(card.locator('.review-thread-time').first()).not.toContainText('Opened:');
   await expect(card).not.toContainText('Closed: Not closed');
+  const metadataOrder = await card.evaluate(element => {
+    const name = element.querySelector(':scope > .review-thread-header .review-author-name');
+    const time = element.querySelector(':scope > .review-thread-header .review-thread-time');
+    const body = element.querySelector(':scope > .review-thread-body');
+    return {
+      nameBeforeTime: Boolean(name.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING),
+      timeBeforeBody: Boolean(time.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING),
+      nameFontSize: parseFloat(getComputedStyle(name).fontSize),
+      timeFontSize: parseFloat(getComputedStyle(time).fontSize)
+    };
+  });
+  expect(metadataOrder.nameBeforeTime).toBe(true);
+  expect(metadataOrder.timeBeforeBody).toBe(true);
+  expect(metadataOrder.timeFontSize).toBeLessThan(metadataOrder.nameFontSize);
 
   await page.locator('#review-panel-close').click();
   await page.reload();
@@ -133,7 +156,7 @@ test('synchronizes hover and click states in both directions', async ({ page }) 
   await highlight.click();
   await expect(card).toHaveClass(/is-review-thread-active/);
   await expect(card.locator('.review-thread-details, .review-thread-anchor')).toHaveCount(0);
-  await expect(card).toHaveCSS('border-color', 'rgb(3, 102, 214)');
+  await expect(card).toHaveCSS('border-color', 'rgb(124, 58, 237)');
   await expect(page.locator('#markdown-preview p').filter({ hasText: 'precise phrase' })).not.toHaveClass(/is-review-highlight-active/);
   await expect(highlight).toHaveClass(/is-review-highlight-active/);
 
@@ -157,6 +180,20 @@ test('adds nested replies and persists their author and timestamp', async ({ pag
   await expect(card.locator('.review-reply .review-author-name')).toHaveText('Author');
   await expect(card.locator('.review-reply-body')).toHaveText('First nested reply.');
   await expect(card.locator('.review-reply-time')).not.toBeEmpty();
+  const replyOrder = await card.locator('.review-reply').evaluate(element => {
+    const name = element.querySelector('.review-author-name');
+    const time = element.querySelector('.review-reply-time');
+    const body = element.querySelector('.review-reply-body');
+    return {
+      nameBeforeTime: Boolean(name.compareDocumentPosition(time) & Node.DOCUMENT_POSITION_FOLLOWING),
+      timeBeforeBody: Boolean(time.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING),
+      nameFontSize: parseFloat(getComputedStyle(name).fontSize),
+      timeFontSize: parseFloat(getComputedStyle(time).fontSize)
+    };
+  });
+  expect(replyOrder.nameBeforeTime).toBe(true);
+  expect(replyOrder.timeBeforeBody).toBe(true);
+  expect(replyOrder.timeFontSize).toBeLessThan(replyOrder.nameFontSize);
 
   await card.locator('.review-reply-input').fill('Second nested reply.');
   await card.locator('.review-reply-input').press('Enter');
@@ -208,6 +245,7 @@ test('keeps comment actions and nested indentation consistent across screen size
         nameFont: getComputedStyle(element.querySelector('.review-author-name')).fontFamily,
         bodyFont: getComputedStyle(document.body).fontFamily,
         activeBackground: getComputedStyle(element).backgroundColor,
+        activeBorder: getComputedStyle(element).borderColor,
         replyButtonBackground: getComputedStyle(element.querySelector('.review-reply-submit')).backgroundColor
       };
     }));
@@ -224,7 +262,8 @@ test('keeps comment actions and nested indentation consistent across screen size
     expect(metrics.cardOverflow).toBeLessThanOrEqual(0);
     expect(metrics.panelOverflow).toBeLessThanOrEqual(0);
     expect(metrics.nameFont).toBe(metrics.bodyFont);
-    expect(metrics.activeBackground).toBe('rgb(255, 255, 255)');
+    expect(metrics.activeBackground).not.toBe('rgb(255, 255, 255)');
+    expect(metrics.activeBorder).toBe('rgb(124, 58, 237)');
     expect(metrics.replyButtonBackground).toBe('rgb(3, 102, 214)');
   });
 });
@@ -232,9 +271,15 @@ test('keeps comment actions and nested indentation consistent across screen size
 test('comments on images, rendered math, diagrams, and resolves without empty closed metadata', async ({ page }) => {
   await page.locator('#review-toggle').click();
 
+  const codeBlock = page.locator('#markdown-preview pre').filter({ hasText: 'reviewable code' });
+  await codeBlock.hover();
+  await expect(codeBlock).toHaveCSS('outline-style', 'dotted');
+  await expect(codeBlock).toHaveCSS('outline-color', 'rgb(124, 58, 237)');
+
   for (const [selector, clickSelector, text] of [
     ['#markdown-preview img[alt="Reference image"]', '#markdown-preview img[alt="Reference image"]', 'Image comment.'],
     ['#markdown-preview mjx-container', '#markdown-preview mjx-container', 'Math comment.'],
+    ['#markdown-preview pre', '#markdown-preview pre code', 'Code comment.'],
     ['#markdown-preview .diagram-viewer', '#markdown-preview .diagram-viewer svg', 'Diagram comment.']
   ]) {
     await expect(page.locator(selector).first()).toBeVisible();
@@ -247,8 +292,8 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
     await page.locator('#review-feedback-submit').click();
   }
 
-  await expect(page.locator('.review-thread')).toHaveCount(3);
-  await expect(page.locator('.review-comment-element')).toHaveCount(3);
+  await expect(page.locator('.review-thread')).toHaveCount(4);
+  await expect(page.locator('.review-comment-element')).toHaveCount(4);
   const activeCard = page.locator('.review-thread').filter({ hasText: 'Math comment.' });
   await activeCard.click();
   await activeCard.locator('[data-review-action="toggle-resolved"]').click();
@@ -258,4 +303,35 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
   await resolvedCard.click();
   await expect(resolvedCard.locator('.review-thread-time.is-closed')).toContainText('Closed:');
   await expect(page.locator('.review-status-label')).toHaveAttribute('aria-label', 'Resolved');
+});
+
+test('collapses long nested conversations to first and last replies and expands on demand', async ({ page }) => {
+  await page.locator('#review-toggle').click();
+  await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
+  await page.locator('#review-new-comment').click();
+  await page.locator('#review-feedback-input').fill('Long conversation root.');
+  await page.locator('#review-feedback-submit').click();
+
+  const card = page.locator('.review-thread');
+  for (let index = 1; index <= 5; index += 1) {
+    await card.locator('.review-reply-input').fill(`Nested reply ${index}.`);
+    await card.locator('.review-reply-submit').click();
+  }
+
+  await expect(card).toHaveClass(/has-collapsible-replies/);
+  await expect(card.locator('.review-reply')).toHaveCount(2);
+  await expect(card.locator('.review-reply').first()).toContainText('Nested reply 1.');
+  await expect(card.locator('.review-reply').last()).toContainText('Nested reply 5.');
+  await expect(card.locator('.review-replies-more')).toHaveText('Show 3 more replies');
+  const headerToggle = card.locator('.review-thread-actions [data-review-action="toggle-replies"]');
+  await expect(headerToggle).toHaveAttribute('aria-label', 'Expand replies');
+
+  await card.locator('.review-replies-more').click();
+  await expect(card.locator('.review-reply')).toHaveCount(5);
+  await expect(headerToggle).toHaveAttribute('aria-label', 'Collapse replies');
+  await expect(headerToggle).toHaveAttribute('aria-expanded', 'true');
+
+  await headerToggle.click();
+  await expect(card.locator('.review-reply')).toHaveCount(2);
+  await expect(headerToggle).toHaveAttribute('aria-label', 'Expand replies');
 });
