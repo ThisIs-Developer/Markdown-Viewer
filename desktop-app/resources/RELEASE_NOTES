@@ -1,82 +1,97 @@
-![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.0`
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.1`
 
-# Welcome to Markdown Viewer 3.10.0
+# Welcome to Markdown Viewer 3.10.1
 
-_Released August 2, 2026_
+_Released August 24, 2026_
 
-This release gives your workspace room to grow, makes complete backups practical, and rebuilds GitHub importing for large and private repositories.
+This release makes review feel native to the document, puts everyday controls where you expect them, and gives keyboard-focused writers a much faster path through Markdown.
 
 Everything here ships with the web, PWA, Docker, and desktop editions. **Happy coding!**
 
-[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.0) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.1) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
 
 ---
 
 ## Highlights
 
-- **A workspace without a document-count ceiling.** Documents now use scalable per-document storage instead of one increasingly large browser record.
-- **Complete backup and recovery.** Export and restore folder-preserving ZIP backups on the web and desktop.
-- **A rebuilt GitHub importer.** Discover every Markdown file, work with branches and tags reliably, and save private-repository access securely.
-- **Polish across the product.** Faster bulk tab closing, clearer staged loading, responsive import selection, and an audit of all 14 interface languages.
+- **Comment on the exact content that matters.** Select words or a rendered element, preview the anchor, and start a focused conversation without changing the Markdown.
+- **A calmer, more capable interface.** Document commands are consolidated, formatting tools are easier to scan, and active, disabled, dropdown, theme, and Private mode states are clearer.
+- **Keyboard-first editing.** Familiar formatting, find, navigation, import, export, view, Explorer, and fullscreen shortcuts now cover the most common writing workflows.
+- **More dependable workspaces.** Multi-file dragging behaves as one operation, expanded folders are easier drop targets, and document statistics stay accurate when content renders or reopens.
+- **A broader and better-tested release.** Bulgarian joins the interface languages, current release notes are available inside the app, and a locked local Playwright suite covers core browser behavior.
 
 > [!TIP]
-> Start with **Workspace storage** if you manage a large library, or jump to **GitHub import** if your documentation lives in repositories.
+> Open **Comments**, select text in Preview, and choose **New** to try the redesigned review flow. Press `Ctrl+Enter` or `Cmd+Enter` to submit.
 
-## Workspace storage
+## Comments that stay with the content
 
-Markdown Viewer no longer limits a workspace to a fixed number of documents. Browser documents are stored as individual IndexedDB records, loaded only when needed, retained in a bounded memory cache, and rendered in paged Explorer groups.
+Comments now begin with a real selection instead of a generic feedback form. Select text in a heading, paragraph, list, quote, or code block, or choose a rendered image, diagram, map, model, or math expression. A temporary highlight confirms the anchor before you submit.
 
-Desktop documents remain ordinary Markdown files in the fixed **Documents/Markdown Viewer Vault** location, so the vault is predictable and easy to inspect outside the application.
+The document and Comments panel stay synchronized: hover either side to find its match, or activate a card to bring the conversation into focus. Open, Resolved, and All filters keep completed work available without crowding current feedback.
 
-### What changed
+### Conversations and collaboration
 
-- Removed the former document-count limit.
-- Added on-demand document loading and a bounded cache.
-- Added paged Explorer rendering for large workspaces.
-- Added exact storage usage and document totals.
-- Preserved a normal Markdown-file vault for desktop users.
+- Add nested replies from the active comment card.
+- Edit or delete replies and edit, resolve, reopen, or delete the original comment.
+- Keep selected text and draft focus stable while the panel changes state.
+- Use a desktop side panel, tablet drawer, or mobile bottom sheet.
+- Show each Live Share participant's current display name on comments and replies, including view-only participants.
+- Continue reading older stored comments and suggestions after the upgrade.
 
-## Backup and recovery
+Comments remain local to normal documents unless Live Share is active. They stay out of Markdown and document exports, duplicated tabs, and Share Snapshot links.
 
-Workspace backup now preserves documents and folder organization in a ZIP file. The same archive can restore a workspace on the web or desktop, with clearer confirmations before imports and destructive resets.
+## A clearer workspace
 
-Secret Workspace files can be included as encrypted data, while Private mode continues to pause persistence without silently removing saved work.
+The header now groups document-level actions into a consistent toolbar for view modes, New, Copy, scroll sync, Comments, Share Snapshot, Live Share, and Export. The application logo remains visible, dropdowns move more smoothly, and buttons communicate selected, expanded, or unavailable states more clearly.
 
-> [!IMPORTANT]
-> A workspace reset removes documents, settings, and release-note visibility data. After a reset, Markdown Viewer treats the next launch as a first run and shows Welcome with this release-note tab beside it.
+The formatting toolbar has matching groups for history, text style, paragraph formatting, content insertion, technical content, additional insertion, Find and Replace, and fullscreen. Heading, text-case, alignment, and direction choices use compact menus so the most frequent tools stay within reach.
 
-## GitHub import
+Theme and Private mode switches now use clearer icon and color states. Read-only shared documents and the Release Notes tab keep unavailable document commands visible but disabled, which preserves the layout while explaining what cannot be changed.
 
-The importer now finds all Markdown files even when GitHub truncates a large repository tree. It resolves branches, tags, slash-containing references, and commit selections to immutable SHAs before importing.
+## Faster writing and reliable feedback
 
-Private access supports up to 50 named fine-grained or classic personal access tokens. Saved credentials stay in a local AES-GCM-encrypted vault and are sent only to `api.github.com` for the selected repository operation.
+Markdown Viewer now supports a wider familiar shortcut set across Windows, Linux, and macOS. Browser-reserved shortcuts remain desktop-only where intercepting them on the web would disrupt normal browser tabs.
 
-### Import workflow improvements
+### New shortcut coverage
 
-- Search and select files in a responsive picker.
-- Import files into Explorer without opening a flood of tabs.
-- See staged progress and clearer success or failure feedback.
-- Distinguish repository folders and their expanded state more easily.
-- Keep private credentials named, encrypted, and removable.
+- Toggle bold, italic, strikethrough, inline code, links, code blocks, blockquotes, and ordered or bulleted lists.
+- Apply paragraph or heading levels on desktop and clear formatting from the current selection or line.
+- Open quick file search, import Markdown, export Markdown, Settings, Find and Replace, or fullscreen.
+- Toggle Edit/Preview, Explorer, and synchronized scrolling.
+- Create, close, and move between documents with desktop-friendly bindings and web-safe alternatives.
 
-## Interface, languages, and desktop
+Word count, character count, and reading time now refresh on every render, including after switching to or reopening a document. Markdown copy feedback also waits for the clipboard operation to succeed before reporting completion.
 
-The release completes a visual and localization pass across the importer and workspace. All 14 interface catalogs were audited, desktop resources were synchronized with the web build, and tagged prereleases now publish with the correct metadata.
+## Explorer, language, and release updates
 
-Bulk tab closing is batched so large sessions remain responsive, and small-screen import selection retains comfortable touch targets.
+Dragging any file in a multi-file selection now moves the whole selection and shows the correct file count. Expanded folders accept drops across their visible contents, reducing the precision needed to organize a busy workspace.
+
+Bulgarian is now available from the language menu, bringing Markdown Viewer to 15 interface languages. The Bulgarian catalog follows the same generated-key parity and audit checks as the existing translations.
+
+Release notes now open inside Markdown Viewer as a temporary, read-only workspace tab. New users see the note beside Welcome without losing editor focus; existing users see it after an upgrade. Closing the tab marks that version as seen, and **About Markdown Viewer > Show Release Notes** brings it back whenever you want it.
+
+## Quality and compatibility
+
+Contributors now have a locked Playwright setup with a cross-platform local server, static asset and syntax checks, Chromium end-to-end coverage, and cross-browser smoke tests. The suite covers workspace, editor, review, export, sharing, rich content, responsive storage, GitHub import, and toolbar behavior without depending on live third-party services.
+
+This release also updates DOMPurify and js-yaml to patched versions, corrects integrity-checked browser asset sources, keeps desktop offline dependencies synchronized, restores WebKit support for local HTTP development, and adds an explicit application-ready lifecycle for dependable automation.
 
 ## Thank you
 
 ### Contributors
 
-- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Design, implementation, testing, documentation, and release work.
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Design, implementation, localization, testing, documentation, and release work.
+- **[crazy-explore-r](https://github.com/crazy-explore-r)** — Document statistics refresh fix and regression coverage.
 
 ### Changes included
 
-- [#230 — Unlimited storage, backup, reset, and fixed vault](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/230)
-- [#231 — Preserve the complete #230 commit history](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/231)
-- [#232 — Refine storage documentation highlights](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/232)
-- [#233 — Scale GitHub imports and simplify private access](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/233)
+- [#234 — Improve multi-file Explorer dragging and folder drops](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/234)
+- [#235 — Add the in-app release-note experience](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/235)
+- [#238 — Add productivity keyboard shortcuts](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/238)
+- [#239 — Add Bulgarian interface support](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/239)
+- [#241 — Publish the shared local Playwright suite](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/241)
+- [#242 — Consolidate the toolbar and add selection-first comments](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/242)
+- [#243 — Refresh document statistics on every render](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/243)
 
 Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
 

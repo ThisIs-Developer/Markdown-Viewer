@@ -5,16 +5,25 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- **Testing:** Published the root Playwright harness for contributor-run local testing with locked dependencies, a cross-platform test server, static validation, documentation, Chromium end-to-end coverage, and cross-browser smoke coverage.
-- **Security & Compatibility:** Updated DOMPurify and js-yaml to patched releases, switched deterministic browser assets to valid integrity-checked CDN endpoints, kept the desktop offline bundle synchronized, and restored WebKit support for local HTTP development.
-- **Reliability:** Added an explicit application-ready lifecycle signal and made Markdown clipboard feedback wait for the actual copy result.
+---
+
+## v3.10.1
+
+- **Description:** Rebuilt comments around precise text and rendered-element selections, consolidated document controls, and expanded keyboard-first editing while improving workspace reliability, localization, and release visibility.
+  - **Comments & Collaboration:** Added selection-first anchored comments, synchronized document highlights and thread cards, nested editable replies, clearer open/resolved states, responsive panel layouts, and Live Share identities that follow participant name changes, including for view-only collaborators.
+  - **Interface & Editing:** Consolidated document actions into a clearer header toolbar, reorganized Markdown formatting controls, refined disabled, dropdown, theme, and Private mode states, and added familiar formatting, navigation, file, view, and fullscreen shortcuts across web and desktop where browser-reserved keys permit.
+  - **Explorer & Reliability:** Made dragging any selected file move the complete multi-file selection, widened expanded-folder drop targets, refreshed word, character, and reading-time statistics on every render and reopened document, and made clipboard success feedback wait for the actual copy result.
+  - **Release Experience & Localization:** Added a branded, read-only in-app release-note tab with first-run and upgrade visibility, version-aware seen tracking, section navigation, and an About action, and expanded the interface from 14 to 15 languages with Bulgarian.
+  - **Testing, Security & Compatibility:** Published locked local Playwright tooling with static checks, Chromium end-to-end coverage, and cross-browser smoke tests; updated DOMPurify and js-yaml, corrected integrity-checked browser assets, synchronized desktop dependencies, and restored WebKit local-development support.
+- **Date:** 2026-08-24
+- **Commits:** `71362f60447a66ae880ec105996faf5646e7f454` through `c3915940e9ab0e0b3cd611388797ac65a21e6870`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.1
 
 ---
 
 ## v3.10.0
 
 - **Description:** Introduced scalable local document storage, complete workspace backup and recovery, and a rebuilt GitHub importer with secure private-repository access.
-  - **In-App Release Notes:** Added the single extensionless, read-only v3.10.0 release note as a branded workspace tab with first-run visibility, close-as-seen version tracking, a sticky section guide, a Show Release Notes action in About, and a documented Markdown format that scales from one-fix patches to large multi-contributor releases.
   - **Workspace Storage:** Removed the document-count limit, migrated browser workspaces to per-document IndexedDB records with on-demand loading, a bounded memory cache, and paged Explorer rendering, and stored desktop documents as ordinary Markdown files in the fixed `Documents/Markdown Viewer Vault` location.
   - **Backup & Recovery:** Added folder-preserving ZIP backup and restore for web and desktop, optional encrypted Secret Workspace files, exact usage and document counts, safer import and reset confirmations, and clearer browser-data and Private mode behavior.
   - **GitHub Import:** Discovered every Markdown file including truncated repository trees, resolved branches, tags, slash-containing refs, and commits to immutable SHAs, and added up to 50 named fine-grained or classic PAT entries stored in an AES-GCM-encrypted local credential vault.

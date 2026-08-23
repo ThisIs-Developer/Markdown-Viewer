@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer-desktop",
-  "version": "3.10.0",
+  "version": "3.10.1",
   "private": true,
   "description": "A lightweight Neutralinojs desktop build for Markdown Viewer with live preview, diagrams, math, and PDF/HTML/PNG exports.",
   "scripts": {

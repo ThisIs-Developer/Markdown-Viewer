@@ -46,9 +46,9 @@
 
 ## Markdown Viewer 簡介
 
-Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開發人員、寫作者、學生、研究人員及所有使用 `.md` 或 `.markdown` 檔案的使用者。它不僅是純文字工具：在一個專注的工作區中整理多份文件，在不變更 Markdown 的情況下透過留言與建議進行審閱，並轉譯圖表、地圖、資料圖、數學公式、3D 模型及音樂。
+Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開發人員、寫作者、學生、研究人員及所有使用 `.md` 或 `.markdown` 檔案的使用者。它不僅是純文字工具：在一個專注的工作區中整理多份文件，在不變更 Markdown 的情況下透過錨定於所選內容的留言進行審閱，並轉譯圖表、地圖、資料圖、數學公式、3D 模型及音樂。
 
-將文件轉換為 Share Snapshot 連結以便快速分享，或啟動具備存取控制的 Live Share，進行即時共同編輯並使用即時游標、留言與建議。日常編輯在裝置上完成。無需帳號，應用程式也不包含廣告、分析、遙測或訂閱。
+將文件轉換為 Share Snapshot 連結以便快速分享，或啟動具備存取控制的 Live Share，進行即時共同編輯並使用即時游標、錨定留言與討論串回覆。日常編輯在裝置上完成。無需帳號，應用程式也不包含廣告、分析、遙測或訂閱。
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Markdown Viewer 應用程式介面" width="90%" />
@@ -58,7 +58,7 @@ Markdown Viewer 是一個開放原始碼、本機優先的工作區，適合開�
 
 - **工作區與文件：** Web 版使用個別文件的 IndexedDB 儲存空間，並可在巢狀資料夾中整理文件。還可使用最近使用、我的最愛、搜尋、分頁、批次操作及加密的 Secret Workspace（秘密工作區）。
 - **備份與還原：** 匯出或匯入保留資料夾結構的工作區 ZIP。可選擇包含加密的 Secret Workspace 文件，但垃圾桶與桌面歷程記錄不包含在備份中。
-- **編輯與審閱：** 在編輯器、分割檢視與預覽之間切換，並使用格式工具、自訂復原／重做、尋找與取代、LTR／RTL、留言與建議。
+- **編輯與審閱：** 在編輯器、分割檢視與預覽之間切換，並使用格式工具、效率快捷鍵、自訂復原／重做、尋找與取代、LTR／RTL、錨定於所選內容的留言與討論串回覆。
 - **Markdown 轉譯：** 支援 CommonMark 風格基礎語法、GitHub-Flavored Markdown（GFM）、表格、工作清單、提示區塊、註腳、定義清單、程式碼語法醒目提示、已清理的 HTML 與 MathJax。
 - **視覺內容：** 轉譯 Mermaid、PlantUML、Graphviz／DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 與 ABC 記譜。
 

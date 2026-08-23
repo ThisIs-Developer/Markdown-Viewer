@@ -22,10 +22,17 @@ The app opens with a header, Files sidebar, document tab bar, formatting toolbar
 - A draggable divider resizes the Editor and Preview in Split view and keeps both panes above 20% width.
 - The divider also supports keyboard adjustment with left and right arrow keys while split view is active.
 - The GitHub link in the header opens the source repository.
-- The bottom status bar centers reading time, word count, and character count, while its right edge reports Saving or All changes saved.
+- The header toolbar groups view modes, document creation, copy, scroll sync, Comments, Share Snapshot, Live Share, and export actions, while the formatting toolbar stays focused on Markdown authoring.
+- The bottom status bar centers reading time, word count, and character count, recomputes them whenever a document renders or reopens, and reports Saving or All changes saved at the right.
 - Application chrome uses a shared semantic size scale: equivalent toolbar, menu, modal, Explorer, mobile, and GitHub importer text and icons match, while headings, brand marks, badges, and illustrations keep their intentional hierarchy.
 
 The editor includes line numbers, wrapped-line height handling, a highlight layer for find results, live cursor overlays during Live Share, and skeleton placeholders during initial or heavy rendering. Line-number calculations are cached so large documents do not force a full layout measurement on every keystroke.
+
+## In-App Release Notes
+
+The current extensionless `RELEASE_NOTES` Markdown file opens as a branded, read-only workspace tab. On a first run it opens in the background beside Welcome without taking editor focus; after an upgrade it opens in the foreground unless that version has already been seen. Closing the tab records that version as seen, while **About Markdown Viewer > Show Release Notes** opens it again on demand.
+
+Release-note tabs are temporary and excluded from document storage. Document-only actions stay visible but disabled, the rendered page receives a generated section guide and back-to-top control, and resetting the complete workspace also clears release-note visibility state.
 
 ## Files Sidebar, Tabs, and Local Workspace Storage
 
@@ -37,7 +44,7 @@ Users can work with multiple documents at once.
 - Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.
 - New files can be created from the sidebar, tab bar, mobile menu, imports, shared snapshots, and Live Share joins. Multi-file imports show a compact bottom progress indicator.
 - The sidebar supports file open, rename, duplicate, favorite, move, Markdown download, and delete actions. Recent and Favorites are filtered references to the original files, not copies.
-- Multi-selected files can be opened or moved together. Any mixed selection of files and folders can be deleted together after a confirmation that explains which files will be deleted and which files inside removed folders will return to the workspace root.
+- Multi-selected files can be opened or moved together. Dragging any selected file moves the complete file selection, and expanded folders accept a drop across their visible contents instead of only on the folder label. Any mixed selection of files and folders can be deleted together after a confirmation that explains which files will be deleted and which files inside removed folders will return to the workspace root.
 - Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
 - Hovering a tab shows its containing folder path and filename. Files stored directly at the Workspace root show only their filename.
@@ -426,7 +433,7 @@ Localization:
 - Language is selected in this order: URL `?lang=`, hash query `?lang=`, saved `app-lang`, browser language, then English.
 - Selecting a language updates the URL query and saves `app-lang`.
 - Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is generated only from interface source strings and every other catalog uses the same keys.
-- `node assets/i18n/audit-ui-locales.mjs` checks all 14 catalogs for key parity, source pollution, empty values, placeholder integrity, protected `GitHub` and `Markdown` terms, merged values, generator or encoding artifacts, and unexpected English fallbacks.
+- `node assets/i18n/audit-ui-locales.mjs` checks all 15 catalogs for key parity, source pollution, empty values, placeholder integrity, protected `GitHub` and `Markdown` terms, merged values, generator or encoding artifacts, and unexpected English fallbacks.
 - Some renderer output, browser messages, third-party text, filenames, and low-level errors can remain English.
 
 ## Statistics

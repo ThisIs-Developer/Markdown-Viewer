@@ -46,9 +46,9 @@
 
 ## Markdown Viewer 简介
 
-Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、写作者、学生、研究人员以及所有使用 `.md` 或 `.markdown` 文件的用户。它不止于纯文本：在一个专注的工作区中整理多个文档，在不改动 Markdown 的情况下通过评论和建议进行审阅，并渲染图表、地图、数据图、数学公式、3D 模型和音乐。
+Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、写作者、学生、研究人员以及所有使用 `.md` 或 `.markdown` 文件的用户。它不止于纯文本：在一个专注的工作区中整理多个文档，在不改动 Markdown 的情况下通过与所选内容锚定的评论进行审阅，并渲染图表、地图、数据图、数学公式、3D 模型和音乐。
 
-将文档转换为 Share Snapshot 链接以便快速分享，或启动带访问控制的 Live Share，进行实时协同编辑并使用实时光标、评论和建议。日常编辑在设备上完成。无需账号，应用也不包含广告、分析、遥测或订阅。
+将文档转换为 Share Snapshot 链接以便快速分享，或启动带访问控制的 Live Share，进行实时协同编辑并使用实时光标、锚定评论和线程回复。日常编辑在设备上完成。无需账号，应用也不包含广告、分析、遥测或订阅。
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Markdown Viewer 应用界面" width="90%" />
@@ -58,7 +58,7 @@ Markdown Viewer 是一个开源、本地优先的工作区，适合开发者、�
 
 - **工作区与文档：** 在 Web 端使用按文档划分的 IndexedDB 存储，并在嵌套文件夹中整理文档。还可使用最近使用、收藏夹、搜索、标签页、批量操作和加密的 Secret Workspace（秘密工作区）。
 - **备份与恢复：** 导出或导入保留文件夹结构的工作区 ZIP。可以选择包含加密的 Secret Workspace 文件，但回收站和桌面历史记录不包含在备份中。
-- **编辑与审阅：** 在编辑器、分屏视图和预览之间切换，使用格式工具、自定义撤销/重做、查找和替换、LTR/RTL、评论与建议。
+- **编辑与审阅：** 在编辑器、分屏视图和预览之间切换，使用格式工具、效率快捷键、自定义撤销/重做、查找和替换、LTR/RTL、锚定到所选内容的评论与线程回复。
 - **Markdown 渲染：** 支持 CommonMark 风格基础语法、GitHub-Flavored Markdown（GFM）、表格、任务列表、提示块、脚注、定义列表、代码语法高亮、已清理的 HTML 和 MathJax。
 - **可视化内容：** 渲染 Mermaid、PlantUML、Graphviz/DOT、D2、Vega-Lite、WaveDrom、Markmap、GeoJSON、TopoJSON、STL 和 ABC 记谱。
 

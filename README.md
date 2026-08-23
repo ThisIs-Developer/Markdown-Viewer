@@ -48,7 +48,7 @@
 
 Markdown Viewer is an open source, local-first workspace for developers, writers, students, researchers, and anyone working with `.md` or `.markdown` files. Go beyond plain text. Organize multiple documents, review with anchored comments without changing the Markdown, and render diagrams, maps, charts, math, 3D models, and music—all in one focused workspace.
 
-Turn a document into a Share Snapshot link for quick handoffs, or start access-controlled Live Share for real-time co-editing, live cursors, comments, and suggestions. Everyday editing stays on your device. No account is required, and the application includes no ads, analytics, telemetry, or subscriptions.
+Turn a document into a Share Snapshot link for quick handoffs, or start access-controlled Live Share for real-time co-editing, live cursors, anchored comments, and threaded replies. Everyday editing stays on your device. No account is required, and the application includes no ads, analytics, telemetry, or subscriptions.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Application UI" width="90%" />
@@ -58,7 +58,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 - **Workspace and documents:** organize documents in nested folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, and an encrypted Secret Workspace.
 - **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash and desktop history stay outside the backup.
-- **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, custom undo/redo, Find and Replace, LTR/RTL direction, comments, and suggestions.
+- **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, selection-anchored comments, and threaded replies.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
 
