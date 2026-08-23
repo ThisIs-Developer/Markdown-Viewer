@@ -3000,7 +3000,7 @@ body {
   min-width: 30px;
   height: 30px;
   padding: 0;
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: transparent;
   color: var(--text-color);
@@ -3026,6 +3026,12 @@ body {
 .header-icon-command i {
   font-size: var(--icon-size-md);
   line-height: 1;
+}
+
+.header-icon-command .header-dropdown-chevron {
+  margin-inline-start: 1px;
+  font-size: var(--ui-icon-size-xs);
+  opacity: 0.72;
 }
 
 .header-icon-command.is-active,

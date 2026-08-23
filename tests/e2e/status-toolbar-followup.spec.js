@@ -17,9 +17,16 @@ test('header consolidates icon document actions in the requested order', async (
   await expect(header.locator('[aria-label="Report an issue"]')).toBeVisible();
   await expect(header.locator('.header-view-toolbar .view-toggle-btn')).toHaveCount(3);
   await expect(header.locator('#importDropdown .btn-text, #share-button .btn-text, #live-share-button .btn-text, #exportDropdown .btn-text')).toHaveCount(0);
-  await expect(header.locator('#importDropdown i')).toHaveClass('lucide lucide-plus');
+  await expect(header.locator('#importDropdown i').first()).toHaveClass('lucide lucide-plus');
   await expect(header.locator('#copy-markdown-button i')).toHaveClass('lucide lucide-clipboard');
   expect(await header.locator('#copy-markdown-button i').evaluate(icon => getComputedStyle(icon).maskImage)).not.toBe('none');
+  expect(await header.locator('#copy-markdown-button').evaluate(button => getComputedStyle(button).borderTopColor)).not.toBe('rgba(0, 0, 0, 0)');
+  for (const selector of ['#importDropdown', '#exportDropdown', '#workspaceSettingsDropdown']) {
+    const trigger = header.locator(selector);
+    await expect(trigger.locator('.header-dropdown-chevron')).toHaveClass(/lucide-chevron-down/);
+    const iconSizes = await trigger.locator('i').evaluateAll(icons => icons.map(icon => Number.parseFloat(getComputedStyle(icon).fontSize)));
+    expect(iconSizes[1]).toBeLessThan(iconSizes[0]);
+  }
 
   const headerOrder = await header.locator(':scope > button, :scope > a, :scope > .dropdown > button').evaluateAll(elements =>
     elements.map(element => element.id || element.getAttribute('aria-label'))
