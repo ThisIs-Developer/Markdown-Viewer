@@ -94,7 +94,15 @@ async function onWindowClose() {
       Neutralino.app.exit();
     }
   } catch (e) {
-    Neutralino.app.exit();
+    console.warn("Window close handling failed; keeping the application open to protect unsaved work:", e);
+    try {
+      await Neutralino.os.showMessageBox(
+        "Unable to exit safely",
+        "Markdown Viewer could not verify that the workspace was saved. The application will remain open.",
+        "OK",
+        "ERROR"
+      );
+    } catch (_) {}
   }
 }
 

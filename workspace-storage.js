@@ -2,7 +2,7 @@
   'use strict';
 
   const DATABASE_NAME = 'markdownViewerWorkspace';
-  const DATABASE_VERSION = 2;
+  const DATABASE_VERSION = 3;
   const VAULT_FORMAT_VERSION = 1;
   const VAULT_NAME = 'Markdown Viewer Vault';
   const LEGACY_VAULT_LOCATOR_KEY = 'markdownViewerVaultLocator';
@@ -11,6 +11,7 @@
   const LEGACY_SECRET_KEY = 'markdownViewerSecretWorkspace';
   const INTERNAL_DIR = '.markdown-viewer';
   const SECRET_FOLDER_RECORD_ID = '__folders__';
+  const SECRET_MANIFEST_BACKUP_RECORD_ID = '__manifest_backup__';
 
   function isDesktopRuntime() {
     try {
@@ -77,6 +78,17 @@
     return new TextEncoder().encode(String(value == null ? '' : value)).byteLength;
   }
 
+  async function stableDocumentIdSuffix(value) {
+    const bytes = new TextEncoder().encode(String(value == null ? '' : value));
+    if (!self.crypto || !self.crypto.subtle) {
+      throw new Error('Cryptographic document path generation is unavailable.');
+    }
+    const digest = new Uint8Array(await self.crypto.subtle.digest('SHA-256', bytes));
+    return Array.from(digest.slice(0, 16)).map(function(byte) {
+      return byte.toString(16).padStart(2, '0');
+    }).join('');
+  }
+
   function requestToPromise(request) {
     return new Promise(function (resolve, reject) {
       request.onsuccess = function () { resolve(request.result); };
@@ -92,6 +104,25 @@
     });
   }
 
+  function base64ByteLength(value) {
+    if (typeof value !== 'string' || !value || value.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+      return -1;
+    }
+    try {
+      return atob(value).length;
+    } catch (_) {
+      return -1;
+    }
+  }
+
+  function validateEncryptedEnvelope(envelope) {
+    return Boolean(
+      envelope && typeof envelope === 'object' &&
+      base64ByteLength(envelope.iv) === 12 &&
+      base64ByteLength(envelope.ciphertext) >= 16
+    );
+  }
+
   function requireDocumentId(id) {
     if (typeof id !== 'string' || !id.trim()) {
       throw new TypeError('Document IDs must be non-empty strings.');
@@ -99,9 +130,100 @@
     return id;
   }
 
+  function requireSecretRecordId(id) {
+    if (typeof id !== 'string' || !id || id.length > 120 || sanitizePathSegment(id, '') !== id ||
+        id === SECRET_MANIFEST_BACKUP_RECORD_ID) {
+      throw new TypeError('Secret Workspace record IDs must be safe, non-empty strings of at most 120 characters.');
+    }
+    return id;
+  }
+
   function normalizedStorageRevision(value) {
     const revision = Number(value);
     return Number.isSafeInteger(revision) && revision >= 0 ? revision : 0;
+  }
+
+  function jsonEqual(left, right) {
+    return JSON.stringify(left == null ? null : left) === JSON.stringify(right == null ? null : right);
+  }
+
+  function mergeObjectChanges(base, local, remote) {
+    const result = Object.assign({}, remote || {});
+    const keys = new Set(Object.keys(base || {}).concat(Object.keys(local || {}), Object.keys(remote || {})));
+    keys.forEach(function(key) {
+      if (key === '_storageRevision' || key === '_storageWriterId') return;
+      const baseValue = base && base[key];
+      const localValue = local && local[key];
+      const remoteValue = remote && remote[key];
+      if (jsonEqual(localValue, baseValue)) return;
+      if (jsonEqual(remoteValue, baseValue) || jsonEqual(localValue, remoteValue)) {
+        if (localValue === undefined) delete result[key];
+        else result[key] = cloneJson(localValue, localValue);
+      }
+    });
+    return result;
+  }
+
+  function mergeOrganizationChanges(baseValue, localValue, remoteValue) {
+    const base = baseValue && typeof baseValue === 'object' ? baseValue : {};
+    const local = localValue && typeof localValue === 'object' ? localValue : {};
+    const remote = remoteValue && typeof remoteValue === 'object' ? remoteValue : {};
+    const merged = Object.assign({}, remote);
+    merged.version = Math.max(Number(remote.version) || 1, Number(local.version) || 1);
+
+    const mergeCollection = function(key) {
+      const baseItems = Array.isArray(base[key]) ? base[key] : [];
+      const localItems = Array.isArray(local[key]) ? local[key] : [];
+      const remoteItems = Array.isArray(remote[key]) ? remote[key] : [];
+      const baseById = new Map(baseItems.filter(Boolean).map(function(item) { return [item.id, item]; }));
+      const localById = new Map(localItems.filter(Boolean).map(function(item) { return [item.id, item]; }));
+      const remoteById = new Map(remoteItems.filter(Boolean).map(function(item) { return [item.id, item]; }));
+      const output = remoteItems.filter(Boolean).map(function(item) { return cloneJson(item, item); });
+      const outputById = new Map(output.map(function(item) { return [item.id, item]; }));
+
+      localById.forEach(function(localItem, id) {
+        const baseItem = baseById.get(id);
+        const remoteItem = remoteById.get(id);
+        if (!baseItem) {
+          if (!remoteItem) {
+            const copy = cloneJson(localItem, localItem);
+            output.push(copy);
+            outputById.set(id, copy);
+          } else if (!jsonEqual(localItem, remoteItem)) {
+            const copy = cloneJson(localItem, localItem);
+            copy.id = randomId(key === 'folders' ? 'folder_conflict' : 'workspace_conflict');
+            if (copy.name) copy.name = String(copy.name) + ' (conflict copy)';
+            output.push(copy);
+          }
+          return;
+        }
+        if (jsonEqual(localItem, baseItem)) return;
+        if (!remoteItem) {
+          const copy = cloneJson(localItem, localItem);
+          copy.id = randomId(key === 'folders' ? 'folder_recovered' : 'workspace_recovered');
+          if (copy.name) copy.name = String(copy.name) + ' (recovered)';
+          output.push(copy);
+          return;
+        }
+        const combined = mergeObjectChanges(baseItem, localItem, remoteItem);
+        Object.assign(outputById.get(id), combined);
+      });
+
+      baseById.forEach(function(baseItem, id) {
+        if (localById.has(id)) return;
+        const remoteItem = remoteById.get(id);
+        if (remoteItem && jsonEqual(remoteItem, baseItem)) {
+          const index = output.findIndex(function(item) { return item.id === id; });
+          if (index >= 0) output.splice(index, 1);
+        }
+      });
+      merged[key] = output;
+    };
+
+    mergeCollection('workspaces');
+    mergeCollection('folders');
+    merged.ui = mergeObjectChanges(base.ui || {}, local.ui || {}, remote.ui || {});
+    return merged;
   }
 
   function tabFromStoredMetadata(item) {
@@ -140,6 +262,16 @@
     }
   }
 
+  class WorkspaceSecretConflictError extends Error {
+    constructor(recordId, attemptedRecord, storedRecord) {
+      super('This Secret Workspace record changed in another tab before the current update could be saved.');
+      this.name = 'WorkspaceSecretConflictError';
+      this.recordId = recordId;
+      this.attemptedRecord = cloneJson(attemptedRecord, null);
+      this.storedRecord = cloneJson(storedRecord, null);
+    }
+  }
+
   class MarkdownWorkspaceStorage {
     constructor() {
       this.desktop = isDesktopRuntime();
@@ -151,6 +283,7 @@
       this.vaultOrganization = null;
       this.desktopSettings = {};
       this._organizationSnapshot = '';
+      this._organizationRevision = 0;
       this.lastError = null;
       this._desktopIndexWrite = Promise.resolve();
       this._normalContentCache = new Map();
@@ -193,16 +326,26 @@
             trash.createIndex('documentId', 'documentId', { unique: false });
             trash.createIndex('deletedAt', 'deletedAt', { unique: false });
           }
+          if (!db.objectStoreNames.contains('journals')) {
+            db.createObjectStore('journals', { keyPath: 'journalId' });
+          }
         };
         request.onsuccess = function () { resolve(request.result); };
         request.onerror = function () { reject(request.error || new Error('Unable to open workspace storage')); };
         request.onblocked = function () { reject(new Error('Workspace storage upgrade is blocked by another tab.')); };
       });
+      this.db.onversionchange = function() {
+        try { this.close(); } catch (_) {}
+      };
       this.vaultId = await this.getMetadata('vaultId');
       if (!this.vaultId) {
         this.vaultId = randomId('vault');
         await this.setMetadata('vaultId', this.vaultId);
       }
+      // Persistence is an optional durability improvement. Some browsers keep
+      // this request pending indefinitely, so it must never gate workspace
+      // initialization or make otherwise healthy data inaccessible.
+      this.requestPersistentStorage();
     }
 
     async _pathJoin() {
@@ -239,7 +382,12 @@
     }
 
     async _writeJsonFile(path, value) {
-      await Neutralino.filesystem.writeFile(path, JSON.stringify(value, null, 2));
+      const serialized = JSON.stringify(value, null, 2);
+      await Neutralino.filesystem.writeFile(path, serialized);
+      const verified = await Neutralino.filesystem.readFile(path);
+      if (verified !== serialized) {
+        throw new Error('A desktop storage write could not be verified: ' + path);
+      }
     }
 
     async _writeJsonFileRecoverably(path, value) {
@@ -251,26 +399,36 @@
         await Neutralino.filesystem.copy(path, backupPath, { overwrite: true });
       }
       await Neutralino.filesystem.writeFile(path, serialized);
+      const verified = await Neutralino.filesystem.readFile(path);
+      if (verified !== serialized) {
+        throw new Error('A desktop storage write could not be verified: ' + path);
+      }
       try { await Neutralino.filesystem.remove(temporaryPath); } catch (_) {}
       try { await Neutralino.filesystem.remove(backupPath); } catch (_) {}
     }
 
     async _readJsonFileRecoverably(path, fallback) {
       const primary = await this._readJsonFile(path, null);
-      if (primary) return primary;
       const backupPath = path + '.backup';
       const backup = await this._readJsonFile(backupPath, null);
-      if (backup) {
-        await this._writeJsonFile(path, backup);
-        return backup;
-      }
       const pendingPath = path + '.pending';
       const pending = await this._readJsonFile(pendingPath, null);
-      if (pending) {
-        await this._writeJsonFile(path, pending);
-        return pending;
-      }
-      return fallback;
+      const candidates = [
+        { value: primary, priority: 3 },
+        { value: pending, priority: 2 },
+        { value: backup, priority: 1 }
+      ].filter(function(item) { return item.value && typeof item.value === 'object'; });
+      if (!candidates.length) return fallback;
+      candidates.sort(function(left, right) {
+        const leftTime = Number(left.value.updatedAt || left.value.committedAt) || 0;
+        const rightTime = Number(right.value.updatedAt || right.value.committedAt) || 0;
+        return rightTime - leftTime || right.priority - left.priority;
+      });
+      const selected = candidates[0];
+      if (selected.value !== primary) await this._writeJsonFile(path, selected.value);
+      try { if (pending) await Neutralino.filesystem.remove(pendingPath); } catch (_) {}
+      try { if (backup) await Neutralino.filesystem.remove(backupPath); } catch (_) {}
+      return selected.value;
     }
 
     async _removeLegacyVaultLocator(documentsPath) {
@@ -333,8 +491,15 @@
       const settingsPath = await this._pathJoin(internalPath, 'settings.json');
       this.desktopSettings = await this._readJsonFile(settingsPath, {});
       const organizationPath = await this._pathJoin(internalPath, 'organization.json');
-      this.vaultOrganization = await this._readJsonFile(organizationPath, null);
-      this._organizationSnapshot = this.vaultOrganization ? JSON.stringify(this.vaultOrganization) : '';
+      this.vaultOrganization = await this._readJsonFileRecoverably(organizationPath, null);
+      const organizationSnapshot = cloneJson(this.vaultOrganization, null);
+      if (organizationSnapshot) {
+        delete organizationSnapshot._storageRevision;
+        delete organizationSnapshot._storageWriterId;
+        delete organizationSnapshot.updatedAt;
+      }
+      this._organizationRevision = normalizedStorageRevision(this.vaultOrganization && this.vaultOrganization._storageRevision);
+      this._organizationSnapshot = organizationSnapshot ? JSON.stringify(organizationSnapshot) : '';
       const indexPath = await this._pathJoin(internalPath, 'index.json');
       const loadedIndex = await this._readJsonFileRecoverably(indexPath, null);
       if (loadedIndex && Array.isArray(loadedIndex.documents)) {
@@ -440,14 +605,38 @@
       let entries = [];
       try {
         entries = await Neutralino.filesystem.readDirectory(journalPath);
-      } catch (_) {
-        return;
-      }
+      } catch (_) {}
       const normalizedVault = normalizePathSeparators(this.vaultPath).toLowerCase().replace(/\/+$/, '') + '/';
+      const pendingRecords = [];
       for (const entry of entries) {
         if (!entry || entry.type !== 'FILE' || !/\.json$/i.test(entry.entry || '')) continue;
         const recordPath = await this._pathJoin(journalPath, entry.entry);
         const record = await this._readJsonFile(recordPath, null);
+        pendingRecords.push({ recordPath: recordPath, record: record });
+      }
+      // A committed index is authoritative for move recovery. Process it before
+      // move journals even when the filesystem returns directory entries in the
+      // opposite order.
+      pendingRecords.sort(function(left, right) {
+        const priority = function(item) {
+          if (item.record && item.record.operation === 'index-commit') return 0;
+          if (item.record && item.record.operation === 'move') return 1;
+          return 2;
+        };
+        return priority(left) - priority(right);
+      });
+      for (const pendingRecord of pendingRecords) {
+        const recordPath = pendingRecord.recordPath;
+        const record = pendingRecord.record;
+        if (record && record.operation === 'index-commit' && record.index && Array.isArray(record.index.documents)) {
+          const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+          const currentIndex = await this._readJsonFileRecoverably(indexPath, null);
+          if (!currentIndex || Number(record.index.updatedAt) >= Number(currentIndex.updatedAt || 0)) {
+            await this._writeJsonFileRecoverably(indexPath, record.index);
+          }
+          try { await Neutralino.filesystem.remove(recordPath); } catch (_) {}
+          continue;
+        }
         if (record && record.operation === 'move') {
           const source = normalizePathSeparators(record.source);
           const destination = normalizePathSeparators(record.destination);
@@ -489,9 +678,95 @@
         if (await this._pathExists(temporary)) {
           const recoveredContent = await Neutralino.filesystem.readFile(temporary);
           await Neutralino.filesystem.writeFile(destination, recoveredContent);
+          const verifiedContent = await Neutralino.filesystem.readFile(destination);
+          if (verifiedContent !== recoveredContent) {
+            throw new Error('A recovered desktop document write could not be verified.');
+          }
           try { await Neutralino.filesystem.remove(temporary); } catch (_) {}
         }
+        if (record.metadata && typeof record.metadata === 'object' && await this._pathExists(destination)) {
+          const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+          const currentIndex = await this._readJsonFileRecoverably(indexPath, null) || {
+            version: VAULT_FORMAT_VERSION,
+            documents: [],
+            updatedAt: 0
+          };
+          if (!Array.isArray(currentIndex.documents)) currentIndex.documents = [];
+          const recoveredMetadata = cloneJson(record.metadata, {}) || {};
+          const existingIndex = currentIndex.documents.findIndex(function(item) {
+            return item.id === recoveredMetadata.id;
+          });
+          const existing = existingIndex >= 0 ? currentIndex.documents[existingIndex] : null;
+          if (!existing || normalizedStorageRevision(recoveredMetadata.storageRevision) > normalizedStorageRevision(existing.storageRevision)) {
+            if (existingIndex >= 0) currentIndex.documents.splice(existingIndex, 1, recoveredMetadata);
+            else currentIndex.documents.push(recoveredMetadata);
+            currentIndex.updatedAt = Math.max(Date.now(), Number(currentIndex.updatedAt) || 0);
+            await this._writeJsonFileRecoverably(indexPath, currentIndex);
+          }
+        }
         try { await Neutralino.filesystem.remove(recordPath); } catch (_) {}
+      }
+      await this._recoverDesktopTrashTransactions();
+    }
+
+    async _recoverDesktopTrashTransactions() {
+      const trashPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'trash');
+      let entries = [];
+      try { entries = await Neutralino.filesystem.readDirectory(trashPath); } catch (_) { return; }
+      const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+      const currentIndex = await this._readJsonFileRecoverably(indexPath, null);
+      if (!currentIndex || !Array.isArray(currentIndex.documents)) return;
+      const normalizedVault = normalizePathSeparators(this.vaultPath).toLowerCase().replace(/\/+$/, '') + '/';
+      for (const entry of entries) {
+        if (!entry || entry.type !== 'FILE' || !/\.md\.json$/i.test(entry.entry || '')) continue;
+        const metadataPath = await this._pathJoin(trashPath, entry.entry);
+        const record = await this._readJsonFileRecoverably(metadataPath, null);
+        if (!record || record.kind !== 'normal-document') continue;
+        const source = normalizePathSeparators(record.originalPath || record.source);
+        const destination = normalizePathSeparators(record.contentPath || record.destination);
+        if (!source || !destination || !source.toLowerCase().startsWith(normalizedVault) ||
+            !destination.toLowerCase().startsWith(normalizedVault) || source.split('/').includes('..') ||
+            destination.split('/').includes('..')) continue;
+        if (record.restoreInProgress && typeof record.restoreInProgress === 'object') {
+          const restoreDestination = normalizePathSeparators(record.restoreInProgress.destination);
+          const restoreMetadata = record.restoreInProgress.metadata;
+          if (restoreDestination && restoreMetadata && typeof restoreMetadata.id === 'string' &&
+              restoreDestination.toLowerCase().startsWith(normalizedVault) &&
+              !restoreDestination.split('/').includes('..')) {
+            const indexedRestore = currentIndex.documents.some(function(item) {
+              return item.id === restoreMetadata.id &&
+                normalizePathSeparators(item.vaultRelativePath) === normalizePathSeparators(restoreMetadata.vaultRelativePath);
+            });
+            const restoreExists = await this._pathExists(restoreDestination);
+            const trashContentExists = await this._pathExists(destination);
+            if (indexedRestore && restoreExists) {
+              try { await Neutralino.filesystem.remove(metadataPath); } catch (_) {}
+              continue;
+            }
+            if (!indexedRestore && restoreExists && !trashContentExists) {
+              await Neutralino.filesystem.move(restoreDestination, destination);
+            }
+            if (!indexedRestore) {
+              const preservedTrashRecord = cloneJson(record, record);
+              delete preservedTrashRecord.restoreInProgress;
+              preservedTrashRecord.updatedAt = Date.now();
+              await this._writeJsonFileRecoverably(metadataPath, preservedTrashRecord);
+              continue;
+            }
+          }
+        }
+        const indexed = currentIndex.documents.find(function(item) {
+          return item.id === record.documentId && record.metadata &&
+            normalizePathSeparators(item.vaultRelativePath) === normalizePathSeparators(record.metadata.vaultRelativePath);
+        });
+        const sourceExists = await this._pathExists(source);
+        const destinationExists = await this._pathExists(destination);
+        if (indexed && !sourceExists && destinationExists) {
+          await Neutralino.filesystem.move(destination, source);
+          try { await Neutralino.filesystem.remove(metadataPath); } catch (_) {}
+        } else if (indexed && sourceExists && !destinationExists) {
+          try { await Neutralino.filesystem.remove(metadataPath); } catch (_) {}
+        }
       }
     }
 
@@ -517,17 +792,63 @@
         return tab && tab.temporary !== true && tab.kind !== 'share-snapshot' && tab.workspaceId !== 'workspace_secret';
       });
       if (!normal.length) return;
-      const existingIds = new Set(existing.map(function(item) { return item.id; }));
-      const pending = normal.filter(function(tab) {
-        return typeof tab.id === 'string' && tab.id && !existingIds.has(tab.id);
+      const existingById = new Map(existing.map(function(item) { return [item.id, item]; }));
+      const pending = [];
+      const migratedLegacyIds = [];
+      for (const legacyTab of normal) {
+        const legacyContent = typeof legacyTab.content === 'string' ? legacyTab.content : '';
+        const legacyId = typeof legacyTab.id === 'string' && legacyTab.id.trim()
+          ? legacyTab.id
+          : randomId('legacy_recovered');
+        const storedMetadata = existingById.get(legacyId);
+        if (!storedMetadata) {
+          const copy = Object.assign({}, legacyTab, {
+            id: legacyId,
+            content: legacyContent,
+            contentLoaded: true,
+            _storageRevision: 0
+          });
+          pending.push(copy);
+          existingById.set(legacyId, copy);
+          migratedLegacyIds.push(legacyId);
+          continue;
+        }
+
+        let storedContent = null;
+        try {
+          storedContent = await this.loadDocumentContent(legacyId);
+        } catch (error) {
+          if (!error || error.name !== 'WorkspaceCorruptionError') throw error;
+        }
+        if (storedContent === null) {
+          pending.push(Object.assign({}, storedMetadata, legacyTab, {
+            id: legacyId,
+            content: legacyContent,
+            contentLoaded: true,
+            _storageRevision: storedMetadata._storageRevision
+          }));
+          migratedLegacyIds.push(legacyId);
+          continue;
+        }
+        if (storedContent !== legacyContent) {
+          const recoveryId = randomId('legacy_recovered');
+          pending.push(Object.assign({}, legacyTab, {
+            id: recoveryId,
+            title: String(legacyTab.title || storedMetadata.title || 'Untitled') + ' (legacy recovery)',
+            content: legacyContent,
+            contentLoaded: true,
+            _storageRevision: 0
+          }));
+          migratedLegacyIds.push(recoveryId);
+        }
+      }
+      if (pending.length) await this.saveDocuments(pending, null, {
+        changedIds: pending.map(function(tab) { return tab.id; }),
+        forceContent: true
       });
-      if (pending.length) await this.saveDocuments(pending.map(function (tab) {
-        const copy = Object.assign({}, tab);
-        copy.contentLoaded = true;
-        return copy;
-      }), null, { changedIds: pending.map(function(tab) { return tab.id; }), forceContent: true });
+      for (const id of migratedLegacyIds) await this.loadDocumentContent(id);
       await this.setMetadata('legacyMigration', {
-        version: 2,
+        version: 3,
         completedAt: Date.now(),
         documentCount: pending.length,
         existingDocumentCount: existing.length
@@ -677,7 +998,8 @@
 
     async _desktopDocumentRelativePath(tab, organization) {
       const segments = ['Workspace'].concat(await this._desktopFolderSegments(tab, organization));
-      const suffix = String(tab.id || randomId('doc')).replace(/[^a-z0-9]/gi, '').slice(-8) || Date.now().toString(36);
+      requireDocumentId(tab && tab.id);
+      const suffix = await stableDocumentIdSuffix(tab.id);
       segments.push(sanitizePathSegment(tab.title, 'Untitled') + '--' + suffix + '.md');
       return normalizePathSeparators(segments.join('/'));
     }
@@ -717,12 +1039,41 @@
     }
 
     async _desktopMoveToTrash(metadata) {
-      if (!metadata || !metadata.vaultRelativePath) return;
+      if (!metadata || !metadata.vaultRelativePath) return null;
       const source = await this._desktopResolveVaultRelativePath(metadata.vaultRelativePath);
-      if (!(await this._pathExists(source))) return;
-      const trashName = Date.now() + '-' + sanitizePathSegment(metadata.title, 'Untitled') + '.md';
+      if (!(await this._pathExists(source))) return null;
+      const trashId = randomId('trash');
+      const trashName = Date.now() + '-' + sanitizePathSegment(metadata.id, 'document') + '-' +
+        sanitizePathSegment(metadata.title, 'Untitled') + '.md';
       const destination = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'trash', trashName);
-      await Neutralino.filesystem.move(source, destination);
+      const metadataPath = destination + '.json';
+      try {
+        await this._writeJsonFileRecoverably(metadataPath, {
+          version: 1,
+          trashId: trashId,
+          kind: 'normal-document',
+          documentId: metadata.id,
+          deletedAt: Date.now(),
+          metadata: cloneJson(metadata, {}),
+          contentPath: destination,
+          originalPath: source,
+          updatedAt: Date.now()
+        });
+        await Neutralino.filesystem.move(source, destination);
+      } catch (error) {
+        if (await this._pathExists(destination) && !(await this._pathExists(source))) {
+          try { await Neutralino.filesystem.move(destination, source); } catch (_) {}
+        }
+        try { await Neutralino.filesystem.remove(metadataPath); } catch (_) {}
+        throw error;
+      }
+      return {
+        trashId: trashId,
+        source: source,
+        destination: destination,
+        metadataPath: metadataPath,
+        metadata: cloneJson(metadata, {})
+      };
     }
 
     async _desktopSaveHistory(tab, fullPath) {
@@ -750,7 +1101,7 @@
       } catch (_) {}
     }
 
-    async _desktopWriteDocumentSafely(tab, fullPath, content) {
+    async _desktopWriteDocumentSafely(tab, fullPath, content, relativePath, nextRevision) {
       await this._desktopSaveHistory(tab, fullPath);
       const journalDirectory = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal');
       const safeId = sanitizePathSegment(tab.id, 'document');
@@ -761,12 +1112,23 @@
         version: 1,
         documentId: tab.id,
         destination: fullPath,
+        destinationRelativePath: relativePath,
         temporary: temporaryPath,
+        metadata: Object.assign(metadataFromTab(tab), {
+          vaultRelativePath: relativePath,
+          storageRevision: normalizedStorageRevision(nextRevision),
+          storageWriterId: this.writerId,
+          contentSize: utf8ByteLength(content)
+        }),
         startedAt: Date.now()
       });
       await Neutralino.filesystem.writeFile(fullPath, content);
+      const verified = await Neutralino.filesystem.readFile(fullPath);
+      if (verified !== content) {
+        throw new Error('A desktop document write could not be verified.');
+      }
       try { await Neutralino.filesystem.remove(temporaryPath); } catch (_) {}
-      try { await Neutralino.filesystem.remove(journalPath); } catch (_) {}
+      tab._storageContentJournalPaths = Array.from(new Set((tab._storageContentJournalPaths || []).concat(journalPath)));
     }
 
     async _desktopSaveDocument(tab, organization, forceContent) {
@@ -818,7 +1180,7 @@
       if (forceContent || tab.contentLoaded !== false) {
         const content = typeof tab.content === 'string' ? tab.content : '';
         if (forceContent || !existing || tab._persistedContent !== content || !(await this._pathExists(fullPath))) {
-          await this._desktopWriteDocumentSafely(tab, fullPath, content);
+          await this._desktopWriteDocumentSafely(tab, fullPath, content, relativePath, actualRevision + 1);
           tab._persistedContent = content;
           this._cacheContent(tab.id, content);
         }
@@ -856,11 +1218,28 @@
         for (const tab of selected) {
           await this._desktopSaveDocument(tab, organization, settings.forceContent === true);
         }
+        this.vaultIndex.updatedAt = Date.now();
+        const journalDirectory = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal');
+        const indexJournalPath = await this._pathJoin(journalDirectory, randomId('index') + '.index.json');
+        await this._writeJsonFile(indexJournalPath, {
+          version: 1,
+          operation: 'index-commit',
+          index: cloneJson(this.vaultIndex, this.vaultIndex),
+          startedAt: Date.now()
+        });
         this._desktopIndexWrite = this._desktopIndexWrite.catch(function () {}).then(() => this._desktopWriteIndex());
         await this._desktopIndexWrite;
+        try { await Neutralino.filesystem.remove(indexJournalPath); } catch (_) {}
         for (const tab of selected) {
           tab._storageRevision = normalizedStorageRevision(tab._pendingStorageRevision);
           delete tab._pendingStorageRevision;
+          const contentJournalPaths = Array.isArray(tab._storageContentJournalPaths)
+            ? tab._storageContentJournalPaths.slice()
+            : [];
+          for (const contentJournalPath of contentJournalPaths) {
+            try { await Neutralino.filesystem.remove(contentJournalPath); } catch (_) {}
+          }
+          delete tab._storageContentJournalPaths;
           if (tab._storageMoveJournalPath) {
             try { await Neutralino.filesystem.remove(tab._storageMoveJournalPath); } catch (_) {}
             delete tab._storageMoveJournalPath;
@@ -925,26 +1304,96 @@
       return true;
     }
 
-    async getDocumentOrganization() {
-      if (this.desktop) return cloneJson(this.vaultOrganization, null);
-      return this.getMetadata('documentOrganization');
+    async getDocumentOrganizationState() {
+      let stored;
+      if (this.desktop) {
+        const organizationPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'organization.json');
+        stored = await this._readJsonFileRecoverably(organizationPath, null);
+        this.vaultOrganization = stored;
+      } else {
+        stored = await this.getMetadata('documentOrganization');
+      }
+      const organization = cloneJson(stored, null);
+      const revision = normalizedStorageRevision(organization && organization._storageRevision);
+      if (organization) {
+        delete organization._storageRevision;
+        delete organization._storageWriterId;
+        delete organization.updatedAt;
+      }
+      this._organizationRevision = revision;
+      this._organizationSnapshot = organization ? JSON.stringify(organization) : '';
+      return { organization: organization, revision: revision };
     }
 
-    async saveDocumentOrganization(organization) {
+    async getDocumentOrganization() {
+      return (await this.getDocumentOrganizationState()).organization;
+    }
+
+    async saveDocumentOrganization(organization, options) {
+      const settings = options || {};
       const safeOrganization = cloneJson(organization, null);
-      if (!safeOrganization) return;
-      const serialized = JSON.stringify(safeOrganization);
-      if (serialized === this._organizationSnapshot) return;
+      if (!safeOrganization) return { organization: null, revision: this._organizationRevision };
+      delete safeOrganization._storageRevision;
+      delete safeOrganization._storageWriterId;
+      delete safeOrganization.updatedAt;
+      const expectedRevision = normalizedStorageRevision(
+        settings.expectedRevision === undefined ? this._organizationRevision : settings.expectedRevision
+      );
+      const baseOrganization = cloneJson(settings.baseOrganization, null) ||
+        (this._organizationSnapshot ? JSON.parse(this._organizationSnapshot) : {});
       if (this.desktop) {
-        this.vaultOrganization = safeOrganization;
-        await this._desktopEnsureOrganizationFolders(safeOrganization);
         const organizationPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'organization.json');
-        await this._writeJsonFile(organizationPath, safeOrganization);
-        this._organizationSnapshot = serialized;
-        return;
+        const stored = await this._readJsonFileRecoverably(organizationPath, null);
+        const storedRevision = normalizedStorageRevision(stored && stored._storageRevision);
+        const storedOrganization = cloneJson(stored, {}) || {};
+        delete storedOrganization._storageRevision;
+        delete storedOrganization._storageWriterId;
+        delete storedOrganization.updatedAt;
+        const merged = storedRevision === expectedRevision
+          ? safeOrganization
+          : mergeOrganizationChanges(baseOrganization, safeOrganization, storedOrganization);
+        const nextRevision = storedRevision + 1;
+        const persisted = Object.assign({}, merged, {
+          _storageRevision: nextRevision,
+          _storageWriterId: this.writerId,
+          updatedAt: Date.now()
+        });
+        await this._desktopEnsureOrganizationFolders(merged);
+        await this._writeJsonFileRecoverably(organizationPath, persisted);
+        this.vaultOrganization = persisted;
+        this._organizationRevision = nextRevision;
+        this._organizationSnapshot = JSON.stringify(merged);
+        return { organization: cloneJson(merged, merged), revision: nextRevision, merged: storedRevision !== expectedRevision };
       }
-      await this.setMetadata('documentOrganization', safeOrganization);
-      this._organizationSnapshot = serialized;
+
+      const transaction = this.db.transaction('metadata', 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const store = transaction.objectStore('metadata');
+      try {
+        const record = await requestToPromise(store.get('documentOrganization'));
+        const stored = record && record.value && typeof record.value === 'object' ? record.value : null;
+        const storedRevision = normalizedStorageRevision(stored && stored._storageRevision);
+        const storedOrganization = cloneJson(stored, {}) || {};
+        delete storedOrganization._storageRevision;
+        delete storedOrganization._storageWriterId;
+        delete storedOrganization.updatedAt;
+        const merged = storedRevision === expectedRevision
+          ? safeOrganization
+          : mergeOrganizationChanges(baseOrganization, safeOrganization, storedOrganization);
+        const nextRevision = storedRevision + 1;
+        store.put({ key: 'documentOrganization', value: Object.assign({}, merged, {
+          _storageRevision: nextRevision,
+          _storageWriterId: this.writerId
+        }) });
+        await completion;
+        this._organizationRevision = nextRevision;
+        this._organizationSnapshot = JSON.stringify(merged);
+        return { organization: cloneJson(merged, merged), revision: nextRevision, merged: storedRevision !== expectedRevision };
+      } catch (error) {
+        try { transaction.abort(); } catch (_) {}
+        await completion.catch(function() {});
+        throw error;
+      }
     }
 
     async deleteDocument(id, options) {
@@ -965,9 +1414,25 @@
           }
           throw new WorkspaceConflictError(id, null, metadata, storedContent);
         }
-        if (metadata) await this._desktopMoveToTrash(metadata);
+        const previousIndex = cloneJson(this.vaultIndex, this.vaultIndex);
+        const trashRecord = metadata ? await this._desktopMoveToTrash(metadata) : null;
         this.vaultIndex.documents = this.vaultIndex.documents.filter(function (item) { return item.id !== id; });
-        await this._desktopWriteIndex();
+        try {
+          await this._desktopWriteIndex();
+        } catch (error) {
+          this.vaultIndex = previousIndex;
+          try { await Neutralino.filesystem.remove(indexPath + '.pending'); } catch (_) {}
+          try { await Neutralino.filesystem.remove(indexPath + '.backup'); } catch (_) {}
+          if (trashRecord && await this._pathExists(trashRecord.destination) && !(await this._pathExists(trashRecord.source))) {
+            try { await Neutralino.filesystem.move(trashRecord.destination, trashRecord.source); } catch (rollbackError) {
+              error.rollbackError = rollbackError;
+            }
+          }
+          if (trashRecord) {
+            try { await Neutralino.filesystem.remove(trashRecord.metadataPath); } catch (_) {}
+          }
+          throw error;
+        }
         return;
       }
       const transaction = this.db.transaction(['documents', 'contents', 'trash'], 'readwrite');
@@ -998,9 +1463,29 @@
       this._normalContentCache.clear();
       if (this.desktop) {
         const existing = this.vaultIndex.documents.slice();
-        for (const item of existing) await this._desktopMoveToTrash(item);
+        const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+        const trashRecords = [];
+        for (const item of existing) {
+          const record = await this._desktopMoveToTrash(item);
+          if (record) trashRecords.push(record);
+        }
         this.vaultIndex.documents = [];
-        await this._desktopWriteIndex();
+        try {
+          await this._desktopWriteIndex();
+        } catch (error) {
+          this.vaultIndex.documents = existing;
+          try { await Neutralino.filesystem.remove(indexPath + '.pending'); } catch (_) {}
+          try { await Neutralino.filesystem.remove(indexPath + '.backup'); } catch (_) {}
+          for (const record of trashRecords.reverse()) {
+            if (await this._pathExists(record.destination) && !(await this._pathExists(record.source))) {
+              try { await Neutralino.filesystem.move(record.destination, record.source); } catch (rollbackError) {
+                error.rollbackError = rollbackError;
+              }
+            }
+            try { await Neutralino.filesystem.remove(record.metadataPath); } catch (_) {}
+          }
+          throw error;
+        }
         return;
       }
       const transaction = this.db.transaction(['documents', 'contents', 'trash'], 'readwrite');
@@ -1093,17 +1578,326 @@
 
     async getSecretManifest() {
       const stored = await this.getMetadata('secretManifest');
-      if (stored) return stored;
+      if (stored) {
+        await this._storeSecretManifestBackup(stored);
+        return stored;
+      }
       try {
         const legacy = JSON.parse(localStorage.getItem(LEGACY_SECRET_KEY) || 'null');
-        return legacy || null;
-      } catch (_) {
-        return null;
+        if (legacy) {
+          await this.setSecretManifest(legacy);
+          return legacy;
+        }
+      } catch (_) {}
+      const backup = await this._readSecretManifestBackup();
+      if (backup) {
+        await this.setSecretManifest(backup);
+        return backup;
+      }
+      const records = await this.listSecretRecords();
+      if (records.length) {
+        throw new WorkspaceCorruptionError(
+          SECRET_MANIFEST_BACKUP_RECORD_ID,
+          'Encrypted Secret Workspace records exist, but every manifest copy is missing. New setup is blocked to preserve them.'
+        );
+      }
+      return null;
+    }
+
+    async _readSecretManifestBackup() {
+      if (this.desktop) {
+        const path = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'manifest-backup.json');
+        return this._readJsonFileRecoverably(path, null);
+      }
+      const transaction = this.db.transaction('secretRecords', 'readonly');
+      const record = await requestToPromise(transaction.objectStore('secretRecords').get(SECRET_MANIFEST_BACKUP_RECORD_ID));
+      await transactionToPromise(transaction);
+      return record && record.manifest ? cloneJson(record.manifest, null) : null;
+    }
+
+    async _storeSecretManifestBackup(manifest) {
+      if (!manifest) return;
+      if (this.desktop) {
+        const path = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'manifest-backup.json');
+        await this._writeJsonFileRecoverably(path, manifest);
+        return;
+      }
+      const transaction = this.db.transaction('secretRecords', 'readwrite');
+      transaction.objectStore('secretRecords').put({
+        id: SECRET_MANIFEST_BACKUP_RECORD_ID,
+        manifest: cloneJson(manifest, null),
+        updatedAt: Date.now()
+      });
+      await transactionToPromise(transaction);
+    }
+
+    async listTrash() {
+      if (this.desktop) {
+        const directory = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'trash');
+        const entries = await Neutralino.filesystem.readDirectory(directory);
+        const items = [];
+        for (const entry of entries) {
+          if (!entry || entry.type !== 'FILE' || !/(?:\.md\.json|\.secret\.json)$/i.test(entry.entry || '')) continue;
+          const path = await this._pathJoin(directory, entry.entry);
+          const record = await this._readJsonFileRecoverably(path, null);
+          if (!record || !record.trashId ||
+              (!['secret-workspace-snapshot', 'secret-record'].includes(record.kind) && !record.contentPath)) continue;
+          items.push(Object.assign({}, record, { metadataPath: path }));
+        }
+        return items.sort(function(left, right) { return Number(right.deletedAt) - Number(left.deletedAt); });
+      }
+      const transaction = this.db.transaction('trash', 'readonly');
+      const records = await requestToPromise(transaction.objectStore('trash').getAll());
+      await transactionToPromise(transaction);
+      return records.sort(function(left, right) { return Number(right.deletedAt) - Number(left.deletedAt); });
+    }
+
+    async saveDirtyJournal(journal) {
+      if (this.desktop || !journal || typeof journal.journalId !== 'string' || !journal.journalId) return false;
+      const transaction = this.db.transaction('journals', 'readwrite');
+      transaction.objectStore('journals').put(cloneJson(journal, journal));
+      await transactionToPromise(transaction);
+      return true;
+    }
+
+    async listDirtyJournals() {
+      if (this.desktop) return [];
+      const transaction = this.db.transaction('journals', 'readonly');
+      const records = await requestToPromise(transaction.objectStore('journals').getAll());
+      await transactionToPromise(transaction);
+      return records;
+    }
+
+    async deleteDirtyJournals(journalIds) {
+      if (this.desktop) return;
+      const ids = Array.isArray(journalIds) ? journalIds.filter(Boolean) : [];
+      if (!ids.length) return;
+      const transaction = this.db.transaction('journals', 'readwrite');
+      const store = transaction.objectStore('journals');
+      ids.forEach(function(id) { store.delete(id); });
+      await transactionToPromise(transaction);
+    }
+
+    async restoreTrashItem(trashId) {
+      if (typeof trashId !== 'string' || !trashId) throw new TypeError('A trash item ID is required.');
+      this._normalContentCache.clear();
+      if (this.desktop) {
+        const items = await this.listTrash();
+        const item = items.find(function(record) { return record.trashId === trashId; });
+        if (!item) throw new Error('The deleted document is no longer available.');
+        if (item.kind === 'secret-workspace-snapshot') {
+          const currentRecords = await this.listSecretRecords();
+          const currentManifest = await this.getSecretManifest();
+          if (currentRecords.length) {
+            const currentTrashPath = await this._pathJoin(
+              this.vaultPath,
+              INTERNAL_DIR,
+              'trash',
+              Date.now() + '-' + randomId('secret_snapshot') + '.secret.json'
+            );
+            await this._writeJsonFileRecoverably(currentTrashPath, {
+              version: 1,
+              trashId: randomId('secret_snapshot'),
+              kind: 'secret-workspace-snapshot',
+              documentId: SECRET_MANIFEST_BACKUP_RECORD_ID,
+              deletedAt: Date.now(),
+              secretManifest: cloneJson(currentManifest, null),
+              secretRecords: cloneJson(currentRecords, []),
+              updatedAt: Date.now()
+            });
+          }
+          await this.replaceSecretRecords(item.secretRecords || [], item.secretManifest || null, { preservePrevious: false });
+          try { await Neutralino.filesystem.remove(item.metadataPath); } catch (_) {}
+          return { id: SECRET_MANIFEST_BACKUP_RECORD_ID, kind: 'secret-workspace-snapshot' };
+        }
+        if (item.kind === 'secret-record') {
+          const manifest = await this.getSecretManifest();
+          if (!manifest || !item.secretManifest || manifest.salt !== item.secretManifest.salt) {
+            throw new Error('This encrypted record belongs to a different Secret Workspace key.');
+          }
+          const existingSecret = (await this.listSecretRecords()).find(function(record) {
+            return record.id === item.documentId;
+          });
+          if (existingSecret) throw new Error('A Secret Workspace record with this ID already exists.');
+          await this.applySecretRecordChanges({
+            upserts: [{
+              id: item.documentId,
+              envelope: item.secretRecord.envelope,
+              expectedRevision: 0
+            }],
+            deletions: []
+          }, manifest);
+          try { await Neutralino.filesystem.remove(item.metadataPath); } catch (_) {}
+          return { id: item.documentId, kind: 'secret-record' };
+        }
+        if (item.kind !== 'normal-document') throw new Error('The deleted document is no longer available.');
+        const currentIndex = cloneJson(this.vaultIndex, this.vaultIndex);
+        const metadata = cloneJson(item.metadata, {}) || {};
+        if (this.vaultIndex.documents.some(function(record) { return record.id === metadata.id; })) {
+          metadata.id = randomId('restored');
+          metadata.title = String(metadata.title || 'Untitled') + ' (restored)';
+        }
+        metadata.storageRevision = 1;
+        metadata.storageWriterId = this.writerId;
+        metadata.workspaceId = metadata.workspaceId === 'workspace_secret' ? 'workspace_default' : (metadata.workspaceId || 'workspace_default');
+        metadata.folderId = null;
+        const relativePath = await this._desktopDocumentRelativePath(metadata, { folders: [] });
+        metadata.vaultRelativePath = relativePath;
+        const destination = await this._desktopResolveVaultRelativePath(relativePath);
+        const restoringTrashRecord = Object.assign({}, cloneJson(item, {}) || {}, {
+          restoreInProgress: {
+            destination: destination,
+            metadata: cloneJson(metadata, metadata)
+          },
+          updatedAt: Date.now()
+        });
+        delete restoringTrashRecord.metadataPath;
+        await this._writeJsonFileRecoverably(item.metadataPath, restoringTrashRecord);
+        await Neutralino.filesystem.move(item.contentPath, destination);
+        this.vaultIndex.documents.push(metadata);
+        try {
+          await this._desktopWriteIndex();
+          try { await Neutralino.filesystem.remove(item.metadataPath); } catch (_) {}
+          return { id: metadata.id, kind: 'normal-document' };
+        } catch (error) {
+          this.vaultIndex = currentIndex;
+          try { await Neutralino.filesystem.move(destination, item.contentPath); } catch (rollbackError) {
+            error.rollbackError = rollbackError;
+          }
+          try {
+            const preservedTrashRecord = cloneJson(item, {}) || {};
+            delete preservedTrashRecord.metadataPath;
+            preservedTrashRecord.updatedAt = Date.now();
+            await this._writeJsonFileRecoverably(item.metadataPath, preservedTrashRecord);
+          } catch (_) {}
+          throw error;
+        }
+      }
+
+      const transaction = this.db.transaction(['documents', 'contents', 'metadata', 'secretRecords', 'trash'], 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const trash = transaction.objectStore('trash');
+      try {
+        const item = await requestToPromise(trash.get(trashId));
+        if (!item) throw new Error('The deleted item is no longer available.');
+        if (item.kind === 'secret-workspace-snapshot') {
+          const records = transaction.objectStore('secretRecords');
+          const metadataStore = transaction.objectStore('metadata');
+          const currentManifestRecord = await requestToPromise(metadataStore.get('secretManifest'));
+          const currentManifest = currentManifestRecord && currentManifestRecord.value ? currentManifestRecord.value : null;
+          const currentRecords = (await requestToPromise(records.getAll())).filter(function(record) {
+            return record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID;
+          });
+          if (currentRecords.length) {
+            trash.put({
+              trashId: randomId('secret_snapshot'),
+              kind: 'secret-workspace-snapshot',
+              documentId: SECRET_MANIFEST_BACKUP_RECORD_ID,
+              deletedAt: Date.now(),
+              reason: 'recovery-replacement',
+              secretManifest: cloneJson(currentManifest, null),
+              secretRecords: cloneJson(currentRecords, [])
+            });
+          }
+          records.clear();
+          (item.secretRecords || []).forEach(function(record) {
+            if (record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID) records.put(cloneJson(record, record));
+          });
+          const restoredManifest = Object.assign({}, item.secretManifest || {}, {
+            generation: normalizedStorageRevision(currentManifest && currentManifest.generation) + 1,
+            updatedAt: Date.now()
+          });
+          metadataStore.put({ key: 'secretManifest', value: restoredManifest });
+          records.put({ id: SECRET_MANIFEST_BACKUP_RECORD_ID, manifest: restoredManifest, updatedAt: Date.now() });
+          trash.delete(trashId);
+          await completion;
+          return { id: SECRET_MANIFEST_BACKUP_RECORD_ID, kind: 'secret-workspace-snapshot' };
+        }
+        if (item.kind === 'secret-record') {
+          const records = transaction.objectStore('secretRecords');
+          const metadataStore = transaction.objectStore('metadata');
+          const manifestRecord = await requestToPromise(metadataStore.get('secretManifest'));
+          const currentManifest = manifestRecord && manifestRecord.value ? manifestRecord.value : null;
+          if (!currentManifest || !item.secretManifest || currentManifest.salt !== item.secretManifest.salt) {
+            throw new Error('This encrypted record belongs to a different Secret Workspace key. Restore its complete snapshot instead.');
+          }
+          if (await requestToPromise(records.get(item.documentId))) {
+            throw new Error('A Secret Workspace record with this ID already exists.');
+          }
+          records.put(Object.assign({}, cloneJson(item.secretRecord, {}), {
+            storageRevision: 1,
+            updatedAt: Date.now()
+          }));
+          const nextManifest = Object.assign({}, currentManifest, {
+            generation: normalizedStorageRevision(currentManifest.generation) + 1,
+            documentCount: Number(currentManifest.documentCount || 0) + 1,
+            updatedAt: Date.now()
+          });
+          metadataStore.put({ key: 'secretManifest', value: nextManifest });
+          records.put({ id: SECRET_MANIFEST_BACKUP_RECORD_ID, manifest: nextManifest, updatedAt: Date.now() });
+          trash.delete(trashId);
+          await completion;
+          return { id: item.documentId, kind: 'secret-record' };
+        }
+
+        const documents = transaction.objectStore('documents');
+        const contents = transaction.objectStore('contents');
+        const storedMetadata = cloneJson(item.metadata, {}) || {};
+        let id = typeof storedMetadata.id === 'string' && storedMetadata.id ? storedMetadata.id : randomId('restored');
+        if (await requestToPromise(documents.get(id))) {
+          id = randomId('restored');
+          storedMetadata.title = String(storedMetadata.title || 'Untitled') + ' (restored)';
+        }
+        storedMetadata.id = id;
+        storedMetadata.workspaceId = storedMetadata.workspaceId === 'workspace_secret' ? 'workspace_default' : (storedMetadata.workspaceId || 'workspace_default');
+        storedMetadata.folderId = null;
+        storedMetadata.storageRevision = 1;
+        storedMetadata.storageWriterId = this.writerId;
+        storedMetadata.contentSize = utf8ByteLength(typeof item.content === 'string' ? item.content : '');
+        delete storedMetadata.storageCorruption;
+        documents.put(storedMetadata);
+        contents.put({
+          id: id,
+          content: typeof item.content === 'string' ? item.content : '',
+          updatedAt: Date.now(),
+          storageRevision: 1,
+          storageWriterId: this.writerId
+        });
+        trash.delete(trashId);
+        await completion;
+        return { id: id, kind: 'normal-document' };
+      } catch (error) {
+        try { transaction.abort(); } catch (_) {}
+        await completion.catch(function() {});
+        throw error;
       }
     }
 
     async setSecretManifest(manifest) {
-      await this.setMetadata('secretManifest', manifest);
+      if (this.desktop) {
+        await this.setMetadata('secretManifest', manifest);
+        if (manifest) await this._storeSecretManifestBackup(manifest);
+        else {
+          const backupPath = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'manifest-backup.json');
+          if (await this._pathExists(backupPath)) await Neutralino.filesystem.remove(backupPath);
+        }
+      } else {
+        const transaction = this.db.transaction(['metadata', 'secretRecords'], 'readwrite');
+        const metadata = transaction.objectStore('metadata');
+        const records = transaction.objectStore('secretRecords');
+        if (manifest) {
+          metadata.put({ key: 'secretManifest', value: cloneJson(manifest, null) });
+          records.put({
+            id: SECRET_MANIFEST_BACKUP_RECORD_ID,
+            manifest: cloneJson(manifest, null),
+            updatedAt: Date.now()
+          });
+        } else {
+          metadata.delete('secretManifest');
+          records.delete(SECRET_MANIFEST_BACKUP_RECORD_ID);
+        }
+        await transactionToPromise(transaction);
+      }
       try {
         if (manifest) localStorage.setItem(LEGACY_SECRET_KEY, JSON.stringify(manifest));
         else localStorage.removeItem(LEGACY_SECRET_KEY);
@@ -1123,24 +1917,50 @@
         for (const entry of entries) {
           if (!entry || entry.type !== 'FILE' || !/\.mvault$/i.test(entry.entry || '')) continue;
           const path = await this._pathJoin(directory, entry.entry);
-          const envelope = await this._readJsonFile(path, null);
-          if (envelope) records.push({ id: entry.entry.replace(/\.mvault$/i, ''), envelope: envelope });
+          const stored = await this._readJsonFileRecoverably(path, null);
+          if (!stored) {
+            throw new WorkspaceCorruptionError(entry.entry, 'An encrypted Secret Workspace record is unreadable.');
+          }
+          const wrapped = stored.format === 'markdown-viewer-secret-record' && stored.envelope;
+          const id = wrapped && stored.id ? stored.id : entry.entry.replace(/\.mvault$/i, '');
+          const envelope = wrapped ? stored.envelope : stored;
+          requireSecretRecordId(id);
+          if (!validateEncryptedEnvelope(envelope)) {
+            throw new WorkspaceCorruptionError(id, 'An encrypted Secret Workspace record is corrupt.');
+          }
+          records.push({
+            id: id,
+            envelope: envelope,
+            storageRevision: normalizedStorageRevision(wrapped && stored.storageRevision)
+          });
         }
         return records;
       }
       const transaction = this.db.transaction('secretRecords', 'readonly');
       const records = await requestToPromise(transaction.objectStore('secretRecords').getAll());
       await transactionToPromise(transaction);
-      return records;
+      return records.filter(function(record) { return record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID; }).map(function(record) {
+        requireSecretRecordId(record.id);
+        if (!validateEncryptedEnvelope(record.envelope)) {
+          throw new WorkspaceCorruptionError(record.id, 'An encrypted Secret Workspace record is corrupt.');
+        }
+        return {
+          id: record.id,
+          envelope: cloneJson(record.envelope, null),
+          storageRevision: normalizedStorageRevision(record.storageRevision)
+        };
+      });
     }
 
-    async replaceSecretRecords(records, manifest) {
+    async replaceSecretRecords(records, manifest, options) {
+      const settings = options || {};
       const source = Array.isArray(records) ? records : [];
       const seenIds = new Set();
       source.forEach(function(record) {
-        if (!record || typeof record.id !== 'string' || !record.id || !record.envelope) {
+        if (!record || !record.envelope) {
           throw new TypeError('Secret Workspace records require a non-empty string ID and encrypted envelope.');
         }
+        requireSecretRecordId(record.id);
         if (seenIds.has(record.id)) throw new TypeError('Duplicate Secret Workspace record ID: ' + record.id);
         seenIds.add(record.id);
       });
@@ -1156,16 +1976,29 @@
               'objects',
               sanitizePathSegment(record.id, 'secret') + '.mvault'
             );
-            await this._writeJsonFileRecoverably(path, record.envelope);
+            await this._writeJsonFileRecoverably(path, {
+              format: 'markdown-viewer-secret-record',
+              id: record.id,
+              storageRevision: normalizedStorageRevision(record.storageRevision) || 1,
+              envelope: record.envelope,
+              updatedAt: Date.now()
+            });
           }
           const currentRecords = await this.listSecretRecords();
           for (const record of currentRecords) {
             if (!nextIds.has(record.id)) await this.deleteSecretRecord(record.id);
           }
-          await this.setSecretManifest(nextManifest);
+          const previousGeneration = normalizedStorageRevision(previousManifest && previousManifest.generation);
+          const committedManifest = Object.assign({}, nextManifest || {}, {
+            generation: previousGeneration + 1,
+            updatedAt: Date.now()
+          });
+          await this.setSecretManifest(committedManifest);
+          return committedManifest;
         };
         try {
-          await replaceDesktopSet(source, manifest || null);
+          const committedManifest = await replaceDesktopSet(source, manifest || null);
+          return { manifest: committedManifest, revisions: source.map(function(record) { return { id: record.id, revision: 1 }; }) };
         } catch (error) {
           try {
             await replaceDesktopSet(previousRecords, previousManifest);
@@ -1177,16 +2010,48 @@
         return;
       }
 
-      const transaction = this.db.transaction(['secretRecords', 'metadata'], 'readwrite');
+      const transaction = this.db.transaction(['secretRecords', 'metadata', 'trash'], 'readwrite');
       const completion = transactionToPromise(transaction);
       try {
         const secretRecords = transaction.objectStore('secretRecords');
+        const metadata = transaction.objectStore('metadata');
+        const manifestRecord = await requestToPromise(metadata.get('secretManifest'));
+        const previousManifest = manifestRecord && manifestRecord.value ? manifestRecord.value : null;
+        const previousRecords = (await requestToPromise(secretRecords.getAll())).filter(function(record) {
+          return record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID;
+        });
+        if (previousRecords.length && settings.preservePrevious !== false) {
+          transaction.objectStore('trash').put({
+            trashId: randomId('secret_snapshot'),
+            kind: 'secret-workspace-snapshot',
+            documentId: SECRET_MANIFEST_BACKUP_RECORD_ID,
+            deletedAt: Date.now(),
+            reason: settings.reason || 'secret-replacement',
+            secretManifest: cloneJson(previousManifest, null),
+            secretRecords: cloneJson(previousRecords, [])
+          });
+        }
         secretRecords.clear();
         source.forEach(function(record) {
-          secretRecords.put({ id: record.id, envelope: cloneJson(record.envelope, null), updatedAt: Date.now() });
+          secretRecords.put({
+            id: record.id,
+            envelope: cloneJson(record.envelope, null),
+            storageRevision: 1,
+            updatedAt: Date.now()
+          });
         });
-        transaction.objectStore('metadata').put({ key: 'secretManifest', value: manifest || null });
+        const committedManifest = Object.assign({}, manifest || {}, {
+          generation: normalizedStorageRevision(previousManifest && previousManifest.generation) + 1,
+          updatedAt: Date.now()
+        });
+        metadata.put({ key: 'secretManifest', value: committedManifest });
+        secretRecords.put({
+          id: SECRET_MANIFEST_BACKUP_RECORD_ID,
+          manifest: committedManifest,
+          updatedAt: Date.now()
+        });
         await completion;
+        manifest = committedManifest;
       } catch (error) {
         try { transaction.abort(); } catch (_) {}
         await completion.catch(function() {});
@@ -1196,9 +2061,161 @@
         if (manifest) localStorage.setItem(LEGACY_SECRET_KEY, JSON.stringify(manifest));
         else localStorage.removeItem(LEGACY_SECRET_KEY);
       } catch (_) {}
+      return {
+        manifest: cloneJson(manifest, manifest),
+        revisions: source.map(function(record) { return { id: record.id, revision: 1 }; })
+      };
+    }
+
+    async applySecretRecordChanges(changes, manifest) {
+      const source = changes && typeof changes === 'object' ? changes : {};
+      const upserts = Array.isArray(source.upserts) ? source.upserts : [];
+      const deletions = Array.isArray(source.deletions) ? source.deletions : [];
+      const seenIds = new Set();
+      upserts.forEach(function(record) {
+        if (!record || !record.envelope) {
+          throw new TypeError('Secret Workspace updates require a valid encrypted record.');
+        }
+        requireSecretRecordId(record.id);
+        if (seenIds.has(record.id)) throw new TypeError('Duplicate Secret Workspace record ID: ' + record.id);
+        seenIds.add(record.id);
+      });
+      deletions.forEach(function(record) {
+        if (!record || seenIds.has(record.id)) {
+          throw new TypeError('Secret Workspace deletions require a unique record ID.');
+        }
+        requireSecretRecordId(record.id);
+        seenIds.add(record.id);
+      });
+
+      if (this.desktop) {
+        const previousRecords = await this.listSecretRecords();
+        const previousManifest = await this.getSecretManifest();
+        const previousById = new Map(previousRecords.map(function(record) { return [record.id, record]; }));
+        for (const change of upserts.concat(deletions)) {
+          const stored = previousById.get(change.id);
+          if (normalizedStorageRevision(stored && stored.storageRevision) !== normalizedStorageRevision(change.expectedRevision)) {
+            throw new WorkspaceSecretConflictError(change.id, change, stored || null);
+          }
+        }
+        try {
+          for (const record of upserts) {
+            const path = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'objects', sanitizePathSegment(record.id, 'secret') + '.mvault');
+            await this._writeJsonFileRecoverably(path, {
+              format: 'markdown-viewer-secret-record',
+              id: record.id,
+              storageRevision: normalizedStorageRevision(record.expectedRevision) + 1,
+              envelope: cloneJson(record.envelope, null),
+              updatedAt: Date.now()
+            });
+          }
+          for (const deletion of deletions) {
+            const stored = previousById.get(deletion.id);
+            if (stored) {
+              const trashPath = await this._pathJoin(
+                this.vaultPath,
+                INTERNAL_DIR,
+                'trash',
+                Date.now() + '-' + randomId('secret_record') + '.secret.json'
+              );
+              await this._writeJsonFileRecoverably(trashPath, {
+                version: 1,
+                trashId: randomId('secret_record'),
+                kind: 'secret-record',
+                documentId: deletion.id,
+                deletedAt: Date.now(),
+                secretManifest: cloneJson(previousManifest, null),
+                secretRecord: cloneJson(stored, null),
+                updatedAt: Date.now()
+              });
+            }
+            await this.deleteSecretRecord(deletion.id);
+          }
+          const remaining = await this.listSecretRecords();
+          const committedManifest = Object.assign({}, manifest || {}, {
+            generation: normalizedStorageRevision(previousManifest && previousManifest.generation) + 1,
+            documentCount: remaining.filter(function(record) { return record.id !== SECRET_FOLDER_RECORD_ID; }).length,
+            folderCount: Number(manifest && manifest.folderCount) || 0,
+            updatedAt: Date.now()
+          });
+          await this.setSecretManifest(committedManifest);
+          return {
+            manifest: committedManifest,
+            revisions: upserts.map(function(record) {
+              return { id: record.id, revision: normalizedStorageRevision(record.expectedRevision) + 1 };
+            })
+          };
+        } catch (error) {
+          try { await this.replaceSecretRecords(previousRecords, previousManifest, { preservePrevious: false }); } catch (rollbackError) {
+            error.rollbackError = rollbackError;
+          }
+          throw error;
+        }
+      }
+
+      const transaction = this.db.transaction(['secretRecords', 'metadata', 'trash'], 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const records = transaction.objectStore('secretRecords');
+      const metadata = transaction.objectStore('metadata');
+      const revisions = [];
+      try {
+        const manifestRecord = await requestToPromise(metadata.get('secretManifest'));
+        const previousManifest = manifestRecord && manifestRecord.value ? manifestRecord.value : null;
+        for (const change of upserts.concat(deletions)) {
+          const stored = await requestToPromise(records.get(change.id));
+          if (normalizedStorageRevision(stored && stored.storageRevision) !== normalizedStorageRevision(change.expectedRevision)) {
+            transaction.abort();
+            await completion.catch(function() {});
+            throw new WorkspaceSecretConflictError(change.id, change, stored || null);
+          }
+          if (upserts.includes(change)) {
+            const revision = normalizedStorageRevision(change.expectedRevision) + 1;
+            records.put({
+              id: change.id,
+              envelope: cloneJson(change.envelope, null),
+              storageRevision: revision,
+              updatedAt: Date.now()
+            });
+            revisions.push({ id: change.id, revision: revision });
+          } else if (stored) {
+            transaction.objectStore('trash').put({
+              trashId: randomId('secret_trash'),
+              kind: 'secret-record',
+              documentId: change.id,
+              deletedAt: Date.now(),
+              secretManifest: cloneJson(previousManifest, null),
+              secretRecord: cloneJson(stored, null)
+            });
+            records.delete(change.id);
+          }
+        }
+        const allRecords = (await requestToPromise(records.getAll())).filter(function(record) {
+          return record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID;
+        });
+        const committedManifest = Object.assign({}, manifest || {}, {
+          generation: normalizedStorageRevision(previousManifest && previousManifest.generation) + 1,
+          documentCount: allRecords.filter(function(record) { return record.id !== SECRET_FOLDER_RECORD_ID; }).length,
+          updatedAt: Date.now()
+        });
+        metadata.put({ key: 'secretManifest', value: committedManifest });
+        records.put({
+          id: SECRET_MANIFEST_BACKUP_RECORD_ID,
+          manifest: committedManifest,
+          updatedAt: Date.now()
+        });
+        await completion;
+        try { localStorage.setItem(LEGACY_SECRET_KEY, JSON.stringify(committedManifest)); } catch (_) {}
+        return { manifest: committedManifest, revisions: revisions };
+      } catch (error) {
+        try { transaction.abort(); } catch (_) {}
+        await completion.catch(function() {});
+        throw error;
+      }
     }
 
     async saveSecretRecord(id, envelope) {
+      requireSecretRecordId(id);
+      if (!validateEncryptedEnvelope(envelope)) throw new TypeError('The encrypted record is invalid.');
       if (this.desktop) {
         const path = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'objects', sanitizePathSegment(id, 'secret') + '.mvault');
         await this._writeJsonFile(path, envelope);
@@ -1210,6 +2227,7 @@
     }
 
     async deleteSecretRecord(id) {
+      requireSecretRecordId(id);
       if (this.desktop) {
         const path = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'objects', sanitizePathSegment(id, 'secret') + '.mvault');
         if (await this._pathExists(path)) await Neutralino.filesystem.remove(path);
@@ -1223,13 +2241,59 @@
     async clearSecretRecords() {
       if (this.desktop) {
         const records = await this.listSecretRecords();
-        for (const record of records) await this.deleteSecretRecord(record.id);
+        const manifest = await this.getSecretManifest();
+        if (records.length) {
+          const trashPath = await this._pathJoin(
+            this.vaultPath,
+            INTERNAL_DIR,
+            'trash',
+            Date.now() + '-' + randomId('secret_snapshot') + '.secret.json'
+          );
+          await this._writeJsonFileRecoverably(trashPath, {
+            version: 1,
+            trashId: randomId('secret_snapshot'),
+            kind: 'secret-workspace-snapshot',
+            documentId: SECRET_MANIFEST_BACKUP_RECORD_ID,
+            deletedAt: Date.now(),
+            secretManifest: cloneJson(manifest, null),
+            secretRecords: cloneJson(records, []),
+            updatedAt: Date.now()
+          });
+        }
+        try {
+          for (const record of records) await this.deleteSecretRecord(record.id);
+          await this.setSecretManifest(null);
+        } catch (error) {
+          try { await this.replaceSecretRecords(records, manifest, { preservePrevious: false }); } catch (rollbackError) {
+            error.rollbackError = rollbackError;
+          }
+          throw error;
+        }
       } else {
-        const transaction = this.db.transaction('secretRecords', 'readwrite');
-        transaction.objectStore('secretRecords').clear();
+        const transaction = this.db.transaction(['secretRecords', 'metadata', 'trash'], 'readwrite');
+        const records = transaction.objectStore('secretRecords');
+        const metadata = transaction.objectStore('metadata');
+        const manifestRecord = await requestToPromise(metadata.get('secretManifest'));
+        const manifest = manifestRecord && manifestRecord.value ? manifestRecord.value : null;
+        const existing = (await requestToPromise(records.getAll())).filter(function(record) {
+          return record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID;
+        });
+        if (existing.length) {
+          transaction.objectStore('trash').put({
+            trashId: randomId('secret_snapshot'),
+            kind: 'secret-workspace-snapshot',
+            documentId: SECRET_MANIFEST_BACKUP_RECORD_ID,
+            deletedAt: Date.now(),
+            reason: 'secret-reset',
+            secretManifest: cloneJson(manifest, null),
+            secretRecords: cloneJson(existing, [])
+          });
+        }
+        records.clear();
+        metadata.delete('secretManifest');
         await transactionToPromise(transaction);
       }
-      await this.setSecretManifest(null);
+      try { localStorage.removeItem(LEGACY_SECRET_KEY); } catch (_) {}
     }
 
     async getWorkspaceUsage() {
@@ -1259,7 +2323,7 @@
         return total;
       }
 
-      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash'];
+      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash', 'journals'];
       let total = 0;
       for (const storeName of storeNames) {
         const transaction = this.db.transaction(storeName, 'readonly');
@@ -1375,23 +2439,31 @@
       });
       const seenSecretIds = new Set();
       secretRecords.forEach(function(record) {
-        if (!record || typeof record.id !== 'string' || !record.id || !record.envelope) {
+        if (!record || !validateEncryptedEnvelope(record.envelope)) {
           throw new TypeError('The backup contains an invalid encrypted record.');
         }
+        requireSecretRecordId(record.id);
         if (seenSecretIds.has(record.id)) throw new TypeError('Duplicate encrypted record ID: ' + record.id);
         seenSecretIds.add(record.id);
       });
+      const secretManifest = cloneJson(source.secretManifest, null);
+      if (secretRecords.length && (
+        !secretManifest || base64ByteLength(secretManifest.salt) < 16 ||
+        !Number.isSafeInteger(Number(secretManifest.iterations)) || Number(secretManifest.iterations) < 100000
+      )) {
+        throw new TypeError('The backup contains an invalid Secret Workspace manifest.');
+      }
       return {
         organization: organization,
         documents: documents,
         tabs: tabs,
         secretRecords: secretRecords,
-        secretManifest: cloneJson(source.secretManifest, null)
+        secretManifest: secretManifest
       };
     }
 
     async _restoreBrowserBackupDataAtomically(normalized, onProgress) {
-      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash'];
+      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash', 'journals'];
       const transaction = this.db.transaction(storeNames, 'readwrite');
       const completion = transactionToPromise(transaction);
       const documents = transaction.objectStore('documents');
@@ -1412,11 +2484,48 @@
             content: content && typeof content.content === 'string' ? content.content : ''
           });
         }
+        const previousSecretManifestRecord = await requestToPromise(metadata.get('secretManifest'));
+        const previousSecretManifest = previousSecretManifestRecord && previousSecretManifestRecord.value
+          ? previousSecretManifestRecord.value
+          : null;
+        const previousSecretRecords = (await requestToPromise(secretRecords.getAll())).filter(function(record) {
+          return record.id !== SECRET_MANIFEST_BACKUP_RECORD_ID;
+        });
+        if (previousSecretRecords.length) {
+          trash.put({
+            trashId: randomId('secret_snapshot'),
+            kind: 'secret-workspace-snapshot',
+            documentId: SECRET_MANIFEST_BACKUP_RECORD_ID,
+            deletedAt: Date.now(),
+            reason: 'backup-replacement',
+            secretManifest: cloneJson(previousSecretManifest, null),
+            secretRecords: cloneJson(previousSecretRecords, [])
+          });
+        }
         documents.clear();
         contents.clear();
         secretRecords.clear();
-        metadata.put({ key: 'documentOrganization', value: normalized.organization });
-        metadata.put({ key: 'secretManifest', value: normalized.secretManifest });
+        transaction.objectStore('journals').clear();
+        metadata.put({ key: 'documentOrganization', value: Object.assign({}, normalized.organization, {
+          _storageRevision: 1,
+          _storageWriterId: this.writerId
+        }) });
+        const restoredSecretManifest = normalized.secretManifest
+          ? Object.assign({}, normalized.secretManifest, {
+              generation: normalizedStorageRevision(previousSecretManifest && previousSecretManifest.generation) + 1,
+              updatedAt: Date.now()
+            })
+          : null;
+        if (restoredSecretManifest) {
+          metadata.put({ key: 'secretManifest', value: restoredSecretManifest });
+          secretRecords.put({
+            id: SECRET_MANIFEST_BACKUP_RECORD_ID,
+            manifest: restoredSecretManifest,
+            updatedAt: Date.now()
+          });
+        } else {
+          metadata.delete('secretManifest');
+        }
 
         normalized.tabs.forEach((tab) => {
           const storedMetadata = metadataFromTab(tab);
@@ -1433,7 +2542,12 @@
           });
         });
         normalized.secretRecords.forEach(function(record) {
-          secretRecords.put({ id: record.id, envelope: cloneJson(record.envelope, null), updatedAt: Date.now() });
+          secretRecords.put({
+            id: record.id,
+            envelope: cloneJson(record.envelope, null),
+            storageRevision: 1,
+            updatedAt: Date.now()
+          });
         });
         await completion;
       } catch (error) {
@@ -1543,7 +2657,7 @@
         return;
       }
 
-      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash'];
+      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash', 'journals'];
       const transaction = this.db.transaction(storeNames, 'readwrite');
       storeNames.forEach(function(storeName) {
         transaction.objectStore(storeName).clear();
@@ -1571,6 +2685,26 @@
         quota: Number.isFinite(estimate.quota) ? estimate.quota : null,
         persistent: persistent
       };
+    }
+
+    async requestPersistentStorage() {
+      if (this.desktop) return true;
+      if (!navigator.storage || typeof navigator.storage.persist !== 'function') return false;
+      const request = Promise.resolve()
+        .then(function() { return navigator.storage.persist(); })
+        .then(Boolean)
+        .catch(function() { return false; });
+      return new Promise(function(resolve) {
+        let settled = false;
+        const finish = function(value) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          resolve(Boolean(value));
+        };
+        const timeoutId = setTimeout(function() { finish(false); }, 1500);
+        request.then(finish);
+      });
     }
 
     async openVaultFolder() {

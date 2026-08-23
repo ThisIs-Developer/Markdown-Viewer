@@ -607,6 +607,11 @@
                 <i class="lucide lucide-database-x" aria-hidden="true"></i>
                 <p id="storage-recovery-note">Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.</p>
               </div>
+              <div id="storage-trash-section" class="storage-trash-section" hidden>
+                <label for="storage-trash-list">Recover deleted data</label>
+                <select id="storage-trash-list" class="form-control" aria-label="Deleted documents"></select>
+                <button type="button" class="reset-modal-btn reset-modal-cancel" id="storage-trash-restore">Restore selected</button>
+              </div>
               <p id="storage-settings-error" class="document-modal-error" role="alert" hidden></p>
             </div>
             <div class="reset-modal-actions storage-settings-actions">

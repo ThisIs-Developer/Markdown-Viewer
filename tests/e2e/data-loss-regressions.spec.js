@@ -217,7 +217,7 @@ test('Secret Workspace records and manifest commit as one transaction', async ({
     await storage.init();
     await storage.replaceSecretRecords([{
       id: 'original_secret',
-      envelope: { version: 2, iv: 'b2xkLWl2', ciphertext: 'b2xkLWNpcGhlcg==' }
+      envelope: { version: 2, iv: 'MDEyMzQ1Njc4OWFi', ciphertext: 'MDEyMzQ1Njc4OWFiY2RlZg==' }
     }], { version: 2, salt: 'b2xkLXNhbHQ=', documentCount: 1 });
 
     const originalPut = IDBObjectStore.prototype.put;
@@ -231,7 +231,7 @@ test('Secret Workspace records and manifest commit as one transaction', async ({
     try {
       await storage.replaceSecretRecords([{
         id: 'replacement_secret',
-        envelope: { version: 2, iv: 'bmV3LWl2', ciphertext: 'bmV3LWNpcGhlcg==' }
+        envelope: { version: 2, iv: 'MTIzNDU2Nzg5MGFi', ciphertext: 'MTIzNDU2Nzg5MGFiY2RlZg==' }
       }], { version: 2, salt: 'bmV3LXNhbHQ=', documentCount: 1 });
     } catch (error) {
       errorName = error.name;

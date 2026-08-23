@@ -248,6 +248,7 @@ test('closing a tab keeps the document in Files and reopening restores the tab',
   await reopenedRow.hover();
   await reopenedRow.locator('.document-menu-btn').click();
   await page.locator('.document-menu-dropdown.open [data-action="delete"]').click();
+  await page.locator('#document-confirm-modal-confirm').click();
   await expect(reopenedRow).toHaveCount(0);
 });
 

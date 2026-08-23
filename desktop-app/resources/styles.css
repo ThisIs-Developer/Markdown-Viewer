@@ -11605,6 +11605,31 @@ html[data-theme="dark"] .mermaid svg {
   margin: 0;
 }
 
+.storage-trash-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 10px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+}
+
+.storage-trash-section[hidden] {
+  display: none;
+}
+
+.storage-trash-section label {
+  grid-column: 1 / -1;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.storage-trash-section select {
+  min-width: 0;
+}
+
 .storage-secure-option {
   display: flex;
   align-items: center;

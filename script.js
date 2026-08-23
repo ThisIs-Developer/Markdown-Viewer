@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const RELEASE_NOTES_PENDING_MODE_KEY = 'markdownViewerPendingReleaseNotesMode';
   const RELEASE_NOTES_SEEN_VERSION_KEY = 'markdownViewerReleaseNotesSeenVersion';
   const DIRTY_DOCUMENT_JOURNAL_PREFIX = 'markdownViewerDirtyDocument:';
+  const SECRET_DIRTY_DOCUMENT_JOURNAL_PREFIX = 'markdownViewerSecretDirtyDocument:';
   const DOCUMENT_STORAGE_KEYS = new Set([
     'markdownViewerGlobalState',
     'markdownViewerTabs',
@@ -916,6 +917,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storageUsageValue = document.getElementById("storage-usage-value");
   const storagePersistenceValue = document.getElementById("storage-persistence-value");
   const storageRecoveryNote = document.getElementById("storage-recovery-note");
+  const storageTrashSection = document.getElementById("storage-trash-section");
+  const storageTrashList = document.getElementById("storage-trash-list");
+  const storageTrashRestore = document.getElementById("storage-trash-restore");
   const storageSettingsError = document.getElementById("storage-settings-error");
   const saveStatus = document.getElementById("save-status");
   const saveStatusIcon = document.getElementById("save-status-icon");
@@ -1098,13 +1102,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     const results = await Promise.all([
       workspaceStorage.listDocumentMetadata(),
       workspaceStorage.listSecretRecords(),
-      workspaceStorage.getStorageEstimate()
+      workspaceStorage.getStorageEstimate(),
+      workspaceStorage.listTrash()
     ]);
     const normalDocuments = results[0];
     const secretDocumentCount = results[1].filter(function(record) {
       return record.id !== window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID;
     }).length;
     const estimate = results[2];
+    const trashItems = results[3];
     const workspaceUsage = status.desktop
       ? estimate.usage
       : await workspaceStorage.getWorkspaceUsage();
@@ -1136,6 +1142,23 @@ document.addEventListener("DOMContentLoaded", async function () {
         : "Clearing this site's browser data will delete local documents.";
     }
     if (storageOpenVault) storageOpenVault.hidden = !status.desktop;
+    if (storageTrashSection && storageTrashList) {
+      storageTrashList.textContent = '';
+      trashItems.forEach(function(item) {
+        const option = document.createElement('option');
+        option.value = item.trashId;
+        const kind = item.kind || 'normal-document';
+        const title = kind === 'secret-workspace-snapshot'
+          ? 'Encrypted Secret Workspace snapshot'
+          : (kind === 'secret-record'
+              ? 'Encrypted Secret Workspace record'
+              : String(item.metadata && item.metadata.title || 'Deleted document'));
+        option.textContent = title + ' · ' + new Date(Number(item.deletedAt) || Date.now()).toLocaleString();
+        storageTrashList.appendChild(option);
+      });
+      storageTrashSection.hidden = trashItems.length === 0;
+      if (storageTrashRestore) storageTrashRestore.disabled = trashItems.length === 0;
+    }
   }
 
   async function openStorageSettings() {
@@ -1146,6 +1169,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       returnFocus: opener
     });
     try {
+      if (workspaceStorage && !workspaceStorage.getStatus().desktop) {
+        await workspaceStorage.requestPersistentStorage();
+      }
       await refreshStorageSettings();
     } catch (error) {
       console.error('Unable to load storage settings:', error);
@@ -1211,6 +1237,35 @@ document.addEventListener("DOMContentLoaded", async function () {
       throw new Error('The backup contains an unsafe or invalid file path.');
     }
     return path;
+  }
+
+  async function sha256Text(value) {
+    const bytes = new TextEncoder().encode(String(value == null ? '' : value));
+    const digest = await window.crypto.subtle.digest('SHA-256', bytes);
+    return bytesToBase64(new Uint8Array(digest));
+  }
+
+  async function verifyBackupDigest(value, expected, label) {
+    if (typeof expected !== 'string' || !expected) {
+      throw new Error('The backup is missing the integrity hash for ' + label + '.');
+    }
+    if (await sha256Text(value) !== expected) {
+      throw new Error('The backup failed its integrity check for ' + label + '.');
+    }
+  }
+
+  function strictBase64Bytes(value, label) {
+    const encoded = String(value || '');
+    if (!encoded || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+      throw new Error(label + ' is not valid Base64 data.');
+    }
+    try {
+      const bytes = base64ToBytes(encoded);
+      if (bytesToBase64(bytes) !== encoded) throw new Error('Non-canonical Base64');
+      return bytes;
+    } catch (_) {
+      throw new Error(label + ' is not valid Base64 data.');
+    }
   }
 
   function addOrganizationFoldersToZip(zip, organization) {
@@ -1279,30 +1334,39 @@ document.addEventListener("DOMContentLoaded", async function () {
     const hasSecureWorkspace = Boolean(includeSecure && backupData.secretManifest);
     addOrganizationFoldersToZip(zip, backupData.organization);
 
-    backupData.documents.forEach(function(item) {
+    for (const item of backupData.documents) {
       const path = normalizeTrustedBackupPath(item.path, 'Workspace/');
-      zip.file(path, typeof item.content === 'string' ? item.content : '');
+      const content = typeof item.content === 'string' ? item.content : '';
+      zip.file(path, content);
       documentIndex.push({
         metadata: item.metadata,
-        path: path
+        path: path,
+        sha256: await sha256Text(content)
       });
-    });
+    }
 
     if (hasSecureWorkspace) {
-      backupData.secretRecords.forEach(function(record, index) {
+      for (let index = 0; index < backupData.secretRecords.length; index += 1) {
+        const record = backupData.secretRecords[index];
         const filename = String(index + 1).padStart(6, '0') + '-' +
           sanitizeBackupPathSegment(record.id, 'secret') + '.mvault';
         const path = 'Secret Workspace/objects/' + filename;
-        zip.file(path, JSON.stringify(record.envelope, null, 2));
-        secureIndex.push({ id: record.id, path: path });
-      });
-      zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json', JSON.stringify(backupData.secretManifest, null, 2));
+        const serializedEnvelope = JSON.stringify(record.envelope, null, 2);
+        zip.file(path, serializedEnvelope);
+        secureIndex.push({ id: record.id, path: path, sha256: await sha256Text(serializedEnvelope) });
+      }
+      const serializedSecretManifest = JSON.stringify(backupData.secretManifest, null, 2);
+      zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json', serializedSecretManifest);
       zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-records.json', JSON.stringify(secureIndex, null, 2));
+      backupData.secretManifestSha256 = await sha256Text(serializedSecretManifest);
     }
 
-    zip.file(WORKSPACE_BACKUP_INTERNAL + 'documents.json', JSON.stringify(documentIndex, null, 2));
-    zip.file(WORKSPACE_BACKUP_INTERNAL + 'organization.json', JSON.stringify(backupData.organization, null, 2));
-    zip.file(WORKSPACE_BACKUP_INTERNAL + 'preferences.json', JSON.stringify(getBackupPreferences(), null, 2));
+    const serializedDocumentIndex = JSON.stringify(documentIndex, null, 2);
+    const serializedOrganization = JSON.stringify(backupData.organization, null, 2);
+    const serializedPreferences = JSON.stringify(getBackupPreferences(), null, 2);
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'documents.json', serializedDocumentIndex);
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'organization.json', serializedOrganization);
+    zip.file(WORKSPACE_BACKUP_INTERNAL + 'preferences.json', serializedPreferences);
     zip.file('README.txt',
       'Markdown Viewer workspace backup\n\n' +
       'Restore this ZIP from Settings > Storage and Backup > Import Backup.\n' +
@@ -1313,6 +1377,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       version: WORKSPACE_BACKUP_VERSION,
       appVersion: APP_VERSION,
       createdAt: createdAt,
+      integrity: 'sha256',
+      documentIndexSha256: await sha256Text(serializedDocumentIndex),
+      organizationSha256: await sha256Text(serializedOrganization),
+      preferencesSha256: await sha256Text(serializedPreferences),
+      secretManifestSha256: backupData.secretManifestSha256 || null,
       includesSecureWorkspace: hasSecureWorkspace,
       normalDocumentCount: documentIndex.length,
       secureRecordCount: secureIndex.length
@@ -1423,6 +1492,25 @@ document.addEventListener("DOMContentLoaded", async function () {
     const organization = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'organization.json', true);
     const documentIndex = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'documents.json', true);
     const preferences = await readBackupJson(zip, WORKSPACE_BACKUP_INTERNAL + 'preferences.json', false) || {};
+    const hasIntegrity = manifest.integrity === 'sha256';
+    if (hasIntegrity) {
+      await verifyBackupDigest(
+        await zip.file(WORKSPACE_BACKUP_INTERNAL + 'organization.json').async('string'),
+        manifest.organizationSha256,
+        'workspace organization'
+      );
+      await verifyBackupDigest(
+        await zip.file(WORKSPACE_BACKUP_INTERNAL + 'documents.json').async('string'),
+        manifest.documentIndexSha256,
+        'document index'
+      );
+      const preferenceEntry = zip.file(WORKSPACE_BACKUP_INTERNAL + 'preferences.json');
+      await verifyBackupDigest(
+        preferenceEntry ? await preferenceEntry.async('string') : '{}',
+        manifest.preferencesSha256,
+        'preferences'
+      );
+    }
     if (!organization || typeof organization !== 'object' || !Array.isArray(documentIndex)) {
       throw new Error('The backup workspace index is invalid.');
     }
@@ -1443,10 +1531,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       seenDocumentPaths.add(path);
       const entry = zip.file(path);
       if (!entry || entry.dir) throw new Error('The backup is missing document file ' + path + '.');
+      const content = await entry.async('string');
+      if (hasIntegrity) await verifyBackupDigest(content, item.sha256, 'document ' + path);
       documents.push({
         metadata: metadata,
         path: path,
-        content: await entry.async('string')
+        content: content
       });
       updateImportProgress(index + 1, Math.max(1, documentIndex.length), 'Reading ' + (metadata.title || 'document') + '…');
     }
@@ -1462,6 +1552,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (Number(manifest.secureRecordCount) !== secretIndex.length) {
         throw new Error('The encrypted backup count does not match its index.');
       }
+      const salt = strictBase64Bytes(secretManifest.salt, 'The Secret Workspace salt');
+      if (salt.byteLength < 16 || Number(secretManifest.iterations) < 100000) {
+        throw new Error('The encrypted Secret Workspace manifest is invalid.');
+      }
+      if (hasIntegrity) {
+        await verifyBackupDigest(
+          await zip.file(WORKSPACE_BACKUP_INTERNAL + 'secret-manifest.json').async('string'),
+          manifest.secretManifestSha256,
+          'Secret Workspace manifest'
+        );
+      }
       const seenSecretIds = new Set();
       const seenSecretPaths = new Set();
       for (const item of secretIndex) {
@@ -1472,9 +1573,18 @@ document.addEventListener("DOMContentLoaded", async function () {
         const path = normalizeTrustedBackupPath(item.path, 'Secret Workspace/objects/');
         if (seenSecretPaths.has(path)) throw new Error('The backup contains duplicate encrypted record paths.');
         seenSecretPaths.add(path);
-        const envelope = await readBackupJson(zip, path, true);
+        const serializedEnvelope = await zip.file(path).async('string');
+        if (hasIntegrity) await verifyBackupDigest(serializedEnvelope, item.sha256, 'encrypted record ' + item.id);
+        let envelope;
+        try { envelope = JSON.parse(serializedEnvelope); } catch (_) {
+          throw new Error('An encrypted Secret Workspace record contains invalid JSON.');
+        }
         if (!envelope || typeof envelope.iv !== 'string' || typeof envelope.ciphertext !== 'string') {
           throw new Error('An encrypted Secret Workspace record is invalid.');
+        }
+        if (strictBase64Bytes(envelope.iv, 'An encrypted record IV').byteLength !== 12 ||
+            strictBase64Bytes(envelope.ciphertext, 'Encrypted record ciphertext').byteLength < 16) {
+          throw new Error('An encrypted Secret Workspace record has invalid cryptographic lengths.');
         }
         secretRecords.push({ id: item.id, envelope: envelope });
       }
@@ -1489,25 +1599,23 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
-  async function clearApplicationPreferences() {
-    try {
-      localStorage.clear();
-    } catch (_) {}
-    if (isNeutralinoRuntimeAvailable() && Neutralino.storage && Neutralino.storage.clear) {
-      try {
-        await Neutralino.storage.clear();
-      } catch (error) {
-        console.warn('Unable to clear desktop preferences:', error);
-      }
-    }
+  function captureApplicationPreferences() {
+    const snapshot = {};
+    WORKSPACE_PREFERENCE_KEYS.forEach(function(key) {
+      try { snapshot[key] = localStorage.getItem(key); } catch (_) { snapshot[key] = null; }
+    });
+    return snapshot;
   }
 
-  async function restoreBackupPreferences(preferences) {
-    if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) return;
+  async function replaceApplicationPreferences(preferences) {
+    const source = preferences && typeof preferences === 'object' && !Array.isArray(preferences) ? preferences : {};
     for (const key of WORKSPACE_PREFERENCE_KEYS) {
-      if (typeof preferences[key] !== 'string') continue;
-      localStorage.setItem(key, preferences[key]);
-      if (isNeutralinoRuntimeAvailable()) await Neutralino.storage.setData(key, preferences[key]);
+      if (typeof source[key] === 'string') localStorage.setItem(key, source[key]);
+      else localStorage.removeItem(key);
+      if (isNeutralinoRuntimeAvailable()) {
+        if (typeof source[key] === 'string') await Neutralino.storage.setData(key, source[key]);
+        else if (Neutralino.storage.removeData) await Neutralino.storage.removeData(key).catch(function() {});
+      }
     }
   }
 
@@ -1517,6 +1625,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       title: 'Importing workspace backup',
       detail: 'Validating backup…'
     });
+    let restoreCommitted = false;
+    let preferenceSnapshot = null;
     try {
       const backup = await parseWorkspaceBackup(input);
       suspendWorkspacePersistence = true;
@@ -1524,20 +1634,33 @@ document.addEventListener("DOMContentLoaded", async function () {
       clearTimeout(secretWorkspaceSaveTimeout);
       await Promise.all([
         workspacePersistenceChain.catch(function() {}),
-        secretWorkspaceSaveChain.catch(function() {})
+        secretWorkspaceSaveChain.catch(function() {}),
+        secretDirtyJournalChain.catch(function() {}),
+        organizationPersistenceChain.catch(function() {})
       ]);
+      preferenceSnapshot = captureApplicationPreferences();
+      try {
+        await replaceApplicationPreferences(backup.preferences);
+      } catch (preferenceError) {
+        try { await replaceApplicationPreferences(preferenceSnapshot); } catch (_) {}
+        throw preferenceError;
+      }
       const restoreTotal = Math.max(1, backup.documents.length + backup.secretRecords.length);
-      await workspaceStorage.restoreBackupData(backup, {
-        onProgress: function(processed, total, label) {
-          updateImportProgress(
-            45 + Math.round((processed / Math.max(1, total || restoreTotal)) * 50),
-            100,
-            'Restoring ' + label + '…'
-          );
-        }
-      });
-      await clearApplicationPreferences();
-      await restoreBackupPreferences(backup.preferences);
+      try {
+        await workspaceStorage.restoreBackupData(backup, {
+          onProgress: function(processed, total, label) {
+            updateImportProgress(
+              45 + Math.round((processed / Math.max(1, total || restoreTotal)) * 50),
+              100,
+              'Restoring ' + label + '…'
+            );
+          }
+        });
+        restoreCommitted = true;
+      } catch (restoreError) {
+        try { await replaceApplicationPreferences(preferenceSnapshot); } catch (_) {}
+        throw restoreError;
+      }
       updateImportProgress(100, 100, 'Reloading restored workspace…');
       finishImportProgress(100, 100, {
         title: 'Import complete',
@@ -1548,14 +1671,24 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
       window.setTimeout(function() { window.location.reload(); }, 1100);
     } catch (error) {
-      suspendWorkspacePersistence = false;
+      if (!restoreCommitted) suspendWorkspacePersistence = false;
       console.error('Workspace backup import failed:', error);
-      finishImportProgress(0, 100, {
-        success: false,
-        title: 'Import failed',
-        countText: 'Workspace not restored',
-        detail: error && error.message ? error.message : 'The backup could not be imported.'
-      });
+      if (restoreCommitted) {
+        finishImportProgress(100, 100, {
+          success: true,
+          title: 'Import complete',
+          countText: 'Workspace restored',
+          detail: 'The workspace was committed. Reloading before editing can resume.'
+        });
+        window.setTimeout(function() { window.location.reload(); }, 100);
+      } else {
+        finishImportProgress(0, 100, {
+          success: false,
+          title: 'Import failed',
+          countText: 'Workspace not restored',
+          detail: error && error.message ? error.message : 'The backup could not be imported.'
+        });
+      }
     }
   }
 
@@ -3419,14 +3552,20 @@ document.addEventListener("DOMContentLoaded", async function () {
   let secretWorkspaceDocumentCount = 0;
   let secretWorkspaceSaveTimeout = null;
   let secretWorkspaceSaveChain = Promise.resolve();
+  let secretDirtyJournalChain = Promise.resolve();
   let secretWorkspacePersistedFolders = '';
   let secretWorkspaceStoredDocumentIds = new Set();
+  let secretWorkspaceRecordRevisions = new Map();
   let importProgressHideTimeout = null;
   let mediaProgressHideTimeout = null;
   let liveCollaboration = null;
   let liveShareUiReady = false;
   let liveCollaborationModulesPromise = null;
   let workspacePersistenceChain = Promise.resolve();
+  let organizationPersistenceChain = Promise.resolve();
+  let organizationSaveSequence = 0;
+  let documentOrganizationStorageRevision = 0;
+  let documentOrganizationPersistedSnapshot = null;
   let pendingWorkspacePersistAll = false;
   let pendingWorkspacePersistIds = new Set();
   let suspendWorkspacePersistence = false;
@@ -3544,17 +3683,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function loadDocumentOrganization() {
     if (workspaceStorage) {
-      try {
-        const storedOrganization = await workspaceStorage.getDocumentOrganization();
-        if (storedOrganization) return normalizeDocumentOrganization(storedOrganization);
-      } catch (error) {
-        console.warn('Failed to load stored document organization:', error);
+      const state = await workspaceStorage.getDocumentOrganizationState();
+      documentOrganizationStorageRevision = Number(state.revision) || 0;
+      if (state.organization) {
+        const normalized = normalizeDocumentOrganization(state.organization);
+        documentOrganizationPersistedSnapshot = JSON.parse(JSON.stringify(normalized));
+        return normalized;
       }
     }
     try {
-      return normalizeDocumentOrganization(JSON.parse(localStorage.getItem(DOCUMENT_ORGANIZATION_KEY)) || {});
+      const normalized = normalizeDocumentOrganization(JSON.parse(localStorage.getItem(DOCUMENT_ORGANIZATION_KEY)) || {});
+      documentOrganizationPersistedSnapshot = createDefaultDocumentOrganization();
+      return normalized;
     } catch (_) {
-      return createDefaultDocumentOrganization();
+      const fallback = createDefaultDocumentOrganization();
+      documentOrganizationPersistedSnapshot = createDefaultDocumentOrganization();
+      return fallback;
     }
   }
 
@@ -3593,11 +3737,34 @@ document.addEventListener("DOMContentLoaded", async function () {
           : null
       })
     };
-    saveStorageItem(DOCUMENT_ORGANIZATION_KEY, JSON.stringify(storageOrganization));
     if (workspaceStorage && !isPrivateStorageMode()) {
-      workspaceStorage.saveDocumentOrganization(storageOrganization).catch(function(error) {
+      const sequence = ++organizationSaveSequence;
+      organizationPersistenceChain = organizationPersistenceChain.catch(function() {}).then(async function() {
+        const result = await workspaceStorage.saveDocumentOrganization(storageOrganization, {
+          expectedRevision: documentOrganizationStorageRevision,
+          baseOrganization: documentOrganizationPersistedSnapshot
+        });
+        documentOrganizationStorageRevision = Number(result && result.revision) || documentOrganizationStorageRevision;
+        documentOrganizationPersistedSnapshot = JSON.parse(JSON.stringify(result && result.organization || storageOrganization));
+        saveStorageItem(DOCUMENT_ORGANIZATION_KEY, JSON.stringify(documentOrganizationPersistedSnapshot));
+        if (result && result.merged && sequence === organizationSaveSequence) {
+          const secretFolders = documentOrganization.folders.filter(function(folder) {
+            return folder.workspaceId === SECRET_WORKSPACE_ID;
+          });
+          const normalized = normalizeDocumentOrganization(result.organization);
+          normalized.folders = normalized.folders.concat(secretFolders);
+          documentOrganization = normalized;
+          renderDocumentSidebar();
+        }
+      }).catch(function(error) {
         console.warn('Failed to save document organization:', error);
+        showAppToast('Folder changes could not be saved. Existing stored folders were kept.', {
+          tone: 'error',
+          title: 'Folder changes not saved'
+        });
       });
+    } else if (!workspaceStorage) {
+      saveStorageItem(DOCUMENT_ORGANIZATION_KEY, JSON.stringify(storageOrganization));
     }
     scheduleSecretWorkspaceSave();
   }
@@ -3722,56 +3889,157 @@ document.addEventListener("DOMContentLoaded", async function () {
     return JSON.parse(new TextDecoder().decode(decrypted));
   }
 
+  async function resolveSecretWorkspaceConflict(error, key) {
+    if (!error || error.name !== 'WorkspaceSecretConflictError') return false;
+    const folderRecordId = window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__';
+    const storedRecord = error.storedRecord;
+    if (error.recordId === folderRecordId) {
+      let remoteFolders = [];
+      if (storedRecord && storedRecord.envelope) {
+        const decrypted = await decryptSecretWorkspaceValue(storedRecord.envelope, key);
+        remoteFolders = Array.isArray(decrypted) ? decrypted : [];
+      }
+      const localFolders = documentOrganization.folders.filter(function(folder) {
+        return folder.workspaceId === SECRET_WORKSPACE_ID;
+      });
+      const merged = remoteFolders.map(function(folder) { return Object.assign({}, folder); });
+      const remoteById = new Map(merged.map(function(folder) { return [folder.id, folder]; }));
+      localFolders.forEach(function(folder) {
+        const remote = remoteById.get(folder.id);
+        if (!remote) {
+          merged.push(Object.assign({}, folder));
+        } else if (JSON.stringify(remote) !== JSON.stringify(folder)) {
+          merged.push(Object.assign({}, folder, {
+            id: createDocumentEntityId('folder_conflict'),
+            name: String(folder.name || 'Folder') + ' (conflict copy)',
+            parentFolderId: null
+          }));
+        }
+      });
+      documentOrganization.folders = documentOrganization.folders.filter(function(folder) {
+        return folder.workspaceId !== SECRET_WORKSPACE_ID;
+      }).concat(merged);
+      secretWorkspacePersistedFolders = JSON.stringify(remoteFolders);
+      secretWorkspaceRecordRevisions.set(folderRecordId, Number(storedRecord && storedRecord.storageRevision) || 0);
+      return true;
+    }
+
+    const localIndex = tabs.findIndex(function(tab) {
+      return tab.id === error.recordId && tab.workspaceId === SECRET_WORKSPACE_ID;
+    });
+    const localTab = localIndex >= 0 ? tabs[localIndex] : null;
+    if (storedRecord && storedRecord.envelope) {
+      const remoteValue = await decryptSecretWorkspaceValue(storedRecord.envelope, key);
+      if (localTab) {
+        const conflictCopy = Object.assign({}, localTab, {
+          id: createDocumentEntityId('secret_conflict'),
+          title: String(localTab.title || 'Untitled') + ' (conflict copy)',
+          createdAt: Date.now(),
+          lastOpenedAt: Date.now(),
+          lastEditedAt: Date.now()
+        });
+        delete conflictCopy._secretPersistedSnapshot;
+        tabs.push(conflictCopy);
+        secretWorkspaceRecordRevisions.set(conflictCopy.id, 0);
+      }
+      if (remoteValue && typeof remoteValue === 'object') {
+        remoteValue.id = error.recordId;
+        remoteValue.workspaceId = SECRET_WORKSPACE_ID;
+        remoteValue.contentLoaded = true;
+        remoteValue._secretPersistedSnapshot = JSON.stringify(getSecretDocumentStorageValue(remoteValue));
+        normalizeTabDocumentMetadata(remoteValue, { allowSecret: true });
+        if (localIndex >= 0) tabs.splice(localIndex, 1, remoteValue);
+        else tabs.push(remoteValue);
+      }
+      secretWorkspaceStoredDocumentIds.add(error.recordId);
+      secretWorkspaceRecordRevisions.set(error.recordId, Number(storedRecord.storageRevision) || 0);
+      return true;
+    }
+
+    if (localTab) {
+      localTab.id = createDocumentEntityId('secret_recovered');
+      localTab.title = String(localTab.title || 'Untitled') + ' (recovered conflict)';
+      delete localTab._secretPersistedSnapshot;
+      secretWorkspaceStoredDocumentIds.delete(error.recordId);
+      secretWorkspaceRecordRevisions.delete(error.recordId);
+      secretWorkspaceRecordRevisions.set(localTab.id, 0);
+      return true;
+    }
+    return false;
+  }
+
   function enqueueSecretWorkspaceSave() {
     if (suspendWorkspacePersistence) return Promise.resolve(false);
     if (!isSecretWorkspaceUnlocked()) return Promise.resolve(false);
     if (isPrivateStorageMode()) return Promise.resolve(false);
     const key = secretWorkspaceKey;
     const salt = new Uint8Array(secretWorkspaceSalt);
-    const payload = getSecretWorkspacePayload();
-    secretWorkspaceDocumentCount = payload.documents.length;
     secretWorkspaceSaveChain = secretWorkspaceSaveChain.catch(function() {}).then(async function() {
       if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
-      const storedRecords = await workspaceStorage.listSecretRecords();
-      const storedById = new Map(storedRecords.map(function(record) { return [record.id, record]; }));
-      const currentIds = new Set();
-      const nextRecords = [];
-      const committedSnapshots = [];
-      for (const tab of payload.documents) {
-        const value = getSecretDocumentStorageValue(tab);
-        const snapshot = JSON.stringify(value);
-        currentIds.add(tab.id);
-        let envelope = storedById.get(tab.id) && storedById.get(tab.id).envelope;
-        if (tab._secretPersistedSnapshot !== snapshot || !secretWorkspaceStoredDocumentIds.has(tab.id)) {
-          envelope = await encryptSecretWorkspaceValue(value, key);
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const payload = getSecretWorkspacePayload();
+        secretWorkspaceDocumentCount = payload.documents.length;
+        const currentIds = new Set();
+        const upserts = [];
+        const committedSnapshots = [];
+        for (const tab of payload.documents) {
+          const value = getSecretDocumentStorageValue(tab);
+          const snapshot = JSON.stringify(value);
+          currentIds.add(tab.id);
+          if (tab._secretPersistedSnapshot !== snapshot || !secretWorkspaceStoredDocumentIds.has(tab.id)) {
+            upserts.push({
+              id: tab.id,
+              envelope: await encryptSecretWorkspaceValue(value, key),
+              expectedRevision: Number(secretWorkspaceRecordRevisions.get(tab.id)) || 0
+            });
+            committedSnapshots.push({ tab: tab, snapshot: snapshot });
+          }
         }
-        if (!envelope) envelope = await encryptSecretWorkspaceValue(value, key);
-        nextRecords.push({ id: tab.id, envelope: envelope });
-        committedSnapshots.push({ tab: tab, snapshot: snapshot });
-      }
 
-      const folderSnapshot = JSON.stringify(payload.folders);
-      const folderRecordId = window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__';
-      let folderEnvelope = storedById.get(folderRecordId) && storedById.get(folderRecordId).envelope;
-      if (secretWorkspacePersistedFolders !== folderSnapshot) {
-        folderEnvelope = await encryptSecretWorkspaceValue(payload.folders, key);
+        const folderSnapshot = JSON.stringify(payload.folders);
+        const folderRecordId = window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__';
+        if (secretWorkspacePersistedFolders !== folderSnapshot || !secretWorkspaceRecordRevisions.has(folderRecordId)) {
+          upserts.push({
+            id: folderRecordId,
+            envelope: await encryptSecretWorkspaceValue(payload.folders, key),
+            expectedRevision: Number(secretWorkspaceRecordRevisions.get(folderRecordId)) || 0
+          });
+        }
+        const deletions = Array.from(secretWorkspaceStoredDocumentIds).filter(function(id) {
+          return !currentIds.has(id);
+        }).map(function(id) {
+          return { id: id, expectedRevision: Number(secretWorkspaceRecordRevisions.get(id)) || 0 };
+        });
+        const nextManifest = {
+          version: SECRET_WORKSPACE_VERSION,
+          iterations: secretWorkspaceIterations,
+          salt: bytesToBase64(salt),
+          documentCount: payload.documents.length,
+          folderCount: payload.folders.length,
+          updatedAt: Date.now()
+        };
+        try {
+          const result = await workspaceStorage.applySecretRecordChanges({
+            upserts: upserts,
+            deletions: deletions
+          }, nextManifest);
+          (result.revisions || []).forEach(function(item) {
+            secretWorkspaceRecordRevisions.set(item.id, Number(item.revision) || 0);
+          });
+          deletions.forEach(function(item) { secretWorkspaceRecordRevisions.delete(item.id); });
+          committedSnapshots.forEach(function(item) {
+            item.tab._secretPersistedSnapshot = item.snapshot;
+            clearSecretDirtyDocumentJournal(item.tab);
+          });
+          secretWorkspaceStoredDocumentIds = currentIds;
+          secretWorkspacePersistedFolders = folderSnapshot;
+          secretWorkspaceEnvelopeCache = result.manifest || nextManifest;
+          return true;
+        } catch (error) {
+          if (!(await resolveSecretWorkspaceConflict(error, key))) throw error;
+        }
       }
-      if (!folderEnvelope) folderEnvelope = await encryptSecretWorkspaceValue(payload.folders, key);
-      nextRecords.push({ id: folderRecordId, envelope: folderEnvelope });
-      const nextManifest = {
-        version: SECRET_WORKSPACE_VERSION,
-        iterations: secretWorkspaceIterations,
-        salt: bytesToBase64(salt),
-        documentCount: payload.documents.length,
-        folderCount: payload.folders.length,
-        updatedAt: Date.now()
-      };
-      await workspaceStorage.replaceSecretRecords(nextRecords, nextManifest);
-      committedSnapshots.forEach(function(item) { item.tab._secretPersistedSnapshot = item.snapshot; });
-      secretWorkspaceStoredDocumentIds = currentIds;
-      secretWorkspacePersistedFolders = folderSnapshot;
-      secretWorkspaceEnvelopeCache = nextManifest;
-      return true;
+      throw new Error('Secret Workspace changed repeatedly in another tab; no local changes were discarded.');
     });
     return secretWorkspaceSaveChain;
   }
@@ -3801,28 +4069,47 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (Number(envelope.version) === 1) {
       payload = await decryptSecretWorkspaceValue(envelope, key);
       secretWorkspaceStoredDocumentIds = new Set();
+      secretWorkspaceRecordRevisions = new Map();
       secretWorkspacePersistedFolders = '';
     } else {
       if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
       const records = await workspaceStorage.listSecretRecords();
       const documents = [];
       let folders = [];
+      const folderRecordId = window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__';
+      const storedDocumentCount = records.filter(function(record) { return record.id !== folderRecordId; }).length;
+      const expectedDocumentCount = Number(envelope.documentCount);
+      if (Number.isSafeInteger(expectedDocumentCount) && expectedDocumentCount >= 0 &&
+          storedDocumentCount < expectedDocumentCount) {
+        throw new Error('Secret Workspace is incomplete: one or more encrypted document records are missing.');
+      }
+      if (Number(envelope.folderCount) > 0 && !records.some(function(record) { return record.id === folderRecordId; })) {
+        throw new Error('Secret Workspace is incomplete: its encrypted folder metadata is missing.');
+      }
       secretWorkspaceStoredDocumentIds = new Set();
+      secretWorkspaceRecordRevisions = new Map();
       for (const record of records) {
         const value = await decryptSecretWorkspaceValue(record.envelope, key);
-        if (record.id === (window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__')) {
-          folders = Array.isArray(value) ? value : [];
+        if (record.id === folderRecordId) {
+          if (!Array.isArray(value)) throw new Error('Secret Workspace folder metadata is corrupt.');
+          folders = value;
           secretWorkspacePersistedFolders = JSON.stringify(folders);
         } else {
-          if (value && typeof value === 'object') {
-            value._secretPersistedSnapshot = JSON.stringify(value);
-            documents.push(value);
-            secretWorkspaceStoredDocumentIds.add(record.id);
+          if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('An encrypted Secret Workspace document is corrupt.');
           }
+          // The record ID is authoritative. This prevents a corrupt plaintext
+          // ID from hiding a second document in the Explorer UI.
+          value.id = record.id;
+          value._secretPersistedSnapshot = JSON.stringify(value);
+          documents.push(value);
+          secretWorkspaceStoredDocumentIds.add(record.id);
         }
+        secretWorkspaceRecordRevisions.set(record.id, Number(record.storageRevision) || 0);
       }
       payload = { version: SECRET_WORKSPACE_VERSION, folders: folders, documents: documents };
     }
+    payload = await recoverSecretDirtyDocumentJournals(payload, key);
     return { payload: payload, key: key, salt: salt, iterations: iterations };
   }
 
@@ -3878,7 +4165,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.reviewThreads = normalizeReviewThreads(tab.reviewThreads);
       tab.contentLoaded = true;
       normalizeTabDocumentMetadata(tab, { allowSecret: true });
-      if (!tab._secretPersistedSnapshot) {
+      if (!tab._secretPersistedSnapshot && !tab._secretDirtyJournalKeys) {
         tab._secretPersistedSnapshot = JSON.stringify(getSecretDocumentStorageValue(tab));
       }
       tabs.push(tab);
@@ -3969,6 +4256,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (workspaceStorage) await workspaceStorage.clearSecretRecords();
     secretWorkspaceEnvelopeCache = null;
     secretWorkspaceStoredDocumentIds.clear();
+    secretWorkspaceRecordRevisions.clear();
     secretWorkspacePersistedFolders = '';
     removeStorageItem(SECRET_WORKSPACE_STORAGE_KEY);
     const workspace = getWorkspaceById(SECRET_WORKSPACE_ID);
@@ -4124,7 +4412,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       closeAppModal(modal);
       openDocumentConfirmation({
         title: 'Reset Secret Workspace?',
-        description: 'This permanently deletes every encrypted file and folder in Secret Workspace. The content cannot be recovered.',
+        description: 'This removes every encrypted file and folder from Secret Workspace and keeps an encrypted recovery snapshot in Trash.',
         confirmText: 'Reset Secret Workspace',
         onConfirm: function() {
           resetSecretWorkspaceData().then(function() {
@@ -4894,7 +5182,20 @@ document.addEventListener("DOMContentLoaded", async function () {
       icon: isTemporaryDocument(tab) ? 'lucide-x' : 'lucide-trash-2',
       label: isTemporaryDocument(tab) ? 'Close' : 'Delete',
       danger: true,
-      run: function() { deleteTab(tab.id); }
+      run: function() {
+        if (isTemporaryDocument(tab)) {
+          deleteTab(tab.id);
+          return;
+        }
+        openDocumentConfirmation({
+          title: 'Delete “' + String(tab.title || 'Untitled') + '”?',
+          description: tab.workspaceId === SECRET_WORKSPACE_ID
+            ? 'The encrypted document will be moved to recoverable storage.'
+            : 'The document will be moved to recoverable trash.',
+          confirmText: 'Delete',
+          onConfirm: function() { deleteTab(tab.id); }
+        });
+      }
     });
     return actions;
   }
@@ -9414,13 +9715,19 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   let dirtyJournalWarningShown = false;
+  let emergencySavePendingCount = 0;
+  let secretJournalPendingCount = 0;
 
   function getDirtyDocumentJournalKey(documentId) {
     return DIRTY_DOCUMENT_JOURNAL_PREFIX + encodeURIComponent(workspaceWriterId) + ':' + encodeURIComponent(documentId);
   }
 
   function writeDirtyDocumentJournal(tab, content) {
-    if (!tab || isTemporaryDocument(tab) || tab.workspaceId === SECRET_WORKSPACE_ID || isPrivateStorageMode()) return;
+    if (!tab || isTemporaryDocument(tab) || isPrivateStorageMode()) return true;
+    if (tab.workspaceId === SECRET_WORKSPACE_ID) {
+      writeSecretDirtyDocumentJournal(tab, content);
+      return true;
+    }
     const key = getDirtyDocumentJournalKey(tab.id);
     try {
       localStorage.setItem(key, JSON.stringify({
@@ -9442,6 +9749,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         content: typeof content === 'string' ? content : ''
       }));
       tab._dirtyJournalKeys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(key)));
+      return true;
     } catch (error) {
       if (!dirtyJournalWarningShown) {
         dirtyJournalWarningShown = true;
@@ -9451,46 +9759,283 @@ document.addEventListener("DOMContentLoaded", async function () {
           title: 'Recovery journal unavailable'
         });
       }
+      try {
+        sessionStorage.setItem(key, JSON.stringify({
+          version: 1,
+          writerId: workspaceWriterId,
+          documentId: tab.id,
+          expectedRevision: Number(tab._storageRevision) || 0,
+          savedAt: Date.now(),
+          metadata: {
+            title: tab.title || 'Untitled',
+            workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
+            folderId: tab.folderId || null,
+            viewMode: tab.viewMode || 'split',
+            favorite: tab.favorite === true,
+            createdAt: tab.createdAt,
+            lastOpenedAt: tab.lastOpenedAt,
+            lastEditedAt: Date.now()
+          },
+          content: typeof content === 'string' ? content : ''
+        }));
+        tab._dirtyJournalKeys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(key)));
+      } catch (_) {}
+      if (workspaceStorage && typeof workspaceStorage.saveDirtyJournal === 'function') {
+        emergencySavePendingCount += 1;
+        workspaceStorage.saveDirtyJournal({
+          journalId: key,
+          version: 1,
+          writerId: workspaceWriterId,
+          documentId: tab.id,
+          expectedRevision: Number(tab._storageRevision) || 0,
+          savedAt: Date.now(),
+          metadata: {
+            title: tab.title || 'Untitled',
+            workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
+            folderId: tab.folderId || null,
+            viewMode: tab.viewMode || 'split',
+            favorite: tab.favorite === true,
+            createdAt: tab.createdAt,
+            lastOpenedAt: tab.lastOpenedAt,
+            lastEditedAt: Date.now()
+          },
+          content: typeof content === 'string' ? content : ''
+        }).then(function() {
+          tab._dirtyIndexedDbJournalIds = Array.from(new Set((tab._dirtyIndexedDbJournalIds || []).concat(key)));
+        }).catch(function(indexedDbError) {
+          console.warn('Unable to create the IndexedDB emergency edit journal:', indexedDbError);
+        }).finally(function() {
+          emergencySavePendingCount = Math.max(0, emergencySavePendingCount - 1);
+        });
+        return 'indexeddb';
+      }
+      return false;
     }
   }
 
-  function clearDirtyDocumentJournal(tab) {
+  function persistEditWithoutDurableJournal(tab, content) {
+    if (!tab || tab.workspaceId === SECRET_WORKSPACE_ID || isPrivateStorageMode()) return;
+    tab.content = typeof content === 'string' ? content : '';
+    tab.contentLoaded = true;
+    tab.lastEditedAt = Date.now();
+    emergencySavePendingCount += 1;
+    _flushTabsToStorage(tabs, { changedIds: [tab.id] }).finally(function() {
+      emergencySavePendingCount = Math.max(0, emergencySavePendingCount - 1);
+    });
+  }
+
+  function getSecretDirtyDocumentJournalKey(documentId) {
+    return SECRET_DIRTY_DOCUMENT_JOURNAL_PREFIX + encodeURIComponent(workspaceWriterId) + ':' + encodeURIComponent(documentId);
+  }
+
+  function writeSecretDirtyDocumentJournal(tab, content) {
+    if (!tab || tab.workspaceId !== SECRET_WORKSPACE_ID || !isSecretWorkspaceUnlocked() || isPrivateStorageMode()) {
+      return Promise.resolve(false);
+    }
+    const key = getSecretDirtyDocumentJournalKey(tab.id);
+    tab.content = typeof content === 'string' ? content : '';
+    tab.contentLoaded = true;
+    tab.lastEditedAt = Date.now();
+    const sequence = (Number(tab._secretJournalSequence) || 0) + 1;
+    tab._secretJournalSequence = sequence;
+    const value = getSecretDocumentStorageValue(Object.assign({}, tab, {
+      content: typeof content === 'string' ? content : '',
+      contentLoaded: true,
+      lastEditedAt: Date.now()
+    }));
+    secretJournalPendingCount += 1;
+    const promise = encryptSecretWorkspaceValue(value, secretWorkspaceKey).then(async function(envelope) {
+      if (tab._secretJournalSequence !== sequence) return false;
+      const journal = {
+        journalId: key,
+        kind: 'secret',
+        version: 1,
+        writerId: workspaceWriterId,
+        documentId: tab.id,
+        expectedRevision: Number(secretWorkspaceRecordRevisions.get(tab.id)) || 0,
+        savedAt: Date.now(),
+        envelope: envelope
+      };
+      try {
+        localStorage.setItem(key, JSON.stringify(journal));
+      } catch (localError) {
+        if (!workspaceStorage || typeof workspaceStorage.saveDirtyJournal !== 'function') throw localError;
+        await workspaceStorage.saveDirtyJournal(journal);
+        tab._secretDirtyIndexedDbJournalIds = Array.from(new Set((tab._secretDirtyIndexedDbJournalIds || []).concat(key)));
+      }
+      tab._secretDirtyJournalKeys = Array.from(new Set((tab._secretDirtyJournalKeys || []).concat(key)));
+      return true;
+    }).catch(function(error) {
+      console.warn('Unable to create the encrypted Secret Workspace recovery journal:', error);
+      showAppToast('The latest Secret Workspace edit could not be journaled. Keep this page open and retry saving.', {
+        tone: 'error',
+        title: 'Encrypted recovery journal unavailable'
+      });
+      enqueueSecretWorkspaceSave().catch(function(saveError) {
+        console.warn('Immediate Secret Workspace fallback save failed:', saveError);
+      });
+      return false;
+    }).finally(function() {
+      secretJournalPendingCount = Math.max(0, secretJournalPendingCount - 1);
+    });
+    secretDirtyJournalChain = promise;
+    return promise;
+  }
+
+  function clearSecretDirtyDocumentJournal(tab) {
     if (!tab) return;
+    const keys = Array.from(new Set((tab._secretDirtyJournalKeys || []).concat(getSecretDirtyDocumentJournalKey(tab.id))));
+    keys.forEach(function(key) {
+      try { localStorage.removeItem(key); } catch (_) {}
+      try { sessionStorage.removeItem(key); } catch (_) {}
+    });
+    delete tab._secretDirtyJournalKeys;
+    delete tab._secretJournalSequence;
+    const indexedDbIds = Array.from(new Set((tab._secretDirtyIndexedDbJournalIds || []).concat(keys)));
+    delete tab._secretDirtyIndexedDbJournalIds;
+    if (workspaceStorage && typeof workspaceStorage.deleteDirtyJournals === 'function') {
+      workspaceStorage.deleteDirtyJournals(indexedDbIds).catch(function(error) {
+        console.warn('Unable to clear a committed encrypted recovery journal:', error);
+      });
+    }
+  }
+
+  async function readSecretDirtyDocumentJournals() {
+    const entries = [];
+    const seenKeys = new Set();
+    [localStorage, sessionStorage].forEach(function(storage) {
+      try {
+        for (let index = 0; index < storage.length; index += 1) {
+          const key = storage.key(index);
+          if (!key || !key.startsWith(SECRET_DIRTY_DOCUMENT_JOURNAL_PREFIX) || seenKeys.has(key)) continue;
+          const value = JSON.parse(storage.getItem(key));
+          if (!value || typeof value.documentId !== 'string' || !value.envelope) continue;
+          seenKeys.add(key);
+          entries.push({ key: key, value: value });
+        }
+      } catch (_) {}
+    });
+    if (workspaceStorage && typeof workspaceStorage.listDirtyJournals === 'function') {
+      try {
+        const stored = await workspaceStorage.listDirtyJournals();
+        stored.forEach(function(value) {
+          if (!value || value.kind !== 'secret' || !value.journalId ||
+              entries.some(function(entry) { return entry.key === value.journalId; })) return;
+          entries.push({ key: value.journalId, value: value });
+        });
+      } catch (error) {
+        console.warn('Unable to read encrypted IndexedDB recovery journals:', error);
+      }
+    }
+    return entries.sort(function(left, right) {
+      return Number(left.value.savedAt) - Number(right.value.savedAt);
+    });
+  }
+
+  async function recoverSecretDirtyDocumentJournals(payload, key) {
+    const source = payload && typeof payload === 'object' ? payload : { folders: [], documents: [] };
+    const documents = Array.isArray(source.documents) ? source.documents : [];
+    const restoredOriginalIds = new Set();
+    for (const entry of await readSecretDirtyDocumentJournals()) {
+      let value;
+      try {
+        value = await decryptSecretWorkspaceValue(entry.value.envelope, key);
+      } catch (_) {
+        continue;
+      }
+      if (!value || typeof value !== 'object') continue;
+      const existingIndex = documents.findIndex(function(tab) { return tab.id === entry.value.documentId; });
+      const canRestoreOriginal = existingIndex >= 0 &&
+        !restoredOriginalIds.has(entry.value.documentId) &&
+        (Number(secretWorkspaceRecordRevisions.get(entry.value.documentId)) || 0) ===
+          (Number(entry.value.expectedRevision) || 0);
+      if (canRestoreOriginal) {
+        value.id = entry.value.documentId;
+        value.workspaceId = SECRET_WORKSPACE_ID;
+        value.contentLoaded = true;
+        value._secretDirtyJournalKeys = [entry.key];
+        delete value._secretPersistedSnapshot;
+        documents.splice(existingIndex, 1, value);
+        restoredOriginalIds.add(value.id);
+      } else {
+        value.id = createDocumentEntityId('secret_recovered');
+        value.title = String(value.title || 'Untitled') + ' (recovered edit)';
+        value.workspaceId = SECRET_WORKSPACE_ID;
+        value.contentLoaded = true;
+        value._secretDirtyJournalKeys = [entry.key];
+        delete value._secretPersistedSnapshot;
+        documents.push(value);
+        secretWorkspaceRecordRevisions.set(value.id, 0);
+      }
+    }
+    source.documents = documents;
+    return source;
+  }
+
+  function clearDirtyDocumentJournal(tab) {
+    if (!tab) return Promise.resolve();
     const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(tab.id))));
     keys.forEach(function(key) {
       try { localStorage.removeItem(key); } catch (_) {}
+      try { sessionStorage.removeItem(key); } catch (_) {}
     });
+    const indexedDbIds = Array.from(new Set((tab._dirtyIndexedDbJournalIds || []).concat(keys)));
     delete tab._dirtyJournalKeys;
+    delete tab._dirtyIndexedDbJournalIds;
+    if (workspaceStorage && typeof workspaceStorage.deleteDirtyJournals === 'function') {
+      return workspaceStorage.deleteDirtyJournals(indexedDbIds).catch(function(error) {
+        console.warn('Unable to clear a committed emergency journal:', error);
+      });
+    }
+    return Promise.resolve();
   }
 
-  function readDirtyDocumentJournals() {
+  async function readDirtyDocumentJournals() {
     const entries = [];
     try {
-      for (let index = 0; index < localStorage.length; index += 1) {
-        const key = localStorage.key(index);
-        if (!key || !key.startsWith(DIRTY_DOCUMENT_JOURNAL_PREFIX)) continue;
-        try {
-          const value = JSON.parse(localStorage.getItem(key));
+      const storages = [localStorage, sessionStorage];
+      for (const storage of storages) {
+        for (let index = 0; index < storage.length; index += 1) {
+          const key = storage.key(index);
+          if (!key || !key.startsWith(DIRTY_DOCUMENT_JOURNAL_PREFIX)) continue;
+          try {
+            const value = JSON.parse(storage.getItem(key));
+            if (entries.some(function(entry) { return entry.key === key; })) continue;
           if (!value || typeof value.documentId !== 'string' || typeof value.content !== 'string') {
-            localStorage.removeItem(key);
+            storage.removeItem(key);
             index -= 1;
             continue;
           }
           entries.push({ key: key, value: value });
         } catch (_) {
-          localStorage.removeItem(key);
+          storage.removeItem(key);
           index -= 1;
         }
       }
+      }
     } catch (_) {}
+    if (workspaceStorage && typeof workspaceStorage.listDirtyJournals === 'function') {
+      try {
+        const stored = await workspaceStorage.listDirtyJournals();
+        stored.forEach(function(value) {
+          const key = value && value.journalId;
+          if (!key || entries.some(function(entry) { return entry.key === key; })) return;
+          if (typeof value.documentId === 'string' && typeof value.content === 'string') {
+            entries.push({ key: key, value: value });
+          }
+        });
+      } catch (error) {
+        console.warn('Unable to read IndexedDB recovery journals:', error);
+      }
+    }
     return entries.sort(function(a, b) { return Number(a.value.savedAt) - Number(b.value.savedAt); });
   }
 
-  function recoverDirtyDocumentJournals() {
+  async function recoverDirtyDocumentJournals() {
     if (isPrivateStorageMode()) return [];
     const recoveredIds = [];
     const restoredOriginalIds = new Set();
-    readDirtyDocumentJournals().forEach(function(entry) {
+    (await readDirtyDocumentJournals()).forEach(function(entry) {
       const journal = entry.value;
       const existing = tabs.find(function(tab) { return tab.id === journal.documentId; });
       const canRestoreOriginal = existing &&
@@ -9501,6 +10046,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         existing.contentLoaded = true;
         existing.lastEditedAt = Number(journal.savedAt) || Date.now();
         existing._dirtyJournalKeys = Array.from(new Set((existing._dirtyJournalKeys || []).concat(entry.key)));
+        existing._dirtyIndexedDbJournalIds = Array.from(new Set((existing._dirtyIndexedDbJournalIds || []).concat(entry.key)));
         restoredOriginalIds.add(existing.id);
         recoveredIds.push(existing.id);
         return;
@@ -9516,6 +10062,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       recovered.lastOpenedAt = Number(metadata.lastOpenedAt) || recovered.lastOpenedAt;
       recovered.lastEditedAt = Number(journal.savedAt) || Date.now();
       recovered._dirtyJournalKeys = [entry.key];
+      recovered._dirtyIndexedDbJournalIds = [entry.key];
       tabs.push(recovered);
       recoveredIds.push(recovered.id);
     });
@@ -9697,10 +10244,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       } else {
         saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
       }
-      changedIds.forEach(function(id) {
+      await Promise.all(changedIds.map(function(id) {
         const tab = tabs.find(function(item) { return item.id === id; });
-        if (tab) clearDirtyDocumentJournal(tab);
-      });
+        return tab ? clearDirtyDocumentJournal(tab) : Promise.resolve();
+      }));
       evictInactiveDocumentContent();
       updateSaveStatus('saved');
       return true;
@@ -9721,11 +10268,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function flushWorkspaceBeforeExit() {
     saveCurrentTabState();
+    await secretDirtyJournalChain.catch(function() {});
     const normalSaved = await _flushTabsToStorage(tabs);
     if (!normalSaved) throw new Error('The normal workspace could not be saved.');
     if (isSecretWorkspaceUnlocked()) {
       await flushSecretWorkspaceToStorage();
     }
+    await organizationPersistenceChain;
     return true;
   }
 
@@ -9734,8 +10283,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Browser lifecycle events cannot guarantee that asynchronous storage finishes,
   // so ordinary edits are still debounced continuously. The desktop close handler
   // explicitly awaits this hook before exiting.
-  window.addEventListener('beforeunload', function() {
+  window.addEventListener('beforeunload', function(event) {
     flushWorkspaceBeforeExit().catch(function() {});
+    if (emergencySavePendingCount > 0 || secretJournalPendingCount > 0) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   });
   window.addEventListener('pagehide', function() {
     flushWorkspaceBeforeExit().catch(function() {});
@@ -10613,7 +11166,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (contentChanged && !isTemporaryDocument(tab)) {
       tab.lastEditedAt = Date.now();
-      writeDirtyDocumentJournal(tab, tab.content);
+      const journalState = writeDirtyDocumentJournal(tab, tab.content);
+      if (journalState !== true && tab.workspaceId !== SECRET_WORKSPACE_ID) {
+        persistEditWithoutDurableJournal(tab, tab.content);
+      }
     }
     if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     if (contentChanged) renderDocumentSidebar();
@@ -10629,7 +11185,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.splitScrollPos = documentSplitEditor.scrollTop;
     if (documentSplitPreview) tab.splitPreviewScrollPos = documentSplitPreview.scrollTop;
     if (contentChanged && !isTemporaryDocument(tab)) tab.lastEditedAt = Date.now();
-    if (contentChanged) writeDirtyDocumentJournal(tab, tab.content);
+    if (contentChanged) {
+      const journalState = writeDirtyDocumentJournal(tab, tab.content);
+      if (journalState !== true && tab.workspaceId !== SECRET_WORKSPACE_ID) {
+        persistEditWithoutDurableJournal(tab, tab.content);
+      }
+    }
     if (contentChanged) saveTabsToStorage(tabs, [tab.id]);
   }
 
@@ -10897,7 +11458,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.content = documentSplitEditor.value;
       tab.contentLoaded = true;
       if (!isTemporaryDocument(tab)) tab.lastEditedAt = Date.now();
-      writeDirtyDocumentJournal(tab, tab.content);
+      const journalState = writeDirtyDocumentJournal(tab, tab.content);
+      if (journalState !== true && tab.workspaceId !== SECRET_WORKSPACE_ID) {
+        persistEditWithoutDurableJournal(tab, tab.content);
+      }
       clearTimeout(secondarySplitSaveTimeout);
       secondarySplitSaveTimeout = setTimeout(function() {
         saveTabsToStorage(tabs, [tab.id]);
@@ -11289,7 +11853,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           secretWorkspaceSaveChain.catch(function() {})
         ]);
         updateImportProgress(25, 100, 'Clearing workspace settings…');
-        await clearApplicationPreferences();
+        await replaceApplicationPreferences({});
         updateImportProgress(55, 100, 'Permanently deleting workspace files…');
         resetStarted = true;
         await workspaceStorage.resetAllData();
@@ -11405,7 +11969,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return enterWorkspaceStorageRecoveryMode(error);
     }
     document.documentElement.dataset.workspaceStorageState = 'ready';
-    const recoveredIds = recoverDirtyDocumentJournals();
+    const recoveredIds = await recoverDirtyDocumentJournals();
     const hadExistingWorkspace = tabs.length > 0;
     activeTabId = loadActiveTabId();
 
@@ -21375,6 +21939,30 @@ ${selector} .arrowheadPath {
       });
     });
   }
+  if (storageTrashRestore && storageTrashList) {
+    storageTrashRestore.addEventListener('click', function() {
+      const trashId = storageTrashList.value;
+      if (!trashId) return;
+      openDocumentConfirmation({
+        title: 'Restore deleted data?',
+        description: 'The selected item will be restored without overwriting an existing normal document. Restoring an encrypted snapshot preserves the current Secret Workspace as another recoverable snapshot.',
+        confirmText: 'Restore',
+        onConfirm: function() {
+          storageTrashRestore.disabled = true;
+          workspaceStorage.restoreTrashItem(trashId).then(function() {
+            showAppToast('Deleted data restored. Reloading the workspace…', {
+              tone: 'info',
+              title: 'Restore complete'
+            });
+            window.setTimeout(function() { window.location.reload(); }, 300);
+          }).catch(function(error) {
+            storageTrashRestore.disabled = false;
+            setStorageSettingsError(error && error.message ? error.message : 'Unable to restore the selected data.');
+          });
+        }
+      });
+    });
+  }
   if (storageBackupFileInput) {
     storageBackupFileInput.addEventListener('change', async function() {
       const file = storageBackupFileInput.files && storageBackupFileInput.files[0];
@@ -21486,7 +22074,12 @@ ${selector} .arrowheadPath {
     }
     updateSaveStatus('saving');
     const dirtyTab = tabs.find(function(tab) { return tab.id === activeTabId; });
-    if (dirtyTab) writeDirtyDocumentJournal(dirtyTab, markdownEditor.value);
+    if (dirtyTab) {
+      const journalState = writeDirtyDocumentJournal(dirtyTab, markdownEditor.value);
+      if (journalState !== true && dirtyTab.workspaceId !== SECRET_WORKSPACE_ID) {
+        persistEditWithoutDurableJournal(dirtyTab, markdownEditor.value);
+      }
+    }
     handleKeystrokeHistory(e);
     if (liveCollaboration && liveCollaboration.tabId === activeTabId && !liveCollaboration.isApplyingRemoteChange) {
       syncLiveLocalEditorChange(liveCollaboration.lastMarkdown || '', markdownEditor.value || '');

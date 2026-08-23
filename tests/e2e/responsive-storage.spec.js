@@ -135,8 +135,8 @@ test('reset workspace permanently deletes documents and blocks repeated clicks',
     await storage.init();
     await storage.saveSecretRecord('reset_secret', {
       version: 2,
-      iv: 'cmVzZXQtaXY=',
-      ciphertext: 'cmVzZXQtY2lwaGVydGV4dA=='
+      iv: 'MDEyMzQ1Njc4OWFi',
+      ciphertext: 'MDEyMzQ1Njc4OWFiY2RlZg=='
     });
     await storage.setSecretManifest({
       version: 2,
@@ -185,12 +185,12 @@ test('workspace backup ZIP restores documents and folder organization', async ({
     await storage.init();
     await storage.saveSecretRecord('encrypted_test', {
       version: 2,
-      iv: 'c2FtZS1pdg==',
-      ciphertext: 'c2FtZS1jaXBoZXJ0ZXh0'
+      iv: 'MDEyMzQ1Njc4OWFi',
+      ciphertext: 'MDEyMzQ1Njc4OWFiY2RlZg=='
     });
     await storage.setSecretManifest({
       version: 2,
-      salt: 'c2FtZS1zYWx0',
+      salt: 'MDEyMzQ1Njc4OWFiY2RlZg==',
       iterations: 250000,
       documentCount: 1,
       folderCount: 0
@@ -236,7 +236,7 @@ test('workspace backup ZIP restores documents and folder organization', async ({
     await storage.init();
     const records = await storage.listSecretRecords();
     return records.find(record => record.id === 'encrypted_test')?.envelope?.ciphertext || '';
-  })).toBe('c2FtZS1jaXBoZXJ0ZXh0');
+  })).toBe('MDEyMzQ1Njc4OWFiY2RlZg==');
 });
 
 test('legacy localStorage workspaces migrate once into per-document storage', async ({ page }) => {
