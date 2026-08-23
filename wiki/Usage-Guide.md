@@ -60,19 +60,19 @@ The toolbar can:
 
 The editor also supports list continuation on Enter, two-space indent on Tab, outdent on Shift+Tab, and custom undo/redo. View-only shared tabs block editing actions and keep reading, find, help, and fullscreen available.
 
-## Comments and Suggestions
+## Comments
 
-Use Review when you want to leave structured feedback without editing the Markdown source.
+Use Comments when you want to leave anchored feedback without editing the Markdown source.
 
-1. Click **Review** in the desktop document toolbar or mobile menu.
-2. Select the plus pin on a rendered YAML frontmatter table, heading, paragraph, code block, or diagram.
-3. Choose **Comment** for general feedback or **Suggestion** for a proposed change.
-4. Enter the feedback, then select **Add comment** or **Add suggestion**.
-5. Use the review count to read saved feedback and the separate plus to add another item to the same block. Threads can be edited, resolved, reopened, or deleted.
+1. Open **Comments** from the desktop document toolbar or mobile menu.
+2. Select text in a heading, paragraph, list, quote, or code block, or click an image, rendered diagram, map, model, or math expression.
+3. Choose **New** in the Comments panel. A temporary blue highlight previews the selected anchor; choosing **Cancel** removes it.
+4. Enter the comment, then choose **Submit** or press `Ctrl+Enter`/`Cmd+Enter`.
+5. Click a comment card or its highlighted document content to activate and synchronize both sides. Hovering either side temporarily highlights the other.
 
-The panel toolbar can copy a Markdown summary, resolve all open items, or delete all feedback after confirmation. Review uses a side panel on desktop, a drawer on tablet, and a bottom sheet on mobile. Opening a new tab closes Review automatically.
+Open, Resolved, and All filters keep completed feedback available without letting it dominate the panel. Comment cards show the author, comment, and date without repeating the selected document text. Active cards reveal nested replies and a compact Reply field; resolved cards also show their closed time. Comments can be edited, resolved, reopened, or deleted. The interface uses a side panel on desktop, a drawer on tablet, and a bottom sheet on mobile. Opening a new tab closes Comments automatically.
 
-Review threads stay with normal local tabs and are excluded from document exports, duplicated tabs, and Share Snapshot links. Live Share synchronizes them while the room is active, including for view-only participants; Private mode pauses new local persistence, workspace backups retain review data, and Reset workspace deletes it.
+Comments stay with normal local tabs and are excluded from document exports, duplicated tabs, and Share Snapshot links. Owner comments use **Author**. Live Share comments and replies use the participant display name and follow later name changes while the room is active, including for view-only participants. Private mode pauses new local persistence, workspace backups retain comment data, and Reset workspace deletes it. Legacy stored comments and suggestions remain readable.
 
 ## Find and Replace
 
@@ -168,7 +168,7 @@ Use Live Share when you want a temporary real-time room.
 4. Start the session.
 5. Copy the invite link after the room starts.
 
-Live Share sends real-time Yjs updates through a Cloudflare Durable Object. It does not persist Markdown or Review Document content server-side. The Durable Object does persist the host, edit, and view capability values plus their creation time. The invite URL contains a room id, room secret, access role/capability, and title, not the full Document body. The server authenticates host, Can edit, and View only capabilities and filters message types by role. Markdown and Review data use separate Yjs documents, so View only participants can synchronize comments and suggestions without being allowed to edit Markdown.
+Live Share sends real-time Yjs updates through a Cloudflare Durable Object. It does not persist Markdown or comment content server-side. The Durable Object does persist the host, edit, and view capability values plus their creation time. The invite URL contains a room id, room secret, access role/capability, and title, not the full Document body. The server authenticates host, Can edit, and View only capabilities and filters message types by role. Markdown and comment data use separate Yjs documents, so View only participants can synchronize comments without being allowed to edit Markdown.
 
 Participants get a temporary live tab, presence avatars, and live cursor indicators. The host can end the session for everyone. Rooms are limited to 64 WebSocket participants and 8 MB live messages. Managed images, GIFs, and videos travel as short HTTPS links rather than binary Live Share messages and stop rendering when their 90-day storage TTL expires.
 

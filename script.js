@@ -298,18 +298,22 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, pre, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
+  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, img, video, audio, mjx-container, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
+  const REVIEW_ELEMENT_TYPES = new Set(['image', 'media', 'diagram', 'math', 'table']);
+  const REVIEW_REPLY_COLLAPSE_THRESHOLD = 4;
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
   const reviewPreviousViewModes = new Map();
   let reviewFilter = 'open';
-  let reviewComposerKind = 'comment';
   let activeReviewAnchor = null;
   let activeReviewEditId = null;
+  let activeReviewReplyEdit = null;
+  let activeReviewId = null;
+  let hoveredReviewId = null;
+  let pendingReviewSelection = null;
+  const expandedReviewThreadIds = new Set();
   let pendingReviewDelete = null;
   let pendingWorkspaceBackupInput = null;
-  let reviewPinsResizeObserver = null;
-  let reviewPinsLayoutFrame = null;
   let reviewTargetSourceSnapshots = new WeakMap();
   let activeModal = null;
   let lastFocusedElement = null;
@@ -340,9 +344,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   const markdownEditor = document.getElementById("markdown-editor");
   const markdownPreview = document.getElementById("markdown-preview");
-  const reviewPinsLayer = document.getElementById('review-pins-layer');
   const markdownFormatToolbar = document.getElementById("markdown-format-toolbar");
   const themeToggle = document.getElementById("theme-toggle");
+  const themeToggleIcon = document.getElementById("theme-toggle-icon");
+  const themeSwitchIcon = document.getElementById("theme-switch-icon");
   const directionToggle = document.getElementById("direction-toggle");
   const importFromFileButton = document.getElementById("import-from-file");
   const importFromGithubButton = document.getElementById("import-from-github");
@@ -374,6 +379,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const reviewPanelBackdrop = document.getElementById('review-panel-backdrop');
   const reviewPanelClose = document.getElementById('review-panel-close');
   const reviewPanelSummary = document.getElementById('review-panel-summary');
+  const reviewNewComment = document.getElementById('review-new-comment');
   const reviewCopySummary = document.getElementById('review-copy-summary');
   const reviewResolveAll = document.getElementById('review-resolve-all');
   const reviewDeleteAll = document.getElementById('review-delete-all');
@@ -387,6 +393,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const reviewComposer = document.getElementById('review-composer');
   const reviewComposerTitle = document.getElementById('review-composer-title');
   const reviewComposerAnchor = document.getElementById('review-composer-anchor');
+  const reviewComposerAuthor = document.getElementById('review-composer-author');
+  const reviewComposerAvatar = document.getElementById('review-composer-avatar');
   const reviewComposerCancel = document.getElementById('review-composer-cancel');
   const reviewFeedbackLabel = document.getElementById('review-feedback-label');
   const reviewFeedbackInput = document.getElementById('review-feedback-input');
@@ -757,7 +765,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return 'Open or create a document to use editing tools.';
     }
     if (reviewModeActive) {
-      return 'Review mode keeps the Markdown source read only.';
+      return 'Comments keeps the Markdown source read only.';
     }
     if (isShareSnapshotViewOnlyActive()) {
       return 'This shared snapshot is view only.';
@@ -801,6 +809,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const mobileExportToggle  = document.querySelector('[aria-controls="mobile-menu-export-panel"]');
   const mobileThemeToggle   = document.getElementById("mobile-theme-toggle");
   const mobileThemeIcon = document.getElementById("mobile-theme-icon");
+  const mobileThemeSwitchIcon = document.getElementById("mobile-theme-switch-icon");
   const mobileThemeStatus = document.getElementById("mobile-theme-status");
   const mobilePrivateModeToggle = document.getElementById("mobile-private-mode-toggle");
   const mobileStorageSettingsButton = document.getElementById("mobile-storage-settings-button");
@@ -1579,22 +1588,25 @@ document.addEventListener("DOMContentLoaded", async function () {
   document.documentElement.setAttribute("data-theme", initialTheme);
 
   function updateThemeToggleUI(theme) {
-    const useLightAppearance = theme === "dark";
+    const darkModeEnabled = theme === "dark";
+    const themeIconName = darkModeEnabled ? 'moon' : 'sun';
     if (themeToggle) {
-      const icon = themeToggle.querySelector('i');
       const description = document.getElementById('theme-toggle-description');
-      if (icon) icon.className = 'lucide lucide-' + (useLightAppearance ? 'sun' : 'moon');
-      if (description) description.textContent = useLightAppearance ? 'Switch to light appearance' : 'Switch to dark appearance';
-      themeToggle.setAttribute('aria-label', useLightAppearance ? 'Use light appearance' : 'Use dark appearance');
-      themeToggle.setAttribute('title', useLightAppearance ? 'Use light appearance' : 'Use dark appearance');
+      themeToggle.classList.toggle('is-active', darkModeEnabled);
+      themeToggle.setAttribute('aria-pressed', String(darkModeEnabled));
+      if (themeToggleIcon) themeToggleIcon.className = 'lucide lucide-' + themeIconName;
+      if (themeSwitchIcon) themeSwitchIcon.className = 'lucide lucide-' + themeIconName + ' settings-switch-icon';
+      if (description) description.textContent = darkModeEnabled ? 'Switch to light appearance' : 'Switch to dark appearance';
+      themeToggle.setAttribute('aria-label', darkModeEnabled ? 'Use light appearance' : 'Use dark appearance');
+      themeToggle.setAttribute('title', darkModeEnabled ? 'Use light appearance' : 'Use dark appearance');
     }
     if (mobileThemeToggle) {
-      const darkModeEnabled = theme === 'dark';
       mobileThemeToggle.classList.toggle('is-active', darkModeEnabled);
       mobileThemeToggle.setAttribute('aria-pressed', String(darkModeEnabled));
       mobileThemeToggle.setAttribute('aria-label', darkModeEnabled ? 'Use light mode' : 'Use dark mode');
       mobileThemeToggle.setAttribute('title', darkModeEnabled ? 'Use light mode' : 'Use dark mode');
-      if (mobileThemeIcon) mobileThemeIcon.className = 'lucide lucide-' + (darkModeEnabled ? 'moon' : 'sun');
+      if (mobileThemeIcon) mobileThemeIcon.className = 'lucide lucide-' + themeIconName;
+      if (mobileThemeSwitchIcon) mobileThemeSwitchIcon.className = 'lucide lucide-' + themeIconName + ' settings-switch-icon';
       if (mobileThemeStatus) mobileThemeStatus.textContent = darkModeEnabled ? 'Dark mode' : 'Light mode';
     }
   }
@@ -3263,6 +3275,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       queryPreviewRoots(mathTargets, 'mjx-container[tabindex="0"]').forEach(function(mjx) {
         mjx.removeAttribute('tabindex');
       });
+      if (reviewModeActive) decorateReviewTargets();
     }).catch(function(err) {
       console.warn('MathJax typesetting failed:', err);
     });
@@ -6829,11 +6842,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (thread.resolved) {
       const status = document.createElement('span');
       status.className = 'review-status-label';
-      status.textContent = 'Resolved';
+      const statusIcon = document.createElement('i');
+      statusIcon.className = 'lucide lucide-check';
+      statusIcon.setAttribute('aria-hidden', 'true');
+      status.appendChild(statusIcon);
+      status.appendChild(document.createTextNode('Resolved'));
       meta.appendChild(status);
     }
     header.appendChild(meta);
     item.appendChild(header);
+
+    const content = document.createElement('div');
+    content.className = 'review-thread-content';
+    item.appendChild(content);
 
     const anchor = document.createElement('button');
     anchor.type = 'button';
@@ -6844,59 +6865,79 @@ document.addEventListener("DOMContentLoaded", async function () {
     anchor.textContent = target
       ? thread.anchor.label + ': ' + thread.anchor.excerpt
       : 'Anchor no longer in preview - ' + thread.anchor.label + ': ' + thread.anchor.excerpt;
-    item.appendChild(anchor);
+    content.appendChild(anchor);
 
     const body = document.createElement('p');
     body.className = 'review-thread-body';
     body.textContent = thread.body;
-    item.appendChild(body);
+    content.appendChild(body);
 
     const dates = document.createElement('div');
     dates.className = 'review-thread-dates';
     const openedTime = document.createElement('time');
     openedTime.className = 'review-thread-time';
     openedTime.dateTime = new Date(thread.createdAt).toISOString();
-    openedTime.textContent = 'Opened: ' + formatReviewTime(thread.createdAt);
+    const openedIcon = document.createElement('i');
+    openedIcon.className = 'lucide lucide-clock-3';
+    openedIcon.setAttribute('aria-hidden', 'true');
+    openedTime.appendChild(openedIcon);
+    openedTime.appendChild(document.createTextNode('Opened: ' + formatReviewTime(thread.createdAt)));
     dates.appendChild(openedTime);
     if (thread.resolvedAt) {
       const closedTime = document.createElement('time');
-      closedTime.className = 'review-thread-time';
+      closedTime.className = 'review-thread-time is-closed';
       closedTime.dateTime = new Date(thread.resolvedAt).toISOString();
-      closedTime.textContent = 'Closed: ' + formatReviewTime(thread.resolvedAt);
+      const closedIcon = document.createElement('i');
+      closedIcon.className = 'lucide lucide-check';
+      closedIcon.setAttribute('aria-hidden', 'true');
+      closedTime.appendChild(closedIcon);
+      closedTime.appendChild(document.createTextNode('Closed: ' + formatReviewTime(thread.resolvedAt)));
       dates.appendChild(closedTime);
     } else {
       const closedTime = document.createElement('span');
-      closedTime.className = 'review-thread-time';
-      closedTime.textContent = thread.resolved ? 'Closed: Unavailable' : 'Closed: Not closed';
+      closedTime.className = 'review-thread-time ' + (thread.resolved ? 'is-closed' : 'is-open');
+      const closedIcon = document.createElement('i');
+      closedIcon.className = thread.resolved ? 'lucide lucide-check' : 'lucide lucide-circle';
+      closedIcon.setAttribute('aria-hidden', 'true');
+      closedTime.appendChild(closedIcon);
+      closedTime.appendChild(document.createTextNode(thread.resolved ? 'Closed: Unavailable' : 'Closed: Not closed'));
       dates.appendChild(closedTime);
     }
-    item.appendChild(dates);
+    content.appendChild(dates);
 
     const actions = document.createElement('div');
     actions.className = 'review-thread-actions';
-    const editButton = document.createElement('button');
-    editButton.type = 'button';
-    editButton.className = 'review-thread-action';
-    editButton.dataset.reviewAction = 'edit';
-    editButton.dataset.reviewId = thread.id;
-    editButton.textContent = 'Edit';
-    editButton.setAttribute('aria-label', 'Edit ' + (thread.kind === 'suggestion' ? 'suggestion' : 'comment'));
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Review item actions');
+
+    function createThreadAction(action, iconClass, label, danger) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'review-thread-action' + (danger ? ' is-danger' : '');
+      button.dataset.reviewAction = action;
+      button.dataset.reviewId = thread.id;
+      button.title = label;
+      button.setAttribute('aria-label', label);
+      const icon = document.createElement('i');
+      icon.className = iconClass;
+      icon.setAttribute('aria-hidden', 'true');
+      button.appendChild(icon);
+      return button;
+    }
+
+    const itemLabel = thread.kind === 'suggestion' ? 'suggestion' : 'comment';
+    const editButton = createThreadAction('edit', 'lucide lucide-square-pen', 'Edit ' + itemLabel, false);
     actions.appendChild(editButton);
-    const statusButton = document.createElement('button');
-    statusButton.type = 'button';
-    statusButton.className = 'review-thread-action';
-    statusButton.dataset.reviewAction = 'toggle-resolved';
-    statusButton.dataset.reviewId = thread.id;
-    statusButton.textContent = thread.resolved ? 'Reopen' : 'Resolve';
+    const statusButton = createThreadAction(
+      'toggle-resolved',
+      thread.resolved ? 'lucide lucide-refresh-cw' : 'lucide lucide-check',
+      (thread.resolved ? 'Reopen ' : 'Resolve ') + itemLabel,
+      false
+    );
     actions.appendChild(statusButton);
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'review-thread-action is-danger';
-    deleteButton.dataset.reviewAction = 'delete';
-    deleteButton.dataset.reviewId = thread.id;
-    deleteButton.textContent = 'Delete';
+    const deleteButton = createThreadAction('delete', 'lucide lucide-trash-2', 'Delete ' + itemLabel, true);
     actions.appendChild(deleteButton);
-    item.appendChild(actions);
+    header.appendChild(actions);
 
     return item;
   }
@@ -6935,12 +6976,12 @@ document.addEventListener("DOMContentLoaded", async function () {
         copy.textContent = 'Resolved comments and suggestions will appear here.';
       } else if (reviewFilter === 'all') {
         title.textContent = 'No feedback yet';
-        copy.textContent = 'Select a comment pin in the preview to add feedback.';
+        copy.textContent = 'Choose the comment button beside any block to start a review.';
       } else {
         title.textContent = 'No open feedback';
         copy.textContent = threads.length > 0
           ? 'Everything has been resolved. Switch to Resolved or All to review earlier feedback.'
-          : 'Select a comment pin in the preview to add feedback.';
+          : 'Choose the comment button beside any block to start a review.';
       }
     }
   }
@@ -7341,6 +7382,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   function setReviewMode(enabled, options) {
     options = options || {};
     const nextState = Boolean(enabled);
+    if (nextState && isReleaseNotesActive()) {
+      announceToScreenReader('Release notes do not support comments or suggestions.');
+      return;
+    }
     const wasActive = reviewModeActive;
     if (nextState && !wasActive) {
       reviewPreviousViewModes.set(activeTabId, currentViewMode || 'split');
@@ -7524,6 +7569,1785 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (reviewComposer && !reviewComposer.hidden) {
         event.preventDefault();
         closeReviewComposer({ restoreFocus: true });
+      } else {
+        event.preventDefault();
+        setReviewMode(false, { restoreFocus: true });
+      }
+    });
+  }
+
+  // Comments v2 keeps the persisted reviewThreads collection compatible while
+  // replacing block-side actions with a selection-first, Word-style workflow.
+  function normalizeReviewSelection(rawSelection) {
+    if (!rawSelection || typeof rawSelection !== 'object') return null;
+    const kind = ['text', 'element', 'block'].includes(rawSelection.kind)
+      ? rawSelection.kind
+      : null;
+    if (!kind) return null;
+    if (kind === 'text') {
+      const start = Math.max(0, Number(rawSelection.start) || 0);
+      const end = Math.max(start, Number(rawSelection.end) || start);
+      const quote = typeof rawSelection.quote === 'string'
+        ? rawSelection.quote.slice(0, 1000)
+        : '';
+      if (!quote || end <= start) return null;
+      return {
+        kind: 'text',
+        start: start,
+        end: end,
+        quote: quote,
+        prefix: typeof rawSelection.prefix === 'string' ? rawSelection.prefix.slice(-64) : '',
+        suffix: typeof rawSelection.suffix === 'string' ? rawSelection.suffix.slice(0, 64) : ''
+      };
+    }
+    return {
+      kind: kind,
+      elementType: typeof rawSelection.elementType === 'string'
+        ? rawSelection.elementType.slice(0, 40)
+        : null
+    };
+  }
+
+  function normalizeReviewThreads(rawThreads) {
+    if (!Array.isArray(rawThreads)) return [];
+    return rawThreads.slice(-500).map(function(thread) {
+      if (!thread || typeof thread !== 'object' || !thread.anchor || typeof thread.anchor.key !== 'string') {
+        return null;
+      }
+      const body = typeof thread.body === 'string' ? thread.body.trim().slice(0, REVIEW_TEXT_LIMIT) : '';
+      if (!body) return null;
+      const createdAt = Number.isFinite(Number(thread.createdAt)) ? Number(thread.createdAt) : Date.now();
+      const updatedAt = Number.isFinite(Number(thread.updatedAt)) ? Number(thread.updatedAt) : createdAt;
+      const resolved = thread.resolved === true;
+      const authorId = typeof thread.authorId === 'string' && thread.authorId
+        ? thread.authorId.slice(0, 160)
+        : null;
+      const replies = Array.isArray(thread.replies)
+        ? thread.replies.slice(-200).map(function(reply) {
+          if (!reply || typeof reply !== 'object') return null;
+          const replyBody = typeof reply.body === 'string'
+            ? reply.body.trim().slice(0, REVIEW_TEXT_LIMIT)
+            : '';
+          if (!replyBody) return null;
+          const replyCreatedAt = Number.isFinite(Number(reply.createdAt))
+            ? Number(reply.createdAt)
+            : createdAt;
+          const replyAuthorId = typeof reply.authorId === 'string' && reply.authorId
+            ? reply.authorId.slice(0, 160)
+            : null;
+          const isOwnerReply = !replyAuthorId || replyAuthorId === 'document-owner';
+          return {
+            id: typeof reply.id === 'string' && reply.id
+              ? reply.id.slice(0, 120)
+              : createReviewId(),
+            author: !isOwnerReply && typeof reply.author === 'string' && reply.author.trim()
+              ? reply.author.trim().slice(0, 120)
+              : 'Author',
+            authorId: replyAuthorId,
+            body: replyBody,
+            createdAt: replyCreatedAt,
+            updatedAt: Number.isFinite(Number(reply.updatedAt))
+              ? Number(reply.updatedAt)
+              : replyCreatedAt
+          };
+        }).filter(Boolean)
+        : [];
+      const isOwnerThread = !authorId || authorId === 'document-owner';
+      return {
+        id: typeof thread.id === 'string' && thread.id ? thread.id.slice(0, 120) : createReviewId(),
+        anchor: {
+          key: thread.anchor.key.slice(0, 240),
+          type: typeof thread.anchor.type === 'string' ? thread.anchor.type.slice(0, 40) : 'block',
+          label: typeof thread.anchor.label === 'string' ? thread.anchor.label.slice(0, 120) : 'Document content',
+          excerpt: typeof thread.anchor.excerpt === 'string' ? thread.anchor.excerpt.slice(0, 240) : '',
+          duplicateCount: Number.isFinite(Number(thread.anchor.duplicateCount))
+            ? Math.max(1, Number(thread.anchor.duplicateCount))
+            : null,
+          context: typeof thread.anchor.context === 'string' ? thread.anchor.context.slice(0, 80) : null,
+          selection: normalizeReviewSelection(thread.anchor.selection)
+        },
+        // Keep legacy suggestion data intact. New comments are always stored as comments.
+        kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
+        author: !isOwnerThread && typeof thread.author === 'string' && thread.author.trim()
+          ? thread.author.trim().slice(0, 120)
+          : 'Author',
+        authorId: authorId,
+        body: body,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        resolved: resolved,
+        resolvedAt: resolved && Number.isFinite(Number(thread.resolvedAt))
+          ? Number(thread.resolvedAt)
+          : null,
+        replies: replies
+      };
+    }).filter(Boolean);
+  }
+
+  function cloneReviewThreadForLiveShare(thread) {
+    return {
+      id: thread.id,
+      anchor: Object.assign({}, thread.anchor, {
+        selection: thread.anchor && thread.anchor.selection
+          ? Object.assign({}, thread.anchor.selection)
+          : null
+      }),
+      kind: thread.kind === 'suggestion' ? 'suggestion' : 'comment',
+      author: thread.author || 'Author',
+      authorId: thread.authorId || null,
+      body: thread.body,
+      createdAt: thread.createdAt,
+      updatedAt: thread.updatedAt,
+      resolved: thread.resolved === true,
+      resolvedAt: Number.isFinite(Number(thread.resolvedAt)) ? Number(thread.resolvedAt) : null,
+      replies: (thread.replies || []).map(function(reply) {
+        return {
+          id: reply.id,
+          author: reply.author || 'Author',
+          authorId: reply.authorId || null,
+          body: reply.body,
+          createdAt: reply.createdAt,
+          updatedAt: reply.updatedAt
+        };
+      })
+    };
+  }
+
+  function liveReviewThreadsMatch(left, right) {
+    if (!left || !right) return false;
+    return left.id === right.id &&
+      left.kind === right.kind &&
+      (left.author || '') === (right.author || '') &&
+      (left.authorId || '') === (right.authorId || '') &&
+      left.body === right.body &&
+      left.createdAt === right.createdAt &&
+      left.updatedAt === right.updatedAt &&
+      left.resolved === right.resolved &&
+      left.resolvedAt === right.resolvedAt &&
+      JSON.stringify(left.anchor || {}) === JSON.stringify(right.anchor || {}) &&
+      JSON.stringify(left.replies || []) === JSON.stringify(right.replies || []);
+  }
+
+  function getCurrentReviewAuthorIdentity() {
+    if (liveCollaboration && liveCollaboration.localParticipantId && liveCollaboration.localParticipant) {
+      const liveName = String(liveCollaboration.localParticipant.name || '').trim();
+      return {
+        id: String(liveCollaboration.localParticipantId).slice(0, 160),
+        name: (liveName || 'Live Share participant').slice(0, 120)
+      };
+    }
+    return { id: 'document-owner', name: 'Author' };
+  }
+
+  function getCurrentReviewAuthor() {
+    return getCurrentReviewAuthorIdentity().name;
+  }
+
+  function updateReviewAuthorIdentity(authorId, authorName) {
+    if (!authorId || !authorName) return false;
+    const tab = getActiveReviewTab();
+    if (!tab || !Array.isArray(tab.reviewThreads)) return false;
+    let changed = false;
+    tab.reviewThreads.forEach(function(thread) {
+      if (thread.authorId === authorId && thread.author !== authorName) {
+        thread.author = authorName;
+        changed = true;
+      }
+      (thread.replies || []).forEach(function(reply) {
+        if (reply.authorId === authorId && reply.author !== authorName) {
+          reply.author = authorName;
+          changed = true;
+        }
+      });
+    });
+    if (!changed) return false;
+    syncLiveReviewThreadsFromTab();
+    if (activeTabId) saveTabsToStorage(tabs, [activeTabId]);
+    renderReviewPanel();
+    return true;
+  }
+
+  function getReviewAvatarLabel(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return (parts[0] || 'A').slice(0, 1).toUpperCase();
+  }
+
+  function getReviewTargetType(target) {
+    if (!target) return 'block';
+    if (target.matches('img')) return 'image';
+    if (target.matches('video, audio')) return 'media';
+    if (target.matches('mjx-container')) return 'math';
+    if (target.matches('.diagram-viewer, .geojson-container, .topojson-container, .stl-container')) return 'diagram';
+    if (target.matches('.frontmatter-table')) return 'table';
+    if (target.tagName === 'PRE') return 'code';
+    if (target.tagName === 'LI') return 'list-item';
+    if (target.tagName === 'BLOCKQUOTE') return 'quote';
+    if (/^H[1-6]$/.test(target.tagName)) return 'heading';
+    if (target.tagName === 'P') return 'paragraph';
+    return 'block';
+  }
+
+  function computeReviewTargetSource(target, type) {
+    if (!target) return '';
+    if (type === 'image') {
+      return normalizeReviewSource([
+        target.getAttribute('alt') || '',
+        target.getAttribute('src') || '',
+        target.getAttribute('title') || ''
+      ].join('\n'), true);
+    }
+    if (type === 'media') {
+      const sources = Array.from(target.querySelectorAll('source')).map(function(source) {
+        return source.getAttribute('src') || '';
+      });
+      return normalizeReviewSource([
+        target.getAttribute('aria-label') || '',
+        target.getAttribute('title') || '',
+        target.getAttribute('src') || '',
+        sources.join('\n')
+      ].join('\n'), true);
+    }
+    if (type === 'math') {
+      return normalizeReviewSource(
+        target.getAttribute('aria-label') || target.getAttribute('data-latex') || target.textContent,
+        false
+      );
+    }
+    if (type === 'diagram') {
+      const sourceNode = target.hasAttribute('data-original-code')
+        ? target
+        : target.querySelector('[data-original-code]');
+      return normalizeReviewSource(sourceNode ? decodeReviewSource(sourceNode.getAttribute('data-original-code')) : '', true);
+    }
+    if (type === 'code') {
+      const code = target.querySelector('code');
+      return normalizeReviewSource(code ? code.textContent : target.textContent, true);
+    }
+    const clone = target.cloneNode(true);
+    clone.querySelectorAll('.review-comment-highlight, .review-pending-highlight').forEach(function(mark) {
+      mark.replaceWith(document.createTextNode(mark.textContent || ''));
+    });
+    clone.querySelectorAll('.review-target-button, .footnote-backref').forEach(function(node) {
+      node.remove();
+    });
+    clone.querySelectorAll('img').forEach(function(image) {
+      image.replaceWith(document.createTextNode(image.getAttribute('alt') || ''));
+    });
+    return normalizeReviewSource(clone.textContent, false);
+  }
+
+  function getReviewTargetLabel(target, type) {
+    if (type === 'heading') return 'Heading ' + target.tagName;
+    if (type === 'paragraph') return 'Paragraph';
+    if (type === 'list-item') return 'List item';
+    if (type === 'quote') return 'Quote';
+    if (type === 'image') return target.getAttribute('alt') ? 'Image: ' + target.getAttribute('alt') : 'Image';
+    if (type === 'media') return target.tagName === 'AUDIO' ? 'Audio' : 'Video';
+    if (type === 'math') return 'Math expression';
+    if (type === 'table') return 'YAML frontmatter';
+    if (type === 'code') {
+      const code = target.querySelector('code');
+      const languageClass = code ? Array.from(code.classList).find(function(className) {
+        return className !== 'hljs' && className !== 'language-plaintext' && className !== 'plaintext';
+      }) : '';
+      const language = languageClass ? languageClass.replace(/^language-/, '') : '';
+      return language ? language + ' code block' : 'Code block';
+    }
+    if (type === 'diagram') {
+      let engine = target.getAttribute('data-diagram-engine');
+      if (!engine && target.matches('.geojson-container')) engine = 'geojson';
+      if (!engine && target.matches('.topojson-container')) engine = 'topojson';
+      if (!engine && target.matches('.stl-container')) engine = 'stl';
+      const labels = { geojson: 'GeoJSON map', topojson: 'TopoJSON map', stl: 'STL model' };
+      if (labels[engine]) return labels[engine];
+      const engineLabel = engine ? getDiagramEngineLabel(engine) : 'Diagram';
+      return engineLabel === 'Diagram' ? engineLabel : engineLabel + ' diagram';
+    }
+    return 'Document content';
+  }
+
+  function getReviewAnchorDescriptor(target, selection) {
+    if (!target || !target.dataset.reviewAnchor) return null;
+    const type = target.dataset.reviewType || getReviewTargetType(target);
+    const source = getReviewTargetSource(target, type);
+    const normalizedSelection = normalizeReviewSelection(selection);
+    const selectedExcerpt = normalizedSelection && normalizedSelection.quote
+      ? normalizeReviewSource(normalizedSelection.quote, false)
+      : '';
+    const excerptSource = selectedExcerpt || source;
+    return {
+      key: target.dataset.reviewAnchor,
+      type: type,
+      label: target.dataset.reviewLabel || getReviewTargetLabel(target, type),
+      excerpt: excerptSource.length > 180 ? excerptSource.slice(0, 177) + '...' : (excerptSource || 'Selected content'),
+      duplicateCount: Math.max(1, Number(target.dataset.reviewDuplicateCount) || 1),
+      context: target.dataset.reviewContext || null,
+      selection: normalizedSelection
+    };
+  }
+
+  function getReviewTargets() {
+    if (!markdownPreview) return [];
+    return Array.from(markdownPreview.querySelectorAll(REVIEW_TARGET_SELECTOR)).filter(function(target) {
+      const diagram = target.closest('.diagram-viewer, .geojson-container, .topojson-container, .stl-container');
+      if (diagram && diagram !== target) return false;
+      const table = target.closest('.frontmatter-table');
+      if (table && table !== target) return false;
+      return !target.closest('button, .review-composer, .review-target-button');
+    });
+  }
+
+  function unwrapReviewMarks() {
+    if (!markdownPreview) return;
+    const parents = new Set();
+    markdownPreview.querySelectorAll('.review-comment-highlight, .review-pending-highlight').forEach(function(mark) {
+      const parent = mark.parentNode;
+      if (parent) parents.add(parent);
+      mark.replaceWith(document.createTextNode(mark.textContent || ''));
+    });
+    parents.forEach(function(parent) { parent.normalize(); });
+  }
+
+  function clearReviewDecorations() {
+    if (!markdownPreview) return;
+    unwrapReviewMarks();
+    markdownPreview.querySelectorAll('.review-comment-element, .review-pending-element').forEach(function(element) {
+      element.classList.remove(
+        'review-comment-element',
+        'review-pending-element',
+        'is-review-highlight-active',
+        'is-review-highlight-hover',
+        'is-review-highlight-emphasized'
+      );
+      delete element.dataset.reviewIds;
+    });
+    markdownPreview.querySelectorAll('[data-review-anchor]').forEach(function(target) {
+      target.classList.remove(
+        'review-target',
+        'review-target--heading',
+        'review-target--paragraph',
+        'review-target--list-item',
+        'review-target--quote',
+        'review-target--code',
+        'review-target--table',
+        'review-target--diagram',
+        'review-target--image',
+        'review-target--media',
+        'review-target--math',
+        'review-element-selectable',
+        'is-review-element-selected',
+        'has-review-native-text-selection',
+        'has-review-thread',
+        'is-review-target-active'
+      );
+      delete target.dataset.reviewAnchor;
+      delete target.dataset.reviewType;
+      delete target.dataset.reviewLabel;
+      delete target.dataset.reviewDuplicateCount;
+      delete target.dataset.reviewContext;
+      delete target.dataset.reviewIds;
+    });
+  }
+
+  function findReviewTarget(anchor) {
+    const anchorKey = typeof anchor === 'string' ? anchor : (anchor && anchor.key);
+    if (!markdownPreview || !anchorKey) return null;
+    let target = Array.from(markdownPreview.querySelectorAll('[data-review-anchor]')).find(function(candidate) {
+      if (candidate.dataset.reviewAnchor !== anchorKey) return false;
+      if (!anchor || typeof anchor === 'string') return true;
+      if (anchor.duplicateCount && Number(candidate.dataset.reviewDuplicateCount) !== Number(anchor.duplicateCount)) return false;
+      if (anchor.context && candidate.dataset.reviewContext !== anchor.context) return false;
+      return true;
+    }) || null;
+    if (target || !anchor || typeof anchor === 'string') return target;
+
+    const selection = normalizeReviewSelection(anchor.selection);
+    const quote = selection && selection.quote;
+    if (quote) {
+      const matches = getReviewTargets().filter(function(candidate) {
+        if (anchor.type && candidate.dataset.reviewType !== anchor.type) return false;
+        return (candidate.textContent || '').includes(quote);
+      });
+      if (matches.length === 1) return matches[0];
+      target = matches.find(function(candidate) {
+        const text = candidate.textContent || '';
+        const index = text.indexOf(quote);
+        const prefix = text.slice(Math.max(0, index - (selection.prefix || '').length), index);
+        const suffix = text.slice(index + quote.length, index + quote.length + (selection.suffix || '').length);
+        return (!selection.prefix || prefix.endsWith(selection.prefix)) &&
+          (!selection.suffix || suffix.startsWith(selection.suffix));
+      }) || null;
+      if (target) return target;
+    }
+
+    const excerpt = normalizeReviewSource(anchor.excerpt || '', false);
+    if (!excerpt) return null;
+    const sourceMatches = getReviewTargets().filter(function(candidate) {
+      if (anchor.type && candidate.dataset.reviewType !== anchor.type) return false;
+      const source = getReviewTargetSource(candidate, candidate.dataset.reviewType);
+      return source === excerpt || source.startsWith(excerpt.replace(/\.\.\.$/, ''));
+    });
+    return sourceMatches.length === 1 ? sourceMatches[0] : null;
+  }
+
+  function addReviewId(element, reviewId) {
+    if (!element || !reviewId) return;
+    const ids = new Set(String(element.dataset.reviewIds || '').split(/\s+/).filter(Boolean));
+    ids.add(reviewId);
+    element.dataset.reviewIds = Array.from(ids).join(' ');
+  }
+
+  function resolveTextSelectionOffsets(target, selection) {
+    if (!target || !selection || selection.kind !== 'text') return null;
+    const text = target.textContent || '';
+    let start = Math.max(0, Math.min(text.length, Number(selection.start) || 0));
+    let end = Math.max(start, Math.min(text.length, Number(selection.end) || start));
+    if (text.slice(start, end) === selection.quote) return { start: start, end: end };
+    const matches = [];
+    let cursor = 0;
+    while (selection.quote && cursor <= text.length) {
+      const index = text.indexOf(selection.quote, cursor);
+      if (index < 0) break;
+      matches.push(index);
+      cursor = index + Math.max(1, selection.quote.length);
+    }
+    if (matches.length === 0) return null;
+    let best = matches[0];
+    let bestScore = -1;
+    matches.forEach(function(index) {
+      let score = 0;
+      const prefix = text.slice(Math.max(0, index - (selection.prefix || '').length), index);
+      const suffix = text.slice(index + selection.quote.length, index + selection.quote.length + (selection.suffix || '').length);
+      if (selection.prefix && prefix.endsWith(selection.prefix)) score += 2;
+      if (selection.suffix && suffix.startsWith(selection.suffix)) score += 2;
+      score -= Math.abs(index - start) / Math.max(1, text.length);
+      if (score > bestScore) {
+        bestScore = score;
+        best = index;
+      }
+    });
+    return { start: best, end: best + selection.quote.length };
+  }
+
+  function applyTextReviewHighlights(target, entries) {
+    if (!target || !entries || entries.length === 0) return;
+    const textNodes = [];
+    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        const parent = node.parentElement;
+        if (!node.nodeValue || !parent || parent.closest('script, style, button, textarea')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node;
+    let offset = 0;
+    while ((node = walker.nextNode())) {
+      textNodes.push({ node: node, start: offset, end: offset + node.nodeValue.length });
+      offset += node.nodeValue.length;
+    }
+
+    textNodes.forEach(function(entry) {
+      const boundaries = new Set([0, entry.node.nodeValue.length]);
+      entries.forEach(function(highlight) {
+        const start = Math.max(entry.start, highlight.start);
+        const end = Math.min(entry.end, highlight.end);
+        if (end > start) {
+          boundaries.add(start - entry.start);
+          boundaries.add(end - entry.start);
+        }
+      });
+      const cuts = Array.from(boundaries).sort(function(a, b) { return a - b; });
+      if (cuts.length <= 2) return;
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < cuts.length - 1; index += 1) {
+        const localStart = cuts[index];
+        const localEnd = cuts[index + 1];
+        const globalStart = entry.start + localStart;
+        const globalEnd = entry.start + localEnd;
+        const covering = entries.filter(function(highlight) {
+          return highlight.start < globalEnd && highlight.end > globalStart;
+        });
+        const text = entry.node.nodeValue.slice(localStart, localEnd);
+        if (covering.length === 0) {
+          fragment.appendChild(document.createTextNode(text));
+          continue;
+        }
+        const mark = document.createElement('mark');
+        mark.className = covering.some(function(item) { return item.pending; })
+          ? 'review-pending-highlight'
+          : 'review-comment-highlight';
+        if (covering.some(function(item) { return item.pending && item.start === globalStart; })) {
+          mark.classList.add('review-selection-start');
+        }
+        if (covering.some(function(item) { return item.pending && item.end === globalEnd; })) {
+          mark.classList.add('review-selection-end');
+        }
+        const startIds = covering.filter(function(item) {
+          return !item.pending && item.start === globalStart;
+        }).map(function(item) { return item.id; });
+        const endIds = covering.filter(function(item) {
+          return !item.pending && item.end === globalEnd;
+        }).map(function(item) { return item.id; });
+        if (startIds.length) mark.dataset.reviewStartIds = startIds.join(' ');
+        if (endIds.length) mark.dataset.reviewEndIds = endIds.join(' ');
+        covering.filter(function(item) { return !item.pending; }).forEach(function(item) {
+          addReviewId(mark, item.id);
+        });
+        mark.textContent = text;
+        fragment.appendChild(mark);
+      }
+      entry.node.replaceWith(fragment);
+    });
+  }
+
+  function decorateReviewTargets() {
+    clearReviewDecorations();
+    if (!reviewModeActive || !markdownPreview || previewContainsSkeleton()) {
+      updateReviewNewButton();
+      return;
+    }
+
+    const targetEntries = getReviewTargets().map(function(target) {
+      const type = getReviewTargetType(target);
+      const source = getReviewTargetSource(target, type);
+      const signature = type + '\u241f' + source;
+      return { target: target, type: type, source: source, signature: signature };
+    });
+    targetEntries.forEach(function(entry, index) {
+      const before = index > 0 ? targetEntries[index - 1].signature : 'review-start';
+      const after = index < targetEntries.length - 1 ? targetEntries[index + 1].signature : 'review-end';
+      entry.context = hashReviewSource(before) + ':' + hashReviewSource(after);
+    });
+    const signatureCounts = new Map();
+    targetEntries.forEach(function(entry) {
+      signatureCounts.set(entry.signature, (signatureCounts.get(entry.signature) || 0) + 1);
+    });
+    const occurrences = new Map();
+    targetEntries.forEach(function(entry) {
+      const occurrence = occurrences.get(entry.signature) || 0;
+      occurrences.set(entry.signature, occurrence + 1);
+      const duplicateCount = signatureCounts.get(entry.signature) || 1;
+      const context = duplicateCount > 1 ? entry.context : '';
+      entry.target.dataset.reviewAnchor = entry.type + ':' + hashReviewSource(entry.signature) + ':' + occurrence;
+      entry.target.dataset.reviewType = entry.type;
+      entry.target.dataset.reviewLabel = getReviewTargetLabel(entry.target, entry.type);
+      entry.target.dataset.reviewDuplicateCount = String(duplicateCount);
+      entry.target.dataset.reviewContext = context;
+      entry.target.classList.add('review-target', 'review-target--' + entry.type);
+      if (REVIEW_ELEMENT_TYPES.has(entry.type)) entry.target.classList.add('review-element-selectable');
+    });
+
+    const textHighlights = new Map();
+    getActiveReviewThreads().forEach(function(thread) {
+      const target = findReviewTarget(thread.anchor);
+      if (!target) return;
+      const selection = normalizeReviewSelection(thread.anchor.selection);
+      target.classList.add('has-review-thread');
+      if (selection && selection.kind === 'text') {
+        const offsets = resolveTextSelectionOffsets(target, selection);
+        if (!offsets) return;
+        if (!textHighlights.has(target)) textHighlights.set(target, []);
+        textHighlights.get(target).push({ id: thread.id, start: offsets.start, end: offsets.end, pending: false });
+        return;
+      }
+      target.classList.add('review-comment-element');
+      addReviewId(target, thread.id);
+    });
+
+    const pendingAnchor = reviewComposer && !reviewComposer.hidden && !activeReviewEditId
+      ? activeReviewAnchor
+      : pendingReviewSelection;
+    if (pendingAnchor) {
+      const pendingTarget = findReviewTarget(pendingAnchor);
+      const pendingSelection = normalizeReviewSelection(pendingAnchor.selection);
+      if (pendingTarget && (!pendingSelection || pendingSelection.kind !== 'text')) {
+        pendingTarget.classList.add('review-pending-element');
+      }
+    }
+
+    textHighlights.forEach(function(entries, target) {
+      applyTextReviewHighlights(target, entries);
+    });
+    syncReviewInteractionState();
+    updateReviewNewButton();
+  }
+
+  function elementHasReviewId(element, reviewId) {
+    return Boolean(element && reviewId && String(element.dataset.reviewIds || '').split(/\s+/).includes(reviewId));
+  }
+
+  function getReviewDocumentNodes(reviewId) {
+    if (!markdownPreview || !reviewId) return [];
+    return Array.from(markdownPreview.querySelectorAll('[data-review-ids]')).filter(function(element) {
+      return elementHasReviewId(element, reviewId);
+    });
+  }
+
+  function syncReviewInteractionState() {
+    const emphasizedReviewId = hoveredReviewId || activeReviewId;
+    if (markdownPreview) {
+      markdownPreview.querySelectorAll('[data-review-ids]').forEach(function(element) {
+        const isActive = elementHasReviewId(element, activeReviewId);
+        const isHovered = elementHasReviewId(element, hoveredReviewId);
+        const isEmphasized = elementHasReviewId(element, emphasizedReviewId);
+        element.classList.toggle('is-review-highlight-active', isActive);
+        element.classList.toggle('is-review-highlight-hover', !isActive && isHovered);
+        element.classList.toggle('is-review-highlight-emphasized', isEmphasized);
+        element.classList.toggle(
+          'is-review-selection-start',
+          isActive && String(element.dataset.reviewStartIds || '').split(/\s+/).includes(activeReviewId)
+        );
+        element.classList.toggle(
+          'is-review-selection-end',
+          isActive && String(element.dataset.reviewEndIds || '').split(/\s+/).includes(activeReviewId)
+        );
+      });
+      const pendingElement = pendingReviewSelection &&
+        pendingReviewSelection.selection &&
+        pendingReviewSelection.selection.kind !== 'text'
+        ? findReviewTarget(pendingReviewSelection)
+        : null;
+      const pendingTextTarget = pendingReviewSelection &&
+        pendingReviewSelection.selection &&
+        pendingReviewSelection.selection.kind === 'text'
+        ? findReviewTarget(pendingReviewSelection)
+        : null;
+      markdownPreview.querySelectorAll('.review-element-selectable').forEach(function(element) {
+        element.classList.toggle('is-review-element-selected', element === pendingElement);
+        element.classList.toggle('has-review-native-text-selection', element === pendingTextTarget);
+      });
+    }
+    if (reviewList) {
+      reviewList.querySelectorAll('.review-thread').forEach(function(item) {
+        const isActive = item.dataset.reviewId === activeReviewId;
+        const isHovered = item.dataset.reviewId === hoveredReviewId;
+        const isEmphasized = item.dataset.reviewId === emphasizedReviewId;
+        item.classList.toggle('is-review-thread-active', isActive);
+        item.classList.toggle('is-review-thread-hover', !isActive && isHovered);
+        item.classList.toggle('is-review-thread-emphasized', isEmphasized);
+        item.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+      });
+    }
+  }
+
+  function setReviewHover(reviewId) {
+    hoveredReviewId = reviewId || null;
+    syncReviewInteractionState();
+  }
+
+  function activateReviewThread(thread, options) {
+    if (!thread) return;
+    options = options || {};
+    activeReviewId = thread.id;
+    pendingReviewSelection = null;
+    if (!activeReviewEditId) closeReviewComposer({ keepSelection: false });
+    if (reviewFilter === 'resolved' && !thread.resolved) setReviewFilter('all');
+    if (reviewFilter === 'open' && thread.resolved) setReviewFilter('all');
+    syncReviewInteractionState();
+
+    const card = reviewList && reviewList.querySelector('.review-thread[data-review-id="' + thread.id + '"]');
+    if (options.scrollPanel !== false && card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (options.focusCard) card.focus({ preventScroll: true });
+    }
+    const nodes = getReviewDocumentNodes(thread.id);
+    const documentNode = nodes.find(function(node) {
+      return node.classList.contains('review-comment-highlight') || node.classList.contains('review-comment-element');
+    }) || nodes[0] || findReviewTarget(thread.anchor);
+    if (options.scrollDocument && documentNode) {
+      documentNode.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+    announceToScreenReader('Comment by ' + (thread.author || getCurrentReviewAuthor()) + ' selected.');
+  }
+
+  function updateReviewToggleActiveState(openCount) {
+    const count = typeof openCount === 'number'
+      ? openCount
+      : getActiveReviewThreads().filter(function(thread) { return !thread.resolved; }).length;
+    if (reviewToggle) reviewToggle.classList.toggle('is-active', reviewModeActive || count > 0);
+    if (mobileReviewToggle) mobileReviewToggle.classList.toggle('is-active', reviewModeActive || count > 0);
+    if (mobileReviewStatus) mobileReviewStatus.textContent = reviewModeActive ? 'Open' : 'Off';
+  }
+
+  function updateReviewCountBadges() {
+    const openCount = getActiveReviewThreads().filter(function(thread) { return !thread.resolved; }).length;
+    const countLabel = openCount + ' open comment' + (openCount === 1 ? '' : 's');
+    if (reviewToolbarCount) {
+      reviewToolbarCount.textContent = String(openCount);
+      reviewToolbarCount.hidden = openCount === 0;
+    }
+    if (reviewToggle) {
+      reviewToggle.setAttribute('aria-label', openCount > 0 ? 'Open comments. ' + countLabel + '.' : 'Open comments');
+      reviewToggle.title = openCount > 0 ? 'Open comments (' + countLabel + ')' : 'Open comments';
+    }
+    updateReviewToggleActiveState(openCount);
+  }
+
+  function createReviewThreadAction(action, iconClass, label, danger, reviewId) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'review-thread-action' + (danger ? ' is-danger' : '');
+    button.dataset.reviewAction = action;
+    button.dataset.reviewId = reviewId;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    icon.setAttribute('aria-hidden', 'true');
+    button.appendChild(icon);
+    return button;
+  }
+
+  function createReviewReplyAction(action, iconClass, label, danger, reviewId, replyId) {
+    const button = createReviewThreadAction(action, iconClass, label, danger, reviewId);
+    button.classList.add('review-reply-action');
+    button.dataset.reviewReplyId = replyId;
+    return button;
+  }
+
+  function createReviewReplyElement(reply, thread) {
+    const author = reply.author || 'Author';
+    const item = document.createElement('div');
+    item.className = 'review-reply';
+    item.dataset.reviewReplyId = reply.id;
+
+    const header = document.createElement('div');
+    header.className = 'review-reply-header';
+    const avatar = document.createElement('span');
+    avatar.className = 'review-author-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = getReviewAvatarLabel(author);
+    const name = document.createElement('strong');
+    name.className = 'review-author-name';
+    name.textContent = author;
+    const timestamp = document.createElement('time');
+    timestamp.className = 'review-reply-time';
+    timestamp.dateTime = new Date(reply.createdAt).toISOString();
+    timestamp.textContent = formatReviewTime(reply.createdAt);
+    const authorMeta = document.createElement('span');
+    authorMeta.className = 'review-author-meta';
+    authorMeta.appendChild(name);
+    authorMeta.appendChild(timestamp);
+    header.appendChild(avatar);
+    header.appendChild(authorMeta);
+
+    const actions = document.createElement('div');
+    actions.className = 'review-reply-actions';
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Reply actions');
+    actions.appendChild(createReviewReplyAction(
+      'edit-reply',
+      'lucide lucide-square-pen',
+      'Edit reply',
+      false,
+      thread.id,
+      reply.id
+    ));
+    actions.appendChild(createReviewReplyAction(
+      'delete-reply',
+      'lucide lucide-trash-2',
+      'Delete reply',
+      true,
+      thread.id,
+      reply.id
+    ));
+    header.appendChild(actions);
+    item.appendChild(header);
+
+    const isEditing = activeReviewReplyEdit &&
+      activeReviewReplyEdit.threadId === thread.id &&
+      activeReviewReplyEdit.replyId === reply.id;
+    if (isEditing) {
+      item.classList.add('is-editing');
+      const form = document.createElement('form');
+      form.className = 'review-reply-edit-form';
+      form.dataset.reviewId = thread.id;
+      form.dataset.reviewReplyId = reply.id;
+      const input = document.createElement('textarea');
+      input.className = 'review-reply-edit-input';
+      input.maxLength = REVIEW_TEXT_LIMIT;
+      input.rows = 2;
+      input.value = reply.body;
+      input.setAttribute('aria-label', 'Edit reply');
+      const controls = document.createElement('div');
+      controls.className = 'review-reply-edit-actions';
+      controls.appendChild(createReviewReplyAction(
+        'save-reply',
+        'lucide lucide-check',
+        'Save reply',
+        false,
+        thread.id,
+        reply.id
+      ));
+      controls.appendChild(createReviewReplyAction(
+        'cancel-reply-edit',
+        'lucide lucide-x',
+        'Cancel reply edit',
+        false,
+        thread.id,
+        reply.id
+      ));
+      form.appendChild(input);
+      form.appendChild(controls);
+      item.appendChild(form);
+    } else {
+      const body = document.createElement('p');
+      body.className = 'review-reply-body';
+      body.textContent = reply.body;
+      item.appendChild(body);
+    }
+    return item;
+  }
+
+  function createReviewConversation(thread) {
+    const conversation = document.createElement('section');
+    conversation.className = 'review-thread-conversation';
+    conversation.setAttribute('aria-label', 'Replies');
+
+    const replies = document.createElement('div');
+    replies.className = 'review-replies';
+    const threadReplies = thread.replies || [];
+    const isCollapsible = threadReplies.length > REVIEW_REPLY_COLLAPSE_THRESHOLD;
+    const isExpanded = isCollapsible && expandedReviewThreadIds.has(thread.id);
+    threadReplies.forEach(function(reply, index) {
+      const isMiddleReply = isCollapsible && index > 0 && index < threadReplies.length - 1;
+      if (!isExpanded && isMiddleReply) {
+        if (index !== 1) return;
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'review-replies-more';
+        more.dataset.reviewAction = 'toggle-replies';
+        more.dataset.reviewId = thread.id;
+        more.setAttribute('aria-expanded', 'false');
+        more.textContent = 'Show ' + (threadReplies.length - 2) + ' more replies';
+        replies.appendChild(more);
+        return;
+      }
+      replies.appendChild(createReviewReplyElement(reply, thread));
+    });
+    conversation.appendChild(replies);
+
+    if (!thread.resolved) {
+      const form = document.createElement('form');
+      form.className = 'review-reply-composer';
+      form.dataset.reviewId = thread.id;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'review-reply-input';
+      input.maxLength = REVIEW_TEXT_LIMIT;
+      input.placeholder = 'Reply';
+      input.setAttribute('aria-label', 'Reply to comment');
+      const submit = document.createElement('button');
+      submit.type = 'submit';
+      submit.className = 'review-reply-submit';
+      submit.dataset.reviewAction = 'submit-reply';
+      submit.dataset.reviewId = thread.id;
+      submit.title = 'Post reply';
+      submit.setAttribute('aria-label', 'Post reply');
+      const icon = document.createElement('i');
+      icon.className = 'lucide lucide-check';
+      icon.setAttribute('aria-hidden', 'true');
+      submit.appendChild(icon);
+      form.appendChild(input);
+      form.appendChild(submit);
+      conversation.appendChild(form);
+    }
+    return conversation;
+  }
+
+  function createReviewThreadElement(thread) {
+    const target = findReviewTarget(thread.anchor);
+    const author = thread.author || 'Author';
+    const isRepliesCollapsible = (thread.replies || []).length > REVIEW_REPLY_COLLAPSE_THRESHOLD;
+    const isRepliesExpanded = isRepliesCollapsible && expandedReviewThreadIds.has(thread.id);
+    const item = document.createElement('article');
+    item.className = 'review-thread' +
+      (thread.resolved ? ' is-resolved' : '') +
+      (!target ? ' is-orphaned' : '') +
+      (isRepliesCollapsible ? ' has-collapsible-replies' : '') +
+      (isRepliesExpanded ? ' has-expanded-replies' : '');
+    item.dataset.reviewId = thread.id;
+    item.dataset.kind = thread.kind;
+    item.tabIndex = 0;
+    item.setAttribute('role', 'group');
+    item.setAttribute('aria-expanded', thread.id === activeReviewId ? 'true' : 'false');
+    item.setAttribute('aria-label', 'Comment by ' + author + ': ' + thread.body);
+
+    const header = document.createElement('div');
+    header.className = 'review-thread-header';
+    const authorRow = document.createElement('div');
+    authorRow.className = 'review-thread-author';
+    const avatar = document.createElement('span');
+    avatar.className = 'review-author-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = getReviewAvatarLabel(author);
+    const name = document.createElement('strong');
+    name.className = 'review-author-name';
+    name.textContent = author;
+    const dates = document.createElement('span');
+    dates.className = 'review-thread-dates';
+    const opened = document.createElement('time');
+    opened.className = 'review-thread-time';
+    opened.dateTime = new Date(thread.createdAt).toISOString();
+    opened.textContent = formatReviewTime(thread.createdAt);
+    opened.title = 'Opened ' + formatReviewTime(thread.createdAt);
+    opened.setAttribute('aria-label', opened.title);
+    dates.appendChild(opened);
+    if (thread.resolvedAt) {
+      const closed = document.createElement('time');
+      closed.className = 'review-thread-time is-closed';
+      closed.dateTime = new Date(thread.resolvedAt).toISOString();
+      closed.textContent = 'Closed: ' + formatReviewTime(thread.resolvedAt);
+      dates.appendChild(closed);
+    }
+    const authorMeta = document.createElement('span');
+    authorMeta.className = 'review-author-meta';
+    authorMeta.appendChild(name);
+    authorMeta.appendChild(dates);
+    authorRow.appendChild(avatar);
+    authorRow.appendChild(authorMeta);
+    if (thread.resolved) {
+      const resolved = document.createElement('span');
+      resolved.className = 'review-status-label';
+      resolved.title = 'Resolved';
+      resolved.setAttribute('aria-label', 'Resolved');
+      const icon = document.createElement('i');
+      icon.className = 'lucide lucide-check';
+      icon.setAttribute('aria-hidden', 'true');
+      resolved.appendChild(icon);
+      authorRow.appendChild(resolved);
+    }
+    header.appendChild(authorRow);
+
+    const actions = document.createElement('div');
+    actions.className = 'review-thread-actions';
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Comment actions');
+    actions.appendChild(createReviewThreadAction('edit', 'lucide lucide-square-pen', 'Edit comment', false, thread.id));
+    if (isRepliesCollapsible) {
+      const toggleReplies = createReviewThreadAction(
+        'toggle-replies',
+        isRepliesExpanded ? 'lucide lucide-fold-vertical' : 'lucide lucide-unfold-vertical',
+        isRepliesExpanded ? 'Collapse replies' : 'Expand replies',
+        false,
+        thread.id
+      );
+      toggleReplies.setAttribute('aria-expanded', isRepliesExpanded ? 'true' : 'false');
+      actions.appendChild(toggleReplies);
+    }
+    actions.appendChild(createReviewThreadAction(
+      'toggle-resolved',
+      thread.resolved ? 'lucide lucide-refresh-cw' : 'lucide lucide-check',
+      thread.resolved ? 'Reopen comment' : 'Resolve comment',
+      false,
+      thread.id
+    ));
+    actions.appendChild(createReviewThreadAction('delete', 'lucide lucide-trash-2', 'Delete comment', true, thread.id));
+    header.appendChild(actions);
+    item.appendChild(header);
+
+    const body = document.createElement('p');
+    body.className = 'review-thread-body';
+    body.textContent = thread.body;
+    item.appendChild(body);
+    item.appendChild(createReviewConversation(thread));
+    return item;
+  }
+
+  function renderReviewPanel() {
+    updateReviewCountBadges();
+    if (!reviewPanel || !reviewList || !reviewEmptyState) return;
+    const threads = getActiveReviewThreads();
+    if (reviewPanelSummary) {
+      reviewPanelSummary.textContent = threads.length + ' comment' + (threads.length === 1 ? '' : 's');
+    }
+    const filteredThreads = threads.filter(function(thread) {
+      if (reviewFilter === 'resolved') return thread.resolved;
+      if (reviewFilter === 'all') return true;
+      return !thread.resolved;
+    }).sort(function(a, b) { return b.createdAt - a.createdAt; });
+
+    reviewList.textContent = '';
+    filteredThreads.forEach(function(thread) { reviewList.appendChild(createReviewThreadElement(thread)); });
+    reviewList.hidden = filteredThreads.length === 0;
+    reviewEmptyState.hidden = filteredThreads.length > 0 || (reviewComposer && !reviewComposer.hidden);
+    if (filteredThreads.length === 0) {
+      const title = reviewEmptyState.querySelector('h3');
+      const copy = reviewEmptyState.querySelector('p');
+      if (reviewFilter === 'resolved') {
+        title.textContent = 'No resolved comments';
+        copy.textContent = 'Resolved comments will appear here.';
+      } else if (reviewFilter === 'all') {
+        title.textContent = 'No comments yet';
+        copy.textContent = 'Select content in the document, then choose New.';
+      } else {
+        title.textContent = threads.length ? 'No open comments' : 'No comments yet';
+        copy.textContent = threads.length
+          ? 'All comments are resolved. Use All to review them.'
+          : 'Select content in the document, then choose New.';
+      }
+    }
+    syncReviewInteractionState();
+    updateReviewNewButton();
+  }
+
+  function setReviewFilter(nextFilter) {
+    reviewFilter = ['open', 'resolved', 'all'].includes(nextFilter) ? nextFilter : 'open';
+    document.querySelectorAll('[data-review-filter]').forEach(function(button) {
+      const active = button.dataset.reviewFilter === reviewFilter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    renderReviewPanel();
+  }
+
+  function getReviewThreadsForAnchor(anchor) {
+    const target = findReviewTarget(anchor);
+    if (!target) return [];
+    return getActiveReviewThreads().filter(function(thread) {
+      return findReviewTarget(thread.anchor) === target;
+    });
+  }
+
+  function showReviewThreadsForAnchor(anchor) {
+    const threads = getReviewThreadsForAnchor(anchor).sort(function(a, b) { return b.createdAt - a.createdAt; });
+    if (!threads.length) return false;
+    activateReviewThread(threads[0], { scrollPanel: true, focusCard: true });
+    return true;
+  }
+
+  function updateReviewNewButton() {
+    if (!reviewNewComment) return;
+    const hasSelection = Boolean(pendingReviewSelection && findReviewTarget(pendingReviewSelection));
+    const composerOpen = Boolean(reviewComposer && !reviewComposer.hidden);
+    reviewNewComment.disabled = !reviewModeActive || !hasSelection || composerOpen;
+    reviewNewComment.title = hasSelection
+      ? 'Create a comment for the selected content'
+      : 'Select document content first';
+    reviewNewComment.setAttribute('aria-label', hasSelection
+      ? 'New comment for selected content'
+      : 'New comment. Select document content first.');
+  }
+
+  function buildTextReviewSelection(target, range) {
+    if (!target || !range || range.collapsed) return null;
+    const before = document.createRange();
+    before.selectNodeContents(target);
+    before.setEnd(range.startContainer, range.startOffset);
+    const through = document.createRange();
+    through.selectNodeContents(target);
+    through.setEnd(range.endContainer, range.endOffset);
+    let start = before.toString().length;
+    let end = through.toString().length;
+    const rawQuote = range.toString();
+    const leading = (rawQuote.match(/^\s*/) || [''])[0].length;
+    const trailing = (rawQuote.match(/\s*$/) || [''])[0].length;
+    start += leading;
+    end -= trailing;
+    if (end <= start) return null;
+    const text = target.textContent || '';
+    const quote = text.slice(start, end) || rawQuote.trim();
+    if (!quote) return null;
+    return {
+      kind: 'text',
+      start: start,
+      end: end,
+      quote: quote.slice(0, 1000),
+      prefix: text.slice(Math.max(0, start - 48), start),
+      suffix: text.slice(end, end + 48)
+    };
+  }
+
+  function getReviewNativeTextRange(anchor) {
+    const selection = anchor && normalizeReviewSelection(anchor.selection);
+    const target = selection && selection.kind === 'text' ? findReviewTarget(anchor) : null;
+    const offsets = target && resolveTextSelectionOffsets(target, selection);
+    if (!target || !offsets) return null;
+    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        const parent = node.parentElement;
+        if (!node.nodeValue || !parent || parent.closest('script, style, button, textarea')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node;
+    let cursor = 0;
+    let startBoundary = null;
+    let endBoundary = null;
+    while ((node = walker.nextNode())) {
+      const nextCursor = cursor + node.nodeValue.length;
+      if (!startBoundary && offsets.start >= cursor && offsets.start <= nextCursor) {
+        startBoundary = { node: node, offset: offsets.start - cursor };
+      }
+      if (!endBoundary && offsets.end >= cursor && offsets.end <= nextCursor) {
+        endBoundary = { node: node, offset: offsets.end - cursor };
+      }
+      cursor = nextCursor;
+      if (startBoundary && endBoundary) break;
+    }
+    if (!startBoundary || !endBoundary) return null;
+    const range = document.createRange();
+    range.setStart(startBoundary.node, startBoundary.offset);
+    range.setEnd(endBoundary.node, endBoundary.offset);
+    return range;
+  }
+
+  function clearReviewComposerSelection() {
+    if (window.CSS && CSS.highlights) CSS.highlights.delete('review-pending-native-selection');
+  }
+
+  function showReviewComposerSelection(anchor) {
+    clearReviewComposerSelection();
+    const range = getReviewNativeTextRange(anchor);
+    if (!range) return false;
+    if (window.CSS && CSS.highlights && typeof window.Highlight === 'function') {
+      CSS.highlights.set('review-pending-native-selection', new Highlight(range));
+      return true;
+    }
+    if (!window.getSelection) return false;
+    const nativeSelection = window.getSelection();
+    nativeSelection.removeAllRanges();
+    nativeSelection.addRange(range);
+    return true;
+  }
+
+  function setPendingReviewSelection(descriptor, options) {
+    if (!descriptor) return;
+    options = options || {};
+    pendingReviewSelection = descriptor;
+    activeReviewId = null;
+    hoveredReviewId = null;
+    const selection = normalizeReviewSelection(descriptor.selection);
+    if (!selection || selection.kind !== 'text') decorateReviewTargets();
+    renderReviewPanel();
+    if (options.announce !== false) {
+      announceToScreenReader('Content selected. Choose New to add a comment.');
+    }
+  }
+
+  function captureReviewTextSelection() {
+    if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return false;
+    const selection = window.getSelection && window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+    const range = selection.getRangeAt(0);
+    const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer
+      : range.startContainer.parentElement;
+    const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE
+      ? range.endContainer
+      : range.endContainer.parentElement;
+    if (!startElement || !endElement || !markdownPreview.contains(startElement) || !markdownPreview.contains(endElement)) return false;
+    const startTarget = startElement.closest('[data-review-anchor]');
+    const endTarget = endElement.closest('[data-review-anchor]');
+    if (!startTarget || startTarget !== endTarget) {
+      announceToScreenReader('Select content within one paragraph, heading, list item, or content block.');
+      return false;
+    }
+    const textSelection = buildTextReviewSelection(startTarget, range);
+    if (!textSelection) return false;
+    const descriptor = getReviewAnchorDescriptor(startTarget, textSelection);
+    if (!descriptor) return false;
+    setPendingReviewSelection(descriptor);
+    return true;
+  }
+
+  function selectReviewElement(target) {
+    if (!target || !target.dataset.reviewAnchor) return;
+    const type = target.dataset.reviewType || getReviewTargetType(target);
+    if (!REVIEW_ELEMENT_TYPES.has(type)) return;
+    const descriptor = getReviewAnchorDescriptor(target, { kind: 'element', elementType: type });
+    if (descriptor) setPendingReviewSelection(descriptor);
+  }
+
+  function reviewClickIsInsideNativeSelection(event, pendingSelection) {
+    const selection = window.getSelection && window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+    if (selection.toString().trim() !== String(pendingSelection.quote || '').trim()) return false;
+    const pointX = Number(event.clientX);
+    const pointY = Number(event.clientY);
+    return Array.from(selection.getRangeAt(0).getClientRects()).some(function(rect) {
+      return pointX >= rect.left && pointX <= rect.right && pointY >= rect.top && pointY <= rect.bottom;
+    });
+  }
+
+  function focusReviewComposerInput() {
+    if (!reviewFeedbackInput) return;
+    reviewFeedbackInput.focus({ preventScroll: true });
+    const cursorPosition = reviewFeedbackInput.value.length;
+    reviewFeedbackInput.setSelectionRange(cursorPosition, cursorPosition);
+    requestAnimationFrame(function() {
+      if (reviewComposer && !reviewComposer.hidden && reviewPanelBody) reviewPanelBody.scrollTop = 0;
+    });
+  }
+
+  function clearReviewNativeSelection() {
+    const selection = window.getSelection && window.getSelection();
+    if (selection && selection.rangeCount > 0) selection.removeAllRanges();
+  }
+
+  function dismissEmptyNewReviewComposer() {
+    if (!reviewComposer || reviewComposer.hidden || activeReviewEditId) return false;
+    if (reviewFeedbackInput && reviewFeedbackInput.value.trim()) return false;
+    pendingReviewSelection = null;
+    clearReviewNativeSelection();
+    closeReviewComposer({ keepSelection: false });
+    announceToScreenReader('Empty comment cancelled and content selection cleared.');
+    return true;
+  }
+
+  function closeReviewComposer(options) {
+    options = options || {};
+    const wasEditing = Boolean(activeReviewEditId);
+    clearReviewComposerSelection();
+    activeReviewAnchor = null;
+    activeReviewEditId = null;
+    if (reviewComposer) reviewComposer.hidden = true;
+    if (reviewFeedbackInput) reviewFeedbackInput.value = '';
+    if (reviewFeedbackCount) reviewFeedbackCount.textContent = '0 / ' + REVIEW_TEXT_LIMIT;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = true;
+    if (!options.keepSelection && wasEditing) pendingReviewSelection = null;
+    decorateReviewTargets();
+    renderReviewPanel();
+    if (options.restoreFocus && reviewModeActive) {
+      if (reviewNewComment && !reviewNewComment.disabled) reviewNewComment.focus();
+      else if (reviewPanelClose) reviewPanelClose.focus();
+    }
+  }
+
+  function populateReviewComposer(author, anchor, isEditing) {
+    if (reviewComposer) reviewComposer.setAttribute('aria-label', isEditing ? 'Edit comment' : 'New comment');
+    if (reviewComposerTitle) reviewComposerTitle.textContent = isEditing ? 'Edit comment' : 'New comment';
+    if (reviewComposerAuthor) reviewComposerAuthor.textContent = author;
+    if (reviewComposerAvatar) reviewComposerAvatar.textContent = getReviewAvatarLabel(author);
+    if (reviewComposerAnchor) reviewComposerAnchor.textContent = anchor.excerpt || anchor.label;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.textContent = isEditing ? 'Save' : 'Submit';
+  }
+
+  function openNewReviewComposer() {
+    if (!pendingReviewSelection) {
+      announceToScreenReader('Select document content before creating a comment.');
+      return;
+    }
+    const target = findReviewTarget(pendingReviewSelection);
+    if (!target) {
+      pendingReviewSelection = null;
+      updateReviewNewButton();
+      announceToScreenReader('The selected content is no longer available. Select it again.');
+      return;
+    }
+    activeReviewEditId = null;
+    activeReviewAnchor = Object.assign({}, pendingReviewSelection, {
+      selection: pendingReviewSelection.selection ? Object.assign({}, pendingReviewSelection.selection) : null
+    });
+    activeReviewId = null;
+    populateReviewComposer(getCurrentReviewAuthor(), activeReviewAnchor, false);
+    if (reviewComposer) reviewComposer.hidden = false;
+    if (reviewFeedbackInput) reviewFeedbackInput.value = '';
+    if (reviewFeedbackCount) reviewFeedbackCount.textContent = '0 / ' + REVIEW_TEXT_LIMIT;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = true;
+    const selection = normalizeReviewSelection(activeReviewAnchor.selection);
+    if (!selection || selection.kind !== 'text') decorateReviewTargets();
+    renderReviewPanel();
+    focusReviewComposerInput();
+    if (selection && selection.kind === 'text') {
+      showReviewComposerSelection(activeReviewAnchor);
+      clearReviewNativeSelection();
+    }
+  }
+
+  function openReviewComposer() {
+    openNewReviewComposer();
+  }
+
+  function openReviewEditor(thread) {
+    if (!thread || !reviewComposer || !reviewFeedbackInput) return;
+    clearReviewComposerSelection();
+    pendingReviewSelection = null;
+    activeReviewEditId = thread.id;
+    activeReviewId = thread.id;
+    activeReviewAnchor = Object.assign({}, thread.anchor, {
+      selection: thread.anchor.selection ? Object.assign({}, thread.anchor.selection) : null
+    });
+    populateReviewComposer(thread.author || getCurrentReviewAuthor(), activeReviewAnchor, true);
+    reviewComposer.hidden = false;
+    reviewFeedbackInput.value = thread.body;
+    if (reviewFeedbackCount) reviewFeedbackCount.textContent = reviewFeedbackInput.value.length + ' / ' + REVIEW_TEXT_LIMIT;
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = false;
+    decorateReviewTargets();
+    renderReviewPanel();
+    focusReviewComposerInput();
+    reviewFeedbackInput.setSelectionRange(reviewFeedbackInput.value.length, reviewFeedbackInput.value.length);
+    announceToScreenReader('Editing comment.');
+  }
+
+  function updateReviewComposerKind() {
+    // Retained as a compatibility no-op for legacy callers. The v2 UI only creates comments.
+  }
+
+  function focusReviewPin() {
+    if (reviewNewComment && !reviewNewComment.disabled) {
+      reviewNewComment.focus({ preventScroll: true });
+      return true;
+    }
+    return false;
+  }
+
+  function submitReviewFeedback() {
+    if (!activeReviewAnchor || !reviewFeedbackInput) return;
+    const body = reviewFeedbackInput.value.trim();
+    if (!body) return;
+    if (activeReviewEditId) {
+      const reviewId = activeReviewEditId;
+      const thread = getActiveReviewThreads().find(function(item) { return item.id === reviewId; });
+      if (!thread) {
+        closeReviewComposer();
+        announceToScreenReader('This comment is no longer available.');
+        return;
+      }
+      thread.body = body.slice(0, REVIEW_TEXT_LIMIT);
+      thread.updatedAt = Date.now();
+      clearReviewComposerSelection();
+      activeReviewEditId = null;
+      activeReviewAnchor = null;
+      if (reviewComposer) reviewComposer.hidden = true;
+      persistReviewThreads('Comment updated.');
+      activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+      return;
+    }
+
+    const now = Date.now();
+    const authorIdentity = getCurrentReviewAuthorIdentity();
+    const thread = {
+      id: createReviewId(),
+      anchor: Object.assign({}, activeReviewAnchor, {
+        selection: activeReviewAnchor.selection ? Object.assign({}, activeReviewAnchor.selection) : null
+      }),
+      kind: 'comment',
+      author: authorIdentity.name,
+      authorId: authorIdentity.id,
+      body: body.slice(0, REVIEW_TEXT_LIMIT),
+      createdAt: now,
+      updatedAt: now,
+      resolved: false,
+      resolvedAt: null,
+      replies: []
+    };
+    getActiveReviewThreads().push(thread);
+    clearReviewComposerSelection();
+    pendingReviewSelection = null;
+    activeReviewAnchor = null;
+    activeReviewId = thread.id;
+    if (reviewComposer) reviewComposer.hidden = true;
+    if (reviewFeedbackInput) reviewFeedbackInput.value = '';
+    persistReviewThreads('Comment added.');
+    activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+  }
+
+  function submitReviewReply(thread, form) {
+    if (!thread || thread.resolved || !form) return;
+    const input = form.querySelector('.review-reply-input');
+    const body = input ? input.value.trim() : '';
+    if (!body) {
+      if (input) input.focus();
+      return;
+    }
+    const now = Date.now();
+    const authorIdentity = getCurrentReviewAuthorIdentity();
+    if (!Array.isArray(thread.replies)) thread.replies = [];
+    thread.replies.push({
+      id: createReviewId(),
+      author: authorIdentity.name,
+      authorId: authorIdentity.id,
+      body: body.slice(0, REVIEW_TEXT_LIMIT),
+      createdAt: now,
+      updatedAt: now
+    });
+    thread.updatedAt = now;
+    activeReviewId = thread.id;
+    persistReviewThreads('Reply added.');
+    requestAnimationFrame(function() {
+      const card = reviewList && reviewList.querySelector('.review-thread[data-review-id="' + thread.id + '"]');
+      const nextInput = card && card.querySelector('.review-reply-input');
+      if (nextInput) nextInput.focus();
+    });
+  }
+
+  function editReviewReply(thread, replyId) {
+    const reply = thread && Array.isArray(thread.replies)
+      ? thread.replies.find(function(item) { return item.id === replyId; })
+      : null;
+    if (!reply) return;
+    activeReviewReplyEdit = { threadId: thread.id, replyId: reply.id };
+    activeReviewId = thread.id;
+    renderReviewPanel();
+    requestAnimationFrame(function() {
+      const input = reviewList && reviewList.querySelector(
+        '.review-reply-edit-form[data-review-id="' + thread.id + '"][data-review-reply-id="' + reply.id + '"] .review-reply-edit-input'
+      );
+      if (input) {
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    });
+  }
+
+  function saveReviewReply(thread, replyId, form) {
+    const reply = thread && Array.isArray(thread.replies)
+      ? thread.replies.find(function(item) { return item.id === replyId; })
+      : null;
+    const input = form && form.querySelector('.review-reply-edit-input');
+    const body = input ? input.value.trim() : '';
+    if (!reply || !body) {
+      if (input) input.focus();
+      return;
+    }
+    const now = Date.now();
+    reply.body = body.slice(0, REVIEW_TEXT_LIMIT);
+    reply.updatedAt = now;
+    thread.updatedAt = now;
+    activeReviewReplyEdit = null;
+    activeReviewId = thread.id;
+    persistReviewThreads('Reply updated.');
+  }
+
+  function deleteReviewReply(thread, replyId) {
+    if (!thread || !Array.isArray(thread.replies)) return;
+    const replyIndex = thread.replies.findIndex(function(item) { return item.id === replyId; });
+    if (replyIndex < 0) return;
+    thread.replies.splice(replyIndex, 1);
+    thread.updatedAt = Date.now();
+    if (activeReviewReplyEdit && activeReviewReplyEdit.threadId === thread.id && activeReviewReplyEdit.replyId === replyId) {
+      activeReviewReplyEdit = null;
+    }
+    if (thread.replies.length <= REVIEW_REPLY_COLLAPSE_THRESHOLD) expandedReviewThreadIds.delete(thread.id);
+    activeReviewId = thread.id;
+    persistReviewThreads('Reply deleted.');
+  }
+
+  function focusReviewAnchor(thread) {
+    activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
+  }
+
+  function buildReviewSummary() {
+    const tab = getActiveReviewTab();
+    const threads = getActiveReviewThreads().slice().sort(function(a, b) { return a.createdAt - b.createdAt; });
+    const resolvedCount = threads.filter(function(thread) { return thread.resolved; }).length;
+    const lines = [
+      '# Comments: ' + (tab && tab.title ? tab.title : 'Markdown document'),
+      '',
+      '- Generated: ' + formatReviewTime(Date.now()),
+      '- Total comments: ' + threads.length,
+      '- Open comments: ' + (threads.length - resolvedCount),
+      '- Resolved comments: ' + resolvedCount,
+      ''
+    ];
+    threads.forEach(function(thread, index) {
+      lines.push((index + 1) + '. **' + (thread.author || getCurrentReviewAuthor()) + '**');
+      lines.push('   - Status: ' + (thread.resolved ? 'Resolved' : 'Open'));
+      lines.push('   - Opened: ' + formatReviewTime(thread.createdAt));
+      if (thread.resolvedAt) lines.push('   - Closed: ' + formatReviewTime(thread.resolvedAt));
+      if (thread.anchor.excerpt) lines.push('   > ' + thread.anchor.excerpt.replace(/\n/g, ' '));
+      thread.body.split('\n').forEach(function(line) { lines.push('   ' + line); });
+      (thread.replies || []).forEach(function(reply) {
+        lines.push('   - Reply by **' + (reply.author || 'Author') + '** (' + formatReviewTime(reply.createdAt) + ')');
+        reply.body.split('\n').forEach(function(line) { lines.push('     ' + line); });
+      });
+      lines.push('');
+    });
+    return lines.join('\n').trim();
+  }
+
+  function requestReviewDeleteConfirmation(reviewId) {
+    if (!reviewDeleteModal || !reviewDeleteCancel || !reviewDeleteConfirm) return;
+    const threads = getActiveReviewThreads();
+    const thread = reviewId ? threads.find(function(item) { return item.id === reviewId; }) : null;
+    if ((reviewId && !thread) || (!reviewId && threads.length === 0)) return;
+    pendingReviewDelete = { tabId: activeTabId, reviewId: reviewId || null };
+    if (reviewDeleteTitle) reviewDeleteTitle.textContent = reviewId ? 'Delete comment?' : 'Delete all comments?';
+    if (reviewDeleteDescription) {
+      reviewDeleteDescription.textContent = reviewId
+        ? 'This comment will be permanently deleted. This cannot be undone.'
+        : 'All ' + threads.length + ' comments in this document will be permanently deleted. This cannot be undone.';
+    }
+    reviewDeleteConfirm.textContent = reviewId ? 'Delete comment' : 'Delete all';
+    openAppModal(reviewDeleteModal, {
+      focusTarget: reviewDeleteCancel,
+      onClose: cancelReviewDeleteConfirmation
+    });
+  }
+
+  function updateReviewBackdrop() {
+    if (reviewPanelBackdrop) reviewPanelBackdrop.hidden = true;
+  }
+
+  function setReviewMode(enabled, options) {
+    options = options || {};
+    const nextState = Boolean(enabled);
+    if (nextState && isReleaseNotesActive()) {
+      announceToScreenReader('Release notes do not support comments.');
+      return;
+    }
+    const wasActive = reviewModeActive;
+    if (nextState && !wasActive) reviewPreviousViewModes.set(activeTabId, currentViewMode || 'split');
+    reviewModeActive = nextState;
+    if (reviewModeActive && currentViewMode !== 'preview') setViewMode('preview');
+    if (reviewPanel) reviewPanel.hidden = !reviewModeActive;
+    if (contentContainer) contentContainer.classList.toggle('is-reviewing', reviewModeActive);
+    [reviewToggle, mobileReviewToggle].forEach(function(button) {
+      if (!button) return;
+      button.setAttribute('aria-expanded', reviewModeActive ? 'true' : 'false');
+      button.setAttribute('aria-pressed', reviewModeActive ? 'true' : 'false');
+    });
+    updateReviewToggleActiveState();
+    updateReviewBackdrop();
+    updateLiveEditorAccess();
+    if (reviewModeActive) {
+      decorateReviewTargets();
+      renderReviewPanel();
+      if (options.focusPanel && reviewPanelClose) reviewPanelClose.focus();
+    } else {
+      cancelReviewDeleteConfirmation();
+      pendingReviewSelection = null;
+      activeReviewReplyEdit = null;
+      activeReviewId = null;
+      hoveredReviewId = null;
+      closeReviewComposer({ keepSelection: false });
+      clearReviewDecorations();
+      const restoreMode = reviewPreviousViewModes.get(activeTabId);
+      reviewPreviousViewModes.clear();
+      if (restoreMode && restoreMode !== currentViewMode) {
+        setViewMode(restoreMode);
+        saveCurrentTabState();
+      }
+      if (options.restoreFocus) {
+        const returnTarget = window.innerWidth < 768 ? mobileMenuToggle : reviewToggle;
+        if (returnTarget) returnTarget.focus();
+      }
+    }
+  }
+
+  function initReviewMode() {
+    tabs.forEach(function(tab) { tab.reviewThreads = normalizeReviewThreads(tab.reviewThreads); });
+    updateReviewCountBadges();
+    renderReviewPanel();
+
+    if (reviewToggle) reviewToggle.addEventListener('click', function() {
+      setReviewMode(!reviewModeActive, { focusPanel: !reviewModeActive });
+    });
+    if (mobileReviewToggle) mobileReviewToggle.addEventListener('click', function() {
+      closeMobileMenu(false);
+      setReviewMode(!reviewModeActive, { focusPanel: !reviewModeActive });
+    });
+    if (reviewPanelClose) reviewPanelClose.addEventListener('click', function() {
+      setReviewMode(false, { restoreFocus: true });
+    });
+    if (reviewPanelBackdrop) reviewPanelBackdrop.addEventListener('click', function() {
+      setReviewMode(false, { restoreFocus: true });
+    });
+    if (reviewNewComment) reviewNewComment.addEventListener('click', openNewReviewComposer);
+    if (reviewComposerCancel) reviewComposerCancel.addEventListener('click', function() {
+      closeReviewComposer({ restoreFocus: true, keepSelection: true });
+    });
+    if (reviewFeedbackInput) {
+      reviewFeedbackInput.addEventListener('input', function() {
+        const length = reviewFeedbackInput.value.length;
+        if (reviewFeedbackCount) reviewFeedbackCount.textContent = length + ' / ' + REVIEW_TEXT_LIMIT;
+        if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = reviewFeedbackInput.value.trim().length === 0;
+      });
+      reviewFeedbackInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          submitReviewFeedback();
+        }
+      });
+    }
+    if (reviewFeedbackSubmit) reviewFeedbackSubmit.addEventListener('click', submitReviewFeedback);
+    document.querySelectorAll('[data-review-filter]').forEach(function(button) {
+      button.addEventListener('click', function() { setReviewFilter(button.dataset.reviewFilter); });
+    });
+    if (reviewDeleteClose) reviewDeleteClose.addEventListener('click', cancelReviewDeleteConfirmation);
+    if (reviewDeleteCancel) reviewDeleteCancel.addEventListener('click', cancelReviewDeleteConfirmation);
+    if (reviewDeleteConfirm) reviewDeleteConfirm.addEventListener('click', confirmReviewDeletion);
+
+    if (markdownPreview) {
+      markdownPreview.addEventListener('mouseup', function() {
+        requestAnimationFrame(captureReviewTextSelection);
+      });
+      markdownPreview.addEventListener('keyup', function() {
+        requestAnimationFrame(captureReviewTextSelection);
+      });
+      markdownPreview.addEventListener('click', function(event) {
+        if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return;
+        const nativeSelection = window.getSelection && window.getSelection();
+        if (nativeSelection && !nativeSelection.isCollapsed && nativeSelection.rangeCount > 0) {
+          const range = nativeSelection.getRangeAt(0);
+          const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? range.startContainer
+            : range.startContainer.parentElement;
+          const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE
+            ? range.endContainer
+            : range.endContainer.parentElement;
+          if (startElement && endElement && markdownPreview.contains(startElement) && markdownPreview.contains(endElement)) {
+            return;
+          }
+        }
+        const highlighted = event.target.closest('[data-review-ids]');
+        if (highlighted && markdownPreview.contains(highlighted)) {
+          const reviewId = String(highlighted.dataset.reviewIds || '').split(/\s+/).filter(Boolean)[0];
+          const thread = getActiveReviewThreads().find(function(item) { return item.id === reviewId; });
+          if (thread) {
+            event.preventDefault();
+            activateReviewThread(thread, { scrollPanel: true, focusCard: true });
+            return;
+          }
+        }
+        const selectable = event.target.closest('[data-review-anchor]');
+        const selectableType = selectable && selectable.dataset.reviewType;
+        if (selectable && markdownPreview.contains(selectable) && REVIEW_ELEMENT_TYPES.has(selectableType)) {
+          event.preventDefault();
+          selectReviewElement(selectable);
+        }
+      });
+      markdownPreview.addEventListener('pointerover', function(event) {
+        const highlighted = event.target.closest('[data-review-ids]');
+        if (!highlighted || !markdownPreview.contains(highlighted)) return;
+        const reviewId = String(highlighted.dataset.reviewIds || '').split(/\s+/).filter(Boolean)[0];
+        setReviewHover(reviewId);
+      });
+      markdownPreview.addEventListener('pointerout', function(event) {
+        const from = event.target.closest('[data-review-ids]');
+        const to = event.relatedTarget && event.relatedTarget.closest
+          ? event.relatedTarget.closest('[data-review-ids]')
+          : null;
+        if (from && from !== to) setReviewHover(null);
+      });
+    }
+
+    document.addEventListener('click', function(event) {
+      if (!reviewModeActive) return;
+      if (reviewComposer && !reviewComposer.hidden) {
+        const clickedComposer = reviewComposer.contains(event.target);
+        const clickedNewButton = reviewNewComment && reviewNewComment.contains(event.target);
+        if (!clickedComposer && !clickedNewButton) dismissEmptyNewReviewComposer();
+        return;
+      }
+      const selection = pendingReviewSelection && normalizeReviewSelection(pendingReviewSelection.selection);
+      if (!selection) return;
+      if (selection.kind === 'text' && reviewClickIsInsideNativeSelection(event, selection)) return;
+      if (selection.kind === 'element') {
+        const selectedTarget = findReviewTarget(pendingReviewSelection);
+        if (selectedTarget && selectedTarget.contains(event.target)) return;
+      }
+      pendingReviewSelection = null;
+      decorateReviewTargets();
+      renderReviewPanel();
+      announceToScreenReader('Content selection cleared.');
+    });
+
+    if (reviewList) {
+      reviewList.addEventListener('click', function(event) {
+        const card = event.target.closest('.review-thread');
+        if (!card) return;
+        const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
+        if (!thread) return;
+        if (event.target.closest('.review-reply-input, .review-reply-edit-input')) {
+          activeReviewId = thread.id;
+          syncReviewInteractionState();
+          return;
+        }
+        const actionButton = event.target.closest('[data-review-action]');
+        if (!actionButton) {
+          activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
+          return;
+        }
+        const action = actionButton.dataset.reviewAction;
+        if (action === 'focus-anchor') {
+          focusReviewAnchor(thread);
+        } else if (action === 'edit') {
+          openReviewEditor(thread);
+        } else if (action === 'toggle-resolved') {
+          thread.resolved = !thread.resolved;
+          const changedAt = Date.now();
+          thread.updatedAt = changedAt;
+          thread.resolvedAt = thread.resolved ? changedAt : null;
+          persistReviewThreads(thread.resolved ? 'Comment resolved.' : 'Comment reopened.');
+          if ((reviewFilter === 'open' && thread.resolved) || (reviewFilter === 'resolved' && !thread.resolved)) {
+            activeReviewId = null;
+            renderReviewPanel();
+          } else {
+            activateReviewThread(thread, { scrollPanel: true });
+          }
+        } else if (action === 'delete') {
+          requestReviewDeleteConfirmation(thread.id);
+        } else if (action === 'edit-reply') {
+          editReviewReply(thread, actionButton.dataset.reviewReplyId);
+        } else if (action === 'save-reply') {
+          saveReviewReply(
+            thread,
+            actionButton.dataset.reviewReplyId,
+            actionButton.closest('.review-reply-edit-form')
+          );
+        } else if (action === 'cancel-reply-edit') {
+          activeReviewReplyEdit = null;
+          activeReviewId = thread.id;
+          renderReviewPanel();
+        } else if (action === 'delete-reply') {
+          deleteReviewReply(thread, actionButton.dataset.reviewReplyId);
+        } else if (action === 'toggle-replies') {
+          event.preventDefault();
+          if (expandedReviewThreadIds.has(thread.id)) expandedReviewThreadIds.delete(thread.id);
+          else expandedReviewThreadIds.add(thread.id);
+          activeReviewId = thread.id;
+          renderReviewPanel();
+          requestAnimationFrame(function() {
+            const toggle = reviewList && reviewList.querySelector(
+              '.review-thread[data-review-id="' + thread.id + '"] .review-thread-actions [data-review-action="toggle-replies"]'
+            );
+            if (toggle) toggle.focus({ preventScroll: true });
+          });
+          announceToScreenReader(expandedReviewThreadIds.has(thread.id) ? 'All replies shown.' : 'Middle replies hidden.');
+        } else if (action === 'submit-reply') {
+          event.preventDefault();
+          submitReviewReply(thread, actionButton.closest('.review-reply-composer'));
+        }
+      });
+      reviewList.addEventListener('submit', function(event) {
+        const form = event.target.closest('.review-reply-composer');
+        if (!form) return;
+        event.preventDefault();
+        const thread = getActiveReviewThreads().find(function(item) { return item.id === form.dataset.reviewId; });
+        if (thread) submitReviewReply(thread, form);
+      });
+      reviewList.addEventListener('keydown', function(event) {
+        const card = event.target.closest('.review-thread');
+        if (!card || event.target.closest('input, textarea, button, [data-review-action]')) return;
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
+        if (thread) activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
+      });
+      reviewList.addEventListener('pointerover', function(event) {
+        const card = event.target.closest('.review-thread');
+        if (card) setReviewHover(card.dataset.reviewId);
+      });
+      reviewList.addEventListener('pointerout', function(event) {
+        const from = event.target.closest('.review-thread');
+        const to = event.relatedTarget && event.relatedTarget.closest
+          ? event.relatedTarget.closest('.review-thread')
+          : null;
+        if (from && from !== to) setReviewHover(null);
+      });
+    }
+
+    window.addEventListener('resize', updateReviewBackdrop);
+    document.addEventListener('keydown', function(event) {
+      if (event.defaultPrevented || event.key !== 'Escape' || !reviewModeActive || activeModal) return;
+      if (reviewComposer && !reviewComposer.hidden) {
+        event.preventDefault();
+        closeReviewComposer({ restoreFocus: true, keepSelection: true });
       } else {
         event.preventDefault();
         setReviewMode(false, { restoreFocus: true });
@@ -7879,6 +9703,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     updateMissingDocumentControlState([
+      copyMarkdownButton,
+      reviewToggle,
       exportDropdown,
       shareButton,
       liveShareButton,
@@ -7922,6 +9748,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   function clearActiveDocument() {
     activeTabId = null;
     selectedDocumentId = null;
+    document.body.classList.remove('release-notes-active');
+    updateReleaseNotesActionAvailability(false);
     removeStorageItem(ACTIVE_TAB_KEY);
     closeReviewComposer();
     clearReviewDecorations();
@@ -8014,33 +9842,29 @@ document.addEventListener("DOMContentLoaded", async function () {
     dropdown.className = 'tab-menu-dropdown';
     dropdown.setAttribute('data-tab-menu-dropdown', 'true');
     dropdown.setAttribute('role', 'menu');
-    if (isReleaseNotesTab(tab)) {
-      dropdown.innerHTML = '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
-    } else {
-      const duplicateAction = isShareSnapshotTab(tab)
-        ? ''
-        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
-      const downloadAction = isShareSnapshotTab(tab)
-        ? ''
-        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
-      const favoriteAction = isShareSnapshotTab(tab)
-        ? ''
-        : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
-      const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
-      const splitAction = isCombinedSplitTab
-        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
-        : tabs.length > 1
-        ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
-        : '';
-      dropdown.innerHTML =
-        '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
-        duplicateAction +
-        favoriteAction +
-        splitAction +
-        downloadAction +
-        '<div class="tab-menu-separator" role="separator"></div>' +
-        '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
-    }
+    const duplicateAction = isShareSnapshotTab(tab)
+      ? ''
+      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="duplicate"><i class="lucide lucide-files"></i> Duplicate</button>';
+    const downloadAction = isShareSnapshotTab(tab)
+      ? ''
+      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="download"><i class="lucide lucide-download"></i> Download Markdown</button>';
+    const favoriteAction = isShareSnapshotTab(tab)
+      ? ''
+      : '<button type="button" class="tab-menu-item" role="menuitem" data-action="favorite"><i class="lucide ' + (tab.favorite ? 'lucide-star-filled' : 'lucide-star') + '"></i> ' + (tab.favorite ? 'Remove from Favorites' : 'Add to Favorites') + '</button>';
+    const isCombinedSplitTab = tab.id === activeTabId && Boolean(secondarySplitTabId);
+    const splitAction = isCombinedSplitTab
+      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split-close"><i class="lucide lucide-panel-right-close"></i> Exit split view</button>'
+      : tabs.length > 1
+      ? '<button type="button" class="tab-menu-item" role="menuitem" data-action="split"><i class="lucide lucide-columns-2"></i> Open in split view</button>'
+      : '';
+    dropdown.innerHTML =
+      '<button type="button" class="tab-menu-item" role="menuitem" data-action="rename"><i class="lucide lucide-square-pen"></i> Rename</button>' +
+      duplicateAction +
+      favoriteAction +
+      splitAction +
+      downloadAction +
+      '<div class="tab-menu-separator" role="separator"></div>' +
+      '<button type="button" class="tab-menu-item" role="menuitem" data-action="close"><i class="lucide lucide-x"></i> Close</button>';
 
     menuBtn.addEventListener('click', function(e) {
       e.preventDefault();
@@ -8196,7 +10020,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, {
       id: 'all', icon: 'lucide-square-x', label: 'Close all'
     }];
-    const actions = isReleaseNotesTab(tab) ? closeActions : [{
+    const actions = isReleaseNotesTab(tab) ? closeActions.slice(0, 1) : [{
       id: isCombinedSplitTab ? 'split-close' : 'split',
       icon: isCombinedSplitTab ? 'lucide-panel-right-close' : 'lucide-columns-2',
       label: isCombinedSplitTab ? 'Exit split view' : 'Open in split view',
@@ -8333,7 +10157,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         titleSpan.title = getDocumentTabHoverTitle(tab);
       }
 
-      const tabMenu = createTabActionMenu(tab, { menuIdPrefix: 'desktop-tab-menu' });
+      const tabMenu = isReleaseNotesTab(tab)
+        ? null
+        : createTabActionMenu(tab, { menuIdPrefix: 'desktop-tab-menu' });
 
       const closeButton = document.createElement('button');
       closeButton.type = 'button';
@@ -8351,7 +10177,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       item.appendChild(fileIcon);
       item.appendChild(titleSpan);
-      item.appendChild(tabMenu.button);
+      if (tabMenu) item.appendChild(tabMenu.button);
       item.appendChild(closeButton);
 
       item.addEventListener('contextmenu', function(event) {
@@ -8913,6 +10739,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     saveSecondarySplitState();
     closeReviewComposer();
     clearReviewDecorations();
+    if (isReleaseNotesTab(tab) && reviewModeActive) setReviewMode(false);
     
     // Clear typing timeout and reset tracking for the new tab
     if (typingTimeout) {
@@ -8923,11 +10750,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     pendingState = null;
     
     activeTabId = tabId;
+    const releaseNotesActive = isReleaseNotesTab(tab);
+    document.body.classList.toggle('release-notes-active', releaseNotesActive);
     if (swapSplitPanes) secondarySplitTabId = previousActiveTabId;
     saveActiveTabId(activeTabId);
     updateNoOpenDocumentState();
-    selectedDocumentId = tabId;
-    setSingleDocumentTreeSelection('document', tabId);
+    selectedDocumentId = releaseNotesActive ? null : tabId;
+    if (releaseNotesActive) clearDocumentTreeSelection({ announce: false });
+    else setSingleDocumentTreeSelection('document', tabId);
     tab.lastOpenedAt = Date.now();
     if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     markdownEditor.value = tab.content;
@@ -13399,7 +15229,7 @@ ${selector} .arrowheadPath {
     }
     if (reviewModeActive && mode !== 'preview') {
       mode = 'preview';
-      announceToScreenReader('Review mode uses the read-only preview.');
+    announceToScreenReader('Comments uses the read-only preview.');
     }
     if (mode === currentViewMode) return;
 
@@ -18764,6 +20594,55 @@ ${selector} .arrowheadPath {
     });
   }
 
+  function initDropdownMenuMotion() {
+    if (!window.bootstrap || !window.bootstrap.Dropdown) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const closeDurationMs = 120;
+
+    document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function(toggle) {
+      if (toggle.dataset.dropdownMotionReady === 'true') return;
+      const dropdown = toggle.closest('.dropdown');
+      const menu = dropdown && Array.from(dropdown.children).find(function(child) {
+        return child.classList && child.classList.contains('dropdown-menu');
+      });
+      if (!dropdown || !menu) return;
+
+      toggle.dataset.dropdownMotionReady = 'true';
+      const instance = window.bootstrap.Dropdown.getOrCreateInstance(toggle);
+      let closeTimer = null;
+      let allowImmediateHide = false;
+
+      toggle.addEventListener('show.bs.dropdown', function() {
+        if (closeTimer !== null) window.clearTimeout(closeTimer);
+        closeTimer = null;
+        allowImmediateHide = false;
+        menu.classList.remove('is-closing');
+      });
+
+      toggle.addEventListener('hide.bs.dropdown', function(event) {
+        if (allowImmediateHide || reducedMotion.matches) return;
+        event.preventDefault();
+        if (closeTimer !== null) return;
+
+        menu.classList.add('is-closing');
+        closeTimer = window.setTimeout(function() {
+          closeTimer = null;
+          allowImmediateHide = true;
+          instance.hide();
+          allowImmediateHide = false;
+        }, closeDurationMs);
+      });
+
+      toggle.addEventListener('hidden.bs.dropdown', function() {
+        if (closeTimer !== null) window.clearTimeout(closeTimer);
+        closeTimer = null;
+        allowImmediateHide = false;
+        menu.classList.remove('is-closing');
+      });
+    });
+  }
+
   // Story 1.3: Resize Divider Functions
   function initResizer() {
     if (!resizeDivider) return;
@@ -19387,6 +21266,7 @@ ${selector} .arrowheadPath {
 
   initMarkdownFormatToolbar();
   initToolbarDropdownPortals();
+  initDropdownMenuMotion();
   initFindReplaceModal();
   initAppModals();
   document.addEventListener('fullscreenchange', function() {
@@ -21679,6 +23559,7 @@ ${selector} .arrowheadPath {
   });
 
   copyMarkdownButton.addEventListener("click", async function () {
+    if (isReleaseNotesActive()) return;
     if (blockShareSnapshotSourceAccess()) return;
     try {
       await copyTextToClipboard(markdownEditor.value);
@@ -22335,6 +24216,9 @@ ${selector} .arrowheadPath {
 
   function updateReleaseNotesActionAvailability(releaseNotesActive) {
     const actions = [
+      toggleSyncButton,
+      copyMarkdownButton,
+      reviewToggle,
       exportDropdown,
       exportMd,
       exportHtml,
@@ -22347,9 +24231,20 @@ ${selector} .arrowheadPath {
       mobileExportHtml,
       mobileExportPdf,
       mobileExportPng,
+      mobileToggleSyncButton,
+      mobileCopyMarkdownButton,
+      mobileReviewToggle,
       mobileShareButton,
       mobileLiveShareButton
     ];
+
+    viewModeButtons.forEach(function(action) { actions.push(action); });
+    mobileViewModeButtons.forEach(function(action) { actions.push(action); });
+    if (markdownFormatToolbar) {
+      markdownFormatToolbar.querySelectorAll('button').forEach(function(action) { actions.push(action); });
+      markdownFormatToolbar.classList.toggle('is-release-notes-disabled', releaseNotesActive);
+      markdownFormatToolbar.setAttribute('aria-disabled', releaseNotesActive ? 'true' : 'false');
+    }
 
     actions.forEach(function(action) {
       if (!action) return;
@@ -22361,11 +24256,15 @@ ${selector} .arrowheadPath {
               ? action.getAttribute('tabindex')
               : '__missing__';
           }
+          action.dataset.releaseNotesOriginalTitle = action.hasAttribute('title')
+            ? action.getAttribute('title')
+            : '__missing__';
         }
         action.dataset.releaseNotesDisabled = 'true';
         if ('disabled' in action) action.disabled = true;
         action.classList.add('disabled');
         action.setAttribute('aria-disabled', 'true');
+        action.setAttribute('title', 'Unavailable in Release Notes');
         if (action.tagName === 'A') action.setAttribute('tabindex', '-1');
         return;
       }
@@ -22381,9 +24280,16 @@ ${selector} .arrowheadPath {
       const remainsDisabled = wasDisabled || hasAnotherDisabledState;
       delete action.dataset.releaseNotesDisabled;
       delete action.dataset.releaseNotesWasDisabled;
+      const originalTitle = action.dataset.releaseNotesOriginalTitle;
+      delete action.dataset.releaseNotesOriginalTitle;
       if ('disabled' in action) action.disabled = remainsDisabled;
       action.classList.toggle('disabled', remainsDisabled);
       action.setAttribute('aria-disabled', remainsDisabled ? 'true' : 'false');
+      if (originalTitle && originalTitle !== '__missing__') {
+        action.setAttribute('title', originalTitle);
+      } else {
+        action.removeAttribute('title');
+      }
       if (action.tagName === 'A') {
         const originalTabindex = action.dataset.releaseNotesOriginalTabindex;
         delete action.dataset.releaseNotesOriginalTabindex;
@@ -22413,6 +24319,8 @@ ${selector} .arrowheadPath {
     const liveShareDocumentActive = isLiveShareDocumentActive();
     const liveShareGuestDocumentActive = liveShareDocumentActive && !isLiveShareHostDocumentActive();
     const viewOnly = isLiveViewOnlyParticipant() || snapshotViewOnly || releaseNotesActive;
+    document.body.classList.toggle('release-notes-active', releaseNotesActive);
+    if (!releaseNotesActive) updateReleaseNotesActionAvailability(false);
     const sourceReadOnly = viewOnly || reviewModeActive;
     if (markdownEditor) {
       markdownEditor.readOnly = sourceReadOnly;
@@ -22531,9 +24439,10 @@ ${selector} .arrowheadPath {
 
     if (markdownFormatToolbar) {
       markdownFormatToolbar.classList.toggle('is-live-view-only', sourceReadOnly);
-      markdownFormatToolbar.querySelectorAll('[data-md-action]').forEach(function(button) {
+      markdownFormatToolbar.querySelectorAll('[data-md-action], [data-toolbar-menu-toggle]').forEach(function(button) {
         const action = button.getAttribute('data-md-action');
-        const shouldDisable = sourceReadOnly && isLiveMutatingAction(action);
+        const isMenuToggle = button.hasAttribute('data-toolbar-menu-toggle');
+        const shouldDisable = sourceReadOnly && (isMenuToggle || isLiveMutatingAction(action));
         if (shouldDisable) {
           button.dataset.liveViewOnlyDisabled = 'true';
           button.disabled = true;
@@ -22550,8 +24459,9 @@ ${selector} .arrowheadPath {
         updateUndoRedoButtons();
       }
     }
+    updateSyncToggleVisibility(currentViewMode);
     updateDocumentToolbarAvailability(hasActiveOpenDocument());
-    updateReleaseNotesActionAvailability(releaseNotesActive);
+    if (releaseNotesActive) updateReleaseNotesActionAvailability(true);
   }
 
   function getLiveRoomSocketUrl(roomId, secret, auth) {
@@ -22917,6 +24827,7 @@ ${selector} .arrowheadPath {
     };
     liveCollaboration.localParticipant = updatedParticipant;
     liveCollaboration.participants.set(liveCollaboration.localParticipantId, updatedParticipant);
+    updateReviewAuthorIdentity(liveCollaboration.localParticipantId, safeName);
     if (liveCollaboration.connection) {
       liveCollaboration.connection.publishPresence(liveCollaboration.localCursor);
     }
@@ -24464,6 +26375,10 @@ ${selector} .arrowheadPath {
 
     if (isCmdOrCtrl && e.shiftKey && !e.altKey && key === 'c') {
       e.preventDefault();
+      if (isReleaseNotesActive()) {
+        announceToScreenReader('Release notes do not expose Markdown source.');
+        return;
+      }
       const focusedEditor = document.activeElement === documentSplitEditor ? documentSplitEditor : markdownEditor;
       const selected = focusedEditor.value.slice(focusedEditor.selectionStart, focusedEditor.selectionEnd);
       copyTextToClipboard(selected || focusedEditor.value)

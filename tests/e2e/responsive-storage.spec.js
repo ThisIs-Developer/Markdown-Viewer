@@ -8,20 +8,92 @@ const {
   waitForAppReady
 } = require('../helpers/app');
 
+async function resolveCssColor(page, variableName) {
+  return page.evaluate(name => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    document.body.appendChild(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, variableName);
+}
+
 test('theme switching stores and restores the selected theme', async ({ page }) => {
   await openApp(page);
 
   const initialTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  const initialThemeIcon = initialTheme === 'dark' ? 'lucide-moon' : 'lucide-sun';
+  const toggledThemeIcon = initialTheme === 'dark' ? 'lucide-sun' : 'lucide-moon';
   await page.getByRole('button', { name: 'Open workspace settings' }).click();
-  await page.locator('#theme-toggle').click();
+  const themeToggle = page.locator('#theme-toggle');
+  const themeSwitch = themeToggle.locator('.settings-switch');
+  const privateModeSwitch = page.locator('#private-mode-toggle .settings-switch');
+
+  await expect(themeToggle).toHaveClass(/settings-menu-item--toggle/);
+  await expect(themeToggle).toHaveAttribute('aria-pressed', String(initialTheme === 'dark'));
+  await expect(themeSwitch).toBeVisible();
+  await expect(themeSwitch).toHaveCSS('width', '40px');
+  await expect(themeSwitch).toHaveCSS('height', '22px');
+  await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${initialThemeIcon}\\b`));
+  await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
+  await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));
+  await expect(themeSwitch).toHaveCSS('height', await privateModeSwitch.evaluate(element => getComputedStyle(element).height));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('border-radius', '50%');
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
+
+  await themeToggle.click();
   const toggledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
 
   expect(toggledTheme).not.toBe(initialTheme);
+  await expect(themeToggle).toHaveAttribute('aria-pressed', String(toggledTheme === 'dark'));
+  await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${toggledThemeIcon}\\b`));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('markdownViewerGlobalState') || '{}').theme)).toBe(toggledTheme);
 
   await page.reload();
   await expect(page.locator('#markdown-editor')).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(toggledTheme);
+});
+
+test('dark mode keeps the active theme switch dark and the private mode switch blue', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await openApp(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  const themeSwitch = page.locator('#theme-toggle .settings-switch');
+  const privateModeToggle = page.locator('#private-mode-toggle');
+  const privateModeSwitch = privateModeToggle.locator('.settings-switch');
+  const darkTrackColor = await privateModeSwitch.evaluate(element => getComputedStyle(element).backgroundColor);
+  const accentTrackColor = await resolveCssColor(page, '--accent-color');
+
+  await expect(themeSwitch).toHaveCSS('background-color', darkTrackColor);
+  await privateModeToggle.click();
+  await expect(privateModeToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(privateModeSwitch).toHaveCSS('background-color', accentTrackColor);
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('width', '12px');
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('height', '12px');
+  await expect(page.locator('#theme-switch-icon')).not.toHaveCSS('filter', 'none');
+  await expect(privateModeSwitch.locator('.lucide')).toHaveCount(0);
+});
+
+test('light mode uses the accent blue for active private mode without an inner icon', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await openApp(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  const privateModeToggle = page.locator('#private-mode-toggle');
+  const privateModeSwitch = privateModeToggle.locator('.settings-switch');
+  const accentTrackColor = await resolveCssColor(page, '--accent-color');
+
+  await privateModeToggle.click();
+  await expect(privateModeToggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(privateModeSwitch).toHaveCSS('background-color', accentTrackColor);
+  await expect(privateModeSwitch.locator('.lucide')).toHaveCount(0);
 });
 
 test('document tabs persist across reload in normal mode', async ({ page }) => {
@@ -364,7 +436,10 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   await expect(page.locator('#mobile-review-toggle')).toBeVisible();
   await expect(page.locator('#mobile-private-mode-toggle')).toBeVisible();
   await expect(page.locator('#mobile-theme-toggle .settings-switch')).toBeVisible();
+  await expect(page.locator('#mobile-theme-switch-icon')).toHaveClass(/lucide-(sun|moon)/);
+  await expect(page.locator('#mobile-theme-switch-icon')).not.toHaveCSS('mask-image', 'none');
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch')).toBeVisible();
+  await expect(page.locator('#mobile-private-mode-toggle .settings-switch .lucide')).toHaveCount(0);
   const settingsOrder = await page.locator('#mobile-menu-settings-panel > *').evaluateAll(elements =>
     elements.filter(element => element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
   );

@@ -86,7 +86,7 @@ Share Snapshot copies Markdown, not every referenced resource.
 - Managed media remains available through its public-by-link URL until that media record expires.
 - External images, media, fonts, and links are requested from their original hosts.
 - Legacy inline data images increase the snapshot size and can force stored-snapshot mode.
-- Review comments and suggestions are not included.
+- Comments are not included.
 - A remote diagram fence is re-rendered by the recipient's browser and can send its source to a renderer.
 
 ## Security Boundaries

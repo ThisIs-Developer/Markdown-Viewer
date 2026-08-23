@@ -5,27 +5,58 @@ test.beforeEach(async ({ page }) => {
   await openApp(page);
 });
 
-test('header and formatting toolbar expose the requested actions in order', async ({ page }) => {
+test('header consolidates icon document actions in the requested order', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const header = page.locator('.header-right');
   await expect(page.locator('.app-header h1')).toBeVisible();
   expect(await page.locator('.app-header h1').evaluate(title => title.getBoundingClientRect().width)).toBeGreaterThan(115);
   expect(await page.locator('#document-sidebar').evaluate(sidebar => sidebar.getBoundingClientRect().width)).toBeGreaterThanOrEqual(220);
-  for (const selector of ['#importDropdown', '#share-button', '#live-share-button', '#header-about-button', '#workspaceSettingsDropdown']) {
+  for (const selector of ['#importDropdown', '#copy-markdown-button', '#toggle-sync', '#review-toggle', '#share-button', '#live-share-button', '#exportDropdown', '#header-about-button', '#workspaceSettingsDropdown']) {
     await expect(header.locator(selector)).toBeVisible();
   }
   await expect(header.locator('[aria-label="Report an issue"]')).toBeVisible();
-  await expect(header.locator('#exportDropdown')).toBeVisible();
-  await expect(header.locator('#toggle-sync, #copy-markdown-button')).toHaveCount(0);
+  await expect(header.locator('.header-view-toolbar .view-toggle-btn')).toHaveCount(3);
+  await expect(header.locator('#importDropdown .btn-text, #share-button .btn-text, #live-share-button .btn-text, #exportDropdown .btn-text')).toHaveCount(0);
+  await expect(header.locator('#importDropdown i').first()).toHaveClass('lucide lucide-plus');
+  await expect(header.locator('#copy-markdown-button i')).toHaveClass('lucide lucide-clipboard');
+  expect(await header.locator('#copy-markdown-button i').evaluate(icon => getComputedStyle(icon).maskImage)).not.toBe('none');
+  expect(await header.locator('#copy-markdown-button').evaluate(button => getComputedStyle(button).borderTopColor)).not.toBe('rgba(0, 0, 0, 0)');
+  for (const selector of ['#importDropdown', '#exportDropdown']) {
+    const trigger = header.locator(selector);
+    await expect(trigger.locator('.header-dropdown-chevron')).toHaveClass(/lucide-chevron-down/);
+    const iconSizes = await trigger.locator('i').evaluateAll(icons => icons.map(icon => Number.parseFloat(getComputedStyle(icon).fontSize)));
+    expect(iconSizes[1]).toBeLessThan(iconSizes[0]);
+    expect(await trigger.evaluate(button => button.getBoundingClientRect().width)).toBeGreaterThanOrEqual(38);
+  }
+  await expect(header.locator('#workspaceSettingsDropdown .header-dropdown-chevron')).toHaveCount(0);
+
+  const headerOrder = await header.locator(':scope > button, :scope > a, :scope > .dropdown > button').evaluateAll(elements =>
+    elements.map(element => element.id || element.getAttribute('aria-label'))
+  );
+  expect(headerOrder).toEqual([
+    'toggle-sync',
+    'importDropdown',
+    'copy-markdown-button',
+    'exportDropdown',
+    'share-button',
+    'live-share-button',
+    'review-toggle',
+    'Report an issue',
+    'header-about-button',
+    'workspaceSettingsDropdown'
+  ]);
 
   const toolbar = page.locator('#markdown-format-toolbar');
   await expect(toolbar.locator('.workspace-format-actions [data-md-action="find"]')).toBeVisible();
   await expect(toolbar.locator('.workspace-format-actions [data-md-action="fullscreen"]')).toBeVisible();
   await expect(toolbar.locator('.workspace-format-actions [data-md-action="find"] i')).toHaveClass(/lucide-search/);
   await expect(toolbar.locator('.workspace-format-actions [data-md-action="fullscreen"] i')).toHaveClass(/lucide-maximize/);
-  await expect(toolbar.locator('#review-toggle')).toBeVisible();
-  await expect(toolbar.locator('#toggle-sync, #copy-markdown-button')).toHaveCount(2);
+  await expect(toolbar.locator('#review-toggle, #toggle-sync, #copy-markdown-button')).toHaveCount(0);
   await expect(toolbar.locator('#exportDropdown')).toHaveCount(0);
+  await expect(toolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
+  await expect(toolbar.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
+  await expect(toolbar.locator('.markdown-toolbar-group--technical > .markdown-tool-btn')).toHaveCount(3);
+  await expect(toolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(5);
 
   await toolbar.locator('.workspace-format-actions [data-md-action="find"]').click();
   await expect(page.locator('#find-replace-modal')).toBeVisible();
@@ -39,13 +70,13 @@ test('header and formatting toolbar expose the requested actions in order', asyn
   await fullscreen.click();
   await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
 
-  await toolbar.locator('#toggle-sync').click();
-  await expect(toolbar.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'false');
-  await toolbar.locator('#toggle-sync').click();
-  await expect(toolbar.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'true');
+  await header.locator('#toggle-sync').click();
+  await expect(header.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'false');
+  await header.locator('#toggle-sync').click();
+  await expect(header.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'true');
   await stubClipboard(page);
-  await toolbar.locator('#copy-markdown-button').click();
-  await expect(toolbar.locator('#copy-markdown-button')).toHaveAttribute('aria-label', 'Copied');
+  await header.locator('#copy-markdown-button').click();
+  await expect(header.locator('#copy-markdown-button')).toHaveAttribute('aria-label', 'Copied');
   await expect.poll(() => page.evaluate(() => window.__copiedText)).not.toBe('');
 
   await header.locator('#importDropdown').click();

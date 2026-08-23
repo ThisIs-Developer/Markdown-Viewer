@@ -119,7 +119,7 @@ test('split view uses one combined tab and offers only edit or preview modes', a
   await expect(page.locator('.view-toolbar [data-view-mode="split"]')).toBeEnabled();
 });
 
-test('header keeps global actions concise and settings groups workspace preferences', async ({ page }) => {
+test('header groups document actions before application preferences', async ({ page }) => {
   const header = page.locator('.header-right');
   await expect(header.locator('#importDropdown')).toBeVisible();
   await expect(header.locator('#share-button')).toBeVisible();
@@ -128,41 +128,39 @@ test('header keeps global actions concise and settings groups workspace preferen
   await expect(header.locator('#header-about-button')).toBeVisible();
   await expect(header.locator('#workspaceSettingsDropdown')).toBeVisible();
   await expect(header.locator('#exportDropdown')).toBeVisible();
-  await expect(header.locator('#toggle-sync, #review-toggle, #copy-markdown-button')).toHaveCount(0);
+  await expect(header.locator('#toggle-sync, #review-toggle, #copy-markdown-button')).toHaveCount(3);
+  await expect(header.locator('.header-view-toolbar .view-toggle-btn')).toHaveCount(3);
   const headerActions = await header.locator(':scope > button, :scope > a, :scope > .dropdown > button').evaluateAll(elements =>
     elements.map(element => element.id || element.getAttribute('aria-label'))
   );
   expect(headerActions).toEqual([
+    'toggle-sync',
     'importDropdown',
+    'copy-markdown-button',
     'exportDropdown',
     'share-button',
     'live-share-button',
+    'review-toggle',
     'Report an issue',
     'header-about-button',
     'workspaceSettingsDropdown'
   ]);
 
   const formatToolbar = page.locator('#markdown-format-toolbar');
-  await expect(formatToolbar.locator('#toggle-sync')).toBeVisible();
-  await expect(formatToolbar.locator('#copy-markdown-button')).toBeVisible();
-  await expect(formatToolbar.locator('#review-toggle')).toBeVisible();
+  await expect(formatToolbar.locator('#toggle-sync, #copy-markdown-button, #review-toggle')).toHaveCount(0);
   await expect(formatToolbar.locator('#exportDropdown')).toHaveCount(0);
   await expect(formatToolbar.locator('#documentActionsDropdown')).toHaveCount(0);
   await expect(page.locator('.app-brand-logo')).toHaveCount(0);
 
-  const utilityOrder = await formatToolbar.locator('.markdown-toolbar-group--utilities').evaluate(group =>
-    Array.from(group.children).map(element => element.id || element.className)
-  );
-  expect(utilityOrder.slice(0, 4)).toEqual(['toggle-sync', 'copy-markdown-button', 'review-toggle', 'document-command-divider']);
-  await formatToolbar.locator('#toggle-sync').click();
-  await expect(formatToolbar.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'false');
-  await expect(formatToolbar.locator('#toggle-sync')).toHaveAttribute('aria-label', 'Enable synchronized scrolling');
-  await formatToolbar.locator('#toggle-sync').click();
-  await expect(formatToolbar.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'true');
+  await header.locator('#toggle-sync').click();
+  await expect(header.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'false');
+  await expect(header.locator('#toggle-sync')).toHaveAttribute('aria-label', 'Enable synchronized scrolling');
+  await header.locator('#toggle-sync').click();
+  await expect(header.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'true');
   await stubClipboard(page);
-  await formatToolbar.locator('#copy-markdown-button').click();
-  await expect(formatToolbar.locator('#copy-markdown-button')).toHaveAttribute('aria-label', 'Copied');
-  await expect(formatToolbar.locator('#copy-markdown-button i')).toHaveClass(/lucide-check/);
+  await header.locator('#copy-markdown-button').click();
+  await expect(header.locator('#copy-markdown-button')).toHaveAttribute('aria-label', 'Copied');
+  await expect(header.locator('#copy-markdown-button i')).toHaveClass(/lucide-check/);
   await expect.poll(() => page.evaluate(() => window.__copiedText)).not.toBe('');
 
   const initialTabCount = await page.locator('#tab-list .tab-item').count();
@@ -188,14 +186,10 @@ test('header keeps global actions concise and settings groups workspace preferen
   await expect(settings.locator('#theme-toggle')).toContainText('Appearance');
   await page.locator('#workspaceSettingsDropdown').click();
 
-  const insertToggle = formatToolbar.locator('.markdown-tool-select--insert');
-  await expect(insertToggle).toHaveAttribute('aria-label', 'More tools');
-  await expect(insertToggle).not.toContainText('Insert');
-  await expect(formatToolbar.locator('[data-md-action="diagram"]')).toHaveCount(1);
-  await expect(formatToolbar.locator('[data-toolbar-menu="insert"] [data-md-action="diagram"]')).toHaveCount(0);
-  await insertToggle.press('Enter');
-  await expect(formatToolbar.locator('[data-toolbar-menu="insert"]')).toHaveClass(/open/);
-  await page.keyboard.press('Escape');
+  await expect(formatToolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
+  await expect(formatToolbar.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
+  await expect(formatToolbar.locator('.markdown-toolbar-group--technical > .markdown-tool-btn')).toHaveCount(3);
+  await expect(formatToolbar.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(5);
 
   await header.locator('#exportDropdown').click();
   const exportMenu = page.locator('[aria-labelledby="exportDropdown"]');
@@ -203,8 +197,8 @@ test('header keeps global actions concise and settings groups workspace preferen
   await expect(exportMenu).not.toHaveClass(/toolbar-portal-menu/);
   await expect(exportMenu).toBeInViewport();
 
-  await expect(formatToolbar.locator('.markdown-view-toolbar .view-toggle-btn')).toHaveCount(3);
-  expect(await formatToolbar.locator('.markdown-view-toolbar .view-toggle-btn').evaluateAll(buttons =>
+  await expect(header.locator('.header-view-toolbar .view-toggle-btn')).toHaveCount(3);
+  expect(await header.locator('.header-view-toolbar .view-toggle-btn').evaluateAll(buttons =>
     buttons.map(button => button.getAttribute('data-view-mode'))
   )).toEqual(['editor', 'split', 'preview']);
   const activeStyle = await page.locator('.view-toggle-btn.is-active').evaluate(button => ({
@@ -282,7 +276,10 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
   await expect(page.locator('[data-toolbar-menu-toggle="heading"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="case"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();
-  await expect(page.locator('[data-toolbar-menu-toggle="insert"]')).toBeVisible();
+  await expect(page.locator('[data-toolbar-menu-toggle="insert"], [data-toolbar-menu="insert"]')).toHaveCount(0);
+  await expect(page.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
+  await expect(page.locator('.markdown-toolbar-group--technical > .markdown-tool-btn')).toHaveCount(3);
+  await expect(page.locator('.markdown-toolbar-group--advanced > .markdown-tool-btn')).toHaveCount(5);
 
   await setEditorContent(page, 'toolbar heading');
   await page.locator('[data-toolbar-menu-toggle="heading"]').click();
@@ -468,19 +465,9 @@ test('toolbar stays usable on phone and landscape widths', async ({ page }) => {
   await page.locator('[data-toolbar-menu-toggle="heading"]').click();
   await expect(page.locator('[data-toolbar-menu="heading"]')).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.locator('#markdown-format-toolbar').evaluate(toolbar => { toolbar.scrollLeft = toolbar.scrollWidth; });
-  const utilityPlacement = await page.evaluate(() => {
-    const toolbar = document.querySelector('#markdown-format-toolbar').getBoundingClientRect();
-    const utilities = document.querySelector('.markdown-toolbar-group--utilities').getBoundingClientRect();
-    return {
-      toolbarLeft: Math.round(toolbar.left),
-      toolbarRight: Math.round(toolbar.right),
-      utilitiesRight: Math.round(utilities.right),
-      utilitiesLeft: Math.round(utilities.left)
-    };
-  });
-  expect(utilityPlacement.utilitiesRight).toBeLessThanOrEqual(utilityPlacement.toolbarRight);
-  expect(utilityPlacement.utilitiesLeft).toBeGreaterThanOrEqual(utilityPlacement.toolbarLeft);
+  const toolbar = page.locator('#markdown-format-toolbar');
+  await toolbar.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+  await expect(toolbar.locator('.markdown-toolbar-group--advanced [data-md-action="alert"]')).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
   await page.setViewportSize({ width: 844, height: 390 });

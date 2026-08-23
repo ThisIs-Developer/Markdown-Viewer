@@ -46,7 +46,7 @@
 
 ## What Markdown Viewer Does
 
-Markdown Viewer is an open source, local-first workspace for developers, writers, students, researchers, and anyone working with `.md` or `.markdown` files. Go beyond plain text. Organize multiple documents, review with comments and suggestions without changing the Markdown, and render diagrams, maps, charts, math, 3D models, and music—all in one focused workspace.
+Markdown Viewer is an open source, local-first workspace for developers, writers, students, researchers, and anyone working with `.md` or `.markdown` files. Go beyond plain text. Organize multiple documents, review with anchored comments without changing the Markdown, and render diagrams, maps, charts, math, 3D models, and music—all in one focused workspace.
 
 Turn a document into a Share Snapshot link for quick handoffs, or start access-controlled Live Share for real-time co-editing, live cursors, comments, and suggestions. Everyday editing stays on your device. No account is required, and the application includes no ads, analytics, telemetry, or subscriptions.
 
