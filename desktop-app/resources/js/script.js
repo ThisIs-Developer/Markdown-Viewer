@@ -307,6 +307,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let reviewFilter = 'open';
   let activeReviewAnchor = null;
   let activeReviewEditId = null;
+  let activeReviewReplyEdit = null;
   let activeReviewId = null;
   let hoveredReviewId = null;
   let pendingReviewSelection = null;
@@ -7936,6 +7937,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         'review-target--math',
         'review-element-selectable',
         'is-review-element-selected',
+        'has-review-native-text-selection',
         'has-review-thread',
         'is-review-target-active'
       );
@@ -8206,8 +8208,14 @@ document.addEventListener("DOMContentLoaded", async function () {
         pendingReviewSelection.selection.kind !== 'text'
         ? findReviewTarget(pendingReviewSelection)
         : null;
+      const pendingTextTarget = pendingReviewSelection &&
+        pendingReviewSelection.selection &&
+        pendingReviewSelection.selection.kind === 'text'
+        ? findReviewTarget(pendingReviewSelection)
+        : null;
       markdownPreview.querySelectorAll('.review-element-selectable').forEach(function(element) {
         element.classList.toggle('is-review-element-selected', element === pendingElement);
+        element.classList.toggle('has-review-native-text-selection', element === pendingTextTarget);
       });
     }
     if (reviewList) {
@@ -8291,7 +8299,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     return button;
   }
 
-  function createReviewReplyElement(reply) {
+  function createReviewReplyAction(action, iconClass, label, danger, reviewId, replyId) {
+    const button = createReviewThreadAction(action, iconClass, label, danger, reviewId);
+    button.classList.add('review-reply-action');
+    button.dataset.reviewReplyId = replyId;
+    return button;
+  }
+
+  function createReviewReplyElement(reply, thread) {
     const author = reply.author || 'Author';
     const item = document.createElement('div');
     item.className = 'review-reply';
@@ -8316,12 +8331,72 @@ document.addEventListener("DOMContentLoaded", async function () {
     authorMeta.appendChild(timestamp);
     header.appendChild(avatar);
     header.appendChild(authorMeta);
+
+    const actions = document.createElement('div');
+    actions.className = 'review-reply-actions';
+    actions.setAttribute('role', 'group');
+    actions.setAttribute('aria-label', 'Reply actions');
+    actions.appendChild(createReviewReplyAction(
+      'edit-reply',
+      'lucide lucide-square-pen',
+      'Edit reply',
+      false,
+      thread.id,
+      reply.id
+    ));
+    actions.appendChild(createReviewReplyAction(
+      'delete-reply',
+      'lucide lucide-trash-2',
+      'Delete reply',
+      true,
+      thread.id,
+      reply.id
+    ));
+    header.appendChild(actions);
     item.appendChild(header);
 
-    const body = document.createElement('p');
-    body.className = 'review-reply-body';
-    body.textContent = reply.body;
-    item.appendChild(body);
+    const isEditing = activeReviewReplyEdit &&
+      activeReviewReplyEdit.threadId === thread.id &&
+      activeReviewReplyEdit.replyId === reply.id;
+    if (isEditing) {
+      item.classList.add('is-editing');
+      const form = document.createElement('form');
+      form.className = 'review-reply-edit-form';
+      form.dataset.reviewId = thread.id;
+      form.dataset.reviewReplyId = reply.id;
+      const input = document.createElement('textarea');
+      input.className = 'review-reply-edit-input';
+      input.maxLength = REVIEW_TEXT_LIMIT;
+      input.rows = 2;
+      input.value = reply.body;
+      input.setAttribute('aria-label', 'Edit reply');
+      const controls = document.createElement('div');
+      controls.className = 'review-reply-edit-actions';
+      controls.appendChild(createReviewReplyAction(
+        'save-reply',
+        'lucide lucide-check',
+        'Save reply',
+        false,
+        thread.id,
+        reply.id
+      ));
+      controls.appendChild(createReviewReplyAction(
+        'cancel-reply-edit',
+        'lucide lucide-x',
+        'Cancel reply edit',
+        false,
+        thread.id,
+        reply.id
+      ));
+      form.appendChild(input);
+      form.appendChild(controls);
+      item.appendChild(form);
+    } else {
+      const body = document.createElement('p');
+      body.className = 'review-reply-body';
+      body.textContent = reply.body;
+      item.appendChild(body);
+    }
     return item;
   }
 
@@ -8349,7 +8424,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         replies.appendChild(more);
         return;
       }
-      replies.appendChild(createReviewReplyElement(reply));
+      replies.appendChild(createReviewReplyElement(reply, thread));
     });
     conversation.appendChild(replies);
 
@@ -8862,6 +8937,58 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function editReviewReply(thread, replyId) {
+    const reply = thread && Array.isArray(thread.replies)
+      ? thread.replies.find(function(item) { return item.id === replyId; })
+      : null;
+    if (!reply) return;
+    activeReviewReplyEdit = { threadId: thread.id, replyId: reply.id };
+    activeReviewId = thread.id;
+    renderReviewPanel();
+    requestAnimationFrame(function() {
+      const input = reviewList && reviewList.querySelector(
+        '.review-reply-edit-form[data-review-id="' + thread.id + '"][data-review-reply-id="' + reply.id + '"] .review-reply-edit-input'
+      );
+      if (input) {
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    });
+  }
+
+  function saveReviewReply(thread, replyId, form) {
+    const reply = thread && Array.isArray(thread.replies)
+      ? thread.replies.find(function(item) { return item.id === replyId; })
+      : null;
+    const input = form && form.querySelector('.review-reply-edit-input');
+    const body = input ? input.value.trim() : '';
+    if (!reply || !body) {
+      if (input) input.focus();
+      return;
+    }
+    const now = Date.now();
+    reply.body = body.slice(0, REVIEW_TEXT_LIMIT);
+    reply.updatedAt = now;
+    thread.updatedAt = now;
+    activeReviewReplyEdit = null;
+    activeReviewId = thread.id;
+    persistReviewThreads('Reply updated.');
+  }
+
+  function deleteReviewReply(thread, replyId) {
+    if (!thread || !Array.isArray(thread.replies)) return;
+    const replyIndex = thread.replies.findIndex(function(item) { return item.id === replyId; });
+    if (replyIndex < 0) return;
+    thread.replies.splice(replyIndex, 1);
+    thread.updatedAt = Date.now();
+    if (activeReviewReplyEdit && activeReviewReplyEdit.threadId === thread.id && activeReviewReplyEdit.replyId === replyId) {
+      activeReviewReplyEdit = null;
+    }
+    if (thread.replies.length <= REVIEW_REPLY_COLLAPSE_THRESHOLD) expandedReviewThreadIds.delete(thread.id);
+    activeReviewId = thread.id;
+    persistReviewThreads('Reply deleted.');
+  }
+
   function focusReviewAnchor(thread) {
     activateReviewThread(thread, { scrollPanel: false, scrollDocument: true });
   }
@@ -8946,6 +9073,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     } else {
       cancelReviewDeleteConfirmation();
       pendingReviewSelection = null;
+      activeReviewReplyEdit = null;
       activeReviewId = null;
       hoveredReviewId = null;
       closeReviewComposer({ keepSelection: false });
@@ -9015,6 +9143,19 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
       markdownPreview.addEventListener('click', function(event) {
         if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return;
+        const nativeSelection = window.getSelection && window.getSelection();
+        if (nativeSelection && !nativeSelection.isCollapsed && nativeSelection.rangeCount > 0) {
+          const range = nativeSelection.getRangeAt(0);
+          const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? range.startContainer
+            : range.startContainer.parentElement;
+          const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE
+            ? range.endContainer
+            : range.endContainer.parentElement;
+          if (startElement && endElement && markdownPreview.contains(startElement) && markdownPreview.contains(endElement)) {
+            return;
+          }
+        }
         const highlighted = event.target.closest('[data-review-ids]');
         if (highlighted && markdownPreview.contains(highlighted)) {
           const reviewId = String(highlighted.dataset.reviewIds || '').split(/\s+/).filter(Boolean)[0];
@@ -9068,7 +9209,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!card) return;
         const thread = getActiveReviewThreads().find(function(item) { return item.id === card.dataset.reviewId; });
         if (!thread) return;
-        if (event.target.closest('.review-reply-input')) {
+        if (event.target.closest('.review-reply-input, .review-reply-edit-input')) {
           activeReviewId = thread.id;
           syncReviewInteractionState();
           return;
@@ -9097,6 +9238,20 @@ document.addEventListener("DOMContentLoaded", async function () {
           }
         } else if (action === 'delete') {
           requestReviewDeleteConfirmation(thread.id);
+        } else if (action === 'edit-reply') {
+          editReviewReply(thread, actionButton.dataset.reviewReplyId);
+        } else if (action === 'save-reply') {
+          saveReviewReply(
+            thread,
+            actionButton.dataset.reviewReplyId,
+            actionButton.closest('.review-reply-edit-form')
+          );
+        } else if (action === 'cancel-reply-edit') {
+          activeReviewReplyEdit = null;
+          activeReviewId = thread.id;
+          renderReviewPanel();
+        } else if (action === 'delete-reply') {
+          deleteReviewReply(thread, actionButton.dataset.reviewReplyId);
         } else if (action === 'toggle-replies') {
           event.preventDefault();
           if (expandedReviewThreadIds.has(thread.id)) expandedReviewThreadIds.delete(thread.id);

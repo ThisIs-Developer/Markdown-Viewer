@@ -44,7 +44,6 @@
   --scrollbar-track: #f1f1f1;
   --accent-color: #0366d6;
   --review-accent: #7c3aed;
-  --review-panel-border: #c4b5fd;
   --success-color: #116329;
   --warning-note-bg: #fff8c5;
   --warning-note-border: #d4a72c;
@@ -107,7 +106,6 @@
   --scrollbar-track: #21262d;
   --accent-color: #58a6ff;
   --review-accent: #a78bfa;
-  --review-panel-border: #8b5cf6;
   --success-color: #3fb950;
   --warning-note-bg: #2d220c;
   --warning-note-border: #9e6a03;
@@ -1959,8 +1957,14 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 @keyframes review-selection-caret-blink {
-  0%, 48% { opacity: 1; }
-  49%, 100% { opacity: 0; }
+  0%, 48% {
+    border-inline-start-color: var(--review-accent);
+    border-inline-end-color: var(--review-accent);
+  }
+  49%, 100% {
+    border-inline-start-color: transparent;
+    border-inline-end-color: transparent;
+  }
 }
 
 /* ========================================
@@ -2142,11 +2146,19 @@ body {
 }
 
 .review-thread {
+  --review-thread-surface: var(--menu-surface);
   padding: 9px 10px 10px;
   overflow: visible;
+  background: var(--review-thread-surface);
+  border-color: var(--border-color);
   border-radius: var(--menu-item-radius);
   box-shadow: none;
   cursor: pointer;
+  transition: border-color 160ms ease;
+}
+
+.review-thread.is-resolved {
+  --review-thread-surface: color-mix(in srgb, var(--button-bg) 52%, var(--menu-surface));
 }
 
 .review-thread-header {
@@ -2222,14 +2234,15 @@ body {
   line-height: 1.25;
 }
 
-.review-thread:not(.is-review-thread-emphasized) {
-  border-color: transparent;
+.review-thread.is-review-thread-emphasized {
+  border-color: var(--accent-color);
+  background: var(--review-thread-surface);
   box-shadow: none;
 }
 
-.review-thread.is-review-thread-emphasized {
-  border-color: var(--review-panel-border);
-  background: var(--menu-surface);
+.review-thread:hover,
+.review-thread.is-review-thread-active {
+  background: var(--review-thread-surface);
   box-shadow: none;
 }
 
@@ -2250,10 +2263,46 @@ body {
   margin-inline-start: 18px;
 }
 
+.review-reply {
+  position: relative;
+  min-width: 0;
+}
+
 .review-reply-header {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 7px;
+  min-height: 26px;
+  padding-inline-end: 58px;
+}
+
+.review-reply-actions {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  opacity: 0;
+  background: var(--menu-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--menu-item-radius);
+  transition: opacity 140ms ease;
+}
+
+.review-reply:hover .review-reply-actions,
+.review-reply:focus-within .review-reply-actions {
+  opacity: 1;
+}
+
+.review-reply-action {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex-basis: 22px;
 }
 
 .review-reply .review-author-avatar {
@@ -2278,6 +2327,45 @@ body {
   color: var(--text-secondary);
   font-size: var(--ui-font-xs);
   line-height: 1.25;
+}
+
+.review-reply-edit-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  margin: 5px 0 0;
+  margin-inline-start: 29px;
+}
+
+.review-reply-edit-input {
+  min-width: 0;
+  min-height: 54px;
+  flex: 1;
+  padding: 5px 7px;
+  resize: vertical;
+  color: var(--text-color);
+  background: var(--menu-surface);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--menu-item-radius);
+  font: inherit;
+  font-size: var(--ui-font-md);
+  line-height: 1.4;
+}
+
+.review-reply-edit-input:focus {
+  border-color: var(--accent-color);
+  outline: 2px solid color-mix(in srgb, var(--accent-color) 22%, transparent);
+  outline-offset: 0;
+}
+
+.review-reply-edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  background: var(--menu-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--menu-item-radius);
 }
 
 .review-replies-more {
@@ -2453,7 +2541,7 @@ body {
   cursor: pointer;
 }
 
-#markdown-preview .review-element-selectable:hover:not(.review-comment-element):not(.review-pending-element):not(.is-review-element-selected) {
+#markdown-preview .review-element-selectable:hover:not(.review-comment-element):not(.review-pending-element):not(.is-review-element-selected):not(.has-review-native-text-selection) {
   outline: 2px dotted var(--review-accent);
   outline-offset: 3px;
 }
@@ -2464,26 +2552,30 @@ body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--review-accent) 10%, transparent);
 }
 
-#markdown-preview .review-pending-highlight.review-selection-start::before,
-#markdown-preview .review-comment-highlight.is-review-selection-start::before,
-#markdown-preview .review-pending-highlight.review-selection-end::after,
-#markdown-preview .review-comment-highlight.is-review-selection-end::after {
-  display: inline-block;
-  width: 2px;
-  height: 1.3125em;
-  background: var(--review-accent);
-  border-radius: 1px;
-  content: "";
+#markdown-preview .review-pending-highlight.review-selection-start,
+#markdown-preview .review-comment-highlight.is-review-selection-start,
+#markdown-preview .review-pending-highlight.review-selection-end,
+#markdown-preview .review-comment-highlight.is-review-selection-end {
+  box-decoration-break: slice;
+  -webkit-box-decoration-break: slice;
   animation: review-selection-caret-blink 900ms steps(1, end) infinite;
-  pointer-events: none;
-  vertical-align: middle;
+}
+
+#markdown-preview .review-pending-highlight.review-selection-start,
+#markdown-preview .review-comment-highlight.is-review-selection-start {
+  border-inline-start: 2px solid var(--review-accent);
+}
+
+#markdown-preview .review-pending-highlight.review-selection-end,
+#markdown-preview .review-comment-highlight.is-review-selection-end {
+  border-inline-end: 2px solid var(--review-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #markdown-preview .review-pending-highlight.review-selection-start::before,
-  #markdown-preview .review-comment-highlight.is-review-selection-start::before,
-  #markdown-preview .review-pending-highlight.review-selection-end::after,
-  #markdown-preview .review-comment-highlight.is-review-selection-end::after {
+  #markdown-preview .review-pending-highlight.review-selection-start,
+  #markdown-preview .review-comment-highlight.is-review-selection-start,
+  #markdown-preview .review-pending-highlight.review-selection-end,
+  #markdown-preview .review-comment-highlight.is-review-selection-end {
     animation: none;
   }
 }
