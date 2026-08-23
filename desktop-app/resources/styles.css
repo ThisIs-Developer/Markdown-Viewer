@@ -44,6 +44,7 @@
   --scrollbar-track: #f1f1f1;
   --accent-color: #0366d6;
   --review-accent: #7c3aed;
+  --review-panel-border: #c4b5fd;
   --success-color: #116329;
   --warning-note-bg: #fff8c5;
   --warning-note-border: #d4a72c;
@@ -106,6 +107,7 @@
   --scrollbar-track: #21262d;
   --accent-color: #58a6ff;
   --review-accent: #a78bfa;
+  --review-panel-border: #8b5cf6;
   --success-color: #3fb950;
   --warning-note-bg: #2d220c;
   --warning-note-border: #9e6a03;
@@ -2221,13 +2223,14 @@ body {
 }
 
 .review-thread:not(.is-review-thread-emphasized) {
-  border-color: var(--accent-color);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .review-thread.is-review-thread-emphasized {
-  border-color: var(--review-accent);
-  background: color-mix(in srgb, var(--review-accent) 5%, var(--menu-surface));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--review-accent) 24%, transparent);
+  border-color: var(--review-panel-border);
+  background: var(--menu-surface);
+  box-shadow: none;
 }
 
 .review-thread-conversation {
@@ -2466,15 +2469,14 @@ body {
 #markdown-preview .review-pending-highlight.review-selection-end::after,
 #markdown-preview .review-comment-highlight.is-review-selection-end::after {
   display: inline-block;
-  color: var(--review-accent);
-  content: "|";
-  font-family: inherit;
-  font-size: 1em;
-  font-weight: 900;
-  line-height: inherit;
+  width: 2px;
+  height: 1.3125em;
+  background: var(--review-accent);
+  border-radius: 1px;
+  content: "";
   animation: review-selection-caret-blink 900ms steps(1, end) infinite;
   pointer-events: none;
-  vertical-align: baseline;
+  vertical-align: middle;
 }
 
 @media (prefers-reduced-motion: reduce) {

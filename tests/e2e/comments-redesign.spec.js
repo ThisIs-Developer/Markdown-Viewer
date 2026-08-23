@@ -98,15 +98,15 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   await expect(pendingHighlight).toHaveText('precise phrase');
   await expect(pendingHighlight).toHaveClass(/review-selection-start/);
   await expect(pendingHighlight).toHaveClass(/review-selection-end/);
-  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::before').content)).toBe('"|"');
-  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::after').content)).toBe('"|"');
+  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::before').content)).toBe('""');
+  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::after').content)).toBe('""');
   const markerTypography = await pendingHighlight.evaluate(element => ({
-    textSize: getComputedStyle(element).fontSize,
-    markerSize: getComputedStyle(element, '::before').fontSize,
-    markerWeight: Number(getComputedStyle(element, '::before').fontWeight)
+    highlightHeight: element.getBoundingClientRect().height,
+    markerHeight: parseFloat(getComputedStyle(element, '::before').height),
+    markerWidth: parseFloat(getComputedStyle(element, '::before').width)
   }));
-  expect(markerTypography.markerSize).toBe(markerTypography.textSize);
-  expect(markerTypography.markerWeight).toBeGreaterThanOrEqual(700);
+  expect(markerTypography.markerHeight).toBe(markerTypography.highlightHeight);
+  expect(markerTypography.markerWidth).toBe(2);
 
   await page.locator('#review-composer-cancel').click();
   await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
@@ -170,7 +170,7 @@ test('synchronizes hover and click states in both directions', async ({ page }) 
   await highlight.click();
   await expect(card).toHaveClass(/is-review-thread-active/);
   await expect(card.locator('.review-thread-details, .review-thread-anchor')).toHaveCount(0);
-  await expect(card).toHaveCSS('border-color', 'rgb(124, 58, 237)');
+  await expect(card).toHaveCSS('border-color', 'rgb(196, 181, 253)');
   await expect(page.locator('#markdown-preview p').filter({ hasText: 'precise phrase' })).not.toHaveClass(/is-review-highlight-active/);
   await expect(highlight).toHaveClass(/is-review-highlight-active/);
 
@@ -179,7 +179,7 @@ test('synchronizes hover and click states in both directions', async ({ page }) 
   await expect(highlight).toHaveClass(/is-review-highlight-active/);
 });
 
-test('emphasizes only the pointed comment in violet and keeps the others blue', async ({ page }) => {
+test('shows a light border only on the pointed or open comment card', async ({ page }) => {
   await page.locator('#review-toggle').click();
   await addTextComment(page, '#markdown-preview p', 'precise phrase', 'Comment one.');
   await addTextComment(page, '#markdown-preview p', 'focused comment', 'Comment two.');
@@ -189,14 +189,14 @@ test('emphasizes only the pointed comment in violet and keeps the others blue', 
   const second = page.locator('.review-thread').filter({ hasText: 'Comment two.' });
   const third = page.locator('.review-thread').filter({ hasText: 'Comment three.' });
   await second.hover();
-  await expect(second).toHaveCSS('border-color', 'rgb(124, 58, 237)');
-  await expect(first).toHaveCSS('border-color', 'rgb(3, 102, 214)');
-  await expect(third).toHaveCSS('border-color', 'rgb(3, 102, 214)');
+  await expect(second).toHaveCSS('border-color', 'rgb(196, 181, 253)');
+  await expect(first).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)');
+  await expect(third).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)');
 
   await page.locator('.review-panel-header').hover();
-  await expect(third).toHaveCSS('border-color', 'rgb(124, 58, 237)');
-  await expect(first).toHaveCSS('border-color', 'rgb(3, 102, 214)');
-  await expect(second).toHaveCSS('border-color', 'rgb(3, 102, 214)');
+  await expect(third).toHaveCSS('border-color', 'rgb(196, 181, 253)');
+  await expect(first).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)');
+  await expect(second).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)');
 });
 
 test('adds nested replies and persists their author and timestamp', async ({ page }) => {
@@ -296,8 +296,8 @@ test('keeps comment actions and nested indentation consistent across screen size
     expect(metrics.cardOverflow).toBeLessThanOrEqual(0);
     expect(metrics.panelOverflow).toBeLessThanOrEqual(0);
     expect(metrics.nameFont).toBe(metrics.bodyFont);
-    expect(metrics.activeBackground).not.toBe('rgb(255, 255, 255)');
-    expect(metrics.activeBorder).toBe('rgb(124, 58, 237)');
+    expect(metrics.activeBackground).toBe('rgb(255, 255, 255)');
+    expect(metrics.activeBorder).toBe('rgb(196, 181, 253)');
     expect(metrics.replyButtonBackground).toBe('rgb(3, 102, 214)');
   });
 });
@@ -308,6 +308,11 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
   const codeBlock = page.locator('#markdown-preview pre').filter({ hasText: 'reviewable code' });
   await expect(codeBlock).not.toHaveAttribute('data-review-anchor', /.+/);
   await codeBlock.click();
+  await expect(page.locator('#review-new-comment')).toBeDisabled();
+
+  const yamlTable = page.locator('#markdown-preview .frontmatter-table');
+  await expect(yamlTable).not.toHaveAttribute('data-review-anchor', /.+/);
+  await yamlTable.click();
   await expect(page.locator('#review-new-comment')).toBeDisabled();
 
   const image = page.locator('#markdown-preview img[alt="Reference image"]');
