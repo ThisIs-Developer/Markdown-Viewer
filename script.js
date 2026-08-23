@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
   const RELEASE_NOTES_PENDING_MODE_KEY = 'markdownViewerPendingReleaseNotesMode';
   const RELEASE_NOTES_SEEN_VERSION_KEY = 'markdownViewerReleaseNotesSeenVersion';
+  const DIRTY_DOCUMENT_JOURNAL_PREFIX = 'markdownViewerDirtyDocument:';
   const DOCUMENT_STORAGE_KEYS = new Set([
     'markdownViewerGlobalState',
     'markdownViewerTabs',
@@ -42,6 +43,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   const workspaceStorage = typeof window.MarkdownWorkspaceStorage === 'function'
     ? new window.MarkdownWorkspaceStorage()
     : null;
+  const workspaceWriterId = workspaceStorage && workspaceStorage.writerId
+    ? workspaceStorage.writerId
+    : 'writer_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
 
   async function syncStorageFromNeutralino() {
     if (!isNeutralinoRuntimeAvailable()) return;
@@ -1513,7 +1517,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       title: 'Importing workspace backup',
       detail: 'Validating backup…'
     });
-    let replacementStarted = false;
     try {
       const backup = await parseWorkspaceBackup(input);
       suspendWorkspacePersistence = true;
@@ -1523,10 +1526,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         workspacePersistenceChain.catch(function() {}),
         secretWorkspaceSaveChain.catch(function() {})
       ]);
-      updateImportProgress(45, 100, 'Clearing the current workspace…');
-      await clearApplicationPreferences();
-      replacementStarted = true;
-      await workspaceStorage.resetAllData();
       const restoreTotal = Math.max(1, backup.documents.length + backup.secretRecords.length);
       await workspaceStorage.restoreBackupData(backup, {
         onProgress: function(processed, total, label) {
@@ -1537,6 +1536,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           );
         }
       });
+      await clearApplicationPreferences();
       await restoreBackupPreferences(backup.preferences);
       updateImportProgress(100, 100, 'Reloading restored workspace…');
       finishImportProgress(100, 100, {
@@ -1548,7 +1548,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
       window.setTimeout(function() { window.location.reload(); }, 1100);
     } catch (error) {
-      if (!replacementStarted) suspendWorkspacePersistence = false;
+      suspendWorkspacePersistence = false;
       console.error('Workspace backup import failed:', error);
       finishImportProgress(0, 100, {
         success: false,
@@ -1556,9 +1556,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         countText: 'Workspace not restored',
         detail: error && error.message ? error.message : 'The backup could not be imported.'
       });
-      if (replacementStarted) {
-        window.setTimeout(function() { window.location.reload(); }, 1800);
-      }
     }
   }
 
@@ -3735,30 +3732,33 @@ document.addEventListener("DOMContentLoaded", async function () {
     secretWorkspaceDocumentCount = payload.documents.length;
     secretWorkspaceSaveChain = secretWorkspaceSaveChain.catch(function() {}).then(async function() {
       if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
+      const storedRecords = await workspaceStorage.listSecretRecords();
+      const storedById = new Map(storedRecords.map(function(record) { return [record.id, record]; }));
       const currentIds = new Set();
+      const nextRecords = [];
+      const committedSnapshots = [];
       for (const tab of payload.documents) {
         const value = getSecretDocumentStorageValue(tab);
         const snapshot = JSON.stringify(value);
         currentIds.add(tab.id);
+        let envelope = storedById.get(tab.id) && storedById.get(tab.id).envelope;
         if (tab._secretPersistedSnapshot !== snapshot || !secretWorkspaceStoredDocumentIds.has(tab.id)) {
-          await workspaceStorage.saveSecretRecord(tab.id, await encryptSecretWorkspaceValue(value, key));
-          tab._secretPersistedSnapshot = snapshot;
+          envelope = await encryptSecretWorkspaceValue(value, key);
         }
+        if (!envelope) envelope = await encryptSecretWorkspaceValue(value, key);
+        nextRecords.push({ id: tab.id, envelope: envelope });
+        committedSnapshots.push({ tab: tab, snapshot: snapshot });
       }
-      for (const storedId of Array.from(secretWorkspaceStoredDocumentIds)) {
-        if (!currentIds.has(storedId)) await workspaceStorage.deleteSecretRecord(storedId);
-      }
-      secretWorkspaceStoredDocumentIds = currentIds;
 
       const folderSnapshot = JSON.stringify(payload.folders);
+      const folderRecordId = window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__';
+      let folderEnvelope = storedById.get(folderRecordId) && storedById.get(folderRecordId).envelope;
       if (secretWorkspacePersistedFolders !== folderSnapshot) {
-        await workspaceStorage.saveSecretRecord(
-          window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID || '__folders__',
-          await encryptSecretWorkspaceValue(payload.folders, key)
-        );
-        secretWorkspacePersistedFolders = folderSnapshot;
+        folderEnvelope = await encryptSecretWorkspaceValue(payload.folders, key);
       }
-      secretWorkspaceEnvelopeCache = {
+      if (!folderEnvelope) folderEnvelope = await encryptSecretWorkspaceValue(payload.folders, key);
+      nextRecords.push({ id: folderRecordId, envelope: folderEnvelope });
+      const nextManifest = {
         version: SECRET_WORKSPACE_VERSION,
         iterations: secretWorkspaceIterations,
         salt: bytesToBase64(salt),
@@ -3766,7 +3766,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         folderCount: payload.folders.length,
         updatedAt: Date.now()
       };
-      await workspaceStorage.setSecretManifest(secretWorkspaceEnvelopeCache);
+      await workspaceStorage.replaceSecretRecords(nextRecords, nextManifest);
+      committedSnapshots.forEach(function(item) { item.tab._secretPersistedSnapshot = item.snapshot; });
+      secretWorkspaceStoredDocumentIds = currentIds;
+      secretWorkspacePersistedFolders = folderSnapshot;
+      secretWorkspaceEnvelopeCache = nextManifest;
       return true;
     });
     return secretWorkspaceSaveChain;
@@ -4260,14 +4264,34 @@ document.addEventListener("DOMContentLoaded", async function () {
     return tab;
   }
 
-  function migrateDocumentsToOrganization() {
+  async function migrateDocumentsToOrganization() {
+    const changedIds = [];
     tabs.forEach(function(tab) {
+      const before = JSON.stringify({
+        createdAt: tab.createdAt,
+        lastOpenedAt: tab.lastOpenedAt,
+        lastEditedAt: tab.lastEditedAt,
+        favorite: tab.favorite,
+        isOpen: tab.isOpen,
+        workspaceId: tab.workspaceId,
+        folderId: tab.folderId
+      });
       normalizeTabDocumentMetadata(tab);
+      const after = JSON.stringify({
+        createdAt: tab.createdAt,
+        lastOpenedAt: tab.lastOpenedAt,
+        lastEditedAt: tab.lastEditedAt,
+        favorite: tab.favorite,
+        isOpen: tab.isOpen,
+        workspaceId: tab.workspaceId,
+        folderId: tab.folderId
+      });
+      if (before !== after && !isTemporaryDocument(tab)) changedIds.push(tab.id);
     });
     saveDocumentOrganization();
-    // Always write once after normalization so legacy tabs receive location,
-    // favorite, and recent-activity metadata on their first migrated load.
-    _flushTabsToStorage(tabs);
+    if (changedIds.length) {
+      await _flushTabsToStorage(tabs, { changedIds: changedIds });
+    }
   }
 
   function setDocumentLocation(tab, workspaceId, folderId) {
@@ -4960,17 +4984,21 @@ document.addEventListener("DOMContentLoaded", async function () {
       title: 'Delete ' + entities.length + ' selected items?',
       description: description,
       confirmText: 'Delete selected items',
-      onConfirm: function() {
+      onConfirm: async function() {
+        const rehomedIds = [];
         tabs.forEach(function(tab) {
-          if (folderIds.has(tab.folderId) && !documentIds.includes(tab.id)) tab.folderId = null;
+          if (folderIds.has(tab.folderId) && !documentIds.includes(tab.id)) {
+            tab.folderId = null;
+            rehomedIds.push(tab.id);
+          }
         });
         documentOrganization.folders = documentOrganization.folders.filter(function(folder) { return !folderIds.has(folder.id); });
         if (folderIds.has(documentOrganization.ui.lastFolderId)) documentOrganization.ui.lastFolderId = null;
         saveDocumentOrganization();
-        documentIds.slice().forEach(function(tabId) { deleteTab(tabId); });
+        for (const tabId of documentIds.slice()) await deleteTab(tabId);
         selectedDocumentTreeIds.clear();
         documentTreeSelectionAnchor = null;
-        saveTabsToStorage(tabs);
+        if (rehomedIds.length) saveTabsToStorage(tabs, rehomedIds);
         renderTabBar(tabs, activeTabId);
         announceToScreenReader(entities.length + ' Explorer items deleted.');
       }
@@ -5254,9 +5282,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     try {
       if (workspaceId === SECRET_WORKSPACE_ID) {
         await flushSecretWorkspaceToStorage();
-        if (!(await _flushTabsToStorage(tabs))) throw new Error('Normal workspace storage failed.');
+        if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Normal workspace storage failed.');
       } else {
-        if (!(await _flushTabsToStorage(tabs))) throw new Error('Normal workspace storage failed.');
+        if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Normal workspace storage failed.');
         if (previousWorkspaceId === SECRET_WORKSPACE_ID) await flushSecretWorkspaceToStorage();
       }
     } catch (error) {
@@ -5266,7 +5294,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (isSecretWorkspaceUnlocked()) {
         await flushSecretWorkspaceToStorage().catch(function() {});
       }
-      _flushTabsToStorage(tabs);
+      _flushTabsToStorage(tabs, { changedIds: [tab.id] });
       renderDocumentSidebar();
       alert('The file could not be moved because the destination could not be saved.');
       return false;
@@ -9385,6 +9413,174 @@ document.addEventListener("DOMContentLoaded", async function () {
     return getSafeDocumentBasename(activeTab ? activeTab.title : "", "document");
   }
 
+  let dirtyJournalWarningShown = false;
+
+  function getDirtyDocumentJournalKey(documentId) {
+    return DIRTY_DOCUMENT_JOURNAL_PREFIX + encodeURIComponent(workspaceWriterId) + ':' + encodeURIComponent(documentId);
+  }
+
+  function writeDirtyDocumentJournal(tab, content) {
+    if (!tab || isTemporaryDocument(tab) || tab.workspaceId === SECRET_WORKSPACE_ID || isPrivateStorageMode()) return;
+    const key = getDirtyDocumentJournalKey(tab.id);
+    try {
+      localStorage.setItem(key, JSON.stringify({
+        version: 1,
+        writerId: workspaceWriterId,
+        documentId: tab.id,
+        expectedRevision: Number(tab._storageRevision) || 0,
+        savedAt: Date.now(),
+        metadata: {
+          title: tab.title || 'Untitled',
+          workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
+          folderId: tab.folderId || null,
+          viewMode: tab.viewMode || 'split',
+          favorite: tab.favorite === true,
+          createdAt: tab.createdAt,
+          lastOpenedAt: tab.lastOpenedAt,
+          lastEditedAt: Date.now()
+        },
+        content: typeof content === 'string' ? content : ''
+      }));
+      tab._dirtyJournalKeys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(key)));
+    } catch (error) {
+      if (!dirtyJournalWarningShown) {
+        dirtyJournalWarningShown = true;
+        console.warn('Unable to create the emergency edit journal:', error);
+        showAppToast('Emergency edit recovery is unavailable because browser storage is full.', {
+          tone: 'error',
+          title: 'Recovery journal unavailable'
+        });
+      }
+    }
+  }
+
+  function clearDirtyDocumentJournal(tab) {
+    if (!tab) return;
+    const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(tab.id))));
+    keys.forEach(function(key) {
+      try { localStorage.removeItem(key); } catch (_) {}
+    });
+    delete tab._dirtyJournalKeys;
+  }
+
+  function readDirtyDocumentJournals() {
+    const entries = [];
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key || !key.startsWith(DIRTY_DOCUMENT_JOURNAL_PREFIX)) continue;
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          if (!value || typeof value.documentId !== 'string' || typeof value.content !== 'string') {
+            localStorage.removeItem(key);
+            index -= 1;
+            continue;
+          }
+          entries.push({ key: key, value: value });
+        } catch (_) {
+          localStorage.removeItem(key);
+          index -= 1;
+        }
+      }
+    } catch (_) {}
+    return entries.sort(function(a, b) { return Number(a.value.savedAt) - Number(b.value.savedAt); });
+  }
+
+  function recoverDirtyDocumentJournals() {
+    if (isPrivateStorageMode()) return [];
+    const recoveredIds = [];
+    const restoredOriginalIds = new Set();
+    readDirtyDocumentJournals().forEach(function(entry) {
+      const journal = entry.value;
+      const existing = tabs.find(function(tab) { return tab.id === journal.documentId; });
+      const canRestoreOriginal = existing &&
+        !restoredOriginalIds.has(existing.id) &&
+        (Number(existing._storageRevision) || 0) === (Number(journal.expectedRevision) || 0);
+      if (canRestoreOriginal) {
+        existing.content = journal.content;
+        existing.contentLoaded = true;
+        existing.lastEditedAt = Number(journal.savedAt) || Date.now();
+        existing._dirtyJournalKeys = Array.from(new Set((existing._dirtyJournalKeys || []).concat(entry.key)));
+        restoredOriginalIds.add(existing.id);
+        recoveredIds.push(existing.id);
+        return;
+      }
+
+      const metadata = journal.metadata && typeof journal.metadata === 'object' ? journal.metadata : {};
+      const recovered = createTab(journal.content, (metadata.title || 'Untitled') + ' (recovered edit)', metadata.viewMode || 'split', {
+        workspaceId: metadata.workspaceId || DEFAULT_WORKSPACE_ID,
+        folderId: metadata.folderId || null
+      });
+      recovered.favorite = metadata.favorite === true;
+      recovered.createdAt = Number(metadata.createdAt) || recovered.createdAt;
+      recovered.lastOpenedAt = Number(metadata.lastOpenedAt) || recovered.lastOpenedAt;
+      recovered.lastEditedAt = Number(journal.savedAt) || Date.now();
+      recovered._dirtyJournalKeys = [entry.key];
+      tabs.push(recovered);
+      recoveredIds.push(recovered.id);
+    });
+    return recoveredIds;
+  }
+
+  async function preserveWorkspaceConflict(error) {
+    if (!error || error.name !== 'WorkspaceConflictError' || !error.documentId) return false;
+    const sourceTab = tabs.find(function(tab) { return tab.id === error.documentId; });
+    if (!sourceTab || !error.contentConflict) {
+      showAppToast('This document changed in another tab. Reload before trying that action again.', {
+        tone: 'error',
+        title: 'Document changed elsewhere'
+      });
+      return false;
+    }
+
+    const attempted = error.attemptedTab || sourceTab;
+    const conflictTab = createTab(
+      typeof attempted.content === 'string' ? attempted.content : '',
+      (attempted.title || 'Untitled') + ' (conflict copy)',
+      attempted.viewMode || 'split',
+      {
+        workspaceId: attempted.workspaceId || DEFAULT_WORKSPACE_ID,
+        folderId: attempted.folderId || null
+      }
+    );
+    conflictTab.reviewThreads = normalizeReviewThreads(attempted.reviewThreads);
+    conflictTab.favorite = attempted.favorite === true;
+    await workspaceStorage.saveDocuments([conflictTab], documentOrganization, {
+      changedIds: [conflictTab.id],
+      forceContent: true
+    });
+
+    const sourceIndex = tabs.indexOf(sourceTab);
+    const remote = error.storedMetadata || {};
+    Object.keys(sourceTab).forEach(function(key) {
+      if (key.indexOf('_storage') === 0 || key === '_persistedContent') delete sourceTab[key];
+    });
+    Object.assign(sourceTab, remote, {
+      content: error.storedContent,
+      contentLoaded: true,
+      _persistedContent: error.storedContent
+    });
+    tabs.splice(sourceIndex + 1, 0, conflictTab);
+    clearDirtyDocumentJournal(sourceTab);
+
+    if (activeTabId === error.documentId) {
+      activeTabId = conflictTab.id;
+      selectedDocumentId = conflictTab.id;
+      saveActiveTabId(activeTabId);
+      markdownEditor.value = conflictTab.content;
+      initTabHistory(conflictTab.id, conflictTab.content);
+    }
+    if (secondarySplitTabId === error.documentId) secondarySplitTabId = conflictTab.id;
+    renderTabBar(tabs, activeTabId);
+    renderDocumentSidebar();
+    renderDocumentSplitView();
+    showAppToast('Both versions were kept. Your edit is open as a conflict copy.', {
+      tone: 'info',
+      title: 'Edit conflict preserved'
+    });
+    return true;
+  }
+
   function updateSaveStatus(state) {
     if (!saveStatus || !saveStatusIcon || !saveStatusText) return;
     const nextState = state === 'saving' || state === 'error' ? state : 'saved';
@@ -9424,7 +9620,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     } catch (e) {
       console.warn('Failed to load workspace documents:', e);
-      return [];
+      throw e;
     }
   }
 
@@ -9477,14 +9673,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       return true;
     }
     const settings = options || {};
-    const hasQueuedIds = pendingWorkspacePersistIds.size > 0;
     const hasExplicitIds = Array.isArray(settings.changedIds);
-    const fullSnapshot = settings.fullSnapshot === true
-      || pendingWorkspacePersistAll
-      || (!hasQueuedIds && !hasExplicitIds);
     const changedIds = Array.isArray(settings.changedIds)
       ? settings.changedIds.slice()
-      : Array.from(pendingWorkspacePersistIds);
+      : (pendingWorkspacePersistAll
+        ? getTabsForStorage(tabsArr).map(function(tab) { return tab.id; })
+        : Array.from(pendingWorkspacePersistIds));
     pendingWorkspacePersistAll = false;
     pendingWorkspacePersistIds.clear();
     if (isPrivateStorageMode()) {
@@ -9496,18 +9690,25 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (workspaceStorage) {
         workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
           return workspaceStorage.saveDocuments(storageTabs, documentOrganization, {
-            fullSnapshot: fullSnapshot,
-            changedIds: fullSnapshot ? null : changedIds
+            changedIds: changedIds
           });
         });
         await workspacePersistenceChain;
       } else {
         saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
       }
+      changedIds.forEach(function(id) {
+        const tab = tabs.find(function(item) { return item.id === id; });
+        if (tab) clearDirtyDocumentJournal(tab);
+      });
       evictInactiveDocumentContent();
       updateSaveStatus('saved');
       return true;
     } catch (e) {
+      if (await preserveWorkspaceConflict(e)) {
+        updateSaveStatus('saved');
+        return true;
+      }
       console.warn('Failed to save workspace documents:', e);
       updateSaveStatus('error');
       showAppToast('The workspace could not be saved. Existing saved documents were kept.', {
@@ -10412,6 +10613,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (contentChanged && !isTemporaryDocument(tab)) {
       tab.lastEditedAt = Date.now();
+      writeDirtyDocumentJournal(tab, tab.content);
     }
     if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
     if (contentChanged) renderDocumentSidebar();
@@ -10427,6 +10629,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.splitScrollPos = documentSplitEditor.scrollTop;
     if (documentSplitPreview) tab.splitPreviewScrollPos = documentSplitPreview.scrollTop;
     if (contentChanged && !isTemporaryDocument(tab)) tab.lastEditedAt = Date.now();
+    if (contentChanged) writeDirtyDocumentJournal(tab, tab.content);
     if (contentChanged) saveTabsToStorage(tabs, [tab.id]);
   }
 
@@ -10694,6 +10897,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.content = documentSplitEditor.value;
       tab.contentLoaded = true;
       if (!isTemporaryDocument(tab)) tab.lastEditedAt = Date.now();
+      writeDirtyDocumentJournal(tab, tab.content);
       clearTimeout(secondarySplitSaveTimeout);
       secondarySplitSaveTimeout = setTimeout(function() {
         saveTabsToStorage(tabs, [tab.id]);
@@ -10801,7 +11005,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return true;
   }
 
-  function deleteTab(tabId) {
+  async function deleteTab(tabId) {
     if (pendingReviewDelete && pendingReviewDelete.tabId === tabId) {
       cancelReviewDeleteConfirmation();
     }
@@ -10817,6 +11021,25 @@ document.addEventListener("DOMContentLoaded", async function () {
     const idx = tabs.findIndex(function(t) { return t.id === tabId; });
     if (idx === -1) return;
     const tab = tabs[idx];
+    if (!isTemporaryDocument(tab) && tab.workspaceId !== SECRET_WORKSPACE_ID && workspaceStorage && !isPrivateStorageMode()) {
+      try {
+        await workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision });
+      } catch (error) {
+        if (error && error.name === 'WorkspaceConflictError') {
+          showAppToast('The document changed in another tab and was not deleted. Reload before trying again.', {
+            tone: 'error',
+            title: 'Delete cancelled'
+          });
+        } else {
+          showAppToast('The document could not be deleted from workspace storage.', {
+            tone: 'error',
+            title: 'Delete failed'
+          });
+        }
+        console.warn('Failed to delete workspace document:', error);
+        return false;
+      }
+    }
     const wasActive = activeTabId === tabId;
     const splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) {
@@ -10837,7 +11060,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     
     tabs.splice(idx, 1);
-    saveTabsToStorage(tabs);
+    clearDirtyDocumentJournal(tab);
+    if (tab.workspaceId === SECRET_WORKSPACE_ID) saveTabsToStorage(tabs, []);
     if (wasActive) {
       const remainingOpenTabs = getOpenTabs();
       const nextTab = (splitPartnerId && remainingOpenTabs.find(function(item) { return item.id === splitPartnerId; }))
@@ -10855,6 +11079,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     closeReviewComposer();
     renderReviewPanel();
     renderDocumentSidebar();
+    return true;
   }
 
   function closeTab(tabId) {
@@ -11130,15 +11355,57 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, 0);
   }
 
+  function enterWorkspaceStorageRecoveryMode(error) {
+    suspendWorkspacePersistence = true;
+    tabs = [];
+    activeTabId = null;
+    selectedDocumentId = null;
+    document.documentElement.dataset.workspaceStorageState = 'error';
+    markdownEditor.value = '';
+    markdownEditor.readOnly = true;
+    const editorPane = document.querySelector('.editor-pane');
+    if (editorPane) editorPane.classList.remove('is-loading');
+    updateSaveStatus('error');
+    updateNoOpenDocumentState();
+    renderTabBar(tabs, activeTabId);
+    initDocumentSidebar();
+    showAppToast('Workspace storage could not be read. No fallback documents were written; reload to retry.', {
+      tone: 'error',
+      title: 'Workspace opened in recovery mode'
+    });
+    console.error('Workspace initialization stopped to protect saved data:', error);
+    return true;
+  }
+
   async function initTabs() {
-    if (workspaceStorage) {
-      await workspaceStorage.init();
-      secretWorkspaceEnvelopeCache = await workspaceStorage.getSecretManifest();
+    try {
+      if (workspaceStorage) {
+        await workspaceStorage.init();
+        secretWorkspaceEnvelopeCache = await workspaceStorage.getSecretManifest();
+        const integrity = await workspaceStorage.auditAndRepairDocuments();
+        if (integrity.recoveredOrphans) {
+          showAppToast(integrity.recoveredOrphans + ' orphaned document' + (integrity.recoveredOrphans === 1 ? '' : 's') + ' recovered.', {
+            tone: 'info',
+            title: 'Workspace repaired'
+          });
+        }
+        if (integrity.missingContents) {
+          showAppToast(integrity.missingContents + ' document' + (integrity.missingContents === 1 ? ' has' : 's have') + ' missing content. Editing is blocked to avoid overwriting recovery evidence.', {
+            tone: 'error',
+            title: 'Workspace corruption detected'
+          });
+        }
+      }
+      untitledCounter = loadUntitledCounter();
+      documentOrganization = await loadDocumentOrganization();
+      initializeSecretWorkspaceState();
+      tabs = await loadTabsFromStorage();
+    } catch (error) {
+      if (!documentOrganization) documentOrganization = createDefaultDocumentOrganization();
+      return enterWorkspaceStorageRecoveryMode(error);
     }
-    untitledCounter = loadUntitledCounter();
-    documentOrganization = await loadDocumentOrganization();
-    initializeSecretWorkspaceState();
-    tabs = await loadTabsFromStorage();
+    document.documentElement.dataset.workspaceStorageState = 'ready';
+    const recoveredIds = recoverDirtyDocumentJournals();
     const hadExistingWorkspace = tabs.length > 0;
     activeTabId = loadActiveTabId();
 
@@ -11157,14 +11424,24 @@ document.addEventListener("DOMContentLoaded", async function () {
       activeTabId = tab.id;
       saveTabsToStorage(tabs);
       saveActiveTabId(activeTabId);
-    } else if (!tabs.find(function(t) { return t.id === activeTabId && isTabOpen(t); })) {
-      const firstOpenTab = getOpenTabs()[0];
+    } else if (!tabs.find(function(t) { return t.id === activeTabId && isTabOpen(t) && !t.storageCorruption; })) {
+      const firstOpenTab = getOpenTabs().find(function(tab) { return !tab.storageCorruption; });
       activeTabId = firstOpenTab ? firstOpenTab.id : null;
       if (activeTabId) saveActiveTabId(activeTabId);
       else removeStorageItem(ACTIVE_TAB_KEY);
     }
-    migrateDocumentsToOrganization();
-    const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
+    await migrateDocumentsToOrganization();
+    if (recoveredIds.length) {
+      const recovered = await _flushTabsToStorage(tabs, { changedIds: recoveredIds });
+      if (!recovered) {
+        throw new Error('Recovered edits could not be committed to workspace storage.');
+      }
+      showAppToast(recoveredIds.length + ' interrupted edit' + (recoveredIds.length === 1 ? '' : 's') + ' recovered.', {
+        tone: 'info',
+        title: 'Unsaved work restored'
+      });
+    }
+    const activeTab = tabs.find(function(t) { return t.id === activeTabId && !t.storageCorruption; });
     selectedDocumentId = activeTabId;
     updateNoOpenDocumentState();
     if (activeTab) {
@@ -21208,6 +21485,8 @@ ${selector} .arrowheadPath {
       return;
     }
     updateSaveStatus('saving');
+    const dirtyTab = tabs.find(function(tab) { return tab.id === activeTabId; });
+    if (dirtyTab) writeDirtyDocumentJournal(dirtyTab, markdownEditor.value);
     handleKeystrokeHistory(e);
     if (liveCollaboration && liveCollaboration.tabId === activeTabId && !liveCollaboration.isApplyingRemoteChange) {
       syncLiveLocalEditorChange(liveCollaboration.lastMarkdown || '', markdownEditor.value || '');

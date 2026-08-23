@@ -5,6 +5,8 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- **Workspace data safety:** Replaced implicit full-workspace deletion with explicit document operations, added cross-tab revision conflicts with preserved copies, stopped writes after startup read failures, made browser backup and Secret Workspace replacement transactional, recovered interrupted edits and orphaned content, and journaled desktop file moves and index writes.
+
 ---
 
 ## v3.10.1

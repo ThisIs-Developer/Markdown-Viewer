@@ -92,6 +92,54 @@
     });
   }
 
+  function requireDocumentId(id) {
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new TypeError('Document IDs must be non-empty strings.');
+    }
+    return id;
+  }
+
+  function normalizedStorageRevision(value) {
+    const revision = Number(value);
+    return Number.isSafeInteger(revision) && revision >= 0 ? revision : 0;
+  }
+
+  function tabFromStoredMetadata(item) {
+    const tab = Object.assign({}, item || {});
+    tab._storageRevision = normalizedStorageRevision(tab.storageRevision);
+    tab._storageWriterId = typeof tab.storageWriterId === 'string' ? tab.storageWriterId : '';
+    delete tab.storageRevision;
+    delete tab.storageWriterId;
+    tab.contentLoaded = false;
+    tab.content = undefined;
+    return tab;
+  }
+
+  class WorkspaceConflictError extends Error {
+    constructor(documentId, attemptedTab, storedMetadata, storedContent) {
+      super('This document changed in another tab before the current update could be saved.');
+      this.name = 'WorkspaceConflictError';
+      this.documentId = documentId;
+      this.attemptedTab = attemptedTab;
+      this.storedMetadata = tabFromStoredMetadata(storedMetadata);
+      this.storedContent = typeof storedContent === 'string' ? storedContent : '';
+      this.contentConflict = Boolean(
+        attemptedTab &&
+        attemptedTab.contentLoaded !== false &&
+        typeof attemptedTab.content === 'string' &&
+        attemptedTab.content !== this.storedContent
+      );
+    }
+  }
+
+  class WorkspaceCorruptionError extends Error {
+    constructor(documentId, message) {
+      super(message || 'The saved document body is missing from workspace storage.');
+      this.name = 'WorkspaceCorruptionError';
+      this.documentId = documentId;
+    }
+  }
+
   class MarkdownWorkspaceStorage {
     constructor() {
       this.desktop = isDesktopRuntime();
@@ -107,6 +155,7 @@
       this._desktopIndexWrite = Promise.resolve();
       this._normalContentCache = new Map();
       this._maxContentCacheEntries = 20;
+      this.writerId = randomId('writer');
     }
 
     async init() {
@@ -193,6 +242,37 @@
       await Neutralino.filesystem.writeFile(path, JSON.stringify(value, null, 2));
     }
 
+    async _writeJsonFileRecoverably(path, value) {
+      const temporaryPath = path + '.pending';
+      const backupPath = path + '.backup';
+      const serialized = JSON.stringify(value, null, 2);
+      await Neutralino.filesystem.writeFile(temporaryPath, serialized);
+      if (await this._pathExists(path)) {
+        await Neutralino.filesystem.copy(path, backupPath, { overwrite: true });
+      }
+      await Neutralino.filesystem.writeFile(path, serialized);
+      try { await Neutralino.filesystem.remove(temporaryPath); } catch (_) {}
+      try { await Neutralino.filesystem.remove(backupPath); } catch (_) {}
+    }
+
+    async _readJsonFileRecoverably(path, fallback) {
+      const primary = await this._readJsonFile(path, null);
+      if (primary) return primary;
+      const backupPath = path + '.backup';
+      const backup = await this._readJsonFile(backupPath, null);
+      if (backup) {
+        await this._writeJsonFile(path, backup);
+        return backup;
+      }
+      const pendingPath = path + '.pending';
+      const pending = await this._readJsonFile(pendingPath, null);
+      if (pending) {
+        await this._writeJsonFile(path, pending);
+        return pending;
+      }
+      return fallback;
+    }
+
     async _removeLegacyVaultLocator(documentsPath) {
       try {
         await Neutralino.storage.removeData(LEGACY_VAULT_LOCATOR_KEY);
@@ -256,12 +336,12 @@
       this.vaultOrganization = await this._readJsonFile(organizationPath, null);
       this._organizationSnapshot = this.vaultOrganization ? JSON.stringify(this.vaultOrganization) : '';
       const indexPath = await this._pathJoin(internalPath, 'index.json');
-      const loadedIndex = await this._readJsonFile(indexPath, null);
+      const loadedIndex = await this._readJsonFileRecoverably(indexPath, null);
       if (loadedIndex && Array.isArray(loadedIndex.documents)) {
         this.vaultIndex = loadedIndex;
       } else {
         this.vaultIndex = await this._rebuildDesktopIndex(workspacePath);
-        await this._writeJsonFile(indexPath, this.vaultIndex);
+        await this._writeJsonFileRecoverably(indexPath, this.vaultIndex);
         if (this.vaultOrganization) {
           await this._writeJsonFile(organizationPath, this.vaultOrganization);
           this._organizationSnapshot = JSON.stringify(this.vaultOrganization);
@@ -368,6 +448,30 @@
         if (!entry || entry.type !== 'FILE' || !/\.json$/i.test(entry.entry || '')) continue;
         const recordPath = await this._pathJoin(journalPath, entry.entry);
         const record = await this._readJsonFile(recordPath, null);
+        if (record && record.operation === 'move') {
+          const source = normalizePathSeparators(record.source);
+          const destination = normalizePathSeparators(record.destination);
+          const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+          const index = await this._readJsonFileRecoverably(indexPath, null);
+          const indexedDocument = index && Array.isArray(index.documents)
+            ? index.documents.find(function(item) { return item.id === record.documentId; })
+            : null;
+          const committed = Boolean(
+            indexedDocument &&
+            normalizePathSeparators(indexedDocument.vaultRelativePath) === normalizePathSeparators(record.destinationRelativePath)
+          );
+          if (!committed &&
+              source.toLowerCase().startsWith(normalizedVault) &&
+              destination.toLowerCase().startsWith(normalizedVault) &&
+              !source.split('/').includes('..') &&
+              !destination.split('/').includes('..') &&
+              await this._pathExists(destination) &&
+              !(await this._pathExists(source))) {
+            await Neutralino.filesystem.move(destination, source);
+          }
+          try { await Neutralino.filesystem.remove(recordPath); } catch (_) {}
+          continue;
+        }
         if (!record || !record.destination || !record.temporary) {
           try { await Neutralino.filesystem.remove(recordPath); } catch (_) {}
           continue;
@@ -404,7 +508,6 @@
 
     async _migrateLegacyNormalDocuments() {
       const existing = await this.listDocumentMetadata();
-      if (existing.length) return;
       let legacy = [];
       try {
         legacy = JSON.parse(localStorage.getItem(LEGACY_TABS_KEY) || '[]');
@@ -414,15 +517,20 @@
         return tab && tab.temporary !== true && tab.kind !== 'share-snapshot' && tab.workspaceId !== 'workspace_secret';
       });
       if (!normal.length) return;
-      await this.saveDocuments(normal.map(function (tab) {
+      const existingIds = new Set(existing.map(function(item) { return item.id; }));
+      const pending = normal.filter(function(tab) {
+        return typeof tab.id === 'string' && tab.id && !existingIds.has(tab.id);
+      });
+      if (pending.length) await this.saveDocuments(pending.map(function (tab) {
         const copy = Object.assign({}, tab);
         copy.contentLoaded = true;
         return copy;
-      }), null, { fullSnapshot: true, forceContent: true });
+      }), null, { changedIds: pending.map(function(tab) { return tab.id; }), forceContent: true });
       await this.setMetadata('legacyMigration', {
-        version: 1,
+        version: 2,
         completedAt: Date.now(),
-        documentCount: normal.length
+        documentCount: pending.length,
+        existingDocumentCount: existing.length
       });
       try {
         localStorage.removeItem(LEGACY_TABS_KEY);
@@ -437,9 +545,7 @@
     async listDocumentMetadata() {
       if (this.desktop) {
         return this.vaultIndex.documents.map(function (item) {
-          const tab = Object.assign({}, item);
-          tab.contentLoaded = false;
-          tab.content = undefined;
+          const tab = tabFromStoredMetadata(item);
           tab._vaultRelativePath = item.vaultRelativePath || '';
           return tab;
         });
@@ -447,12 +553,76 @@
       const transaction = this.db.transaction('documents', 'readonly');
       const records = await requestToPromise(transaction.objectStore('documents').getAll());
       await transactionToPromise(transaction);
-      return records.map(function (item) {
-        const tab = Object.assign({}, item);
-        tab.contentLoaded = false;
-        tab.content = undefined;
-        return tab;
-      });
+      return records.map(tabFromStoredMetadata);
+    }
+
+    async loadDocumentMetadata(id) {
+      requireDocumentId(id);
+      if (this.desktop) {
+        const item = this.vaultIndex.documents.find(function(record) { return record.id === id; });
+        return item ? tabFromStoredMetadata(item) : null;
+      }
+      const transaction = this.db.transaction('documents', 'readonly');
+      const record = await requestToPromise(transaction.objectStore('documents').get(id));
+      await transactionToPromise(transaction);
+      return record ? tabFromStoredMetadata(record) : null;
+    }
+
+    async auditAndRepairDocuments() {
+      if (this.desktop) return { recoveredOrphans: 0, missingContents: 0 };
+      const transaction = this.db.transaction(['documents', 'contents'], 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const documents = transaction.objectStore('documents');
+      const contents = transaction.objectStore('contents');
+      const metadataRecords = await requestToPromise(documents.getAll());
+      const contentRecords = await requestToPromise(contents.getAll());
+      const metadataIds = new Set(metadataRecords.map(function(item) { return item.id; }));
+      const contentIds = new Set(contentRecords.map(function(item) { return item.id; }));
+      let recoveredOrphans = 0;
+      let missingContents = 0;
+
+      for (const record of contentRecords) {
+        if (metadataIds.has(record.id)) continue;
+        const recoveredId = typeof record.id === 'string' && record.id.trim()
+          ? record.id
+          : randomId('recovered');
+        const content = typeof record.content === 'string' ? record.content : '';
+        contents.put({
+          id: recoveredId,
+          content: content,
+          updatedAt: Number(record.updatedAt) || Date.now(),
+          storageRevision: 1,
+          storageWriterId: this.writerId
+        });
+        if (recoveredId !== record.id) contents.delete(record.id);
+        documents.put({
+          id: recoveredId,
+          title: 'Recovered document',
+          workspaceId: 'workspace_default',
+          folderId: null,
+          favorite: false,
+          isOpen: false,
+          viewMode: 'split',
+          reviewThreads: [],
+          createdAt: Number(record.updatedAt) || Date.now(),
+          lastOpenedAt: Number(record.updatedAt) || Date.now(),
+          lastEditedAt: Number(record.updatedAt) || Date.now(),
+          contentSize: utf8ByteLength(content),
+          storageRevision: 1,
+          storageWriterId: this.writerId,
+          recoveredFromOrphan: true
+        });
+        recoveredOrphans += 1;
+      }
+
+      for (const metadata of metadataRecords) {
+        if (contentIds.has(metadata.id)) continue;
+        metadata.storageCorruption = 'missing-content';
+        documents.put(metadata);
+        missingContents += 1;
+      }
+      await completion;
+      return { recoveredOrphans: recoveredOrphans, missingContents: missingContents };
     }
 
     _cacheContent(id, content) {
@@ -465,6 +635,7 @@
     }
 
     async loadDocumentContent(id) {
+      requireDocumentId(id);
       if (this._normalContentCache.has(id)) {
         const content = this._normalContentCache.get(id);
         this._cacheContent(id, content);
@@ -473,14 +644,18 @@
       let content = '';
       if (this.desktop) {
         const metadata = this.vaultIndex.documents.find(function (item) { return item.id === id; });
-        if (!metadata || !metadata.vaultRelativePath) return '';
+        if (!metadata || !metadata.vaultRelativePath) {
+          throw new WorkspaceCorruptionError(id);
+        }
         const path = await this._desktopResolveVaultRelativePath(metadata.vaultRelativePath);
+        if (!(await this._pathExists(path))) throw new WorkspaceCorruptionError(id);
         content = await Neutralino.filesystem.readFile(path);
       } else {
         const transaction = this.db.transaction('contents', 'readonly');
         const record = await requestToPromise(transaction.objectStore('contents').get(id));
         await transactionToPromise(transaction);
-        content = record && typeof record.content === 'string' ? record.content : '';
+        if (!record || typeof record.content !== 'string') throw new WorkspaceCorruptionError(id);
+        content = record.content;
       }
       this._cacheContent(id, content);
       return content;
@@ -538,7 +713,7 @@
       const internalPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR);
       const indexPath = await this._pathJoin(internalPath, 'index.json');
       this.vaultIndex.updatedAt = Date.now();
-      await this._writeJsonFile(indexPath, this.vaultIndex);
+      await this._writeJsonFileRecoverably(indexPath, this.vaultIndex);
     }
 
     async _desktopMoveToTrash(metadata) {
@@ -595,7 +770,18 @@
     }
 
     async _desktopSaveDocument(tab, organization, forceContent) {
+      requireDocumentId(tab && tab.id);
       const existing = this.vaultIndex.documents.find(function (item) { return item.id === tab.id; });
+      const actualRevision = normalizedStorageRevision(existing && existing.storageRevision);
+      const expectedRevision = normalizedStorageRevision(tab && tab._storageRevision);
+      if (existing && actualRevision !== expectedRevision) {
+        let storedContent = '';
+        if (existing.vaultRelativePath) {
+          const storedPath = await this._desktopResolveVaultRelativePath(existing.vaultRelativePath);
+          if (await this._pathExists(storedPath)) storedContent = await Neutralino.filesystem.readFile(storedPath);
+        }
+        throw new WorkspaceConflictError(tab.id, tab, existing, storedContent);
+      }
       const relativePath = await this._desktopDocumentRelativePath(tab, organization);
       const fullPath = await this._pathJoin(this.vaultPath, relativePath);
       const pathParts = relativePath.split('/');
@@ -608,6 +794,18 @@
 
       if (existing && existing.vaultRelativePath && existing.vaultRelativePath !== relativePath) {
         const oldPath = await this._desktopResolveVaultRelativePath(existing.vaultRelativePath);
+        const journalDirectory = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal');
+        const moveJournalPath = await this._pathJoin(journalDirectory, sanitizePathSegment(tab.id, 'document') + '.move.json');
+        await this._writeJsonFile(moveJournalPath, {
+          version: 1,
+          operation: 'move',
+          documentId: tab.id,
+          source: oldPath,
+          destination: fullPath,
+          destinationRelativePath: relativePath,
+          startedAt: Date.now()
+        });
+        tab._storageMoveJournalPath = moveJournalPath;
         if (await this._pathExists(oldPath)) {
           if (await this._pathExists(fullPath)) {
             await Neutralino.filesystem.writeFile(fullPath, typeof tab.content === 'string' ? tab.content : await Neutralino.filesystem.readFile(oldPath));
@@ -627,12 +825,15 @@
       }
       const metadata = metadataFromTab(tab);
       metadata.vaultRelativePath = relativePath;
+      metadata.storageRevision = actualRevision + 1;
+      metadata.storageWriterId = this.writerId;
       metadata.contentSize = typeof tab.content === 'string'
         ? new TextEncoder().encode(tab.content).byteLength
         : Number(existing && existing.contentSize) || 0;
       if (existing) Object.assign(existing, metadata);
       else this.vaultIndex.documents.push(metadata);
       tab._vaultRelativePath = relativePath;
+      tab._pendingStorageRevision = metadata.storageRevision;
     }
 
     async saveDocuments(tabs, organization, options) {
@@ -640,58 +841,87 @@
       const source = (tabs || []).filter(function (tab) {
         return tab && tab.id && tab.temporary !== true && tab.kind !== 'share-snapshot' && tab.workspaceId !== 'workspace_secret';
       });
+      const seenIds = new Set();
+      source.forEach(function(tab) {
+        requireDocumentId(tab.id);
+        if (seenIds.has(tab.id)) throw new TypeError('Duplicate document ID: ' + tab.id);
+        seenIds.add(tab.id);
+      });
       const changedIds = settings.changedIds ? new Set(settings.changedIds) : null;
       const selected = changedIds ? source.filter(function (tab) { return changedIds.has(tab.id); }) : source;
       if (this.desktop) {
+        const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+        const currentIndex = await this._readJsonFileRecoverably(indexPath, null);
+        if (currentIndex && Array.isArray(currentIndex.documents)) this.vaultIndex = currentIndex;
         for (const tab of selected) {
           await this._desktopSaveDocument(tab, organization, settings.forceContent === true);
         }
-        if (settings.fullSnapshot) {
-          const currentIds = new Set(source.map(function (tab) { return tab.id; }));
-          const removed = this.vaultIndex.documents.filter(function (item) { return !currentIds.has(item.id); });
-          for (const item of removed) await this._desktopMoveToTrash(item);
-          this.vaultIndex.documents = this.vaultIndex.documents.filter(function (item) { return currentIds.has(item.id); });
-        }
         this._desktopIndexWrite = this._desktopIndexWrite.catch(function () {}).then(() => this._desktopWriteIndex());
         await this._desktopIndexWrite;
+        for (const tab of selected) {
+          tab._storageRevision = normalizedStorageRevision(tab._pendingStorageRevision);
+          delete tab._pendingStorageRevision;
+          if (tab._storageMoveJournalPath) {
+            try { await Neutralino.filesystem.remove(tab._storageMoveJournalPath); } catch (_) {}
+            delete tab._storageMoveJournalPath;
+          }
+        }
         return true;
       }
 
       const transaction = this.db.transaction(['documents', 'contents', 'trash'], 'readwrite');
+      const completion = transactionToPromise(transaction);
       const documents = transaction.objectStore('documents');
       const contents = transaction.objectStore('contents');
-      const trash = transaction.objectStore('trash');
-      selected.forEach((tab) => {
-        const metadata = metadataFromTab(tab);
-        if (settings.forceContent || tab.contentLoaded !== false) {
-          const content = typeof tab.content === 'string' ? tab.content : '';
-          metadata.contentSize = utf8ByteLength(content);
-          contents.put({ id: tab.id, content: content, updatedAt: Date.now() });
-          tab._persistedContent = content;
-          this._cacheContent(tab.id, content);
-        }
-        documents.put(metadata);
-      });
-      if (settings.fullSnapshot) {
-        const currentIds = new Set(source.map(function (tab) { return tab.id; }));
-        const existingIds = await requestToPromise(documents.getAllKeys());
-        for (const id of existingIds) {
-          if (!currentIds.has(id)) {
-            const metadata = await requestToPromise(documents.get(id));
-            const content = await requestToPromise(contents.get(id));
-            trash.put({
-              trashId: randomId('trash'),
-              documentId: id,
-              deletedAt: Date.now(),
-              metadata: metadata || { id: id },
-              content: content && typeof content.content === 'string' ? content.content : ''
-            });
-            documents.delete(id);
-            contents.delete(id);
+      const writes = [];
+      try {
+        for (const tab of selected) {
+          const existingMetadata = await requestToPromise(documents.get(tab.id));
+          const existingContentRecord = existingMetadata ? await requestToPromise(contents.get(tab.id)) : null;
+          const actualRevision = normalizedStorageRevision(existingMetadata && existingMetadata.storageRevision);
+          const expectedRevision = normalizedStorageRevision(tab._storageRevision);
+          if (existingMetadata && actualRevision !== expectedRevision) {
+            transaction.abort();
+            await completion.catch(function() {});
+            throw new WorkspaceConflictError(
+              tab.id,
+              tab,
+              existingMetadata,
+              existingContentRecord && existingContentRecord.content
+            );
           }
+          const metadata = metadataFromTab(tab);
+          const nextRevision = actualRevision + 1;
+          metadata.storageRevision = nextRevision;
+          metadata.storageWriterId = this.writerId;
+          if (settings.forceContent || tab.contentLoaded !== false) {
+            const content = typeof tab.content === 'string' ? tab.content : '';
+            metadata.contentSize = utf8ByteLength(content);
+            contents.put({
+              id: tab.id,
+              content: content,
+              updatedAt: Date.now(),
+              storageRevision: nextRevision,
+              storageWriterId: this.writerId
+            });
+          }
+          documents.put(metadata);
+          writes.push({ tab: tab, revision: nextRevision });
         }
+        await completion;
+      } catch (error) {
+        try { transaction.abort(); } catch (_) {}
+        await completion.catch(function() {});
+        throw error;
       }
-      await transactionToPromise(transaction);
+      writes.forEach((write) => {
+        write.tab._storageRevision = write.revision;
+        if (settings.forceContent || write.tab.contentLoaded !== false) {
+          const content = typeof write.tab.content === 'string' ? write.tab.content : '';
+          write.tab._persistedContent = content;
+          this._cacheContent(write.tab.id, content);
+        }
+      });
       return true;
     }
 
@@ -717,10 +947,24 @@
       this._organizationSnapshot = serialized;
     }
 
-    async deleteDocument(id) {
+    async deleteDocument(id, options) {
+      requireDocumentId(id);
+      const settings = options || {};
       this._normalContentCache.delete(id);
       if (this.desktop) {
+        const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+        const currentIndex = await this._readJsonFileRecoverably(indexPath, null);
+        if (currentIndex && Array.isArray(currentIndex.documents)) this.vaultIndex = currentIndex;
         const metadata = this.vaultIndex.documents.find(function (item) { return item.id === id; });
+        if (metadata && settings.expectedRevision !== undefined &&
+            normalizedStorageRevision(metadata.storageRevision) !== normalizedStorageRevision(settings.expectedRevision)) {
+          let storedContent = '';
+          if (metadata.vaultRelativePath) {
+            const storedPath = await this._desktopResolveVaultRelativePath(metadata.vaultRelativePath);
+            if (await this._pathExists(storedPath)) storedContent = await Neutralino.filesystem.readFile(storedPath);
+          }
+          throw new WorkspaceConflictError(id, null, metadata, storedContent);
+        }
         if (metadata) await this._desktopMoveToTrash(metadata);
         this.vaultIndex.documents = this.vaultIndex.documents.filter(function (item) { return item.id !== id; });
         await this._desktopWriteIndex();
@@ -731,6 +975,11 @@
       const contents = transaction.objectStore('contents');
       const metadata = await requestToPromise(documents.get(id));
       const content = await requestToPromise(contents.get(id));
+      if (metadata && settings.expectedRevision !== undefined &&
+          normalizedStorageRevision(metadata.storageRevision) !== normalizedStorageRevision(settings.expectedRevision)) {
+        transaction.abort();
+        throw new WorkspaceConflictError(id, null, metadata, content && content.content);
+      }
       if (metadata || content) {
         transaction.objectStore('trash').put({
           trashId: randomId('trash'),
@@ -885,6 +1134,70 @@
       return records;
     }
 
+    async replaceSecretRecords(records, manifest) {
+      const source = Array.isArray(records) ? records : [];
+      const seenIds = new Set();
+      source.forEach(function(record) {
+        if (!record || typeof record.id !== 'string' || !record.id || !record.envelope) {
+          throw new TypeError('Secret Workspace records require a non-empty string ID and encrypted envelope.');
+        }
+        if (seenIds.has(record.id)) throw new TypeError('Duplicate Secret Workspace record ID: ' + record.id);
+        seenIds.add(record.id);
+      });
+      if (this.desktop) {
+        const previousRecords = await this.listSecretRecords();
+        const previousManifest = await this.getSecretManifest();
+        const replaceDesktopSet = async (nextRecords, nextManifest) => {
+          const nextIds = new Set(nextRecords.map(function(record) { return record.id; }));
+          for (const record of nextRecords) {
+            const path = await this._pathJoin(
+              this.vaultPath,
+              'Secret Workspace',
+              'objects',
+              sanitizePathSegment(record.id, 'secret') + '.mvault'
+            );
+            await this._writeJsonFileRecoverably(path, record.envelope);
+          }
+          const currentRecords = await this.listSecretRecords();
+          for (const record of currentRecords) {
+            if (!nextIds.has(record.id)) await this.deleteSecretRecord(record.id);
+          }
+          await this.setSecretManifest(nextManifest);
+        };
+        try {
+          await replaceDesktopSet(source, manifest || null);
+        } catch (error) {
+          try {
+            await replaceDesktopSet(previousRecords, previousManifest);
+          } catch (rollbackError) {
+            error.rollbackError = rollbackError;
+          }
+          throw error;
+        }
+        return;
+      }
+
+      const transaction = this.db.transaction(['secretRecords', 'metadata'], 'readwrite');
+      const completion = transactionToPromise(transaction);
+      try {
+        const secretRecords = transaction.objectStore('secretRecords');
+        secretRecords.clear();
+        source.forEach(function(record) {
+          secretRecords.put({ id: record.id, envelope: cloneJson(record.envelope, null), updatedAt: Date.now() });
+        });
+        transaction.objectStore('metadata').put({ key: 'secretManifest', value: manifest || null });
+        await completion;
+      } catch (error) {
+        try { transaction.abort(); } catch (_) {}
+        await completion.catch(function() {});
+        throw error;
+      }
+      try {
+        if (manifest) localStorage.setItem(LEGACY_SECRET_KEY, JSON.stringify(manifest));
+        else localStorage.removeItem(LEGACY_SECRET_KEY);
+      } catch (_) {}
+    }
+
     async saveSecretRecord(id, envelope) {
       if (this.desktop) {
         const path = await this._pathJoin(this.vaultPath, 'Secret Workspace', 'objects', sanitizePathSegment(id, 'secret') + '.mvault');
@@ -1034,10 +1347,8 @@
       };
     }
 
-    async restoreBackupData(backup, options) {
+    _normalizeBackupForRestore(backup) {
       const source = backup && typeof backup === 'object' ? backup : {};
-      const settings = options || {};
-      const onProgress = typeof settings.onProgress === 'function' ? settings.onProgress : function() {};
       const organization = cloneJson(source.organization, {
         version: 1,
         workspaces: [],
@@ -1046,38 +1357,157 @@
       });
       const documents = Array.isArray(source.documents) ? source.documents : [];
       const secretRecords = Array.isArray(source.secretRecords) ? source.secretRecords : [];
-      const total = documents.length + secretRecords.length;
-      let processed = 0;
-
-      await this.saveDocumentOrganization(organization);
+      const seenDocumentIds = new Set();
       const tabs = documents.map(function(item) {
         const metadata = item && item.metadata && typeof item.metadata === 'object'
           ? cloneJson(item.metadata, {})
           : {};
+        requireDocumentId(metadata.id);
+        if (seenDocumentIds.has(metadata.id)) throw new TypeError('Duplicate document ID: ' + metadata.id);
+        seenDocumentIds.add(metadata.id);
         metadata.content = typeof item.content === 'string' ? item.content : '';
         metadata.contentLoaded = true;
+        delete metadata.storageRevision;
+        delete metadata.storageWriterId;
+        delete metadata._storageRevision;
+        delete metadata._storageWriterId;
         return metadata;
       });
-      await this.saveDocuments(tabs, organization, {
-        fullSnapshot: true,
+      const seenSecretIds = new Set();
+      secretRecords.forEach(function(record) {
+        if (!record || typeof record.id !== 'string' || !record.id || !record.envelope) {
+          throw new TypeError('The backup contains an invalid encrypted record.');
+        }
+        if (seenSecretIds.has(record.id)) throw new TypeError('Duplicate encrypted record ID: ' + record.id);
+        seenSecretIds.add(record.id);
+      });
+      return {
+        organization: organization,
+        documents: documents,
+        tabs: tabs,
+        secretRecords: secretRecords,
+        secretManifest: cloneJson(source.secretManifest, null)
+      };
+    }
+
+    async _restoreBrowserBackupDataAtomically(normalized, onProgress) {
+      const storeNames = ['documents', 'contents', 'metadata', 'secretRecords', 'trash'];
+      const transaction = this.db.transaction(storeNames, 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const documents = transaction.objectStore('documents');
+      const contents = transaction.objectStore('contents');
+      const metadata = transaction.objectStore('metadata');
+      const secretRecords = transaction.objectStore('secretRecords');
+      const trash = transaction.objectStore('trash');
+      try {
+        const existingMetadata = await requestToPromise(documents.getAll());
+        for (const existing of existingMetadata) {
+          const content = await requestToPromise(contents.get(existing.id));
+          trash.put({
+            trashId: randomId('trash'),
+            documentId: existing.id,
+            deletedAt: Date.now(),
+            reason: 'backup-replacement',
+            metadata: existing,
+            content: content && typeof content.content === 'string' ? content.content : ''
+          });
+        }
+        documents.clear();
+        contents.clear();
+        secretRecords.clear();
+        metadata.put({ key: 'documentOrganization', value: normalized.organization });
+        metadata.put({ key: 'secretManifest', value: normalized.secretManifest });
+
+        normalized.tabs.forEach((tab) => {
+          const storedMetadata = metadataFromTab(tab);
+          storedMetadata.storageRevision = 1;
+          storedMetadata.storageWriterId = this.writerId;
+          storedMetadata.contentSize = utf8ByteLength(tab.content);
+          documents.put(storedMetadata);
+          contents.put({
+            id: tab.id,
+            content: tab.content,
+            updatedAt: Date.now(),
+            storageRevision: 1,
+            storageWriterId: this.writerId
+          });
+        });
+        normalized.secretRecords.forEach(function(record) {
+          secretRecords.put({ id: record.id, envelope: cloneJson(record.envelope, null), updatedAt: Date.now() });
+        });
+        await completion;
+      } catch (error) {
+        try { transaction.abort(); } catch (_) {}
+        await completion.catch(function() {});
+        throw error;
+      }
+      this._normalContentCache.clear();
+      this._organizationSnapshot = JSON.stringify(normalized.organization);
+      normalized.tabs.forEach((tab) => {
+        tab._storageRevision = 1;
+        tab._persistedContent = tab.content;
+        this._cacheContent(tab.id, tab.content);
+      });
+      let processed = 0;
+      const total = normalized.tabs.length + normalized.secretRecords.length;
+      normalized.tabs.forEach(function(tab) {
+        processed += 1;
+        onProgress(processed, total, tab.title || 'Untitled');
+      });
+      normalized.secretRecords.forEach(function() {
+        processed += 1;
+        onProgress(processed, total, 'Encrypted Secret Workspace record');
+      });
+    }
+
+    async _restoreDesktopBackupData(normalized, onProgress) {
+      await this.clearNormalDocuments();
+      await this.saveDocumentOrganization(normalized.organization);
+      await this.saveDocuments(normalized.tabs, normalized.organization, {
+        changedIds: normalized.tabs.map(function(tab) { return tab.id; }),
         forceContent: true
       });
-      for (const item of documents) {
-        processed += 1;
-        onProgress(processed, total, item && item.metadata && item.metadata.title || 'Untitled');
-      }
-
       await this.clearSecretRecords();
-      for (const record of secretRecords) {
-        if (!record || !record.id || !record.envelope) continue;
+      let processed = 0;
+      const total = normalized.tabs.length + normalized.secretRecords.length;
+      for (const tab of normalized.tabs) {
+        processed += 1;
+        onProgress(processed, total, tab.title || 'Untitled');
+      }
+      for (const record of normalized.secretRecords) {
         await this.saveSecretRecord(record.id, record.envelope);
         processed += 1;
         onProgress(processed, total, 'Encrypted Secret Workspace record');
       }
-      await this.setSecretManifest(source.secretManifest || null);
+      await this.setSecretManifest(normalized.secretManifest);
+    }
+
+    async restoreBackupData(backup, options) {
+      const settings = options || {};
+      const onProgress = typeof settings.onProgress === 'function' ? settings.onProgress : function() {};
+      const normalized = this._normalizeBackupForRestore(backup);
+      if (!this.desktop) {
+        await this._restoreBrowserBackupDataAtomically(normalized, onProgress);
+      } else {
+        const rollbackData = await this.createBackupData({
+          includeSecure: true,
+          organization: this.vaultOrganization
+        });
+        const rollback = this._normalizeBackupForRestore(rollbackData);
+        try {
+          await this._restoreDesktopBackupData(normalized, onProgress);
+        } catch (error) {
+          try {
+            await this._restoreDesktopBackupData(rollback, function() {});
+          } catch (rollbackError) {
+            error.rollbackError = rollbackError;
+          }
+          throw error;
+        }
+      }
       return {
-        normalDocumentCount: tabs.length,
-        secretRecordCount: secretRecords.length
+        normalDocumentCount: normalized.tabs.length,
+        secretRecordCount: normalized.secretRecords.length
       };
     }
 
