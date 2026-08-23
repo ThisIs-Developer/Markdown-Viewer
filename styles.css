@@ -2971,6 +2971,12 @@ body {
   display: none;
 }
 
+.header-icon-dropdown > .header-icon-command {
+  width: 38px;
+  min-width: 38px;
+  gap: 3px;
+}
+
 .header-toolbar-divider {
   width: 1px;
   height: 20px;
@@ -3029,7 +3035,6 @@ body {
 }
 
 .header-icon-command .header-dropdown-chevron {
-  margin-inline-start: 1px;
   font-size: var(--ui-icon-size-xs);
   opacity: 0.72;
 }
