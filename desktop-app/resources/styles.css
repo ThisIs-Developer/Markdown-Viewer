@@ -2220,15 +2220,14 @@ body {
   line-height: 1.25;
 }
 
-.review-thread.is-review-thread-active {
+.review-thread:not(.is-review-thread-emphasized) {
+  border-color: var(--accent-color);
+}
+
+.review-thread.is-review-thread-emphasized {
   border-color: var(--review-accent);
   background: color-mix(in srgb, var(--review-accent) 5%, var(--menu-surface));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--review-accent) 24%, transparent);
-}
-
-.review-thread.is-review-thread-hover:not(.is-review-thread-active) {
-  border-color: color-mix(in srgb, var(--review-accent) 62%, var(--menu-border));
-  background: color-mix(in srgb, var(--review-accent) 4%, var(--menu-surface));
 }
 
 .review-thread-conversation {
@@ -2405,8 +2404,8 @@ body {
 }
 
 #markdown-preview .review-comment-highlight {
-  background: color-mix(in srgb, var(--review-accent) 13%, transparent);
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--review-accent) 42%, transparent);
+  background: color-mix(in srgb, var(--accent-color) 13%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent-color) 42%, transparent);
   cursor: pointer;
   transition: background-color 140ms ease, box-shadow 140ms ease;
 }
@@ -2425,9 +2424,9 @@ body {
 }
 
 #markdown-preview .review-comment-element {
-  outline: 1px solid color-mix(in srgb, var(--review-accent) 40%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--accent-color) 40%, transparent);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-accent) 7%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 7%, transparent);
   cursor: pointer;
 }
 
@@ -2437,25 +2436,14 @@ body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--review-accent) 8%, transparent);
 }
 
-#markdown-preview .is-review-highlight-hover:not(.is-review-highlight-active) {
+#markdown-preview .is-review-highlight-emphasized {
   background-color: color-mix(in srgb, var(--review-accent) 20%, transparent);
   outline-color: color-mix(in srgb, var(--review-accent) 70%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-accent) 12%, transparent);
 }
 
-#markdown-preview .review-comment-highlight.is-review-highlight-hover:not(.is-review-highlight-active) {
+#markdown-preview .review-comment-highlight.is-review-highlight-emphasized {
   box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--review-accent) 70%, transparent);
-}
-
-#markdown-preview .is-review-highlight-active {
-  background-color: color-mix(in srgb, var(--review-accent) 25%, transparent);
-  outline-color: var(--review-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--review-accent) 17%, transparent);
-}
-
-#markdown-preview .review-comment-highlight.is-review-highlight-active {
-  position: relative;
-  box-shadow: inset 0 -2px 0 var(--review-accent);
 }
 
 #markdown-preview .review-element-selectable {
@@ -2477,25 +2465,16 @@ body {
 #markdown-preview .review-comment-highlight.is-review-selection-start::before,
 #markdown-preview .review-pending-highlight.review-selection-end::after,
 #markdown-preview .review-comment-highlight.is-review-selection-end::after {
-  position: absolute;
-  z-index: 1;
+  display: inline-block;
   color: var(--review-accent);
   content: "|";
-  font-family: var(--font-mono);
+  font-family: inherit;
+  font-size: 1em;
   font-weight: 900;
-  line-height: 1;
+  line-height: inherit;
   animation: review-selection-caret-blink 900ms steps(1, end) infinite;
   pointer-events: none;
-}
-
-#markdown-preview .review-pending-highlight.review-selection-start::before,
-#markdown-preview .review-comment-highlight.is-review-selection-start::before {
-  inset-inline-start: -0.24em;
-}
-
-#markdown-preview .review-pending-highlight.review-selection-end::after,
-#markdown-preview .review-comment-highlight.is-review-selection-end::after {
-  inset-inline-end: -0.24em;
+  vertical-align: baseline;
 }
 
 @media (prefers-reduced-motion: reduce) {

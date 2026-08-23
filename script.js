@@ -298,8 +298,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, pre, blockquote, img, video, audio, mjx-container, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
-  const REVIEW_ELEMENT_TYPES = new Set(['image', 'media', 'diagram', 'math', 'code', 'table']);
+  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, img, video, audio, mjx-container, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
+  const REVIEW_ELEMENT_TYPES = new Set(['image', 'media', 'diagram', 'math', 'table']);
   const REVIEW_REPLY_COLLAPSE_THRESHOLD = 4;
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -7916,7 +7916,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         'review-comment-element',
         'review-pending-element',
         'is-review-highlight-active',
-        'is-review-highlight-hover'
+        'is-review-highlight-hover',
+        'is-review-highlight-emphasized'
       );
       delete element.dataset.reviewIds;
     });
@@ -8188,12 +8189,15 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function syncReviewInteractionState() {
+    const emphasizedReviewId = hoveredReviewId || activeReviewId;
     if (markdownPreview) {
       markdownPreview.querySelectorAll('[data-review-ids]').forEach(function(element) {
         const isActive = elementHasReviewId(element, activeReviewId);
         const isHovered = elementHasReviewId(element, hoveredReviewId);
+        const isEmphasized = elementHasReviewId(element, emphasizedReviewId);
         element.classList.toggle('is-review-highlight-active', isActive);
         element.classList.toggle('is-review-highlight-hover', !isActive && isHovered);
+        element.classList.toggle('is-review-highlight-emphasized', isEmphasized);
         element.classList.toggle(
           'is-review-selection-start',
           isActive && String(element.dataset.reviewStartIds || '').split(/\s+/).includes(activeReviewId)
@@ -8216,8 +8220,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       reviewList.querySelectorAll('.review-thread').forEach(function(item) {
         const isActive = item.dataset.reviewId === activeReviewId;
         const isHovered = item.dataset.reviewId === hoveredReviewId;
+        const isEmphasized = item.dataset.reviewId === emphasizedReviewId;
         item.classList.toggle('is-review-thread-active', isActive);
         item.classList.toggle('is-review-thread-hover', !isActive && isHovered);
+        item.classList.toggle('is-review-thread-emphasized', isEmphasized);
         item.setAttribute('aria-expanded', isActive ? 'true' : 'false');
       });
     }
@@ -8453,7 +8459,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (isRepliesCollapsible) {
       const toggleReplies = createReviewThreadAction(
         'toggle-replies',
-        isRepliesExpanded ? 'lucide lucide-chevrons-up' : 'lucide lucide-chevrons-down',
+        isRepliesExpanded ? 'lucide lucide-fold-vertical' : 'lucide lucide-unfold-vertical',
         isRepliesExpanded ? 'Collapse replies' : 'Expand replies',
         false,
         thread.id
@@ -8991,6 +8997,18 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (from && from !== to) setReviewHover(null);
       });
     }
+
+    document.addEventListener('click', function(event) {
+      if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return;
+      const selection = pendingReviewSelection && normalizeReviewSelection(pendingReviewSelection.selection);
+      if (!selection || selection.kind !== 'element') return;
+      const selectedTarget = findReviewTarget(pendingReviewSelection);
+      if (selectedTarget && selectedTarget.contains(event.target)) return;
+      pendingReviewSelection = null;
+      decorateReviewTargets();
+      renderReviewPanel();
+      announceToScreenReader('Element selection cleared.');
+    });
 
     if (reviewList) {
       reviewList.addEventListener('click', function(event) {

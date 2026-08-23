@@ -42,6 +42,13 @@ async function selectPreviewText(page, selector, selectedText) {
   }, selectedText);
 }
 
+async function addTextComment(page, selector, selectedText, body) {
+  await selectPreviewText(page, selector, selectedText);
+  await page.locator('#review-new-comment').click();
+  await page.locator('#review-feedback-input').fill(body);
+  await page.locator('#review-feedback-submit').click();
+}
+
 test.beforeEach(async ({ page }) => {
   await stubLazyRendererLibraries(page);
   await openApp(page);
@@ -93,6 +100,13 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   await expect(pendingHighlight).toHaveClass(/review-selection-end/);
   expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::before').content)).toBe('"|"');
   expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::after').content)).toBe('"|"');
+  const markerTypography = await pendingHighlight.evaluate(element => ({
+    textSize: getComputedStyle(element).fontSize,
+    markerSize: getComputedStyle(element, '::before').fontSize,
+    markerWeight: Number(getComputedStyle(element, '::before').fontWeight)
+  }));
+  expect(markerTypography.markerSize).toBe(markerTypography.textSize);
+  expect(markerTypography.markerWeight).toBeGreaterThanOrEqual(700);
 
   await page.locator('#review-composer-cancel').click();
   await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
@@ -163,6 +177,26 @@ test('synchronizes hover and click states in both directions', async ({ page }) 
   await page.locator('.review-panel-header').hover();
   await card.click();
   await expect(highlight).toHaveClass(/is-review-highlight-active/);
+});
+
+test('emphasizes only the pointed comment in violet and keeps the others blue', async ({ page }) => {
+  await page.locator('#review-toggle').click();
+  await addTextComment(page, '#markdown-preview p', 'precise phrase', 'Comment one.');
+  await addTextComment(page, '#markdown-preview p', 'focused comment', 'Comment two.');
+  await addTextComment(page, '#markdown-preview li', 'list item', 'Comment three.');
+
+  const first = page.locator('.review-thread').filter({ hasText: 'Comment one.' });
+  const second = page.locator('.review-thread').filter({ hasText: 'Comment two.' });
+  const third = page.locator('.review-thread').filter({ hasText: 'Comment three.' });
+  await second.hover();
+  await expect(second).toHaveCSS('border-color', 'rgb(124, 58, 237)');
+  await expect(first).toHaveCSS('border-color', 'rgb(3, 102, 214)');
+  await expect(third).toHaveCSS('border-color', 'rgb(3, 102, 214)');
+
+  await page.locator('.review-panel-header').hover();
+  await expect(third).toHaveCSS('border-color', 'rgb(124, 58, 237)');
+  await expect(first).toHaveCSS('border-color', 'rgb(3, 102, 214)');
+  await expect(second).toHaveCSS('border-color', 'rgb(3, 102, 214)');
 });
 
 test('adds nested replies and persists their author and timestamp', async ({ page }) => {
@@ -272,14 +306,24 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
   await page.locator('#review-toggle').click();
 
   const codeBlock = page.locator('#markdown-preview pre').filter({ hasText: 'reviewable code' });
-  await codeBlock.hover();
-  await expect(codeBlock).toHaveCSS('outline-style', 'dotted');
-  await expect(codeBlock).toHaveCSS('outline-color', 'rgb(124, 58, 237)');
+  await expect(codeBlock).not.toHaveAttribute('data-review-anchor', /.+/);
+  await codeBlock.click();
+  await expect(page.locator('#review-new-comment')).toBeDisabled();
+
+  const image = page.locator('#markdown-preview img[alt="Reference image"]');
+  await image.hover();
+  await expect(image).toHaveCSS('outline-style', 'dotted');
+  await expect(image).toHaveCSS('outline-color', 'rgb(124, 58, 237)');
+  await image.click();
+  await expect(image).toHaveClass(/is-review-element-selected/);
+  await expect(page.locator('#review-new-comment')).toBeEnabled();
+  await page.locator('#markdown-preview h1').click();
+  await expect(image).not.toHaveClass(/is-review-element-selected|review-pending-element/);
+  await expect(page.locator('#review-new-comment')).toBeDisabled();
 
   for (const [selector, clickSelector, text] of [
     ['#markdown-preview img[alt="Reference image"]', '#markdown-preview img[alt="Reference image"]', 'Image comment.'],
     ['#markdown-preview mjx-container', '#markdown-preview mjx-container', 'Math comment.'],
-    ['#markdown-preview pre', '#markdown-preview pre code', 'Code comment.'],
     ['#markdown-preview .diagram-viewer', '#markdown-preview .diagram-viewer svg', 'Diagram comment.']
   ]) {
     await expect(page.locator(selector).first()).toBeVisible();
@@ -292,8 +336,8 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
     await page.locator('#review-feedback-submit').click();
   }
 
-  await expect(page.locator('.review-thread')).toHaveCount(4);
-  await expect(page.locator('.review-comment-element')).toHaveCount(4);
+  await expect(page.locator('.review-thread')).toHaveCount(3);
+  await expect(page.locator('.review-comment-element')).toHaveCount(3);
   const activeCard = page.locator('.review-thread').filter({ hasText: 'Math comment.' });
   await activeCard.click();
   await activeCard.locator('[data-review-action="toggle-resolved"]').click();
@@ -325,13 +369,16 @@ test('collapses long nested conversations to first and last replies and expands 
   await expect(card.locator('.review-replies-more')).toHaveText('Show 3 more replies');
   const headerToggle = card.locator('.review-thread-actions [data-review-action="toggle-replies"]');
   await expect(headerToggle).toHaveAttribute('aria-label', 'Expand replies');
+  await expect(headerToggle.locator('i')).toHaveClass(/lucide-unfold-vertical/);
 
   await card.locator('.review-replies-more').click();
   await expect(card.locator('.review-reply')).toHaveCount(5);
   await expect(headerToggle).toHaveAttribute('aria-label', 'Collapse replies');
   await expect(headerToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(headerToggle.locator('i')).toHaveClass(/lucide-fold-vertical/);
 
   await headerToggle.click();
   await expect(card.locator('.review-reply')).toHaveCount(2);
   await expect(headerToggle).toHaveAttribute('aria-label', 'Expand replies');
+  await expect(headerToggle.locator('i')).toHaveClass(/lucide-unfold-vertical/);
 });
