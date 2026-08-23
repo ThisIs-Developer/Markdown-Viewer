@@ -298,8 +298,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let currentViewMode = 'split'; // 'editor', 'split', or 'preview'
   const shareSnapshotViewOnlyTabIds = new Set();
   const SHARE_SNAPSHOT_TAB_KIND = 'share-snapshot';
-  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, img, video, audio, mjx-container, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
-  const REVIEW_ELEMENT_TYPES = new Set(['image', 'media', 'diagram', 'math']);
+  const REVIEW_TARGET_SELECTOR = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, img, video, audio, mjx-container, .frontmatter-table, .diagram-viewer, .geojson-container, .topojson-container, .stl-container';
+  const REVIEW_ELEMENT_TYPES = new Set(['image', 'media', 'diagram', 'math', 'table']);
   const REVIEW_REPLY_COLLAPSE_THRESHOLD = 4;
   const REVIEW_TEXT_LIMIT = 2000;
   let reviewModeActive = false;
@@ -8159,13 +8159,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (pendingAnchor) {
       const pendingTarget = findReviewTarget(pendingAnchor);
       const pendingSelection = normalizeReviewSelection(pendingAnchor.selection);
-      if (pendingTarget && pendingSelection && pendingSelection.kind === 'text') {
-        const offsets = resolveTextSelectionOffsets(pendingTarget, pendingSelection);
-        if (offsets) {
-          if (!textHighlights.has(pendingTarget)) textHighlights.set(pendingTarget, []);
-          textHighlights.get(pendingTarget).push({ id: '', start: offsets.start, end: offsets.end, pending: true });
-        }
-      } else if (pendingTarget) {
+      if (pendingTarget && (!pendingSelection || pendingSelection.kind !== 'text')) {
         pendingTarget.classList.add('review-pending-element');
       }
     }
@@ -8590,13 +8584,53 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
+  function restoreReviewNativeTextSelection(anchor) {
+    const selection = anchor && normalizeReviewSelection(anchor.selection);
+    const target = selection && selection.kind === 'text' ? findReviewTarget(anchor) : null;
+    const offsets = target && resolveTextSelectionOffsets(target, selection);
+    if (!target || !offsets || !window.getSelection) return false;
+    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        const parent = node.parentElement;
+        if (!node.nodeValue || !parent || parent.closest('script, style, button, textarea')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node;
+    let cursor = 0;
+    let startBoundary = null;
+    let endBoundary = null;
+    while ((node = walker.nextNode())) {
+      const nextCursor = cursor + node.nodeValue.length;
+      if (!startBoundary && offsets.start >= cursor && offsets.start <= nextCursor) {
+        startBoundary = { node: node, offset: offsets.start - cursor };
+      }
+      if (!endBoundary && offsets.end >= cursor && offsets.end <= nextCursor) {
+        endBoundary = { node: node, offset: offsets.end - cursor };
+      }
+      cursor = nextCursor;
+      if (startBoundary && endBoundary) break;
+    }
+    if (!startBoundary || !endBoundary) return false;
+    const range = document.createRange();
+    range.setStart(startBoundary.node, startBoundary.offset);
+    range.setEnd(endBoundary.node, endBoundary.offset);
+    const nativeSelection = window.getSelection();
+    nativeSelection.removeAllRanges();
+    nativeSelection.addRange(range);
+    return true;
+  }
+
   function setPendingReviewSelection(descriptor, options) {
     if (!descriptor) return;
     options = options || {};
     pendingReviewSelection = descriptor;
     activeReviewId = null;
     hoveredReviewId = null;
-    decorateReviewTargets();
+    const selection = normalizeReviewSelection(descriptor.selection);
+    if (!selection || selection.kind !== 'text') decorateReviewTargets();
     renderReviewPanel();
     if (options.announce !== false) {
       announceToScreenReader('Content selected. Choose New to add a comment.');
@@ -8635,6 +8669,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!REVIEW_ELEMENT_TYPES.has(type)) return;
     const descriptor = getReviewAnchorDescriptor(target, { kind: 'element', elementType: type });
     if (descriptor) setPendingReviewSelection(descriptor);
+  }
+
+  function reviewClickIsInsideNativeSelection(event, pendingSelection) {
+    const selection = window.getSelection && window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+    if (selection.toString().trim() !== String(pendingSelection.quote || '').trim()) return false;
+    const pointX = Number(event.clientX);
+    const pointY = Number(event.clientY);
+    return Array.from(selection.getRangeAt(0).getClientRects()).some(function(rect) {
+      return pointX >= rect.left && pointX <= rect.right && pointY >= rect.top && pointY <= rect.bottom;
+    });
   }
 
   function focusReviewComposerInput() {
@@ -8694,9 +8739,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (reviewFeedbackInput) reviewFeedbackInput.value = '';
     if (reviewFeedbackCount) reviewFeedbackCount.textContent = '0 / ' + REVIEW_TEXT_LIMIT;
     if (reviewFeedbackSubmit) reviewFeedbackSubmit.disabled = true;
-    decorateReviewTargets();
+    const selection = normalizeReviewSelection(activeReviewAnchor.selection);
+    if (!selection || selection.kind !== 'text') decorateReviewTargets();
     renderReviewPanel();
     focusReviewComposerInput();
+    if (selection && selection.kind === 'text') {
+      requestAnimationFrame(function() { restoreReviewNativeTextSelection(activeReviewAnchor); });
+    }
   }
 
   function openReviewComposer() {
@@ -9001,13 +9050,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.addEventListener('click', function(event) {
       if (!reviewModeActive || (reviewComposer && !reviewComposer.hidden)) return;
       const selection = pendingReviewSelection && normalizeReviewSelection(pendingReviewSelection.selection);
-      if (!selection || selection.kind !== 'element') return;
-      const selectedTarget = findReviewTarget(pendingReviewSelection);
-      if (selectedTarget && selectedTarget.contains(event.target)) return;
+      if (!selection) return;
+      if (selection.kind === 'text' && reviewClickIsInsideNativeSelection(event, selection)) return;
+      if (selection.kind === 'element') {
+        const selectedTarget = findReviewTarget(pendingReviewSelection);
+        if (selectedTarget && selectedTarget.contains(event.target)) return;
+      }
       pendingReviewSelection = null;
       decorateReviewTargets();
       renderReviewPanel();
-      announceToScreenReader('Element selection cleared.');
+      announceToScreenReader('Content selection cleared.');
     });
 
     if (reviewList) {

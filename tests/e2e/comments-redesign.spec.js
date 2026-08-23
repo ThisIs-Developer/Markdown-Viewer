@@ -86,42 +86,59 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
 
   await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
   await expect(page.locator('#review-new-comment')).toBeEnabled();
-  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
+  await expect(page.locator('.review-pending-highlight')).toHaveCount(0);
   await expect(page.locator('.review-comment-highlight, .review-comment-element')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.getSelection().toString())).toBe('precise phrase');
+
+  await page.locator('#markdown-preview h1').click();
+  await expect(page.locator('#review-new-comment')).toBeDisabled();
+  await expect.poll(() => page.evaluate(() => window.getSelection().isCollapsed)).toBe(true);
+
+  await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
+  await expect(page.locator('#review-new-comment')).toBeEnabled();
 
   await page.locator('#review-new-comment').click();
   await expect(page.locator('#review-composer')).toBeVisible();
   await expect(page.locator('#review-composer-author')).toHaveText('Author');
   await expect(page.locator('#review-composer-avatar')).toHaveText('A');
   await expect(page.locator('.review-composer-heading, #review-composer-anchor')).toHaveCount(0);
-  const pendingHighlight = page.locator('.review-pending-highlight');
-  await expect(pendingHighlight).toHaveText('precise phrase');
-  await expect(pendingHighlight).toHaveClass(/review-selection-start/);
-  await expect(pendingHighlight).toHaveClass(/review-selection-end/);
-  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::before').content)).toBe('""');
-  expect(await pendingHighlight.evaluate(element => getComputedStyle(element, '::after').content)).toBe('""');
-  const markerTypography = await pendingHighlight.evaluate(element => ({
-    highlightHeight: element.getBoundingClientRect().height,
-    markerHeight: parseFloat(getComputedStyle(element, '::before').height),
-    markerWidth: parseFloat(getComputedStyle(element, '::before').width)
-  }));
-  expect(markerTypography.markerHeight).toBe(markerTypography.highlightHeight);
-  expect(markerTypography.markerWidth).toBe(2);
+  await expect(page.locator('.review-pending-highlight')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.getSelection().toString())).toBe('precise phrase');
+  await expect(page.locator('#review-feedback-input')).toBeFocused();
 
   await page.locator('#review-composer-cancel').click();
-  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
-  await expect(page.locator('#review-new-comment')).toBeEnabled();
+  await expect(page.locator('.review-pending-highlight')).toHaveCount(0);
+  await expect(page.locator('#review-new-comment')).toBeDisabled();
+  await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
   await page.locator('#review-new-comment').click();
-  await expect(page.locator('.review-pending-highlight')).toHaveText('precise phrase');
+  await expect(page.locator('#review-composer')).toBeVisible();
+  await expect(page.locator('.review-pending-highlight')).toHaveCount(0);
   await page.locator('#review-feedback-input').fill('This wording is clear.');
+  await expect(page.locator('#review-feedback-submit')).toBeEnabled();
   await page.locator('#review-feedback-submit').click();
+  await expect(page.locator('#review-composer')).toBeHidden();
+  expect(await page.evaluate(() => ({
+    inputValue: document.querySelector('#review-feedback-input').value,
+    summary: document.querySelector('#review-panel-summary').textContent,
+    selection: window.getSelection().toString()
+  }))).toEqual({ inputValue: '', summary: '1 comment', selection: '' });
 
   const card = page.locator('.review-thread');
   await expect(card).toHaveCount(1);
   await expect(card.locator('.review-author-name').first()).toHaveText('Author');
   await expect(card.locator('.review-author-avatar').first()).toHaveText('A');
   await expect(card.locator('.review-thread-body')).toHaveText('This wording is clear.');
-  await expect(page.locator('.review-comment-highlight')).toHaveText('precise phrase');
+  const submittedHighlight = page.locator('.review-comment-highlight');
+  await expect(submittedHighlight).toHaveText('precise phrase');
+  await expect(submittedHighlight).toHaveClass(/is-review-selection-start/);
+  await expect(submittedHighlight).toHaveClass(/is-review-selection-end/);
+  const markerTypography = await submittedHighlight.evaluate(element => ({
+    highlightHeight: element.getBoundingClientRect().height,
+    markerHeight: parseFloat(getComputedStyle(element, '::before').height),
+    markerWidth: parseFloat(getComputedStyle(element, '::before').width)
+  }));
+  expect(markerTypography.markerHeight).toBe(markerTypography.highlightHeight);
+  expect(markerTypography.markerWidth).toBe(2);
   await expect(card.locator('.review-thread-details, .review-thread-anchor')).toHaveCount(0);
   await expect(card.locator('.review-thread-dates')).toBeVisible();
   await expect(card.locator('.review-thread-time').first()).not.toContainText('Opened:');
@@ -302,7 +319,7 @@ test('keeps comment actions and nested indentation consistent across screen size
   });
 });
 
-test('comments on images, rendered math, diagrams, and resolves without empty closed metadata', async ({ page }) => {
+test('comments on YAML, images, rendered math, diagrams, and resolves without empty closed metadata', async ({ page }) => {
   await page.locator('#review-toggle').click();
 
   const codeBlock = page.locator('#markdown-preview pre').filter({ hasText: 'reviewable code' });
@@ -311,8 +328,11 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
   await expect(page.locator('#review-new-comment')).toBeDisabled();
 
   const yamlTable = page.locator('#markdown-preview .frontmatter-table');
-  await expect(yamlTable).not.toHaveAttribute('data-review-anchor', /.+/);
+  await expect(yamlTable).toHaveAttribute('data-review-anchor', /.+/);
   await yamlTable.click();
+  await expect(yamlTable).toHaveClass(/is-review-element-selected/);
+  await expect(page.locator('#review-new-comment')).toBeEnabled();
+  await page.locator('#markdown-preview h1').click();
   await expect(page.locator('#review-new-comment')).toBeDisabled();
 
   const image = page.locator('#markdown-preview img[alt="Reference image"]');
@@ -327,6 +347,7 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
   await expect(page.locator('#review-new-comment')).toBeDisabled();
 
   for (const [selector, clickSelector, text] of [
+    ['#markdown-preview .frontmatter-table', '#markdown-preview .frontmatter-table', 'YAML comment.'],
     ['#markdown-preview img[alt="Reference image"]', '#markdown-preview img[alt="Reference image"]', 'Image comment.'],
     ['#markdown-preview mjx-container', '#markdown-preview mjx-container', 'Math comment.'],
     ['#markdown-preview .diagram-viewer', '#markdown-preview .diagram-viewer svg', 'Diagram comment.']
@@ -341,8 +362,8 @@ test('comments on images, rendered math, diagrams, and resolves without empty cl
     await page.locator('#review-feedback-submit').click();
   }
 
-  await expect(page.locator('.review-thread')).toHaveCount(3);
-  await expect(page.locator('.review-comment-element')).toHaveCount(3);
+  await expect(page.locator('.review-thread')).toHaveCount(4);
+  await expect(page.locator('.review-comment-element')).toHaveCount(4);
   const activeCard = page.locator('.review-thread').filter({ hasText: 'Math comment.' });
   await activeCard.click();
   await activeCard.locator('[data-review-action="toggle-resolved"]').click();
