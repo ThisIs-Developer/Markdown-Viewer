@@ -225,10 +225,9 @@ test('dedicated Trash restores, permanently deletes, and empties selected data',
 
   const restoreRow = page.locator('.trash-item', { hasText: 'Restore from Trash' });
   await restoreRow.locator('input').check();
-  await page.locator('#trash-restore-button').click();
-  await expect(page.locator('#document-confirm-modal-title')).toContainText('Restore from Trash');
   const reloadPromise = page.waitForEvent('load');
-  await page.locator('#document-confirm-modal-confirm').click();
+  await page.locator('#trash-restore-button').click();
+  await expect(page.locator('#document-confirm-modal')).not.toBeVisible();
   await reloadPromise;
   await waitForAppReady(page);
   expect(JSON.stringify(await storedDocuments(page))).toContain('Restore from Trash');
@@ -239,7 +238,9 @@ test('dedicated Trash restores, permanently deletes, and empties selected data',
   const deleteRow = page.locator('.trash-item', { hasText: 'Delete from Trash' });
   await deleteRow.locator('input').check();
   await page.locator('#trash-delete-button').click();
-  await expect(page.locator('#document-confirm-modal-description')).toContainText('cannot be undone');
+  await expect(page.locator('#document-confirm-modal-description')).toHaveText(
+    '“Delete from Trash” will be permanently removed from Trash immediately. This action cannot be undone.'
+  );
   await page.locator('#document-confirm-modal-cancel').click();
   await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
   await expect(deleteRow.locator('input')).toBeChecked();

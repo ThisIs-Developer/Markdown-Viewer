@@ -11606,34 +11606,29 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 #trash-modal .trash-modal-box {
-  width: min(92vw, 640px);
-  max-width: 640px;
+  width: min(92vw, 560px);
+  max-width: 560px;
 }
 
 .trash-modal-body {
   display: flex;
-  min-height: 240px;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .trash-retention-note {
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 10px 11px;
-  border: 1px solid var(--info-note-border);
-  border-radius: 9px;
-  background: var(--info-note-bg);
-  color: var(--info-note-text);
+  align-items: center;
+  gap: 7px;
+  color: var(--text-secondary);
   font-size: var(--ui-font-md);
   line-height: 1.45;
 }
 
 .trash-retention-note i {
   flex: 0 0 auto;
-  margin-top: 2px;
-  color: var(--info-note-icon);
+  color: var(--text-secondary);
+  font-size: var(--ui-icon-size-md);
 }
 
 .trash-retention-note p {
@@ -11665,8 +11660,8 @@ html[data-theme="dark"] .mermaid svg {
 
 .trash-list {
   display: grid;
-  max-height: min(42vh, 340px);
-  gap: 6px;
+  max-height: min(42vh, 320px);
+  gap: 5px;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 2px;
@@ -11681,11 +11676,11 @@ html[data-theme="dark"] .mermaid svg {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
-  padding: 9px 10px;
+  padding: 8px 9px;
   border: 1px solid var(--border-color);
-  border-radius: 9px;
+  border-radius: 8px;
   background: var(--bg-color);
   color: var(--text-color);
   cursor: pointer;
@@ -11716,9 +11711,9 @@ html[data-theme="dark"] .mermaid svg {
 .trash-item-icon {
   display: inline-grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
   background: var(--button-bg);
   color: var(--text-secondary);
 }
@@ -11765,7 +11760,7 @@ html[data-theme="dark"] .mermaid svg {
 
 .trash-empty-state {
   display: grid;
-  min-height: 150px;
+  min-height: 130px;
   place-items: center;
   align-content: center;
   gap: 5px;
@@ -11795,14 +11790,23 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .trash-modal-actions {
+  align-items: center;
   flex-wrap: wrap;
 }
 
-.trash-modal-actions .reset-modal-btn {
+.trash-modal-actions .reset-modal-btn,
+.trash-primary-actions {
   display: inline-flex;
   align-items: center;
+}
+
+.trash-modal-actions .reset-modal-btn {
   justify-content: center;
   gap: 7px;
+}
+
+.trash-primary-actions {
+  gap: 8px;
 }
 
 .trash-empty-action {
@@ -12473,6 +12477,10 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
   .trash-modal-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trash-primary-actions {
+    display: contents;
   }
 
   .trash-modal-actions .reset-modal-btn {

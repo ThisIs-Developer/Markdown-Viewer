@@ -191,13 +191,7 @@ test('Explorer supports modifier selection, contextual bulk delete, and selectio
 
   await rows.nth(1).click({ button: 'right' });
   await page.locator('.document-menu-context.open').getByRole('menuitem', { name: 'Delete 3 selected items' }).click();
-  await expect(page.locator('#document-confirm-modal')).toBeVisible();
-  await expect(page.locator('#document-confirm-modal-title')).toHaveText('Delete 3 selected items?');
-  await page.locator('#document-confirm-modal-cancel').click();
-
-  await rows.nth(1).click({ button: 'right' });
-  await page.locator('.document-menu-context.open').getByRole('menuitem', { name: 'Delete 3 selected items' }).click();
-  await page.locator('#document-confirm-modal-confirm').click();
+  await expect(page.locator('#document-confirm-modal')).not.toBeVisible();
   await expect(page.locator('.document-tree-row[data-tree-type="document"]:not(.document-tree-temporary)')).toHaveCount(0);
 
   await page.locator('#document-tree').evaluate(tree => tree.dispatchEvent(new MouseEvent('click', { bubbles: true })));

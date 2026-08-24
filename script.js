@@ -1371,7 +1371,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       const message = error && error.message ? error.message : 'Unable to restore the selected file.';
       setTrashModalError(message);
       setTrashModalBusy(false);
-      reopenTrashModalAfterConfirmation({ preserveSelection: true, errorMessage: message });
     }
   }
 
@@ -5429,14 +5428,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           deleteTab(tab.id);
           return;
         }
-        openDocumentConfirmation({
-          title: 'Delete “' + String(tab.title || 'Untitled') + '”?',
-          description: tab.workspaceId === SECRET_WORKSPACE_ID
-            ? 'The encrypted document will move to Trash and be permanently deleted after 30 days.'
-            : 'The document will move to Trash and be permanently deleted after 30 days.',
-          confirmText: 'Delete',
-          onConfirm: function() { deleteTab(tab.id); }
-        });
+        void deleteTab(tab.id);
       }
     });
     return actions;
@@ -5523,28 +5515,33 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (movedDocumentCount) {
       description += ' ' + movedDocumentCount + ' file' + (movedDocumentCount === 1 ? '' : 's') + ' inside selected folders will move to the workspace root.';
     }
+    const performDelete = async function() {
+      const rehomedIds = [];
+      tabs.forEach(function(tab) {
+        if (folderIds.has(tab.folderId) && !documentIds.includes(tab.id)) {
+          tab.folderId = null;
+          rehomedIds.push(tab.id);
+        }
+      });
+      documentOrganization.folders = documentOrganization.folders.filter(function(folder) { return !folderIds.has(folder.id); });
+      if (folderIds.has(documentOrganization.ui.lastFolderId)) documentOrganization.ui.lastFolderId = null;
+      saveDocumentOrganization();
+      for (const tabId of documentIds.slice()) await deleteTab(tabId);
+      selectedDocumentTreeIds.clear();
+      documentTreeSelectionAnchor = null;
+      if (rehomedIds.length) saveTabsToStorage(tabs, rehomedIds);
+      renderTabBar(tabs, activeTabId);
+      announceToScreenReader(entities.length + ' Explorer items deleted.');
+    };
+    if (!selectedFolderIds.size) {
+      void performDelete();
+      return;
+    }
     openDocumentConfirmation({
       title: 'Delete ' + entities.length + ' selected items?',
       description: description,
       confirmText: 'Delete selected items',
-      onConfirm: async function() {
-        const rehomedIds = [];
-        tabs.forEach(function(tab) {
-          if (folderIds.has(tab.folderId) && !documentIds.includes(tab.id)) {
-            tab.folderId = null;
-            rehomedIds.push(tab.id);
-          }
-        });
-        documentOrganization.folders = documentOrganization.folders.filter(function(folder) { return !folderIds.has(folder.id); });
-        if (folderIds.has(documentOrganization.ui.lastFolderId)) documentOrganization.ui.lastFolderId = null;
-        saveDocumentOrganization();
-        for (const tabId of documentIds.slice()) await deleteTab(tabId);
-        selectedDocumentTreeIds.clear();
-        documentTreeSelectionAnchor = null;
-        if (rehomedIds.length) saveTabsToStorage(tabs, rehomedIds);
-        renderTabBar(tabs, activeTabId);
-        announceToScreenReader(entities.length + ' Explorer items deleted.');
-      }
+      onConfirm: performDelete
     });
   }
 
@@ -11832,7 +11829,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     const idx = tabs.findIndex(function(t) { return t.id === tabId; });
     if (idx === -1) return;
     const tab = tabs[idx];
+    const wasActive = activeTabId === tabId;
+    const splitPartnerId = wasActive ? secondarySplitTabId : null;
+    if (wasActive) saveCurrentTabState();
+    saveSecondarySplitState();
     if (!isTemporaryDocument(tab) && tab.workspaceId !== SECRET_WORKSPACE_ID && workspaceStorage && !isPrivateStorageMode()) {
+      const saved = await _flushTabsToStorage(tabs);
+      if (!saved) {
+        showAppToast('The latest document changes could not be saved, so the file was not moved to Trash.', {
+          tone: 'error',
+          title: 'Delete cancelled'
+        });
+        return false;
+      }
       try {
         await workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision });
       } catch (error) {
@@ -11851,14 +11860,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         return false;
       }
     }
-    const wasActive = activeTabId === tabId;
-    const splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) {
-      saveCurrentTabState();
       closeReviewComposer();
       clearReviewDecorations();
     }
-    saveSecondarySplitState();
     if (secondarySplitTabId === tabId || splitPartnerId) {
       closeDocumentSplitView({ silent: true, renderTabs: false });
     }
@@ -22091,23 +22096,18 @@ ${selector} .arrowheadPath {
     trashRestoreButton.addEventListener('click', function() {
       const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
       if (!selected) return;
-      openDocumentConfirmation({
-        title: 'Restore “' + String(selected.dataset.trashTitle || 'deleted file') + '”?',
-        description: 'The file will be restored without overwriting an existing document. An encrypted snapshot preserves the current Secret Workspace before replacement.',
-        confirmText: 'Restore',
-        onConfirm: function() { restoreSelectedTrashItem(); },
-        onCancel: function() { reopenTrashModalAfterConfirmation({ preserveSelection: true }); }
-      });
+      void restoreSelectedTrashItem();
     });
   }
   if (trashDeleteButton) {
     trashDeleteButton.addEventListener('click', function() {
       const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
       if (!selected) return;
+      const filename = String(selected.dataset.trashTitle || 'deleted file');
       openDocumentConfirmation({
-        title: 'Permanently delete “' + String(selected.dataset.trashTitle || 'deleted file') + '”?',
-        description: 'This removes the selected file from Trash immediately. This action cannot be undone.',
-        confirmText: 'Delete permanently',
+        title: 'Permanently delete “' + filename + '”?',
+        description: '“' + filename + '” will be permanently removed from Trash immediately. This action cannot be undone.',
+        confirmText: 'Delete Permanently',
         onConfirm: function() { permanentlyDeleteSelectedTrashItem(); },
         onCancel: function() { reopenTrashModalAfterConfirmation({ preserveSelection: true }); }
       });
