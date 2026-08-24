@@ -935,6 +935,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const trashEmptyButton = document.getElementById("trash-empty-button");
   const trashModalError = document.getElementById("trash-modal-error");
   let trashModalBusy = false;
+  let trashSelectionAnchorId = '';
   const saveStatus = document.getElementById("save-status");
   const saveStatusIcon = document.getElementById("save-status-icon");
   const saveStatusText = document.getElementById("save-status-text");
@@ -1230,6 +1231,48 @@ document.addEventListener("DOMContentLoaded", async function () {
     return Array.from(trashList.querySelectorAll('.trash-item:not([hidden]) input[name="trash-selected-item"]'));
   }
 
+  function selectTrashRange(targetInput, additive) {
+    const visibleInputs = getVisibleTrashInputs();
+    const targetIndex = visibleInputs.indexOf(targetInput);
+    const anchorIndex = visibleInputs.findIndex(function(input) {
+      return input.value === trashSelectionAnchorId;
+    });
+    if (!additive) {
+      trashList.querySelectorAll('input[name="trash-selected-item"]').forEach(function(input) {
+        input.checked = false;
+      });
+    }
+    if (targetIndex < 0 || anchorIndex < 0) {
+      targetInput.checked = true;
+      trashSelectionAnchorId = targetInput.value;
+      updateTrashSelectionState();
+      return;
+    }
+    const first = Math.min(anchorIndex, targetIndex);
+    const last = Math.max(anchorIndex, targetIndex);
+    visibleInputs.slice(first, last + 1).forEach(function(input) {
+      input.checked = true;
+    });
+    updateTrashSelectionState();
+  }
+
+  function handleTrashItemSelection(input, event) {
+    const additive = Boolean(event.ctrlKey || event.metaKey);
+    if (event.shiftKey) {
+      selectTrashRange(input, additive);
+      return;
+    }
+    if (!additive) {
+      trashList.querySelectorAll('input[name="trash-selected-item"]').forEach(function(candidate) {
+        candidate.checked = candidate === input;
+      });
+    } else {
+      input.checked = !input.checked;
+    }
+    trashSelectionAnchorId = input.value;
+    updateTrashSelectionState();
+  }
+
   function updateTrashSelectionState() {
     const selected = getSelectedTrashInputs();
     const restorable = selected.length > 0 && selected.every(function(input) {
@@ -1291,6 +1334,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renderTrashItems(items, selectedTrashIds) {
     if (!trashList) return;
     const selectedIds = new Set(Array.isArray(selectedTrashIds) ? selectedTrashIds : []);
+    if (trashSelectionAnchorId && !items.some(function(item) { return item.trashId === trashSelectionAnchorId; })) {
+      trashSelectionAnchorId = '';
+    }
     trashList.textContent = '';
     items.forEach(function(item) {
       const row = document.createElement('label');
@@ -1305,6 +1351,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       input.dataset.trashTitle = getTrashItemTitle(item);
       input.dataset.trashRestorable = item.restorable === false ? 'false' : 'true';
       input.checked = selectedIds.has(item.trashId);
+      input.addEventListener('click', function(event) {
+        event.stopPropagation();
+        if (event.shiftKey) {
+          selectTrashRange(input, Boolean(event.ctrlKey || event.metaKey));
+        } else {
+          trashSelectionAnchorId = input.value;
+          updateTrashSelectionState();
+        }
+      });
       input.addEventListener('change', updateTrashSelectionState);
 
       const icon = document.createElement('i');
@@ -1324,6 +1379,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       expiry.append(clock, remaining);
 
       row.append(input, icon, title, expiry);
+      row.addEventListener('click', function(event) {
+        if (event.target === input) return;
+        event.preventDefault();
+        handleTrashItemSelection(input, event);
+        input.focus({ preventScroll: true });
+      });
       row.classList.toggle('is-unrestorable', item.restorable === false);
       if (item.restorable === false) row.title = 'Recovery data is incomplete; this item is kept until manually deleted.';
       trashList.appendChild(row);
@@ -1358,7 +1419,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!trashModal) return;
     const settings = options || {};
     if (opener && !trashModal.contains(opener)) trashModalOpener = opener;
-    if (!settings.preserveSelection && trashSearchInput) trashSearchInput.value = '';
+    if (!settings.preserveSelection) {
+      trashSelectionAnchorId = '';
+      if (trashSearchInput) trashSearchInput.value = '';
+    }
     setTrashModalError('');
     const description = document.getElementById('trash-modal-description');
     if (description) {

@@ -171,6 +171,72 @@ test('Trash maintenance failure never blocks workspace initialization', async ({
   expect(result.documentCount).toBeGreaterThan(0);
 });
 
+test('Trash supports desktop Ctrl-click and Shift-click selection', async ({ page }) => {
+  await openApp(page);
+  await page.evaluate(async () => {
+    const storage = new window.MarkdownWorkspaceStorage();
+    await storage.init();
+    await storage.emptyTrash();
+    const documents = Array.from({ length: 6 }, (_, index) => ({
+      id: 'trash_selection_' + (index + 1),
+      title: 'Selection item ' + (index + 1),
+      content: '# Selection item ' + (index + 1),
+      contentLoaded: true,
+      workspaceId: 'workspace_default',
+      folderId: null,
+      isOpen: false,
+      _storageRevision: 0
+    }));
+    await storage.saveDocuments(documents, null, {
+      changedIds: documents.map(document => document.id),
+      forceContent: true
+    });
+    for (const document of documents) {
+      await storage.deleteDocument(document.id, { expectedRevision: document._storageRevision });
+    }
+  });
+
+  await page.locator('#sidebar-trash-button').click();
+  const rows = page.locator('.trash-item');
+  await expect(rows).toHaveCount(6);
+  const titles = await rows.locator('.trash-item-title').allTextContents();
+  const selectedTitles = () => page.locator('.trash-item input:checked').evaluateAll(inputs =>
+    inputs.map(input => input.dataset.trashTitle)
+  );
+
+  await rows.nth(1).locator('.trash-item-title').click();
+  expect(await selectedTitles()).toEqual([titles[1]]);
+
+  await rows.nth(4).locator('.trash-item-title').click({ modifiers: ['Control'] });
+  expect(await selectedTitles()).toEqual([titles[1], titles[4]]);
+
+  await rows.nth(4).locator('.trash-item-title').click({ modifiers: ['Control'] });
+  expect(await selectedTitles()).toEqual([titles[1]]);
+
+  await rows.nth(1).locator('.trash-item-title').click();
+  await rows.nth(4).locator('.trash-item-title').click({ modifiers: ['Shift'] });
+  expect(await selectedTitles()).toEqual(titles.slice(1, 5));
+  await expect(rows.nth(4).locator('input')).toBeFocused();
+
+  await rows.nth(0).locator('.trash-item-title').click({ modifiers: ['Control'] });
+  expect(await selectedTitles()).toEqual(titles.slice(0, 5));
+
+  await rows.nth(3).locator('.trash-item-title').click({ modifiers: ['Control'] });
+  expect(await selectedTitles()).toEqual([titles[0], titles[1], titles[2], titles[4]]);
+
+  await rows.nth(5).locator('.trash-item-title').click();
+  expect(await selectedTitles()).toEqual([titles[5]]);
+
+  await rows.nth(2).locator('.trash-item-title').click({ modifiers: ['Shift'] });
+  expect(await selectedTitles()).toEqual(titles.slice(2, 6));
+
+  await rows.nth(0).locator('input').click();
+  expect(await selectedTitles()).toEqual([titles[0], ...titles.slice(2, 6)]);
+
+  await rows.nth(3).locator('input').click({ modifiers: ['Shift'] });
+  expect(await selectedTitles()).toEqual(titles.slice(0, 4));
+});
+
 test('dedicated Trash restores, permanently deletes, and empties selected data', async ({ page }) => {
   await openApp(page);
   await page.evaluate(async () => {
