@@ -30,7 +30,9 @@ test('Explorer labels and sidebar toggle describe the next action', async ({ pag
 
 test('application header keeps its height while showing the compact product identity', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.locator('.app-brand-icon')).toHaveCount(0);
+  await expect(page.locator('.app-brand-icon')).toHaveCount(1);
+  await expect(page.locator('.app-brand-icon')).toHaveAttribute('width', '32');
+  await expect(page.locator('.app-brand-icon')).toHaveAttribute('height', '32');
   await expect(page.locator('.app-brand-title-row h1')).toContainText('Markdown Viewer');
   await expect(page.locator('.app-brand-subtitle')).toHaveText('Write. Preview. Share.');
 

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openApp, setEditorContent, storedDocuments, stubClipboard } = require('../helpers/app');
+const { openApp, readWorkspaceStore, setEditorContent, storedDocuments, stubClipboard } = require('../helpers/app');
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -181,6 +181,7 @@ test('header groups document actions before application preferences', async ({ p
   await expect(settings.locator('#languageDropdown')).toBeVisible();
   await expect(settings.locator('#private-mode-toggle')).toBeVisible();
   await expect(settings.locator('#storage-settings-button')).toContainText('Storage and Backup');
+  await expect(settings.locator('#trash-settings-button')).toContainText('Trash');
   await expect(settings.locator('#tab-reset-btn')).toContainText('Reset workspace');
   await settings.locator('#theme-toggle').click();
   await expect(settings.locator('#theme-toggle')).toContainText('Appearance');
@@ -248,7 +249,12 @@ test('closing a tab keeps the document in Files and reopening restores the tab',
   await reopenedRow.hover();
   await reopenedRow.locator('.document-menu-btn').click();
   await page.locator('.document-menu-dropdown.open [data-action="delete"]').click();
+  await expect(page.locator('#document-confirm-modal')).not.toBeVisible();
   await expect(reopenedRow).toHaveCount(0);
+  const trash = await readWorkspaceStore(page, 'trash');
+  expect(trash).toEqual(expect.arrayContaining([
+    expect.objectContaining({ documentId: closedTabId, content: '# Kept document' })
+  ]));
 });
 
 test('reopening the only closed tab restores the word/char/reading-time stats', async ({ page }) => {

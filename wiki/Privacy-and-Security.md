@@ -27,10 +27,13 @@ Markdown Viewer is local-first: normal editing, Preview rendering, local file im
 | Interface language | `app-lang` | Local browser value; restored in prepared desktop use where available |
 | Find and Replace docking preference | `find-replace-docked` | Local browser value; restored in prepared desktop use where available |
 | Private mode preference | `markdownViewerPrivateMode` | Remains locally so the mode survives reload |
+| Deleted documents and encrypted recovery records | IndexedDB `trash` store | Recoverable records under `.markdown-viewer/trash` in the vault |
 
 Temporary Share Snapshot and Live Share participant tabs are removed before normal tab persistence. Opening someone else's link therefore does not silently add that temporary document to the saved Workspace.
 
 Browser storage quotas and user-cleared site data still apply. The application cannot recover data after the browser, operating system, user, or storage policy deletes it.
+
+Deleted normal documents and encrypted Secret Workspace recovery records remain in the application Trash for 30 days. Users can restore one item, permanently delete one item, or empty Trash after an explicit confirmation. Automatic cleanup requires a valid deletion timestamp and a recognized, structurally valid Trash record; missing, corrupt, or future-format records are retained rather than guessed at and deleted. Trash is local recovery storage, not a backup, and is excluded from exported workspace ZIP files.
 
 ## Private Mode, Reset Workspace, and Secret Workspace
 

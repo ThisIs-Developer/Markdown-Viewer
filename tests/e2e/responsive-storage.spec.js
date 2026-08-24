@@ -115,6 +115,15 @@ test('private mode pauses writes without deleting existing saved documents', asy
   await page.locator('#private-mode-toggle').click();
   await expect(page.locator('#private-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#private-mode-description')).toHaveText('Session activity is not persisted');
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'true');
+  await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'private');
+  await expect(page.locator('#save-status')).toHaveClass(/is-private/);
+  await expect(page.locator('#save-status-text')).toHaveText('Private mode is on');
+  await expect(page.locator('#save-status-icon')).toHaveClass(/lucide-hat-glasses/);
+  await expect(page.locator('#save-status')).toHaveCSS('color', await resolveCssColor(page, '--color-danger-fg'));
+  await expect(page.locator('#save-status')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(page.locator('#save-status')).toHaveCSS('border-top-width', '0px');
+  expect(await page.evaluate(() => localStorage.getItem('markdownViewerPrivateMode'))).toBeNull();
   await page.keyboard.press('Escape');
 
   await setEditorContent(page, '# Private Content\n\nDo not store this.');
@@ -123,6 +132,42 @@ test('private mode pauses writes without deleting existing saved documents', asy
   const stored = JSON.stringify(await storedDocuments(page));
   expect(stored).toContain('Persisted Before Private Mode');
   expect(stored).not.toContain('Private Content');
+  await expect(page.locator('#save-status-text')).toHaveText('Private mode is on');
+
+  await page.reload();
+  await waitForAppReady(page);
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'false');
+  await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'saved');
+  await expect(page.locator('#save-status-text')).toHaveText('All changes saved');
+  await expect(page.locator('#markdown-editor')).toHaveValue(/Persisted Before Private Mode/);
+  await expect(page.locator('#markdown-editor')).not.toHaveValue(/Private Content/);
+});
+
+test('private mode resets when its tab is closed and reopened', async ({ page }) => {
+  await openApp(page);
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  await page.locator('#private-mode-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'true');
+  expect(await page.evaluate(() => localStorage.getItem('markdownViewerPrivateMode'))).toBeNull();
+
+  const context = page.context();
+  await page.close();
+  const reopenedPage = await context.newPage();
+  await openApp(reopenedPage);
+  await expect(reopenedPage.locator('html')).toHaveAttribute('data-private-mode', 'false');
+  await expect(reopenedPage.locator('#save-status-text')).toHaveText('All changes saved');
+});
+
+test('legacy persisted private mode flags are cleared instead of restored', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('markdownViewerPrivateMode', 'true');
+  });
+  await openApp(page);
+
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'false');
+  await expect(page.locator('#private-mode-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#save-status-text')).toHaveText('All changes saved');
+  expect(await page.evaluate(() => localStorage.getItem('markdownViewerPrivateMode'))).toBeNull();
 });
 
 test('reset workspace permanently deletes documents and blocks repeated clicks', async ({ page }) => {
@@ -135,8 +180,8 @@ test('reset workspace permanently deletes documents and blocks repeated clicks',
     await storage.init();
     await storage.saveSecretRecord('reset_secret', {
       version: 2,
-      iv: 'cmVzZXQtaXY=',
-      ciphertext: 'cmVzZXQtY2lwaGVydGV4dA=='
+      iv: 'MDEyMzQ1Njc4OWFi',
+      ciphertext: 'MDEyMzQ1Njc4OWFiY2RlZg=='
     });
     await storage.setSecretManifest({
       version: 2,
@@ -185,12 +230,12 @@ test('workspace backup ZIP restores documents and folder organization', async ({
     await storage.init();
     await storage.saveSecretRecord('encrypted_test', {
       version: 2,
-      iv: 'c2FtZS1pdg==',
-      ciphertext: 'c2FtZS1jaXBoZXJ0ZXh0'
+      iv: 'MDEyMzQ1Njc4OWFi',
+      ciphertext: 'MDEyMzQ1Njc4OWFiY2RlZg=='
     });
     await storage.setSecretManifest({
       version: 2,
-      salt: 'c2FtZS1zYWx0',
+      salt: 'MDEyMzQ1Njc4OWFiY2RlZg==',
       iterations: 250000,
       documentCount: 1,
       folderCount: 0
@@ -236,7 +281,7 @@ test('workspace backup ZIP restores documents and folder organization', async ({
     await storage.init();
     const records = await storage.listSecretRecords();
     return records.find(record => record.id === 'encrypted_test')?.envelope?.ciphertext || '';
-  })).toBe('c2FtZS1jaXBoZXJ0ZXh0');
+  })).toBe('MDEyMzQ1Njc4OWFiY2RlZg==');
 });
 
 test('legacy localStorage workspaces migrate once into per-document storage', async ({ page }) => {
@@ -289,7 +334,7 @@ test('workspace storage accepts more than the former 50-document limit', async (
   await expect(page.locator('#storage-usage-value')).not.toContainText('Browser quota');
   await expect(page.locator('#storage-persistence-value')).toContainText(/Best-effort browser storage|Persistent browser storage/);
   await expect(page.locator('#storage-recovery-note')).toHaveText(
-    "Clearing this site's browser data will delete local documents."
+    "Deleted files stay in Trash for 30 days. Clearing this site's browser data removes documents and Trash immediately."
   );
   await expect(page.locator('#storage-settings-description')).toHaveCount(0);
   await expect(page.locator('#storage-request-persistence')).toHaveCount(0);
@@ -314,6 +359,142 @@ test('workspace storage accepts more than the former 50-document limit', async (
   expect(noteStyles.recovery).toEqual(['rgb(255, 248, 197)', 'rgb(212, 167, 44)', 'rgb(99, 60, 1)']);
   expect(noteStyles.secure).toEqual(['rgb(221, 244, 255)', 'rgb(84, 174, 255)', 'rgb(5, 80, 174)']);
   await expect(page.locator('#storage-backup-options-modal .reset-modal-box')).toHaveCSS('width', '420px');
+});
+
+test('dedicated Trash uses the shared application type scale at compact widths', async ({ page }) => {
+  await page.setViewportSize({ width: 617, height: 531 });
+  await openApp(page);
+  await page.evaluate(async () => {
+    const storage = new window.MarkdownWorkspaceStorage();
+    await storage.init();
+    const document = {
+      id: 'typography_trash_document',
+      title: 'Typography trash document',
+      content: '# Recovery option typography',
+      contentLoaded: true,
+      workspaceId: 'workspace_default',
+      folderId: null,
+      isOpen: false,
+      _storageRevision: 0
+    };
+    await storage.saveDocuments([document], null, {
+      changedIds: [document.id],
+      forceContent: true
+    });
+    await storage.deleteDocument(document.id, {
+      expectedRevision: document._storageRevision
+    });
+  });
+
+  await page.locator('#mobile-menu-toggle').click();
+  await page.locator('[data-mobile-menu-section-toggle]', { hasText: 'Settings' }).click();
+  await page.locator('#mobile-trash-settings-button').click();
+  await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
+  await expect(page.locator('.trash-item')).toHaveCount(1);
+  await expect(page.locator('#trash-modal-description')).toContainText('permanently deleted after 30 days');
+  await expect(page.locator('#trash-search')).toBeVisible();
+  await expect(page.locator('#trash-select-all')).toBeEnabled();
+  await expect(page.locator('#trash-restore-button')).toBeDisabled();
+  await expect(page.locator('#trash-delete-button')).toBeDisabled();
+  await page.locator('.trash-item input').check();
+  await expect(page.locator('#trash-selection-status')).toHaveText('1 selected');
+  await expect(page.locator('#trash-select-all')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#trash-restore-button')).toBeEnabled();
+  await expect(page.locator('#trash-delete-button')).toBeEnabled();
+  await expect(page.locator('.trash-summary #trash-restore-button')).toHaveCount(1);
+  await expect(page.locator('.trash-summary #trash-delete-button')).toHaveCount(1);
+  expect(await page.locator('.trash-summary .github-import-toolbar-actions > button').evaluateAll(buttons => buttons.map(button => button.id))).toEqual([
+    'trash-select-all',
+    'trash-delete-button',
+    'trash-restore-button'
+  ]);
+  await expect(page.locator('.trash-modal-actions .reset-modal-btn')).toHaveText(['Cancel', 'Empty Trash']);
+
+  const typography = await page.evaluate(() => {
+    const read = selector => {
+      const style = getComputedStyle(document.querySelector(selector));
+      return { fontFamily: style.fontFamily, fontSize: style.fontSize };
+    };
+    return {
+      modalTitle: read('#trash-modal-title'),
+      retentionNote: read('#trash-modal-description'),
+      itemTitle: read('.trash-item-title'),
+      itemExpiry: read('.trash-item-expiry'),
+      summaryCount: read('.trash-summary .github-import-selected-count'),
+      restoreButton: read('#trash-restore-button'),
+      githubToolbarButton: read('#github-import-select-all'),
+      closeButton: read('#trash-modal-close')
+    };
+  });
+
+  expect(typography.modalTitle.fontSize).toBe('13px');
+  expect(typography.itemTitle.fontSize).toBe('12px');
+  expect(typography.itemExpiry.fontSize).toBe('11px');
+  expect(typography.summaryCount.fontSize).toBe('11px');
+  expect(typography.restoreButton).toEqual(typography.githubToolbarButton);
+  for (const role of [
+    'retentionNote',
+    'closeButton'
+  ]) {
+    expect(typography[role].fontSize).toBe('12px');
+    expect(typography[role].fontFamily).toBe(typography.retentionNote.fontFamily);
+  }
+  await expect(page.locator('.trash-item-type, .trash-item-meta, .trash-item-copy')).toHaveCount(0);
+  await expect(page.locator('.trash-item-expiry')).toHaveText('30 days');
+  await expect(page.locator('.trash-item-expiry .lucide-clock-3')).toBeVisible();
+  await expect(page.locator('.trash-item-icon')).toHaveClass(/lucide-file-text/);
+  const fileIcon = await page.locator('.trash-item-icon').evaluate(icon => ({
+    tagName: icon.tagName,
+    parentClass: icon.parentElement.className,
+    borderWidth: getComputedStyle(icon).borderWidth,
+    borderRadius: getComputedStyle(icon).borderRadius
+  }));
+  expect(fileIcon).toEqual({ tagName: 'I', parentClass: 'trash-item is-selected', borderWidth: '0px', borderRadius: '0px' });
+  await expect(page.locator('.trash-item-title')).toHaveCSS('font-weight', '400');
+  const sharedComponentStyles = await page.evaluate(() => {
+    const properties = ['alignItems', 'gap', 'padding', 'borderRadius', 'backgroundColor', 'borderColor', 'color', 'fontFamily', 'fontSize'];
+    const read = (selector, pseudo) => {
+      const style = getComputedStyle(document.querySelector(selector), pseudo);
+      return Object.fromEntries(properties.map(property => [property, style[property]]));
+    };
+    return {
+      retention: read('.trash-retention-note'),
+      storageRecovery: read('.storage-recovery-note:not(.trash-retention-note)'),
+      trashSummary: read('.trash-summary'),
+      githubToolbar: read('.github-import-selection-toolbar:not(.trash-summary)'),
+      trashCount: read('.trash-summary .github-import-selected-count'),
+      githubCount: read('#github-import-selected-count'),
+      trashSearch: read('#trash-search'),
+      githubSearch: read('#github-import-search'),
+      trashRestore: read('#trash-restore-button'),
+      githubSelectAll: read('#github-import-select-all')
+    };
+  });
+  expect(sharedComponentStyles.retention).toEqual(sharedComponentStyles.storageRecovery);
+  expect(sharedComponentStyles.trashSummary).toEqual(sharedComponentStyles.githubToolbar);
+  expect(sharedComponentStyles.trashCount).toEqual(sharedComponentStyles.githubCount);
+  expect(sharedComponentStyles.trashSearch).toEqual(sharedComponentStyles.githubSearch);
+  expect(sharedComponentStyles.trashRestore).toEqual(sharedComponentStyles.githubSelectAll);
+  await expect(page.locator('.trash-summary')).toHaveCSS('display', 'grid');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.locator('#trash-search')).toBeVisible();
+  await expect(page.locator('#trash-select-all')).toBeVisible();
+  await expect(page.locator('#trash-empty-button')).toBeVisible();
+  await expect(page.locator('#trash-restore-button')).toBeVisible();
+  await expect(page.locator('#trash-delete-button')).toBeVisible();
+  await expect(page.locator('#trash-modal-close')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  await page.setViewportSize({ width: 667, height: 375 });
+  for (const selector of ['#trash-search', '#trash-select-all', '#trash-empty-button', '#trash-restore-button', '#trash-delete-button', '#trash-modal-close']) {
+    await expect(page.locator(selector)).toBeVisible();
+  }
+  const modalBounds = await page.locator('#trash-modal .trash-modal-box').boundingBox();
+  expect(modalBounds.y).toBeGreaterThanOrEqual(0);
+  expect(modalBounds.y + modalBounds.height).toBeLessThanOrEqual(375);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test('storage and backup remains usable on phone portrait and landscape layouts', async ({ page }) => {
@@ -447,7 +628,8 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   expect(settingsOrder[1]).toContain('mobile-menu-language');
   expect(settingsOrder[2]).toBe('mobile-private-mode-toggle');
   expect(settingsOrder[3]).toBe('mobile-storage-settings-button');
-  expect(settingsOrder[4]).toBe('mobile-tab-reset-btn');
+  expect(settingsOrder[4]).toBe('mobile-trash-settings-button');
+  expect(settingsOrder[5]).toBe('mobile-tab-reset-btn');
   await expect(page.locator('#mobile-tab-reset-btn')).toBeVisible();
   await expect(page.locator('#mobile-about-button')).toBeVisible();
 

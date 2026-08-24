@@ -156,6 +156,9 @@
                             <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and backup">
                                 <i class="lucide lucide-box" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage and Backup</span><span class="app-menu-description">Back up or restore your workspace</span></span>
                             </button>
+                            <button id="trash-settings-button" class="settings-menu-item app-menu-item" type="button" title="Open Trash">
+                                <i class="lucide lucide-trash-2" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Trash</span><span class="app-menu-description">Restore or permanently delete files</span></span>
+                            </button>
                             <div class="settings-menu-divider" role="separator"></div>
                             <button class="settings-menu-item app-menu-item settings-menu-reset" id="tab-reset-btn" type="button" title="Reset workspace" aria-label="Reset workspace">
                                 <i class="lucide lucide-power" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Reset workspace</span><span class="app-menu-description">Permanently delete all workspace data</span></span>
@@ -311,6 +314,9 @@
                                         <button id="mobile-storage-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Storage and backup">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-box" aria-hidden="true"></i><span>Storage and Backup</span></span>
                                         </button>
+                                        <button id="mobile-trash-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Open Trash">
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-trash-2" aria-hidden="true"></i><span>Trash</span></span>
+                                        </button>
                                         <button id="mobile-tab-reset-btn" class="mobile-menu-item mobile-menu-reset" title="Reset workspace" aria-label="Reset workspace">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-power" aria-hidden="true"></i><span id="mobile-reset-label">Reset workspace</span></span>
                                         </button>
@@ -339,6 +345,9 @@
                 </button>
                 <button id="sidebar-new-folder" class="document-sidebar-icon-btn" type="button" aria-label="Create a folder" title="New folder">
                   <i class="lucide lucide-folder-plus" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-trash-button" class="document-sidebar-icon-btn" type="button" aria-label="Open Trash" title="Trash">
+                  <i class="lucide lucide-trash-2" aria-hidden="true"></i>
                 </button>
                 <button id="document-sidebar-collapse-all" class="document-sidebar-icon-btn" type="button" aria-label="Collapse all folders" title="Collapse all folders">
                   <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>
@@ -512,7 +521,7 @@
               </dl>
               <div class="storage-recovery-note">
                 <i class="lucide lucide-database-x" aria-hidden="true"></i>
-                <p id="storage-recovery-note">Deleted documents are moved to recoverable trash. Desktop edits keep recent history inside the vault.</p>
+                <p id="storage-recovery-note">Deleted files stay in Trash for 30 days. Clearing this site's browser data removes documents and Trash immediately.</p>
               </div>
               <p id="storage-settings-error" class="document-modal-error" role="alert" hidden></p>
             </div>
@@ -525,6 +534,58 @@
           </div>
         </div>
         <input id="storage-backup-file-input" type="file" accept=".zip,application/zip" hidden>
+
+        <!-- Trash Modal -->
+        <div id="trash-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="trash-modal-title" aria-describedby="trash-modal-description" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box trash-modal-box">
+            <div class="modal-header">
+              <p id="trash-modal-title" class="reset-modal-message">Trash</p>
+              <button type="button" class="modal-close-btn" id="trash-modal-close-icon" aria-label="Close Trash">
+                <i class="lucide lucide-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="modal-body trash-modal-body">
+              <div class="storage-recovery-note trash-retention-note">
+                <i class="lucide lucide-clock-3" aria-hidden="true"></i>
+                <p id="trash-modal-description">Deleted files are automatically and permanently deleted after 30 days.</p>
+              </div>
+              <div class="trash-summary github-import-selection-toolbar">
+                <label class="github-import-search" for="trash-search">
+                  <i class="lucide lucide-search" aria-hidden="true"></i>
+                  <input type="search" id="trash-search" placeholder="Search Trash" autocomplete="off" spellcheck="false">
+                </label>
+                <div class="github-import-selection-actions">
+                  <output class="github-import-selected-count" role="status" aria-live="polite">
+                    <i class="lucide lucide-check" aria-hidden="true"></i>
+                    <span id="trash-selection-status">0 selected</span>
+                  </output>
+                  <div class="github-import-toolbar-actions" role="group" aria-label="Trash selection actions">
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="trash-select-all" aria-label="Select all files" title="Select all files" aria-pressed="false" disabled>
+                      <i class="lucide lucide-check-check" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn trash-toolbar-delete" id="trash-delete-button" aria-label="Delete selected files permanently" title="Delete selected files permanently" disabled>
+                      <i class="lucide lucide-trash-2" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="trash-restore-button" aria-label="Restore selected files" title="Restore selected files" disabled>
+                      <i class="lucide lucide-undo-2" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="trash-list" class="trash-list" role="group" aria-label="Deleted files"></div>
+              <div id="trash-empty-state" class="trash-empty-state">
+                <i class="lucide lucide-trash-2" aria-hidden="true"></i>
+                <strong id="trash-empty-title">Trash is empty</strong>
+                <span id="trash-empty-description">Deleted files will appear here for 30 days.</span>
+              </div>
+              <p id="trash-modal-error" class="document-modal-error" role="alert" hidden></p>
+            </div>
+            <div class="reset-modal-actions trash-modal-actions">
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="trash-modal-close">Cancel</button>
+              <button type="button" class="reset-modal-btn reset-modal-confirm" id="trash-empty-button" disabled>Empty Trash</button>
+            </div>
+          </div>
+        </div>
 
         <!-- Workspace Backup Options Modal -->
         <div id="storage-backup-options-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="storage-backup-options-title" aria-describedby="storage-backup-options-description" aria-hidden="true" style="display:none;">

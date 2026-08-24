@@ -61,7 +61,7 @@ Storage used by the current implementation includes:
 | IndexedDB `documents` | Lightweight metadata for each normal Workspace document. |
 | IndexedDB `contents` | One content record per normal document, loaded only when opened. |
 | IndexedDB `secretRecords` | One encrypted object per Secret Workspace document plus an encrypted folder record. |
-| IndexedDB `trash` | Local records retained when normal documents are deleted. |
+| IndexedDB `trash` | Normal documents and encrypted Secret Workspace recovery records retained for 30 days after deletion. |
 | `markdownViewerDocumentOrganization` | Fixed workspace state, non-secret folders, active sidebar filter, sidebar width/collapse state, and the last non-secret creation location. |
 | IndexedDB `metadata` | Vault id, encrypted Secret Workspace manifest, and migration markers. |
 | `markdownViewerActiveTab` | The active tab id. |
@@ -72,7 +72,7 @@ Storage used by the current implementation includes:
 
 On the web, document data lives in IndexedDB while small preferences remain in `localStorage`. Existing monolithic `markdownViewerTabs` data is migrated once. On desktop, normal content is stored as individual Markdown files in `Documents/Markdown Viewer Vault/Workspace` by default; metadata, history, trash, journals, settings, and encrypted Secret Workspace objects live under the same durable vault.
 
-Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Storage and Backup** reports usage, separate normal and secret document counts, a logical browser storage location or fixed desktop vault path, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. Import permanently replaces the current workspace after confirmation. Backups exclude trash, desktop history, and recovery journals. Browser storage is best-effort by default and is shown as read-only status. **Reset workspace** permanently clears all local workspace data after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
+Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Trash** has its own responsive window for restoring or permanently deleting one item and emptying all items after confirmation. Valid records expire after 30 days; missing, corrupt, or unknown record shapes are preserved instead of automatically deleted. **Storage and Backup** reports usage, separate normal and secret document counts, a logical browser storage location or fixed desktop vault path, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. Import permanently replaces the current workspace after confirmation. Backups exclude trash, desktop history, and recovery journals. Browser storage is best-effort by default and is shown as read-only status. **Reset workspace** permanently clears all local workspace data after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
 
 ## Comments
 

@@ -5,6 +5,9 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- **Workspace data safety:** Replaced implicit full-workspace deletion with explicit document operations, added cross-tab revision conflicts with preserved copies, stopped writes after startup read failures, made browser backup and Secret Workspace replacement transactional, recovered interrupted edits and orphaned content, and journaled desktop file moves and index writes.
+- **Trash:** Replaced the embedded recovery selector with a compact responsive Trash window. Deleting normal and encrypted files moves them directly to recoverable Trash, Restore is immediate, and confirmations are reserved for permanent deletion. Valid expired records are purged automatically after 30 days; corrupt and unrecognized records are never auto-purged.
+
 ---
 
 ## v3.10.1
