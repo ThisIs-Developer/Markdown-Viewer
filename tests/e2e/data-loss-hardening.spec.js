@@ -341,6 +341,7 @@ test('IndexedDB fallback journal recovers a normal edit when localStorage is ful
 test('encrypted dirty journal restores the latest Secret Workspace edit after abrupt close', async ({ context, page }) => {
   await openApp(page);
   await page.locator('.document-tree-row[data-tree-id="workspace_secret"] .document-tree-main').click();
+  await expect(page.locator('#secret-workspace-key')).toBeFocused();
   await page.locator('#secret-workspace-key').fill('durable-secret-key');
   await page.locator('#secret-workspace-key-confirm').fill('durable-secret-key');
   await page.locator('#secret-workspace-modal-confirm').click();
@@ -365,6 +366,7 @@ test('encrypted dirty journal restores the latest Secret Workspace edit after ab
   const reopened = await context.newPage();
   await openApp(reopened);
   await reopened.locator('.document-tree-row[data-tree-id="workspace_secret"] .document-tree-main').click();
+  await expect(reopened.locator('#secret-workspace-key')).toBeFocused();
   await reopened.locator('#secret-workspace-key').fill('durable-secret-key');
   await reopened.locator('#secret-workspace-modal-confirm').click();
   await expect(reopened.locator('#secret-workspace-modal')).toBeHidden();

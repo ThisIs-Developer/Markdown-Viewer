@@ -233,6 +233,7 @@ test('closing a tab keeps the document in Files and reopening restores the tab',
   await page.locator('#tab-new-btn').click();
   const closedTabId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
   await setEditorContent(page, '# Kept document');
+  await expect.poll(async () => JSON.stringify(await storedDocuments(page))).toContain('# Kept document');
   await page.locator('#tab-list .tab-item.active .tab-close-btn').click();
 
   await expect(page.locator(`.tab-item[data-tab-id="${closedTabId}"]`)).toHaveCount(0);

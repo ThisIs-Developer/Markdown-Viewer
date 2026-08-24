@@ -25,18 +25,22 @@ const markedOptions = {
 
 const BLOCK_MATH_MARKER_PATTERN = /^\$\$/m;
 const BLOCK_MATH_PATTERN = /^\$\$[ \t]*\n?([\s\S]*?)\n?\$\$[ \t]*(?:\n|$)/;
+const INLINE_MATH_START_PATTERN = /\\(?:\$|\(|\[)|\$/;
 const DEFINITION_LIST_ITEM_PATTERN = /^:[ \t]+(.*)$/;
 const SUPERSCRIPT_PATTERN = /^\^(?!\s)([^^\n]*?\S)\^(?!\^)/;
 const SUBSCRIPT_PATTERN = /^~(?!~)(?!\s)([^~\n]*?\S)~(?!~)/;
 const HIGHLIGHT_PATTERN = /^==(?=\S)([\s\S]*?\S)==/;
 const MARKDOWN_LIST_MARKER_PATTERN = /^(\s*)(?:[-*+]\s+|\d+\.\s+|>\s+)/;
+const DEFINITION_LIST_DISALLOWED_TERM_PATTERN = /^[ \t]{0,3}(?:`{3,}|~{3,}|#{1,6}(?:[ \t]+|$)|<\/?[a-zA-Z][\w:-]*(?:\s|>|\/>))/;
 const EMPTY_LINE_PATTERN = /^\s*$/;
 
 let suppressFootnotePreprocess = false;
+let preserveExtendedMarkdownState = false;
 const footnoteDefinitions = new Map();
 const footnoteOrder = [];
 const footnoteRefCounts = new Map();
 const footnoteFirstRefId = new Map();
+const usedHeadingIds = new Set();
 let anonymousFootnoteCounter = 0;
 
 function escapeHtml(str) {
@@ -61,6 +65,7 @@ function resetExtendedMarkdownState() {
   footnoteOrder.length = 0;
   footnoteRefCounts.clear();
   footnoteFirstRefId.clear();
+  usedHeadingIds.clear();
   anonymousFootnoteCounter = 0;
 }
 
@@ -104,69 +109,7 @@ function renderDefinitionContent(content, options) {
     .join("");
 }
 
-function extractFootnoteDefinitions(markdown) {
-  const lines = markdown.split("\n");
-  const preservedLines = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const match = /^([ \t]{0,3})\[\^([^\]\n]+)\]:[ \t]*(.*)$/.exec(lines[index]);
-    if (!match) {
-      preservedLines.push(lines[index]);
-      index += 1;
-      continue;
-    }
-
-    const baseIndent = match[1] || "";
-    const id = match[2].trim();
-    const definitionLines = [match[3] || ""];
-    index += 1;
-
-    while (index < lines.length) {
-      const line = lines[index];
-      if (!line.startsWith(baseIndent)) break;
-      const lineAfterBase = line.slice(baseIndent.length);
-      const indentedMatch = /^(?: {2,}|\t)(.*)$/.exec(lineAfterBase);
-      if (indentedMatch) {
-        definitionLines.push(indentedMatch[1]);
-        index += 1;
-        continue;
-      }
-      if (lineAfterBase.trim() === "") {
-        const nextLine = lines[index + 1] || "";
-        const nextAfterBase = nextLine.startsWith(baseIndent) ? nextLine.slice(baseIndent.length) : "";
-        if (/^(?: {2,}|\t)/.test(nextAfterBase)) {
-          definitionLines.push("");
-          index += 1;
-          continue;
-        }
-      }
-      break;
-    }
-
-    footnoteDefinitions.set(id, definitionLines.join("\n").trim());
-  }
-
-  return preservedLines.join("\n");
-}
-
-function applyFootnotes(markdown) {
-  const markdownWithReferences = markdown.replace(/\[\^([^\]\n]+)\]/g, function(match, idText) {
-    const id = idText.trim();
-    if (!id) return match;
-    if (!footnoteOrder.includes(id)) footnoteOrder.push(id);
-
-    const refCount = (footnoteRefCounts.get(id) || 0) + 1;
-    footnoteRefCounts.set(id, refCount);
-
-    const normalizedId = normalizeFootnoteId(id);
-    const refId = `fnref-${normalizedId}${refCount > 1 ? `-${refCount}` : ""}`;
-    if (!footnoteFirstRefId.has(id)) footnoteFirstRefId.set(id, refId);
-
-    const noteNumber = footnoteOrder.indexOf(id) + 1;
-    return `<sup id="${escapeHtmlAttribute(refId)}" class="footnote-ref"><a href="#fn-${escapeHtmlAttribute(normalizedId)}" aria-label="Footnote ${noteNumber}">[${noteNumber}]</a></sup>`;
-  });
-
+function renderFootnotesSection() {
   const footnotesHtml = footnoteOrder
     .filter((id) => footnoteDefinitions.has(id))
     .map((id) => {
@@ -178,8 +121,123 @@ function applyFootnotes(markdown) {
     })
     .join("");
 
-  if (!footnotesHtml) return markdownWithReferences;
-  return `${markdownWithReferences}\n\n<section class="footnotes"><hr><ol>${footnotesHtml}</ol></section>`;
+  return footnotesHtml
+    ? `<section class="footnotes"><hr><ol>${footnotesHtml}</ol></section>`
+    : "";
+}
+
+function isEscapedCharacter(source, index) {
+  let backslashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function findClosingMathDelimiter(source, delimiter, startIndex) {
+  for (let index = startIndex; index <= source.length - delimiter.length; index += 1) {
+    if (source[index] === "\n") return -1;
+    if (source.startsWith(delimiter, index) && !isEscapedCharacter(source, index)) return index;
+  }
+  return -1;
+}
+
+function tokenizeDollarMath(source) {
+  if (source.startsWith("$$")) {
+    const closeIndex = findClosingMathDelimiter(source, "$$", 2);
+    if (closeIndex > 2) {
+      return { type: "inlineMath", raw: source.slice(0, closeIndex + 2), display: true };
+    }
+    return null;
+  }
+  if (source[0] !== "$" || !source[1] || /[\s$]/.test(source[1])) return null;
+  for (let index = 1; index < source.length; index += 1) {
+    if (source[index] === "\n") break;
+    if (source[index] !== "$" || isEscapedCharacter(source, index)) continue;
+    if (/\s/.test(source[index - 1]) || /\d/.test(source[index + 1] || "")) return null;
+    return { type: "inlineMath", raw: source.slice(0, index + 1), display: false };
+  }
+  return null;
+}
+
+function createUniqueHeadingId(raw) {
+  const baseId = String(raw || "")
+    .toLowerCase()
+    .trim()
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]/g, '')
+    .replace(/-+/g, '-') || 'heading';
+  let id = baseId;
+  let suffix = 0;
+  while (usedHeadingIds.has(id)) {
+    suffix += 1;
+    id = `${baseId}-${suffix}`;
+  }
+  usedHeadingIds.add(id);
+  return id;
+}
+
+function normalizeWorkerMarkmapFences(markdown) {
+  const lines = String(markdown || '').split(/\r?\n/);
+  const output = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const opening = lines[index].match(/^([ \t]{0,3})(`{3,}|~{3,})([ \t]*)(.*)$/);
+    const info = opening ? opening[4].trim() : '';
+    if (!opening || !/^markmap(?:\s|$)/i.test(info)) {
+      output.push(lines[index]);
+      index += 1;
+      continue;
+    }
+
+    const indent = opening[1];
+    const fence = opening[2];
+    const marker = fence[0];
+    const content = [];
+    let nestedFence = null;
+    let maxInnerFenceLength = fence.length;
+    let closeIndex = -1;
+
+    for (let scan = index + 1; scan < lines.length; scan += 1) {
+      const line = lines[scan];
+      const fenceMatch = line.match(/^[ \t]{0,3}(`{3,}|~{3,})([ \t]*.*)$/);
+      if (fenceMatch) {
+        const currentFence = fenceMatch[1];
+        const currentMarker = currentFence[0];
+        const tail = fenceMatch[2].trim();
+        if (currentMarker === marker) {
+          maxInnerFenceLength = Math.max(maxInnerFenceLength, currentFence.length);
+        }
+        if (nestedFence) {
+          if (currentMarker === nestedFence.marker && currentFence.length >= nestedFence.length && tail === '') {
+            nestedFence = null;
+          }
+        } else if (currentMarker === marker && currentFence.length >= fence.length && tail === '') {
+          closeIndex = scan;
+          break;
+        } else if (tail !== '') {
+          nestedFence = { marker: currentMarker, length: currentFence.length };
+        }
+      }
+      content.push(line);
+    }
+
+    if (closeIndex === -1) {
+      output.push(lines[index]);
+      index += 1;
+      continue;
+    }
+
+    const normalizedFence = marker.repeat(maxInnerFenceLength + 1);
+    output.push(`${indent}${normalizedFence}${opening[3]}${opening[4]}`);
+    output.push(...content);
+    output.push(`${indent}${normalizedFence}`);
+    index = closeIndex + 1;
+  }
+
+  return output.join('\n');
 }
 
 function configureMarked() {
@@ -199,7 +257,119 @@ function configureMarked() {
       return { type: "blockMath", raw: match[0], text: match[1] };
     },
     renderer(token) {
-      return `<div class="math-block">$$\n${token.text}\n$$</div>\n`;
+      return `<div class="math-block tex2jax_process">$$\n${escapeHtml(token.text)}\n$$</div>\n`;
+    },
+  };
+
+  const footnoteDefinitionExtension = {
+    name: "footnoteDefinition",
+    level: "block",
+    start(src) {
+      const match = src.match(/(?:^|\n)[ \t]{0,3}\[\^[^\]\n]+\]:/);
+      if (!match) return undefined;
+      return match.index + (match[0][0] === "\n" ? 1 : 0);
+    },
+    tokenizer(src) {
+      if (suppressFootnotePreprocess) return undefined;
+      const lines = src.split("\n");
+      const match = /^([ \t]{0,3})\[\^([^\]\n]+)\]:[ \t]*(.*)$/.exec(lines[0]);
+      if (!match) return undefined;
+      const baseIndent = match[1] || "";
+      const id = match[2].trim();
+      const definitionLines = [match[3] || ""];
+      const rawLines = [lines[0]];
+      let index = 1;
+      while (index < lines.length) {
+        const line = lines[index];
+        if (!line.startsWith(baseIndent)) break;
+        const lineAfterBase = line.slice(baseIndent.length);
+        const indentedMatch = /^(?: {2,}|\t)(.*)$/.exec(lineAfterBase);
+        if (indentedMatch) {
+          rawLines.push(line);
+          definitionLines.push(indentedMatch[1]);
+          index += 1;
+          continue;
+        }
+        if (lineAfterBase.trim() === "") {
+          const nextLine = lines[index + 1] || "";
+          const nextAfterBase = nextLine.startsWith(baseIndent) ? nextLine.slice(baseIndent.length) : "";
+          if (/^(?: {2,}|\t)/.test(nextAfterBase)) {
+            rawLines.push(line);
+            definitionLines.push("");
+            index += 1;
+            continue;
+          }
+        }
+        break;
+      }
+      let raw = rawLines.join("\n");
+      if (src.startsWith(raw + "\n")) raw += "\n";
+      footnoteDefinitions.set(id, definitionLines.join("\n").trim());
+      return { type: "footnoteDefinition", raw };
+    },
+    renderer() {
+      return "";
+    },
+  };
+
+  const footnoteReferenceExtension = {
+    name: "footnoteReference",
+    level: "inline",
+    start(src) {
+      if (suppressFootnotePreprocess) return undefined;
+      const index = src.indexOf("[^");
+      return index >= 0 ? index : undefined;
+    },
+    tokenizer(src) {
+      if (suppressFootnotePreprocess) return undefined;
+      const match = /^\[\^([^\]\n]+)\]/.exec(src);
+      if (!match) return undefined;
+      return { type: "footnoteReference", raw: match[0], id: match[1].trim() };
+    },
+    renderer(token) {
+      const id = token.id;
+      if (!id) return token.raw;
+      if (!footnoteOrder.includes(id)) footnoteOrder.push(id);
+      const refCount = (footnoteRefCounts.get(id) || 0) + 1;
+      footnoteRefCounts.set(id, refCount);
+      const normalizedId = normalizeFootnoteId(id);
+      const refId = `fnref-${normalizedId}${refCount > 1 ? `-${refCount}` : ""}`;
+      if (!footnoteFirstRefId.has(id)) footnoteFirstRefId.set(id, refId);
+      const noteNumber = footnoteOrder.indexOf(id) + 1;
+      return `<sup id="${escapeHtmlAttribute(refId)}" class="footnote-ref"><a href="#fn-${escapeHtmlAttribute(normalizedId)}" aria-label="Footnote ${noteNumber}">[${noteNumber}]</a></sup>`;
+    },
+  };
+
+  const inlineMathExtension = {
+    name: "inlineMath",
+    level: "inline",
+    start(src) {
+      const match = INLINE_MATH_START_PATTERN.exec(src);
+      return match ? match.index : undefined;
+    },
+    tokenizer(src) {
+      if (src.startsWith("\\$")) return { type: "inlineMath", raw: "\\$", literalDollar: true };
+      if (src.startsWith("\\(") || src.startsWith("\\[")) {
+        const opening = src.slice(0, 2);
+        const closing = opening === "\\(" ? "\\)" : "\\]";
+        const closeIndex = findClosingMathDelimiter(src, closing, 2);
+        if (closeIndex >= 2) {
+          return {
+            type: "inlineMath",
+            raw: src.slice(0, closeIndex + 2),
+            display: opening === "\\[",
+          };
+        }
+        return undefined;
+      }
+      if (src[0] !== "$" || isEscapedCharacter(src, 0)) return undefined;
+      const mathToken = tokenizeDollarMath(src);
+      return mathToken || { type: "inlineMath", raw: "$", literalDollar: true };
+    },
+    renderer(token) {
+      if (token.literalDollar) return '<span class="math-literal-dollar tex2jax_ignore">&#36;</span>';
+      const displayClass = token.display ? ' math-display-inline' : '';
+      return `<span class="math-inline tex2jax_process${displayClass}">${escapeHtml(token.raw)}</span>`;
     },
   };
 
@@ -214,13 +384,22 @@ function configureMarked() {
       const lines = src.split("\n");
       if (lines.length < 2) return undefined;
 
-      const term = lines[0];
-      if (EMPTY_LINE_PATTERN.test(term) || MARKDOWN_LIST_MARKER_PATTERN.test(term)) return undefined;
-      if (!DEFINITION_LIST_ITEM_PATTERN.test(lines[1])) return undefined;
-
+      const terms = [];
+      const rawLines = [];
+      let index = 0;
+      while (index < lines.length && !DEFINITION_LIST_ITEM_PATTERN.test(lines[index])) {
+        const term = lines[index];
+        if (
+          EMPTY_LINE_PATTERN.test(term) ||
+          MARKDOWN_LIST_MARKER_PATTERN.test(term) ||
+          DEFINITION_LIST_DISALLOWED_TERM_PATTERN.test(term)
+        ) return undefined;
+        terms.push(term.trim());
+        rawLines.push(term);
+        index += 1;
+      }
+      if (terms.length === 0 || index >= lines.length) return undefined;
       const definitions = [];
-      const rawLines = [term];
-      let index = 1;
       while (index < lines.length) {
         const itemMatch = DEFINITION_LIST_ITEM_PATTERN.exec(lines[index]);
         if (!itemMatch) break;
@@ -255,14 +434,16 @@ function configureMarked() {
       if (definitions.length === 0) return undefined;
       let raw = rawLines.join("\n");
       if (src.startsWith(raw + "\n")) raw += "\n";
-      return { type: "definitionList", raw, term: term.trim(), definitions };
+      return { type: "definitionList", raw, terms, definitions };
     },
     renderer(token) {
-      const termHtml = parseInlineWithoutFootnotes(token.term);
+      const termHtml = token.terms
+        .map((term) => `<dt>${parseInlineWithoutFootnotes(term)}</dt>`)
+        .join("");
       const definitionHtml = token.definitions
         .map((definition) => `<dd>${renderDefinitionContent(definition)}</dd>`)
         .join("");
-      return `<dl><dt>${termHtml}</dt>${definitionHtml}</dl>\n`;
+      return `<dl>${termHtml}${definitionHtml}</dl>\n`;
     },
   };
 
@@ -278,7 +459,7 @@ function configureMarked() {
       return match ? { type: "superscript", raw: match[0], text: match[1] } : undefined;
     },
     renderer(token) {
-      return `<sup>${marked.parseInline(token.text)}</sup>`;
+      return `<sup>${parseInlineWithoutFootnotes(token.text)}</sup>`;
     },
   };
 
@@ -294,7 +475,7 @@ function configureMarked() {
       return match ? { type: "subscript", raw: match[0], text: match[1] } : undefined;
     },
     renderer(token) {
-      return `<sub>${marked.parseInline(token.text)}</sub>`;
+      return `<sub>${parseInlineWithoutFootnotes(token.text)}</sub>`;
     },
   };
 
@@ -310,7 +491,7 @@ function configureMarked() {
       return match ? { type: "highlight", raw: match[0], text: match[1] } : undefined;
     },
     renderer(token) {
-      return `<mark>${marked.parseInline(token.text)}</mark>`;
+      return `<mark>${parseInlineWithoutFootnotes(token.text)}</mark>`;
     },
   };
 
@@ -390,16 +571,7 @@ function configureMarked() {
   };
 
   renderer.heading = function(text, level, raw) {
-    let id = raw
-      .toLowerCase()
-      .trim()
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '')
-      .replace(/-+/g, '-');
-    if (!id) {
-      id = `heading-worker-${Math.random().toString(36).substr(2, 9)}`;
-    }
+    const id = createUniqueHeadingId(raw);
     return `<h${level} id="${id}">${text}</h${level}>`;
   };
 
@@ -472,7 +644,10 @@ function configureMarked() {
   marked.use({
     extensions: [
       blockMathExtension,
+      footnoteDefinitionExtension,
       definitionListExtension,
+      inlineMathExtension,
+      footnoteReferenceExtension,
       superscriptExtension,
       subscriptExtension,
       highlightExtension,
@@ -480,10 +655,12 @@ function configureMarked() {
     hooks: {
       preprocess(markdown) {
         if (suppressFootnotePreprocess) return markdown;
-        resetExtendedMarkdownState();
-        const normalizedMarkdown = normalizeMarkmapFences(markdown);
-        const protectedMarkdown = normalizedMarkdown.replace(/\\\$/g, "&#36;");
-        return applyFootnotes(extractFootnoteDefinitions(protectedMarkdown));
+        if (!preserveExtendedMarkdownState) resetExtendedMarkdownState();
+        return normalizeMarkmapFences(markdown);
+      },
+      postprocess(html) {
+        if (suppressFootnotePreprocess) return html;
+        return html + renderFootnotesSection();
       },
     },
   });
@@ -580,7 +757,7 @@ function splitMarkdownBlocks(markdown) {
 }
 
 function renderSegmentedMarkdown(markdown, options) {
-  const normalizedMarkdown = normalizeMarkmapFences(markdown);
+  const normalizedMarkdown = normalizeWorkerMarkmapFences(markdown);
   if (!isSegmentedPreviewSafe(normalizedMarkdown)) {
     return { mode: "full-required", reason: "unsafe-markdown" };
   }
@@ -591,21 +768,28 @@ function renderSegmentedMarkdown(markdown, options) {
   }
 
   const seenHashes = new Map();
-  const renderedBlocks = blocks.map((block) => {
-    const hash = hashString(block.source);
-    const seenCount = seenHashes.get(hash) || 0;
-    seenHashes.set(hash, seenCount + 1);
-    const html = marked.parse(block.source);
-    return {
-      id: `preview-block-${hash}-${seenCount}`,
-      hash,
-      html,
-      htmlLength: html.length,
-      sourceLength: block.source.length,
-      startLine: block.startLine,
-      endLine: block.endLine,
-    };
-  });
+  resetExtendedMarkdownState();
+  preserveExtendedMarkdownState = true;
+  let renderedBlocks;
+  try {
+    renderedBlocks = blocks.map((block) => {
+      const hash = hashString(block.source);
+      const seenCount = seenHashes.get(hash) || 0;
+      seenHashes.set(hash, seenCount + 1);
+      const html = marked.parse(block.source);
+      return {
+        id: `preview-block-${hash}-${seenCount}`,
+        hash,
+        html,
+        htmlLength: html.length,
+        sourceLength: block.source.length,
+        startLine: block.startLine,
+        endLine: block.endLine,
+      };
+    });
+  } finally {
+    preserveExtendedMarkdownState = false;
+  }
 
   return {
     mode: "segmented",
