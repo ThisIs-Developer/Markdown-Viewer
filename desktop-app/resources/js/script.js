@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     'markdownViewerDocumentOrganization',
     'markdownViewerSecretWorkspace'
   ]);
+  let privateStorageModeEnabled = false;
+  try {
+    localStorage.removeItem(PRIVATE_MODE_KEY);
+  } catch (_) {}
 
   document.addEventListener('click', function(event) {
     const closeButton = event.target.closest('[data-modal-cancel]');
@@ -26,11 +30,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   });
 
   function isPrivateStorageMode() {
-    try {
-      return localStorage.getItem(PRIVATE_MODE_KEY) === 'true';
-    } catch (_) {
-      return false;
-    }
+    return privateStorageModeEnabled;
   }
 
   function isNeutralinoRuntimeAvailable() {
@@ -1071,8 +1071,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function setPrivateStorageMode(enabled) {
+    privateStorageModeEnabled = Boolean(enabled);
     try {
-      localStorage.setItem(PRIVATE_MODE_KEY, enabled ? 'true' : 'false');
+      localStorage.removeItem(PRIVATE_MODE_KEY);
     } catch (_) {}
     updatePrivateModeButton();
     if (enabled) {
@@ -1581,7 +1582,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     'markdownViewerGlobalState',
     'markdownViewerActiveTab',
     'markdownViewerUntitledCounter',
-    'markdownViewerPrivateMode',
     'markdownViewerAllowLocalDiagramCommands',
     'find-replace-docked',
     'app-lang'

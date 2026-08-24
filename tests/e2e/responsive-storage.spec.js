@@ -123,6 +123,7 @@ test('private mode pauses writes without deleting existing saved documents', asy
   await expect(page.locator('#save-status')).toHaveCSS('color', await resolveCssColor(page, '--color-danger-fg'));
   await expect(page.locator('#save-status')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(page.locator('#save-status')).toHaveCSS('border-top-width', '0px');
+  expect(await page.evaluate(() => localStorage.getItem('markdownViewerPrivateMode'))).toBeNull();
   await page.keyboard.press('Escape');
 
   await setEditorContent(page, '# Private Content\n\nDo not store this.');
@@ -132,6 +133,41 @@ test('private mode pauses writes without deleting existing saved documents', asy
   expect(stored).toContain('Persisted Before Private Mode');
   expect(stored).not.toContain('Private Content');
   await expect(page.locator('#save-status-text')).toHaveText('Private mode is on');
+
+  await page.reload();
+  await waitForAppReady(page);
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'false');
+  await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'saved');
+  await expect(page.locator('#save-status-text')).toHaveText('All changes saved');
+  await expect(page.locator('#markdown-editor')).toHaveValue(/Persisted Before Private Mode/);
+  await expect(page.locator('#markdown-editor')).not.toHaveValue(/Private Content/);
+});
+
+test('private mode resets when its tab is closed and reopened', async ({ page }) => {
+  await openApp(page);
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  await page.locator('#private-mode-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'true');
+  expect(await page.evaluate(() => localStorage.getItem('markdownViewerPrivateMode'))).toBeNull();
+
+  const context = page.context();
+  await page.close();
+  const reopenedPage = await context.newPage();
+  await openApp(reopenedPage);
+  await expect(reopenedPage.locator('html')).toHaveAttribute('data-private-mode', 'false');
+  await expect(reopenedPage.locator('#save-status-text')).toHaveText('All changes saved');
+});
+
+test('legacy persisted private mode flags are cleared instead of restored', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('markdownViewerPrivateMode', 'true');
+  });
+  await openApp(page);
+
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'false');
+  await expect(page.locator('#private-mode-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#save-status-text')).toHaveText('All changes saved');
+  expect(await page.evaluate(() => localStorage.getItem('markdownViewerPrivateMode'))).toBeNull();
 });
 
 test('reset workspace permanently deletes documents and blocks repeated clicks', async ({ page }) => {

@@ -256,6 +256,9 @@ test('startup repairs orphaned content records without changing their body', asy
   await setEditorContent(page, '# Orphan recovery marker\n\nThe contents record should return to the Explorer.');
   await waitForStoredContent(page, 'Orphan recovery marker');
   const documentId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  await page.locator('#private-mode-toggle').click();
+  await expect(page.locator('#private-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
 
   await page.evaluate(async id => {
     const database = await new Promise((resolve, reject) => {
@@ -271,10 +274,10 @@ test('startup repairs orphaned content records without changing their body', asy
       transaction.onabort = () => reject(transaction.error);
     });
     database.close();
-    localStorage.setItem('markdownViewerPrivateMode', 'true');
   }, documentId);
   await page.reload();
   await waitForAppReady(page);
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'false');
 
   const stored = await storedDocuments(page);
   expect(stored.find(item => item.id === documentId)?.content).toContain('Orphan recovery marker');
@@ -286,6 +289,9 @@ test('missing content is marked as corruption and never normalized to an empty b
   await setEditorContent(page, '# Missing body marker');
   await waitForStoredContent(page, 'Missing body marker');
   const documentId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  await page.locator('#private-mode-toggle').click();
+  await expect(page.locator('#private-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
 
   await page.evaluate(async id => {
     const database = await new Promise((resolve, reject) => {
@@ -301,10 +307,10 @@ test('missing content is marked as corruption and never normalized to an empty b
       transaction.onabort = () => reject(transaction.error);
     });
     database.close();
-    localStorage.setItem('markdownViewerPrivateMode', 'true');
   }, documentId);
   await page.reload();
   await waitForAppReady(page);
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'false');
 
   const metadata = (await readWorkspaceStore(page, 'documents')).find(item => item.id === documentId);
   expect(metadata.storageCorruption).toBe('missing-content');
