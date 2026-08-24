@@ -4162,7 +4162,6 @@ a:focus {
 
 .app-save-status.is-private {
   color: var(--color-danger-fg);
-  font-weight: 600;
 }
 
 .app-save-status.is-saving i {
