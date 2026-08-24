@@ -11566,7 +11566,7 @@ html[data-theme="dark"] .mermaid svg {
   padding: 10px 11px;
   border: 1px solid;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   line-height: 1.45;
 }
 
@@ -11622,12 +11622,19 @@ html[data-theme="dark"] .mermaid svg {
 .storage-trash-section label {
   grid-column: 1 / -1;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--ui-font-md);
   font-weight: 600;
 }
 
 .storage-trash-section select {
   min-width: 0;
+  font-family: inherit;
+  font-size: var(--ui-font-md);
+  line-height: 1.5;
+}
+
+.storage-trash-section option {
+  font: inherit;
 }
 
 .storage-secure-option {

@@ -316,6 +316,69 @@ test('workspace storage accepts more than the former 50-document limit', async (
   await expect(page.locator('#storage-backup-options-modal .reset-modal-box')).toHaveCSS('width', '420px');
 });
 
+test('storage recovery controls use the shared application type scale', async ({ page }) => {
+  await page.setViewportSize({ width: 617, height: 531 });
+  await openApp(page);
+  await page.evaluate(async () => {
+    const storage = new window.MarkdownWorkspaceStorage();
+    await storage.init();
+    const document = {
+      id: 'typography_trash_document',
+      title: 'Typography trash document',
+      content: '# Recovery option typography',
+      contentLoaded: true,
+      workspaceId: 'workspace_default',
+      folderId: null,
+      isOpen: false,
+      _storageRevision: 0
+    };
+    await storage.saveDocuments([document], null, {
+      changedIds: [document.id],
+      forceContent: true
+    });
+    await storage.deleteDocument(document.id, {
+      expectedRevision: document._storageRevision
+    });
+  });
+
+  await page.locator('#mobile-menu-toggle').click();
+  await page.locator('[data-mobile-menu-section-toggle]', { hasText: 'Settings' }).click();
+  await page.locator('#mobile-storage-settings-button').click();
+  await expect(page.locator('#storage-trash-section')).toBeVisible();
+  await expect(page.locator('#storage-trash-list option')).toHaveCount(1);
+
+  const typography = await page.evaluate(() => {
+    const read = selector => {
+      const style = getComputedStyle(document.querySelector(selector));
+      return { fontFamily: style.fontFamily, fontSize: style.fontSize };
+    };
+    return {
+      modalTitle: read('#storage-settings-title'),
+      statusValue: read('#storage-backend-value'),
+      recoveryNote: read('#storage-recovery-note'),
+      trashLabel: read('.storage-trash-section label'),
+      trashSelect: read('#storage-trash-list'),
+      trashOption: read('#storage-trash-list option'),
+      restoreButton: read('#storage-trash-restore'),
+      closeButton: read('#storage-settings-close')
+    };
+  });
+
+  expect(typography.modalTitle.fontSize).toBe('13px');
+  for (const role of [
+    'statusValue',
+    'recoveryNote',
+    'trashLabel',
+    'trashSelect',
+    'trashOption',
+    'restoreButton',
+    'closeButton'
+  ]) {
+    expect(typography[role].fontSize).toBe('12px');
+    expect(typography[role].fontFamily).toBe(typography.statusValue.fontFamily);
+  }
+});
+
 test('storage and backup remains usable on phone portrait and landscape layouts', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await openApp(page);
