@@ -2218,38 +2218,58 @@ document.addEventListener("DOMContentLoaded", async function () {
   const SUPERSCRIPT_PATTERN = /^\^(?!\s)([^^\n]*?\S)\^(?!\^)/;
   const SUBSCRIPT_PATTERN = /^~(?!~)(?!\s)([^~\n]*?\S)~(?!~)/;
   const HIGHLIGHT_PATTERN = /^==(?=\S)([\s\S]*?\S)==/;
-  const MARKDOWN_LIST_MARKER_PATTERN = /^(\s*)(?:[-*+]\s+|\d+\.\s+|>\s+)/;
-  const DEFINITION_LIST_DISALLOWED_TERM_PATTERN = /^[ \t]{0,3}(?:`{3,}|~{3,}|#{1,6}(?:[ \t]+|$)|<\/?[a-zA-Z][\w:-]*(?:\s|>|\/>))/;
+  const MARKDOWN_LIST_MARKER_PATTERN = /^(\s*)(?:[-*+]\s+|\d{1,9}[.)]\s+|>\s*)/;
+  const DEFINITION_LIST_DISALLOWED_TERM_PATTERN = /^(?: {4}|\t|[ \t]{0,3}(?:`{3,}|~{3,}|#{1,6}(?:[ \t]+|$)|(?:[*_-][ \t]*){3,}$|[=-]+[ \t]*$|\[[^\]\n]+\]:[ \t]*\S|<!--|<\?|<![A-Z]|<!\[CDATA\[|<\/?[a-zA-Z][\w:-]*(?:\s|>|\/>)))/;
+  const GFM_TABLE_DELIMITER_PATTERN = /^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)+\|?[ \t]*$/;
   const EMPTY_LINE_PATTERN = /^\s*$/;
   const footnoteDefinitions = new Map();
   const footnoteOrder = [];
   const footnoteRefCounts = new Map();
-  const footnoteFirstRefId = new Map();
+  const footnoteSlugs = new Map();
+  const usedFootnoteSlugs = new Set();
   const usedHeadingIds = new Set();
-  let anonymousFootnoteCounter = 0;
   let suppressFootnotePreprocess = false;
 
   function resetExtendedMarkdownState() {
     footnoteDefinitions.clear();
     footnoteOrder.length = 0;
     footnoteRefCounts.clear();
-    footnoteFirstRefId.clear();
+    footnoteSlugs.clear();
+    usedFootnoteSlugs.clear();
     usedHeadingIds.clear();
-    anonymousFootnoteCounter = 0;
   }
 
-  function normalizeFootnoteId(id) {
-    const normalized = String(id || "")
+  function normalizeFootnoteLabel(id) {
+    return String(id || "")
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    if (normalized) {
-      return normalized;
+      .replace(/\s+/g, " ");
+  }
+
+  function getFootnoteSlug(label) {
+    if (footnoteSlugs.has(label)) {
+      return footnoteSlugs.get(label);
     }
 
-    anonymousFootnoteCounter += 1;
-    return `footnote-${anonymousFootnoteCounter}`;
+    const baseSlug = String(label || "")
+      .replace(/\s+/g, "-")
+      .replace(/[^\p{L}\p{N}\p{M}_-]+/gu, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "") || "footnote";
+    let slug = baseSlug;
+    let suffix = 1;
+    while (usedFootnoteSlugs.has(slug)) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+    usedFootnoteSlugs.add(slug);
+    footnoteSlugs.set(label, slug);
+    return slug;
+  }
+
+  function getFootnoteReferenceId(label, referenceNumber) {
+    const slug = getFootnoteSlug(label);
+    return `fnref-${slug}${referenceNumber > 1 ? `-${referenceNumber}` : ""}`;
   }
 
   function escapeHtmlAttribute(value) {
@@ -2315,6 +2335,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (/^\[[^\]\n]+\]:\s+\S+/m.test(markdown)) return false;
     if (/\[\^[^\]\n]+\]/.test(markdown)) return false;
     if (/\n:[ \t]+/.test(markdown)) return false;
+    if (/^[ \t]{0,3}(?:[*+-]|\d{1,9}[.)])(?:[ \t]+|$)/m.test(markdown)) return false;
+    if (/^(?: {4}|\t)\S/m.test(markdown)) return false;
+    if (/^[ \t]{0,3}(?:<!--|<\?|<![A-Z]|<!\[CDATA\[)/m.test(markdown)) return false;
     if (/^\s{0,3}<\/?[a-zA-Z][\w:-]*(?:\s|>|\/>)/m.test(markdown)) return false;
     return true;
   }
@@ -2492,16 +2515,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     const footnotesHtml = footnoteOrder
       .filter((id) => footnoteDefinitions.has(id))
       .map((id) => {
-        const normalizedId = normalizeFootnoteId(id);
-        const backRefId = footnoteFirstRefId.get(id) || `fnref-${normalizedId}`;
-        const safeNormalizedId = escapeHtmlAttribute(normalizedId);
-        const safeBackRefId = escapeHtmlAttribute(backRefId);
-        const backRefHtml = `<a href="#${safeBackRefId}" class="footnote-backref" aria-label="Back to content">←</a>`;
+        const slug = getFootnoteSlug(id);
+        const referenceCount = footnoteRefCounts.get(id) || 1;
+        const safeSlug = escapeHtmlAttribute(slug);
+        const backRefHtml = Array.from({ length: referenceCount }, (_, index) => {
+          const referenceNumber = index + 1;
+          const backRefId = escapeHtmlAttribute(getFootnoteReferenceId(id, referenceNumber));
+          const occurrenceLabel = referenceNumber > 1 ? ` ${referenceNumber}` : "";
+          const occurrenceMarker = referenceNumber > 1 ? `<sup>${referenceNumber}</sup>` : "";
+          return `<a href="#${backRefId}" class="footnote-backref" aria-label="Back to content${occurrenceLabel}">←${occurrenceMarker}</a>`;
+        }).join(" ");
         const noteHtml = renderDefinitionContent(
           footnoteDefinitions.get(id) || "",
           { appendHtml: backRefHtml }
         );
-        return `<li id="fn-${safeNormalizedId}">${noteHtml}</li>`;
+        return `<li id="fn-${safeSlug}">${noteHtml}</li>`;
       })
       .join("");
 
@@ -2629,8 +2657,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       .trim()
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '')
-      .replace(/-+/g, '-') || 'heading';
+      .replace(/[^\p{L}\p{N}\p{M}_-]/gu, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'heading';
     let id = baseId;
     let suffix = 0;
     while (usedHeadingIds.has(id)) {
@@ -2681,7 +2710,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!match) return undefined;
 
       const baseIndent = match[1] || "";
-      const id = match[2].trim();
+      const id = normalizeFootnoteLabel(match[2]);
       const definitionLines = [match[3] || ""];
       const rawLines = [lines[0]];
       let index = 1;
@@ -2713,7 +2742,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       let raw = rawLines.join("\n");
       if (src.startsWith(raw + "\n")) raw += "\n";
-      footnoteDefinitions.set(id, definitionLines.join("\n").trim());
+      if (id && !footnoteDefinitions.has(id)) {
+        footnoteDefinitions.set(id, definitionLines.join("\n").trim());
+      }
       return { type: "footnoteDefinition", raw };
     },
     renderer() {
@@ -2735,16 +2766,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       return { type: "footnoteReference", raw: match[0], id: match[1].trim() };
     },
     renderer(token) {
-      const id = token.id;
-      if (!id) return token.raw;
+      const id = normalizeFootnoteLabel(token.id);
+      if (!id || !footnoteDefinitions.has(id)) return escapeHtml(token.raw);
       if (!footnoteOrder.includes(id)) footnoteOrder.push(id);
       const refCount = (footnoteRefCounts.get(id) || 0) + 1;
       footnoteRefCounts.set(id, refCount);
-      const normalizedId = normalizeFootnoteId(id);
-      const refId = `fnref-${normalizedId}${refCount > 1 ? `-${refCount}` : ""}`;
-      if (!footnoteFirstRefId.has(id)) footnoteFirstRefId.set(id, refId);
+      const slug = getFootnoteSlug(id);
+      const refId = getFootnoteReferenceId(id, refCount);
       const noteNumber = footnoteOrder.indexOf(id) + 1;
-      return `<sup id="${escapeHtmlAttribute(refId)}" class="footnote-ref"><a href="#fn-${escapeHtmlAttribute(normalizedId)}" aria-label="Footnote ${noteNumber}">[${noteNumber}]</a></sup>`;
+      return `<sup id="${escapeHtmlAttribute(refId)}" class="footnote-ref"><a href="#fn-${escapeHtmlAttribute(slug)}" aria-label="Footnote ${noteNumber}">[${noteNumber}]</a></sup>`;
     },
   };
   const inlineMathExtension = {
@@ -2794,6 +2824,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return match.index + 1;
     },
     tokenizer(src) {
+      if (this.lexer && this.lexer.state && !this.lexer.state.top) return undefined;
       const lines = src.split("\n");
       if (lines.length < 2) {
         return undefined;
@@ -2807,7 +2838,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (
           EMPTY_LINE_PATTERN.test(term) ||
           MARKDOWN_LIST_MARKER_PATTERN.test(term) ||
-          DEFINITION_LIST_DISALLOWED_TERM_PATTERN.test(term)
+          DEFINITION_LIST_DISALLOWED_TERM_PATTERN.test(term) ||
+          GFM_TABLE_DELIMITER_PATTERN.test(term)
         ) return undefined;
         terms.push(term.trim());
         rawLines.push(term);

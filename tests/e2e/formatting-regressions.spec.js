@@ -36,6 +36,36 @@ test('de-duplicates heading ids and resets slug state for each render', async ({
   await expect(page.locator('#markdown-preview h1')).toHaveAttribute('id', 'test');
 });
 
+test('preserves Unicode in heading ids and gives empty slugs stable fallbacks', async ({ page }) => {
+  await setEditorContent(page, [
+    '# 你好 世界',
+    '',
+    '# Café déjà vu',
+    '',
+    '# 🎉',
+    '',
+    '# 🎉',
+    '',
+    '[Jump to Chinese heading](#你好-世界)'
+  ].join('\n'));
+
+  const headings = page.locator('#markdown-preview h1');
+  await expect(headings).toHaveCount(4);
+  await expect(headings.nth(0)).toHaveAttribute('id', '你好-世界');
+  await expect(headings.nth(1)).toHaveAttribute('id', 'café-déjà-vu');
+  await expect(headings.nth(2)).toHaveAttribute('id', 'heading');
+  await expect(headings.nth(3)).toHaveAttribute('id', 'heading-1');
+  await expect(page.locator('#markdown-preview a')).toHaveAttribute(
+    'href',
+    '#%E4%BD%A0%E5%A5%BD-%E4%B8%96%E7%95%8C'
+  );
+  await expect(page.locator('#markdown-preview a')).toHaveJSProperty('hash', '#%E4%BD%A0%E5%A5%BD-%E4%B8%96%E7%95%8C');
+  await expect.poll(() => page.evaluate(() => {
+    const href = document.querySelector('#markdown-preview a').getAttribute('href');
+    return Boolean(document.getElementById(decodeURIComponent(href.slice(1))));
+  })).toBe(true);
+});
+
 test('de-duplicates headings across segmented worker blocks', async ({ page }) => {
   const blocks = ['# Worker duplicate'];
   for (let index = 0; index < 75; index += 1) {
@@ -49,6 +79,57 @@ test('de-duplicates headings across segmented worker blocks', async ({ page }) =
   await expect(page.locator('#markdown-preview h1')).toHaveCount(2);
   await expect(page.locator('#markdown-preview h1').first()).toHaveAttribute('id', 'worker-duplicate');
   await expect(page.locator('#markdown-preview h1').last()).toHaveAttribute('id', 'worker-duplicate-1');
+});
+
+test('uses full parsing for large documents with cross-block Markdown constructs', async ({ page }) => {
+  const filler = Array.from(
+    { length: 75 },
+    (_, index) => `Paragraph ${index} ${'large document filler '.repeat(45)}`
+  ).join('\n\n');
+
+  await setEditorContent(page, [
+    '- item one',
+    '',
+    '  continuation paragraph',
+    '',
+    '- item two',
+    '',
+    filler
+  ].join('\n'));
+
+  await expect(page.locator('#markdown-preview .preview-render-block')).toHaveCount(0);
+  await expect(page.locator('#markdown-preview > ul')).toHaveCount(1);
+  await expect(page.locator('#markdown-preview > ul > li')).toHaveCount(2);
+  await expect(page.locator('#markdown-preview > ul > li').first()).toContainText('continuation paragraph');
+
+  await setEditorContent(page, [
+    '    line one',
+    '',
+    '    line two',
+    '',
+    filler
+  ].join('\n'));
+
+  await expect(page.locator('#markdown-preview .preview-render-block')).toHaveCount(0);
+  await expect(page.locator('#markdown-preview pre code')).toHaveCount(1);
+  await expect(page.locator('#markdown-preview pre code')).toHaveText('line one\n\nline two\n');
+
+  await setEditorContent(page, [
+    '<!--',
+    'hidden first',
+    '',
+    'hidden second',
+    '-->',
+    '',
+    'Visible content.',
+    '',
+    filler
+  ].join('\n'));
+
+  await expect(page.locator('#markdown-preview .preview-render-block')).toHaveCount(0);
+  await expect(page.locator('#markdown-preview')).not.toContainText('hidden first');
+  await expect(page.locator('#markdown-preview')).not.toContainText('hidden second');
+  await expect(page.locator('#markdown-preview')).toContainText('Visible content.');
 });
 
 test('keeps GFM lists separated when the bullet character changes', async ({ page }) => {
@@ -129,6 +210,37 @@ test('does not transform dollars or footnotes inside code', async ({ page }) => 
   await expect(page.locator('#markdown-preview .footnotes')).toContainText('Continued body.');
 });
 
+test('matches footnote labels case-insensitively and links every defined reference', async ({ page }) => {
+  await setEditorContent(page, [
+    'Undefined[^missing].',
+    '',
+    'Case reference[^Note].',
+    '',
+    'Repeated[^repeat] and again[^REPEAT].',
+    '',
+    'Slug collision[^a!] and another[^a?].',
+    '',
+    '[^note]: Case-insensitive definition.',
+    '[^repeat]: Repeated definition.',
+    '[^a!]: First collision definition.',
+    '[^a?]: Second collision definition.'
+  ].join('\n'));
+
+  await expect(page.locator('#markdown-preview > p').first()).toContainText('Undefined[^missing].');
+  await expect(page.locator('#markdown-preview .footnote-ref')).toHaveText(['[1]', '[2]', '[2]', '[3]', '[4]']);
+  await expect(page.locator('#markdown-preview .footnotes li')).toHaveCount(4);
+  await expect(page.locator('#fn-note')).toContainText('Case-insensitive definition.');
+  await expect(page.locator('#fn-repeat')).toContainText('Repeated definition.');
+  await expect(page.locator('#fn-a')).toContainText('First collision definition.');
+  await expect(page.locator('#fn-a-1')).toContainText('Second collision definition.');
+
+  const repeatedBackrefs = page.locator('#fn-repeat .footnote-backref');
+  await expect(repeatedBackrefs).toHaveCount(2);
+  await expect(repeatedBackrefs.nth(0)).toHaveAttribute('href', '#fnref-repeat');
+  await expect(repeatedBackrefs.nth(1)).toHaveAttribute('href', '#fnref-repeat-2');
+  await expect(repeatedBackrefs.nth(1)).toContainText('2');
+});
+
 test('supports Markdown Extra multi-term definition lists without changing ordinary prose', async ({ page }) => {
   await setEditorContent(page, [
     '~~~md',
@@ -160,6 +272,42 @@ test('supports Markdown Extra multi-term definition lists without changing ordin
   await expect(lists.nth(1).locator('dt')).toHaveText(['Single term']);
   await expect(page.locator('#markdown-preview > p').last()).toContainText('Ordinary line A');
   await expect(page.locator('#markdown-preview > p').last()).toContainText('Ordinary line B');
+});
+
+test('does not let definition lists preempt GFM and CommonMark block constructs', async ({ page }) => {
+  await setEditorContent(page, [
+    '1) Ordered item',
+    ': lazy continuation in the list',
+    '',
+    'Setext heading',
+    '---',
+    ': paragraph after the heading',
+    '',
+    '***',
+    ': paragraph after the thematic break',
+    '',
+    '    indented code',
+    ': paragraph after the code',
+    '',
+    '[ref]: https://example.com',
+    ': paragraph after the reference definition',
+    '',
+    '[uses ref][ref]',
+    '',
+    'A | B',
+    '--- | ---',
+    ': table row'
+  ].join('\n'));
+
+  await expect(page.locator('#markdown-preview dl')).toHaveCount(0);
+  await expect(page.locator('#markdown-preview ol')).toHaveCount(1);
+  await expect(page.locator('#markdown-preview ol')).toContainText(': lazy continuation in the list');
+  await expect(page.locator('#markdown-preview h2')).toHaveText('Setext heading');
+  await expect(page.locator('#markdown-preview hr')).toHaveCount(1);
+  await expect(page.locator('#markdown-preview pre code')).toHaveText('indented code\n');
+  await expect(page.locator('#markdown-preview a[href="https://example.com"]')).toHaveText('uses ref');
+  await expect(page.locator('#markdown-preview table')).toHaveCount(1);
+  await expect(page.locator('#markdown-preview table tbody td').first()).toHaveText(': table row');
 });
 
 test('keeps TeX atomic while preserving superscript, subscript, and highlight outside math', async ({ page }) => {
