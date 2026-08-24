@@ -289,7 +289,7 @@ test('workspace storage accepts more than the former 50-document limit', async (
   await expect(page.locator('#storage-usage-value')).not.toContainText('Browser quota');
   await expect(page.locator('#storage-persistence-value')).toContainText(/Best-effort browser storage|Persistent browser storage/);
   await expect(page.locator('#storage-recovery-note')).toHaveText(
-    "Clearing this site's browser data will delete local documents."
+    "Deleted files stay in Trash for 30 days. Clearing this site's browser data removes documents and Trash immediately."
   );
   await expect(page.locator('#storage-settings-description')).toHaveCount(0);
   await expect(page.locator('#storage-request-persistence')).toHaveCount(0);
@@ -316,7 +316,7 @@ test('workspace storage accepts more than the former 50-document limit', async (
   await expect(page.locator('#storage-backup-options-modal .reset-modal-box')).toHaveCSS('width', '420px');
 });
 
-test('storage recovery controls use the shared application type scale', async ({ page }) => {
+test('dedicated Trash uses the shared application type scale at compact widths', async ({ page }) => {
   await page.setViewportSize({ width: 617, height: 531 });
   await openApp(page);
   await page.evaluate(async () => {
@@ -343,9 +343,15 @@ test('storage recovery controls use the shared application type scale', async ({
 
   await page.locator('#mobile-menu-toggle').click();
   await page.locator('[data-mobile-menu-section-toggle]', { hasText: 'Settings' }).click();
-  await page.locator('#mobile-storage-settings-button').click();
-  await expect(page.locator('#storage-trash-section')).toBeVisible();
-  await expect(page.locator('#storage-trash-list option')).toHaveCount(1);
+  await page.locator('#mobile-trash-settings-button').click();
+  await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
+  await expect(page.locator('.trash-item')).toHaveCount(1);
+  await expect(page.locator('#trash-modal-description')).toContainText('permanently deleted after 30 days');
+  await expect(page.locator('#trash-restore-button')).toBeDisabled();
+  await expect(page.locator('#trash-delete-button')).toBeDisabled();
+  await page.locator('.trash-item input').check();
+  await expect(page.locator('#trash-restore-button')).toBeEnabled();
+  await expect(page.locator('#trash-delete-button')).toBeEnabled();
 
   const typography = await page.evaluate(() => {
     const read = selector => {
@@ -353,30 +359,45 @@ test('storage recovery controls use the shared application type scale', async ({
       return { fontFamily: style.fontFamily, fontSize: style.fontSize };
     };
     return {
-      modalTitle: read('#storage-settings-title'),
-      statusValue: read('#storage-backend-value'),
-      recoveryNote: read('#storage-recovery-note'),
-      trashLabel: read('.storage-trash-section label'),
-      trashSelect: read('#storage-trash-list'),
-      trashOption: read('#storage-trash-list option'),
-      restoreButton: read('#storage-trash-restore'),
-      closeButton: read('#storage-settings-close')
+      modalTitle: read('#trash-modal-title'),
+      retentionNote: read('#trash-modal-description'),
+      itemTitle: read('.trash-item-title'),
+      itemType: read('.trash-item-type'),
+      itemMeta: read('.trash-item-meta'),
+      restoreButton: read('#trash-restore-button'),
+      closeButton: read('#trash-modal-close')
     };
   });
 
   expect(typography.modalTitle.fontSize).toBe('13px');
+  expect(typography.itemTitle.fontSize).toBe('13px');
+  expect(typography.itemType.fontSize).toBe('11px');
+  expect(typography.itemMeta.fontSize).toBe('11px');
   for (const role of [
-    'statusValue',
-    'recoveryNote',
-    'trashLabel',
-    'trashSelect',
-    'trashOption',
+    'retentionNote',
     'restoreButton',
     'closeButton'
   ]) {
     expect(typography[role].fontSize).toBe('12px');
-    expect(typography[role].fontFamily).toBe(typography.statusValue.fontFamily);
+    expect(typography[role].fontFamily).toBe(typography.retentionNote.fontFamily);
   }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.locator('#trash-empty-button')).toBeVisible();
+  await expect(page.locator('#trash-restore-button')).toBeVisible();
+  await expect(page.locator('#trash-delete-button')).toBeVisible();
+  await expect(page.locator('#trash-modal-close')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  await page.setViewportSize({ width: 667, height: 375 });
+  for (const selector of ['#trash-empty-button', '#trash-restore-button', '#trash-delete-button', '#trash-modal-close']) {
+    await expect(page.locator(selector)).toBeVisible();
+  }
+  const modalBounds = await page.locator('#trash-modal .trash-modal-box').boundingBox();
+  expect(modalBounds.y).toBeGreaterThanOrEqual(0);
+  expect(modalBounds.y + modalBounds.height).toBeLessThanOrEqual(375);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test('storage and backup remains usable on phone portrait and landscape layouts', async ({ page }) => {
@@ -510,7 +531,8 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   expect(settingsOrder[1]).toContain('mobile-menu-language');
   expect(settingsOrder[2]).toBe('mobile-private-mode-toggle');
   expect(settingsOrder[3]).toBe('mobile-storage-settings-button');
-  expect(settingsOrder[4]).toBe('mobile-tab-reset-btn');
+  expect(settingsOrder[4]).toBe('mobile-trash-settings-button');
+  expect(settingsOrder[5]).toBe('mobile-tab-reset-btn');
   await expect(page.locator('#mobile-tab-reset-btn')).toBeVisible();
   await expect(page.locator('#mobile-about-button')).toBeVisible();
 

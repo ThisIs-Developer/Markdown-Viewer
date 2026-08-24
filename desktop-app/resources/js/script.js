@@ -818,6 +818,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const mobileThemeStatus = document.getElementById("mobile-theme-status");
   const mobilePrivateModeToggle = document.getElementById("mobile-private-mode-toggle");
   const mobileStorageSettingsButton = document.getElementById("mobile-storage-settings-button");
+  const mobileTrashSettingsButton = document.getElementById("mobile-trash-settings-button");
   const mobileToggleSyncButton = document.getElementById("mobile-toggle-sync");
   const mobileSyncStatus = document.getElementById("mobile-sync-status");
   const mobileCopyMarkdownButton = document.getElementById("mobile-copy-markdown");
@@ -893,6 +894,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
   const storageSettingsButton = document.getElementById("storage-settings-button");
+  const trashSettingsButton = document.getElementById("trash-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
   const storageSettingsClose = document.getElementById("storage-settings-close");
   const storageSettingsCloseIcon = document.getElementById("storage-settings-close-icon");
@@ -917,10 +919,18 @@ document.addEventListener("DOMContentLoaded", async function () {
   const storageUsageValue = document.getElementById("storage-usage-value");
   const storagePersistenceValue = document.getElementById("storage-persistence-value");
   const storageRecoveryNote = document.getElementById("storage-recovery-note");
-  const storageTrashSection = document.getElementById("storage-trash-section");
-  const storageTrashList = document.getElementById("storage-trash-list");
-  const storageTrashRestore = document.getElementById("storage-trash-restore");
   const storageSettingsError = document.getElementById("storage-settings-error");
+  const trashModal = document.getElementById("trash-modal");
+  const trashModalClose = document.getElementById("trash-modal-close");
+  const trashModalCloseIcon = document.getElementById("trash-modal-close-icon");
+  const trashList = document.getElementById("trash-list");
+  const trashEmptyState = document.getElementById("trash-empty-state");
+  const trashItemCount = document.getElementById("trash-item-count");
+  const trashSelectionStatus = document.getElementById("trash-selection-status");
+  const trashRestoreButton = document.getElementById("trash-restore-button");
+  const trashDeleteButton = document.getElementById("trash-delete-button");
+  const trashEmptyButton = document.getElementById("trash-empty-button");
+  const trashModalError = document.getElementById("trash-modal-error");
   const saveStatus = document.getElementById("save-status");
   const saveStatusIcon = document.getElementById("save-status-icon");
   const saveStatusText = document.getElementById("save-status-text");
@@ -1102,15 +1112,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     const results = await Promise.all([
       workspaceStorage.listDocumentMetadata(),
       workspaceStorage.listSecretRecords(),
-      workspaceStorage.getStorageEstimate(),
-      workspaceStorage.listTrash()
+      workspaceStorage.getStorageEstimate()
     ]);
     const normalDocuments = results[0];
     const secretDocumentCount = results[1].filter(function(record) {
       return record.id !== window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID;
     }).length;
     const estimate = results[2];
-    const trashItems = results[3];
     const workspaceUsage = status.desktop
       ? estimate.usage
       : await workspaceStorage.getWorkspaceUsage();
@@ -1138,27 +1146,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (storageRecoveryNote) {
       storageRecoveryNote.textContent = status.desktop
-        ? 'Workspace files stay in this vault when the application binary is replaced or removed.'
-        : "Clearing this site's browser data will delete local documents.";
+        ? 'Deleted files stay in Trash for 30 days. Workspace files remain in the vault when the application is replaced or removed.'
+        : "Deleted files stay in Trash for 30 days. Clearing this site's browser data removes documents and Trash immediately.";
     }
     if (storageOpenVault) storageOpenVault.hidden = !status.desktop;
-    if (storageTrashSection && storageTrashList) {
-      storageTrashList.textContent = '';
-      trashItems.forEach(function(item) {
-        const option = document.createElement('option');
-        option.value = item.trashId;
-        const kind = item.kind || 'normal-document';
-        const title = kind === 'secret-workspace-snapshot'
-          ? 'Encrypted Secret Workspace snapshot'
-          : (kind === 'secret-record'
-              ? 'Encrypted Secret Workspace record'
-              : String(item.metadata && item.metadata.title || 'Deleted document'));
-        option.textContent = title + ' · ' + new Date(Number(item.deletedAt) || Date.now()).toLocaleString();
-        storageTrashList.appendChild(option);
-      });
-      storageTrashSection.hidden = trashItems.length === 0;
-      if (storageTrashRestore) storageTrashRestore.disabled = trashItems.length === 0;
-    }
   }
 
   async function openStorageSettings() {
@@ -1176,6 +1167,256 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (error) {
       console.error('Unable to load storage settings:', error);
       setStorageSettingsError(error && error.message ? error.message : 'Unable to load storage settings.');
+    }
+  }
+
+  function setTrashModalError(message) {
+    if (!trashModalError) return;
+    trashModalError.textContent = message || '';
+    trashModalError.hidden = !message;
+  }
+
+  function getTrashItemTitle(item) {
+    const kind = item && (item.kind || 'normal-document');
+    if (kind === 'secret-workspace-snapshot') return 'Secret Workspace snapshot';
+    if (kind === 'secret-record') return 'Secret Workspace item';
+    return String(item && item.metadata && item.metadata.title || 'Deleted document');
+  }
+
+  function getTrashItemTypeLabel(item) {
+    if (item && item.restorable === false) return 'Recovery data incomplete';
+    const kind = item && (item.kind || 'normal-document');
+    if (kind === 'secret-workspace-snapshot') return 'Encrypted workspace snapshot';
+    if (kind === 'secret-record') return 'Encrypted file';
+    return 'Markdown file';
+  }
+
+  function formatTrashExpiry(item) {
+    const deletedAt = Number(item && item.deletedAt);
+    if (!Number.isSafeInteger(deletedAt) || deletedAt <= 0) {
+      return 'Deletion date unavailable · kept until manually deleted';
+    }
+    const retentionDays = Number(window.MARKDOWN_VIEWER_TRASH_RETENTION_DAYS) || 30;
+    const expiresAt = deletedAt + retentionDays * 24 * 60 * 60 * 1000;
+    const daysRemaining = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
+    const deletedLabel = 'Deleted ' + new Date(deletedAt).toLocaleString();
+    if (daysRemaining > 1) return deletedLabel + ' · permanently deletes in ' + daysRemaining + ' days';
+    if (daysRemaining === 1) return deletedLabel + ' · permanently deletes tomorrow';
+    return deletedLabel + ' · scheduled for permanent deletion';
+  }
+
+  function getSelectedTrashId() {
+    const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
+    return selected ? selected.value : '';
+  }
+
+  function updateTrashSelectionState() {
+    const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
+    const restorable = Boolean(selected && selected.dataset.trashRestorable === 'true');
+    if (trashList) {
+      trashList.querySelectorAll('.trash-item').forEach(function(row) {
+        const input = row.querySelector('input[name="trash-selected-item"]');
+        row.classList.toggle('is-selected', Boolean(input && input.checked));
+      });
+    }
+    if (trashRestoreButton) trashRestoreButton.disabled = !restorable;
+    if (trashDeleteButton) trashDeleteButton.disabled = !selected;
+    if (trashSelectionStatus) {
+      trashSelectionStatus.textContent = selected
+        ? 'Selected: ' + String(selected.dataset.trashTitle || 'deleted file') +
+          (restorable ? '' : ' · recovery data is incomplete')
+        : 'Select a file to manage it';
+    }
+  }
+
+  function renderTrashItems(items, selectedTrashId) {
+    if (!trashList) return;
+    trashList.textContent = '';
+    items.forEach(function(item) {
+      const row = document.createElement('label');
+      row.className = 'trash-item';
+      row.dataset.trashId = item.trashId;
+
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'trash-selected-item';
+      input.value = item.trashId;
+      input.dataset.trashTitle = getTrashItemTitle(item);
+      input.dataset.trashRestorable = item.restorable === false ? 'false' : 'true';
+      input.checked = item.trashId === selectedTrashId;
+      input.addEventListener('change', updateTrashSelectionState);
+
+      const iconShell = document.createElement('span');
+      iconShell.className = 'trash-item-icon';
+      const icon = document.createElement('i');
+      icon.className = 'lucide ' + (item.restorable === false
+        ? 'lucide-triangle-alert'
+        : ((item.kind && item.kind !== 'normal-document') ? 'lucide-lock-keyhole' : 'lucide-file-text'));
+      icon.setAttribute('aria-hidden', 'true');
+      iconShell.appendChild(icon);
+
+      const copy = document.createElement('span');
+      copy.className = 'trash-item-copy';
+      const title = document.createElement('strong');
+      title.className = 'trash-item-title';
+      title.textContent = getTrashItemTitle(item);
+      const type = document.createElement('span');
+      type.className = 'trash-item-type';
+      type.textContent = getTrashItemTypeLabel(item);
+      const meta = document.createElement('span');
+      meta.className = 'trash-item-meta';
+      meta.textContent = formatTrashExpiry(item);
+      copy.append(title, type, meta);
+
+      row.append(input, iconShell, copy);
+      row.classList.toggle('is-unrestorable', item.restorable === false);
+      trashList.appendChild(row);
+    });
+    if (trashEmptyState) trashEmptyState.hidden = items.length > 0;
+    if (trashItemCount) {
+      trashItemCount.textContent = items.length.toLocaleString() + ' item' + (items.length === 1 ? '' : 's');
+    }
+    if (trashEmptyButton) trashEmptyButton.disabled = items.length === 0;
+    updateTrashSelectionState();
+  }
+
+  async function refreshTrashModal(options) {
+    if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
+    const settings = options || {};
+    const selectedTrashId = settings.preserveSelection ? getSelectedTrashId() : '';
+    await workspaceStorage.init();
+    let maintenanceError = null;
+    try {
+      await workspaceStorage.purgeExpiredTrash();
+    } catch (error) {
+      maintenanceError = error;
+    }
+    const items = await workspaceStorage.listTrash();
+    renderTrashItems(items, selectedTrashId);
+    if (maintenanceError) {
+      setTrashModalError('Some expired items could not be removed and were kept in Trash. ' +
+        (maintenanceError.message || 'Try again later.'));
+    }
+    return items;
+  }
+
+  let trashModalOpener = null;
+
+  async function openTrashModal(opener, options) {
+    if (!trashModal) return;
+    if (opener && !trashModal.contains(opener)) trashModalOpener = opener;
+    setTrashModalError('');
+    const description = document.getElementById('trash-modal-description');
+    if (description) {
+      const retentionDays = Number(window.MARKDOWN_VIEWER_TRASH_RETENTION_DAYS) || 30;
+      description.textContent = 'Deleted files are automatically and permanently deleted after ' + retentionDays + ' days.';
+    }
+    openAppModal(trashModal, {
+      focusTarget: trashModalClose,
+      returnFocus: trashModalOpener || opener || document.activeElement
+    });
+    try {
+      await refreshTrashModal(options);
+    } catch (error) {
+      setTrashModalError(error && error.message ? error.message : 'Unable to load Trash.');
+      renderTrashItems([], '');
+    }
+  }
+
+  function closeTrashModal() {
+    if (trashModal) closeAppModal(trashModal);
+  }
+
+  function reopenTrashModalAfterConfirmation(options) {
+    const settings = options || {};
+    window.setTimeout(function() {
+      void openTrashModal(trashModalOpener, {
+        preserveSelection: settings.preserveSelection === true
+      }).then(function() {
+        if (settings.errorMessage) setTrashModalError(settings.errorMessage);
+      });
+    }, 210);
+  }
+
+  function setTrashModalBusy(busy) {
+    const box = trashModal && trashModal.querySelector('.trash-modal-box');
+    if (box) {
+      if (busy) box.setAttribute('aria-busy', 'true');
+      else box.removeAttribute('aria-busy');
+    }
+    if (trashList) trashList.querySelectorAll('input').forEach(function(input) { input.disabled = busy; });
+    if (trashEmptyButton) trashEmptyButton.disabled = busy || !trashList || !trashList.children.length;
+    if (busy) {
+      if (trashRestoreButton) trashRestoreButton.disabled = true;
+      if (trashDeleteButton) trashDeleteButton.disabled = true;
+    } else {
+      updateTrashSelectionState();
+    }
+  }
+
+  async function restoreSelectedTrashItem() {
+    const trashId = getSelectedTrashId();
+    if (!trashId) return;
+    setTrashModalBusy(true);
+    setTrashModalError('');
+    try {
+      await workspaceStorage.restoreTrashItem(trashId);
+      showAppToast('The selected file was restored. Reloading the workspace…', {
+        tone: 'info',
+        title: 'Restore complete'
+      });
+      closeTrashModal();
+      window.setTimeout(function() { window.location.reload(); }, 300);
+    } catch (error) {
+      const message = error && error.message ? error.message : 'Unable to restore the selected file.';
+      setTrashModalError(message);
+      setTrashModalBusy(false);
+      reopenTrashModalAfterConfirmation({ preserveSelection: true, errorMessage: message });
+    }
+  }
+
+  async function permanentlyDeleteSelectedTrashItem() {
+    const trashId = getSelectedTrashId();
+    if (!trashId) return;
+    let reopenOptions = {};
+    setTrashModalBusy(true);
+    setTrashModalError('');
+    try {
+      await workspaceStorage.permanentlyDeleteTrashItem(trashId);
+      await refreshTrashModal();
+      showAppToast('The selected file was permanently deleted.', {
+        tone: 'info',
+        title: 'Deleted from Trash'
+      });
+    } catch (error) {
+      const message = error && error.message ? error.message : 'Unable to permanently delete the selected file.';
+      setTrashModalError(message);
+      reopenOptions = { preserveSelection: true, errorMessage: message };
+    } finally {
+      setTrashModalBusy(false);
+      reopenTrashModalAfterConfirmation(reopenOptions);
+    }
+  }
+
+  async function emptyTrashPermanently() {
+    let reopenOptions = {};
+    setTrashModalBusy(true);
+    setTrashModalError('');
+    try {
+      const deletedCount = await workspaceStorage.emptyTrash();
+      await refreshTrashModal();
+      showAppToast(deletedCount.toLocaleString() + ' Trash item' + (deletedCount === 1 ? '' : 's') + ' permanently deleted.', {
+        tone: 'info',
+        title: 'Trash emptied'
+      });
+    } catch (error) {
+      try { await refreshTrashModal(); } catch (_) {}
+      const message = error && error.message ? error.message : 'Trash could not be completely emptied.';
+      setTrashModalError(message);
+      reopenOptions = { errorMessage: message };
+    } finally {
+      setTrashModalBusy(false);
+      reopenTrashModalAfterConfirmation(reopenOptions);
     }
   }
 
@@ -4412,7 +4653,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       closeAppModal(modal);
       openDocumentConfirmation({
         title: 'Reset Secret Workspace?',
-        description: 'This removes every encrypted file and folder from Secret Workspace and keeps an encrypted recovery snapshot in Trash.',
+        description: 'This removes every encrypted file and folder from Secret Workspace and keeps an encrypted recovery snapshot in Trash for 30 days.',
         confirmText: 'Reset Secret Workspace',
         onConfirm: function() {
           resetSecretWorkspaceData().then(function() {
@@ -4701,6 +4942,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     function cancel() {
       cleanup();
       closeAppModal(modal);
+      if (typeof options.onCancel === 'function') options.onCancel();
     }
 
     function confirmAction() {
@@ -5190,8 +5432,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         openDocumentConfirmation({
           title: 'Delete “' + String(tab.title || 'Untitled') + '”?',
           description: tab.workspaceId === SECRET_WORKSPACE_ID
-            ? 'The encrypted document will be moved to recoverable storage.'
-            : 'The document will be moved to recoverable trash.',
+            ? 'The encrypted document will move to Trash and be permanently deleted after 30 days.'
+            : 'The document will move to Trash and be permanently deleted after 30 days.',
           confirmText: 'Delete',
           onConfirm: function() { deleteTab(tab.id); }
         });
@@ -5275,7 +5517,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return !isTemporaryDocument(tab) && folderIds.has(tab.folderId) && !documentIds.includes(tab.id);
     }).length;
     const consequences = [];
-    if (documentIds.length) consequences.push('permanently deletes ' + documentIds.length + ' file' + (documentIds.length === 1 ? '' : 's'));
+    if (documentIds.length) consequences.push('moves ' + documentIds.length + ' file' + (documentIds.length === 1 ? '' : 's') + ' to Trash for 30 days');
     if (selectedFolderIds.size) consequences.push('removes ' + folderIds.size + ' folder' + (folderIds.size === 1 ? '' : 's'));
     let description = 'This ' + consequences.join(' and ') + '.';
     if (movedDocumentCount) {
@@ -6463,6 +6705,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const collapseAllButton = document.getElementById('document-sidebar-collapse-all');
     const newDocumentButton = document.getElementById('sidebar-new-document');
     const newFolderButton = document.getElementById('sidebar-new-folder');
+    const trashButton = document.getElementById('sidebar-trash-button');
     const search = document.getElementById('document-sidebar-search');
     const clearSearch = document.getElementById('document-sidebar-search-clear');
     const tree = document.getElementById('document-tree');
@@ -6480,6 +6723,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (newFolderButton) newFolderButton.addEventListener('click', function() {
       const location = getPreferredDocumentLocation();
       createFolder(location.workspaceId);
+    });
+    if (trashButton) trashButton.addEventListener('click', function() {
+      closeDocumentSidebarOnMobile();
+      openTrashModal(trashButton);
     });
 
     document.querySelectorAll('.document-filter-btn').forEach(function(button) {
@@ -21807,6 +22054,13 @@ ${selector} .arrowheadPath {
     });
   }
 
+  if (mobileTrashSettingsButton) {
+    mobileTrashSettingsButton.addEventListener('click', function() {
+      closeMobileMenu();
+      openTrashModal(mobileTrashSettingsButton);
+    });
+  }
+
   if (storageSettingsButton) {
     storageSettingsButton.addEventListener('click', function() {
       const settingsToggle = document.getElementById('workspaceSettingsDropdown');
@@ -21817,8 +22071,60 @@ ${selector} .arrowheadPath {
     });
   }
 
+  if (trashSettingsButton) {
+    trashSettingsButton.addEventListener('click', function() {
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
+        bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
+      }
+      openTrashModal(trashSettingsButton);
+    });
+  }
+
   function closeStorageSettings() {
     if (storageSettingsModal) closeAppModal(storageSettingsModal);
+  }
+
+  if (trashModalClose) trashModalClose.addEventListener('click', closeTrashModal);
+  if (trashModalCloseIcon) trashModalCloseIcon.addEventListener('click', closeTrashModal);
+  if (trashRestoreButton) {
+    trashRestoreButton.addEventListener('click', function() {
+      const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
+      if (!selected) return;
+      openDocumentConfirmation({
+        title: 'Restore “' + String(selected.dataset.trashTitle || 'deleted file') + '”?',
+        description: 'The file will be restored without overwriting an existing document. An encrypted snapshot preserves the current Secret Workspace before replacement.',
+        confirmText: 'Restore',
+        onConfirm: function() { restoreSelectedTrashItem(); },
+        onCancel: function() { reopenTrashModalAfterConfirmation({ preserveSelection: true }); }
+      });
+    });
+  }
+  if (trashDeleteButton) {
+    trashDeleteButton.addEventListener('click', function() {
+      const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
+      if (!selected) return;
+      openDocumentConfirmation({
+        title: 'Permanently delete “' + String(selected.dataset.trashTitle || 'deleted file') + '”?',
+        description: 'This removes the selected file from Trash immediately. This action cannot be undone.',
+        confirmText: 'Delete permanently',
+        onConfirm: function() { permanentlyDeleteSelectedTrashItem(); },
+        onCancel: function() { reopenTrashModalAfterConfirmation({ preserveSelection: true }); }
+      });
+    });
+  }
+  if (trashEmptyButton) {
+    trashEmptyButton.addEventListener('click', function() {
+      const itemCount = trashList ? trashList.children.length : 0;
+      if (!itemCount) return;
+      openDocumentConfirmation({
+        title: 'Empty Trash?',
+        description: 'This permanently deletes all ' + itemCount.toLocaleString() + ' item' + (itemCount === 1 ? '' : 's') + ' in Trash. This action cannot be undone.',
+        confirmText: 'Empty Trash',
+        onConfirm: function() { emptyTrashPermanently(); },
+        onCancel: function() { reopenTrashModalAfterConfirmation(); }
+      });
+    });
   }
 
   function setStorageBackupOptionsError(message) {
@@ -21936,30 +22242,6 @@ ${selector} .arrowheadPath {
       setStorageSettingsError('');
       selectWorkspaceBackup().catch(function(error) {
         setStorageSettingsError(error && error.message ? error.message : 'Unable to select the workspace backup.');
-      });
-    });
-  }
-  if (storageTrashRestore && storageTrashList) {
-    storageTrashRestore.addEventListener('click', function() {
-      const trashId = storageTrashList.value;
-      if (!trashId) return;
-      openDocumentConfirmation({
-        title: 'Restore deleted data?',
-        description: 'The selected item will be restored without overwriting an existing normal document. Restoring an encrypted snapshot preserves the current Secret Workspace as another recoverable snapshot.',
-        confirmText: 'Restore',
-        onConfirm: function() {
-          storageTrashRestore.disabled = true;
-          workspaceStorage.restoreTrashItem(trashId).then(function() {
-            showAppToast('Deleted data restored. Reloading the workspace…', {
-              tone: 'info',
-              title: 'Restore complete'
-            });
-            window.setTimeout(function() { window.location.reload(); }, 300);
-          }).catch(function(error) {
-            storageTrashRestore.disabled = false;
-            setStorageSettingsError(error && error.message ? error.message : 'Unable to restore the selected data.');
-          });
-        }
       });
     });
   }

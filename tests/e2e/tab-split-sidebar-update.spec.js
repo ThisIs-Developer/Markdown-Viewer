@@ -181,6 +181,7 @@ test('header groups document actions before application preferences', async ({ p
   await expect(settings.locator('#languageDropdown')).toBeVisible();
   await expect(settings.locator('#private-mode-toggle')).toBeVisible();
   await expect(settings.locator('#storage-settings-button')).toContainText('Storage and Backup');
+  await expect(settings.locator('#trash-settings-button')).toContainText('Trash');
   await expect(settings.locator('#tab-reset-btn')).toContainText('Reset workspace');
   await settings.locator('#theme-toggle').click();
   await expect(settings.locator('#theme-toggle')).toContainText('Appearance');

@@ -520,24 +520,56 @@ test('desktop journals recover a new file and a move before their index commits'
     const afterRestoreCrash = new window.MarkdownWorkspaceStorage();
     await afterRestoreCrash.init();
     const recoveredTrash = (await afterRestoreCrash.listTrash()).find(item => item.trashId === trashItem.trashId);
+    const interruptedRestoreReturnedToTrash = Boolean(
+      recoveredTrash && files.has(normalize(recoveredTrash.contentPath)) &&
+      !(await afterRestoreCrash.listDocumentMetadata()).some(item => item.id === tab.id)
+    );
+    const collisionBodies = [
+      await afterRestoreCrash.loadDocumentContent('collision_one_same1234'),
+      await afterRestoreCrash.loadDocumentContent('collision_two_same1234')
+    ];
+
+    // Simulate a crash after permanent deletion removed the Trash body but
+    // before its metadata marker was removed. Startup must finish the purge.
+    const interruptedPurge = Object.assign({}, recoveredTrash, {
+      purgeInProgress: { requestedAt: Date.now() },
+      updatedAt: Date.now()
+    });
+    delete interruptedPurge.metadataPath;
+    await afterRestoreCrash._writeJsonFileRecoverably(recoveredTrash.metadataPath, interruptedPurge);
+    await window.Neutralino.filesystem.remove(recoveredTrash.contentPath);
+    const afterPurgeCrash = new window.MarkdownWorkspaceStorage();
+    await afterPurgeCrash.init();
+    const interruptedPurgeCompleted = !files.has(normalize(recoveredTrash.metadataPath)) &&
+      !(await afterPurgeCrash.listTrash()).some(item => item.trashId === recoveredTrash.trashId);
+
+    const explicitMetadata = (await afterPurgeCrash.listDocumentMetadata())
+      .find(item => item.id === 'collision_one_same1234');
+    await afterPurgeCrash.deleteDocument(explicitMetadata.id, {
+      expectedRevision: explicitMetadata._storageRevision
+    });
+    const explicitTrash = (await afterPurgeCrash.listTrash())
+      .find(item => item.documentId === explicitMetadata.id);
+    await afterPurgeCrash.permanentlyDeleteTrashItem(explicitTrash.trashId);
+    const explicitPurgeRemovedFiles = !files.has(normalize(explicitTrash.contentPath)) &&
+      !files.has(normalize(explicitTrash.metadataPath)) &&
+      !(await afterPurgeCrash.listTrash()).some(item => item.trashId === explicitTrash.trashId);
     return {
       ids: finalMetadata.map(item => item.id),
       title: finalRecord?.title,
       content: finalContent,
-      interruptedRestoreReturnedToTrash: Boolean(
-        recoveredTrash && files.has(normalize(recoveredTrash.contentPath)) &&
-        !(await afterRestoreCrash.listDocumentMetadata()).some(item => item.id === tab.id)
-      ),
-      collisionBodies: [
-        await afterRestoreCrash.loadDocumentContent('collision_one_same1234'),
-        await afterRestoreCrash.loadDocumentContent('collision_two_same1234')
-      ]
+      interruptedRestoreReturnedToTrash,
+      interruptedPurgeCompleted,
+      explicitPurgeRemovedFiles,
+      collisionBodies
     };
   });
   expect(result.ids).toContain('desktop_new_document');
   expect(result.title).toBe('Desktop document renamed');
   expect(result.content).toBe('# Desktop body survives');
   expect(result.interruptedRestoreReturnedToTrash).toBe(true);
+  expect(result.interruptedPurgeCompleted).toBe(true);
+  expect(result.explicitPurgeRemovedFiles).toBe(true);
   expect(result.collisionBodies).toEqual(['# First collision body', '# Second collision body']);
 });
 

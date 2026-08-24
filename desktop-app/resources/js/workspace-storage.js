@@ -12,6 +12,8 @@
   const INTERNAL_DIR = '.markdown-viewer';
   const SECRET_FOLDER_RECORD_ID = '__folders__';
   const SECRET_MANIFEST_BACKUP_RECORD_ID = '__manifest_backup__';
+  const TRASH_RETENTION_DAYS = 30;
+  const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
   function isDesktopRuntime() {
     try {
@@ -121,6 +123,60 @@
       base64ByteLength(envelope.iv) === 12 &&
       base64ByteLength(envelope.ciphertext) >= 16
     );
+  }
+
+  function isSecretManifestStructurallyValid(manifest) {
+    return Boolean(
+      manifest && typeof manifest === 'object' &&
+      base64ByteLength(manifest.salt) >= 16 &&
+      Number.isSafeInteger(Number(manifest.iterations)) &&
+      Number(manifest.iterations) >= 100000
+    );
+  }
+
+  function isSecretRecordStructurallyValid(record) {
+    if (!record || typeof record !== 'object') return false;
+    try {
+      requireSecretRecordId(record.id);
+    } catch (_) {
+      return false;
+    }
+    return validateEncryptedEnvelope(record.envelope);
+  }
+
+  function isTrashRecordRestorable(record, desktop) {
+    if (!record || typeof record.trashId !== 'string' || !record.trashId) return false;
+    const kind = record.kind || 'normal-document';
+    if (kind === 'normal-document') {
+      return Boolean(
+        record.metadata && typeof record.metadata.id === 'string' && record.metadata.id &&
+        (desktop ? typeof record.contentPath === 'string' && record.contentPath : typeof record.content === 'string')
+      );
+    }
+    if (kind === 'secret-workspace-snapshot') {
+      if (!isSecretManifestStructurallyValid(record.secretManifest) || !Array.isArray(record.secretRecords)) return false;
+      const ids = new Set();
+      return record.secretRecords.every(function(secretRecord) {
+        if (!isSecretRecordStructurallyValid(secretRecord) || ids.has(secretRecord.id)) return false;
+        ids.add(secretRecord.id);
+        return true;
+      });
+    }
+    if (kind === 'secret-record') {
+      return Boolean(
+        isSecretManifestStructurallyValid(record.secretManifest) &&
+        isSecretRecordStructurallyValid(record.secretRecord) &&
+        record.documentId === record.secretRecord.id
+      );
+    }
+    return false;
+  }
+
+  function isTrashRecordEligibleForAutomaticPurge(record, cutoff) {
+    if (!record || typeof record.trashId !== 'string' || !record.trashId) return false;
+    const deletedAt = Number(record.deletedAt);
+    if (!Number.isSafeInteger(deletedAt) || deletedAt <= 0 || deletedAt > cutoff) return false;
+    return isTrashRecordRestorable(record, typeof record.contentPath === 'string');
   }
 
   function requireDocumentId(id) {
@@ -297,6 +353,12 @@
       else await this._initBrowser();
       await this._migrateLegacyNormalDocuments();
       this.ready = true;
+      try {
+        await this.purgeExpiredTrash();
+      } catch (error) {
+        this.lastError = error;
+        console.warn('Expired Trash items could not be removed:', error);
+      }
       return this;
     }
 
@@ -709,19 +771,55 @@
       await this._recoverDesktopTrashTransactions();
     }
 
+    async _completeDesktopTrashPurge(record, metadataPath) {
+      const trashPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'trash');
+      const normalizedTrashPath = normalizePathSeparators(trashPath).toLowerCase().replace(/\/+$/, '') + '/';
+      const isSafeTrashPath = function(path) {
+        const normalized = normalizePathSeparators(path);
+        return Boolean(
+          normalized &&
+          normalized.toLowerCase().startsWith(normalizedTrashPath) &&
+          !normalized.split('/').includes('..')
+        );
+      };
+      if (!isSafeTrashPath(metadataPath)) {
+        throw new Error('Trash metadata points outside the managed Trash folder.');
+      }
+      if ((record.kind || 'normal-document') === 'normal-document') {
+        if (!isSafeTrashPath(record.contentPath)) {
+          throw new Error('Trash content points outside the managed Trash folder.');
+        }
+        if (await this._pathExists(record.contentPath)) {
+          await Neutralino.filesystem.remove(record.contentPath);
+        }
+      }
+      if (await this._pathExists(metadataPath)) {
+        await Neutralino.filesystem.remove(metadataPath);
+      }
+    }
+
     async _recoverDesktopTrashTransactions() {
       const trashPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'trash');
       let entries = [];
       try { entries = await Neutralino.filesystem.readDirectory(trashPath); } catch (_) { return; }
       const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
       const currentIndex = await this._readJsonFileRecoverably(indexPath, null);
-      if (!currentIndex || !Array.isArray(currentIndex.documents)) return;
+      const hasCurrentIndex = Boolean(currentIndex && Array.isArray(currentIndex.documents));
       const normalizedVault = normalizePathSeparators(this.vaultPath).toLowerCase().replace(/\/+$/, '') + '/';
       for (const entry of entries) {
-        if (!entry || entry.type !== 'FILE' || !/\.md\.json$/i.test(entry.entry || '')) continue;
+        if (!entry || entry.type !== 'FILE' || !/(?:\.md\.json|\.secret\.json)$/i.test(entry.entry || '')) continue;
         const metadataPath = await this._pathJoin(trashPath, entry.entry);
         const record = await this._readJsonFileRecoverably(metadataPath, null);
-        if (!record || record.kind !== 'normal-document') continue;
+        if (!record) continue;
+        if (record.purgeInProgress) {
+          try {
+            await this._completeDesktopTrashPurge(record, metadataPath);
+          } catch (error) {
+            console.warn('An interrupted Trash purge could not be completed:', error);
+          }
+          continue;
+        }
+        if (record.kind !== 'normal-document' || !hasCurrentIndex) continue;
         const source = normalizePathSeparators(record.originalPath || record.source);
         const destination = normalizePathSeparators(record.contentPath || record.destination);
         if (!source || !destination || !source.toLowerCase().startsWith(normalizedVault) ||
@@ -1640,16 +1738,111 @@
           if (!entry || entry.type !== 'FILE' || !/(?:\.md\.json|\.secret\.json)$/i.test(entry.entry || '')) continue;
           const path = await this._pathJoin(directory, entry.entry);
           const record = await this._readJsonFileRecoverably(path, null);
-          if (!record || !record.trashId ||
-              (!['secret-workspace-snapshot', 'secret-record'].includes(record.kind) && !record.contentPath)) continue;
-          items.push(Object.assign({}, record, { metadataPath: path }));
+          if (!record || !record.trashId) continue;
+          items.push(Object.assign({}, record, {
+            metadataPath: path,
+            restorable: isTrashRecordRestorable(record, true)
+          }));
         }
         return items.sort(function(left, right) { return Number(right.deletedAt) - Number(left.deletedAt); });
       }
       const transaction = this.db.transaction('trash', 'readonly');
       const records = await requestToPromise(transaction.objectStore('trash').getAll());
       await transactionToPromise(transaction);
-      return records.sort(function(left, right) { return Number(right.deletedAt) - Number(left.deletedAt); });
+      return records.map(function(record) {
+        return Object.assign({}, record, { restorable: isTrashRecordRestorable(record, false) });
+      }).sort(function(left, right) { return Number(right.deletedAt) - Number(left.deletedAt); });
+    }
+
+    async permanentlyDeleteTrashItem(trashId) {
+      if (typeof trashId !== 'string' || !trashId) throw new TypeError('A Trash item ID is required.');
+      if (this.desktop) {
+        const items = await this.listTrash();
+        const item = items.find(function(record) { return record.trashId === trashId; });
+        if (!item) throw new Error('The Trash item is no longer available.');
+        const purgeRecord = Object.assign({}, cloneJson(item, {}) || {}, {
+          purgeInProgress: { requestedAt: Date.now() },
+          updatedAt: Date.now()
+        });
+        delete purgeRecord.metadataPath;
+        delete purgeRecord.restorable;
+        await this._writeJsonFileRecoverably(item.metadataPath, purgeRecord);
+        await this._completeDesktopTrashPurge(purgeRecord, item.metadataPath);
+        return true;
+      }
+      const transaction = this.db.transaction('trash', 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const store = transaction.objectStore('trash');
+      const item = await requestToPromise(store.get(trashId));
+      if (!item) {
+        await completion;
+        throw new Error('The Trash item is no longer available.');
+      }
+      store.delete(trashId);
+      await completion;
+      return true;
+    }
+
+    async emptyTrash() {
+      if (this.desktop) {
+        const items = await this.listTrash();
+        let deletedCount = 0;
+        const failures = [];
+        for (const item of items) {
+          try {
+            await this.permanentlyDeleteTrashItem(item.trashId);
+            deletedCount += 1;
+          } catch (error) {
+            failures.push({ trashId: item.trashId, error: error });
+          }
+        }
+        if (failures.length) {
+          const error = new Error(
+            deletedCount + ' Trash item' + (deletedCount === 1 ? '' : 's') +
+            ' deleted, but ' + failures.length + ' could not be removed.'
+          );
+          error.deletedCount = deletedCount;
+          error.failures = failures;
+          throw error;
+        }
+        return deletedCount;
+      }
+      const transaction = this.db.transaction('trash', 'readwrite');
+      const completion = transactionToPromise(transaction);
+      const store = transaction.objectStore('trash');
+      const count = await requestToPromise(store.count());
+      store.clear();
+      await completion;
+      return count;
+    }
+
+    async purgeExpiredTrash(options) {
+      const settings = options || {};
+      const now = Number.isFinite(Number(settings.now)) ? Number(settings.now) : Date.now();
+      const retentionMs = Number.isFinite(Number(settings.retentionMs)) && Number(settings.retentionMs) >= 0
+        ? Number(settings.retentionMs)
+        : TRASH_RETENTION_MS;
+      const cutoff = now - retentionMs;
+      const items = (await this.listTrash()).filter(function(record) {
+        return isTrashRecordEligibleForAutomaticPurge(record, cutoff);
+      });
+      let deletedCount = 0;
+      const failures = [];
+      for (const item of items) {
+        try {
+          await this.permanentlyDeleteTrashItem(item.trashId);
+          deletedCount += 1;
+        } catch (error) {
+          failures.push({ trashId: item.trashId, error: error });
+        }
+      }
+      if (failures.length) {
+        const error = new Error('One or more expired Trash items could not be removed.');
+        error.deletedCount = deletedCount;
+        error.failures = failures;
+        throw error;
+      }
+      return deletedCount;
     }
 
     async saveDirtyJournal(journal) {
@@ -1685,6 +1878,12 @@
         const items = await this.listTrash();
         const item = items.find(function(record) { return record.trashId === trashId; });
         if (!item) throw new Error('The deleted document is no longer available.');
+        if (!item.restorable) {
+          throw new WorkspaceCorruptionError(
+            trashId,
+            'This Trash item has incomplete or unsupported recovery data. It was kept in Trash and was not changed.'
+          );
+        }
         if (item.kind === 'secret-workspace-snapshot') {
           const currentRecords = await this.listSecretRecords();
           const currentManifest = await this.getSecretManifest();
@@ -1752,6 +1951,7 @@
           updatedAt: Date.now()
         });
         delete restoringTrashRecord.metadataPath;
+        delete restoringTrashRecord.restorable;
         await this._writeJsonFileRecoverably(item.metadataPath, restoringTrashRecord);
         await Neutralino.filesystem.move(item.contentPath, destination);
         this.vaultIndex.documents.push(metadata);
@@ -1780,6 +1980,12 @@
       try {
         const item = await requestToPromise(trash.get(trashId));
         if (!item) throw new Error('The deleted item is no longer available.');
+        if (!isTrashRecordRestorable(item, false)) {
+          throw new WorkspaceCorruptionError(
+            trashId,
+            'This Trash item has incomplete or unsupported recovery data. It was kept in Trash and was not changed.'
+          );
+        }
         if (item.kind === 'secret-workspace-snapshot') {
           const records = transaction.objectStore('secretRecords');
           const metadataStore = transaction.objectStore('metadata');
@@ -2727,7 +2933,10 @@
     }
   }
 
+  MarkdownWorkspaceStorage.TRASH_RETENTION_DAYS = TRASH_RETENTION_DAYS;
+  MarkdownWorkspaceStorage.TRASH_RETENTION_MS = TRASH_RETENTION_MS;
   window.MarkdownWorkspaceStorage = MarkdownWorkspaceStorage;
   window.MARKDOWN_VIEWER_VAULT_NAME = VAULT_NAME;
   window.MARKDOWN_VIEWER_SECRET_FOLDER_RECORD_ID = SECRET_FOLDER_RECORD_ID;
+  window.MARKDOWN_VIEWER_TRASH_RETENTION_DAYS = TRASH_RETENTION_DAYS;
 })();
