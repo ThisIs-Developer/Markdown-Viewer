@@ -10533,7 +10533,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const presentation = {
       saving: { icon: 'lucide lucide-refresh-cw', text: 'Saving...' },
       saved: { icon: 'lucide lucide-check', text: 'All changes saved' },
-      private: { icon: 'lucide lucide-hat-glasses', text: 'Incognito' },
+      private: { icon: 'lucide lucide-hat-glasses', text: 'Private mode is on' },
       error: { icon: 'lucide lucide-circle-alert', text: 'Changes not saved' }
     }[nextState];
     saveStatus.classList.remove('is-saving', 'is-saved', 'is-private', 'is-error');

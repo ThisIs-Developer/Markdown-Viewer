@@ -4160,17 +4160,7 @@ a:focus {
   color: var(--success-color);
 }
 
-html[data-private-mode="true"] .app-status-bar {
-  border-top-color: color-mix(in srgb, var(--color-danger-fg) 42%, var(--border-color));
-  background: color-mix(in srgb, var(--color-danger-fg) 8%, var(--header-bg));
-}
-
 .app-save-status.is-private {
-  min-width: 0;
-  padding: 3px 7px;
-  border: 1px solid color-mix(in srgb, var(--color-danger-fg) 38%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-danger-fg) 12%, transparent);
   color: var(--color-danger-fg);
   font-weight: 600;
 }
@@ -12256,17 +12246,7 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
 
 #private-mode-toggle.is-active .settings-switch,
 #mobile-private-mode-toggle.is-active .settings-switch {
-  background: var(--color-danger-fg);
-}
-
-#private-mode-toggle.is-active > .lucide,
-#mobile-private-mode-toggle.is-active .mobile-menu-item-label > .lucide {
-  color: var(--color-danger-fg);
-}
-
-#private-mode-toggle.is-active:focus-visible,
-#mobile-private-mode-toggle.is-active:focus-visible {
-  outline-color: var(--color-danger-fg);
+  background: var(--accent-color);
 }
 
 .mobile-menu-command.is-active .mobile-menu-item-label > i,
