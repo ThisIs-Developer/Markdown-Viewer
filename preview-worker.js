@@ -160,6 +160,70 @@ function tokenizeDollarMath(source) {
   return null;
 }
 
+function readBalancedTexGroup(source, startIndex) {
+  if (source[startIndex] !== "{") return null;
+  let depth = 0;
+  for (let index = startIndex; index < source.length; index += 1) {
+    if (isEscapedCharacter(source, index)) continue;
+    if (source[index] === "{") {
+      depth += 1;
+    } else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return { endIndex: index, content: source.slice(startIndex + 1, index) };
+      }
+    }
+  }
+  return null;
+}
+
+function normalizeLegacyMathSyntax(source) {
+  const tex = String(source || "");
+  let normalized = "";
+  let index = 0;
+
+  while (index < tex.length) {
+    if (tex.startsWith("\\^", index) && !isEscapedCharacter(tex, index)) {
+      normalized += "^";
+      index += 2;
+      continue;
+    }
+
+    if (
+      !tex.startsWith("\\color", index) ||
+      isEscapedCharacter(tex, index) ||
+      /[a-zA-Z]/.test(tex[index + 6] || "")
+    ) {
+      normalized += tex[index];
+      index += 1;
+      continue;
+    }
+
+    let colorGroupStart = index + 6;
+    while (/[ \t]/.test(tex[colorGroupStart] || "")) colorGroupStart += 1;
+    const colorGroup = readBalancedTexGroup(tex, colorGroupStart);
+    if (!colorGroup) {
+      normalized += tex[index];
+      index += 1;
+      continue;
+    }
+
+    let contentGroupStart = colorGroup.endIndex + 1;
+    while (/[ \t]/.test(tex[contentGroupStart] || "")) contentGroupStart += 1;
+    const contentGroup = readBalancedTexGroup(tex, contentGroupStart);
+    if (!contentGroup) {
+      normalized += tex[index];
+      index += 1;
+      continue;
+    }
+
+    normalized += `{\\color{${colorGroup.content}}${normalizeLegacyMathSyntax(contentGroup.content)}}`;
+    index = contentGroup.endIndex + 1;
+  }
+
+  return normalized;
+}
+
 function createUniqueHeadingId(raw) {
   const baseId = String(raw || "")
     .toLowerCase()
@@ -257,7 +321,7 @@ function configureMarked() {
       return { type: "blockMath", raw: match[0], text: match[1] };
     },
     renderer(token) {
-      return `<div class="math-block tex2jax_process">$$\n${escapeHtml(token.text)}\n$$</div>\n`;
+      return `<div class="math-block tex2jax_process">$$\n${escapeHtml(normalizeLegacyMathSyntax(token.text))}\n$$</div>\n`;
     },
   };
 
@@ -369,7 +433,7 @@ function configureMarked() {
     renderer(token) {
       if (token.literalDollar) return '<span class="math-literal-dollar tex2jax_ignore">&#36;</span>';
       const displayClass = token.display ? ' math-display-inline' : '';
-      return `<span class="math-inline tex2jax_process${displayClass}">${escapeHtml(token.raw)}</span>`;
+      return `<span class="math-inline tex2jax_process${displayClass}">${escapeHtml(normalizeLegacyMathSyntax(token.raw))}</span>`;
     },
   };
 
@@ -560,7 +624,7 @@ function configureMarked() {
     }
 
     if (language === "math") {
-      return `<div class="math-block">$$\n${code}\n$$</div>\n`;
+      return `<div class="math-block tex2jax_process">$$\n${escapeHtml(normalizeLegacyMathSyntax(code))}\n$$</div>\n`;
     }
 
     const validLanguage = hljs && hljs.getLanguage(language) ? language : "plaintext";

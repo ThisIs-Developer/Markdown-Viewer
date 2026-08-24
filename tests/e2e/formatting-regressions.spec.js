@@ -198,11 +198,23 @@ test('keeps TeX atomic while preserving superscript, subscript, and highlight ou
   await expect(page.locator('#markdown-preview .math-block')).toContainText('A_cE\\left\\{');
 });
 
-test('preserves standard MathJax color syntax and sanitizes extension output', async ({ page }) => {
+test('scopes legacy MathJax color syntax without changing standard switches or sanitization', async ({ page }) => {
   await setEditorContent(page, [
     '$\\color{red}{v\\^2} \\color{blue}{G}M\\left(\\color{green}{\\frac{2}{r}} - \\color{purple}{\\frac{1}{a}}\\right)$',
     '',
     '${\\color{red}v^2} + \\textcolor{blue}{G}M$',
+    '',
+    '$\\color{red}{outer \\color{blue}{inner} outer} + z$',
+    '',
+    '$\\color{orange} x + y$',
+    '',
+    '$$',
+    '\\color{teal}{A_{nested}}',
+    '$$',
+    '',
+    '```math',
+    '\\color{brown}{B^2}',
+    '```',
     '',
     '$x <svg onload="window.__mathXss = true"></svg> y$',
     '',
@@ -212,9 +224,16 @@ test('preserves standard MathJax color syntax and sanitizes extension output', a
   ].join('\n'));
 
   const math = page.locator('#markdown-preview .math-inline');
-  await expect(math).toHaveCount(3);
-  await expect(math.nth(0)).toContainText('\\color{red}{v\\^2}');
+  await expect(math).toHaveCount(5);
+  await expect(math.nth(0)).toContainText('${\\color{red}v^2} {\\color{blue}G}M\\left({\\color{green}\\frac{2}{r}} - {\\color{purple}\\frac{1}{a}}\\right)$');
+  await expect(math.nth(0)).not.toContainText('\\^');
   await expect(math.nth(1)).toContainText('{\\color{red}v^2}');
+  await expect(math.nth(2)).toContainText('${\\color{red}outer {\\color{blue}inner} outer} + z$');
+  await expect(math.nth(3)).toContainText('$\\color{orange} x + y$');
+  const mathBlocks = page.locator('#markdown-preview .math-block');
+  await expect(mathBlocks).toHaveCount(2);
+  await expect(mathBlocks.nth(0)).toContainText('{\\color{teal}A_{nested}}');
+  await expect(mathBlocks.nth(1)).toContainText('{\\color{brown}B^2}');
   await expect(page.locator('#markdown-preview svg')).toHaveCount(0);
   await expect(page.locator('#markdown-preview [onload], #markdown-preview [onerror]')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => ({ math: window.__mathXss, note: window.__footnoteXss }))).toEqual({
