@@ -178,7 +178,8 @@ test('dedicated Trash restores, permanently deletes, and empties selected data',
     await storage.init();
     await storage.emptyTrash();
     const documents = [
-      ['trash_ui_restore', 'Restore from Trash'],
+      ['trash_ui_restore_first', 'Restore from Trash A'],
+      ['trash_ui_restore_second', 'Restore from Trash B'],
       ['trash_ui_delete', 'Delete from Trash'],
       ['trash_ui_empty', 'Empty from Trash']
     ].map(([id, title]) => ({
@@ -215,45 +216,78 @@ test('dedicated Trash restores, permanently deletes, and empties selected data',
   await page.locator('#sidebar-trash-button').click();
   await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#trash-modal-title')).toHaveText('Trash');
-  await expect(page.locator('.trash-item')).toHaveCount(4);
+  await expect(page.locator('.trash-item')).toHaveCount(5);
+  expect(await page.locator('.trash-item input').evaluateAll(inputs => inputs.every(input => input.type === 'checkbox'))).toBe(true);
+  await expect(page.locator('#trash-search')).toBeVisible();
+  await expect(page.locator('#trash-selection-status')).toHaveText('0 selected');
   await expect(page.locator('#trash-empty-button')).toBeEnabled();
 
   const incompleteRow = page.locator('.trash-item', { hasText: 'No expiry' });
   await expect(incompleteRow).toHaveAttribute('title', /Recovery data is incomplete/);
-  await incompleteRow.locator('input').check();
+  await incompleteRow.locator('input').click({ modifiers: ['Control'] });
+  await expect(page.locator('#trash-selection-status')).toHaveText('1 selected');
   await expect(page.locator('#trash-restore-button')).toBeDisabled();
   await expect(page.locator('#trash-delete-button')).toBeEnabled();
+  await incompleteRow.locator('input').click({ modifiers: ['Control'] });
+  await expect(page.locator('#trash-selection-status')).toHaveText('0 selected');
 
-  const restoreRow = page.locator('.trash-item', { hasText: 'Restore from Trash' });
-  await restoreRow.locator('input').check();
+  await page.locator('#trash-search').fill('Restore from Trash');
+  await expect(page.locator('.trash-item:not([hidden])')).toHaveCount(2);
+  await page.locator('#trash-select-all').click();
+  await expect(page.locator('.trash-item input:checked')).toHaveCount(2);
+  await expect(page.locator('#trash-selection-status')).toHaveText('2 selected');
+  await expect(page.locator('#trash-select-all')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#trash-select-all').click();
+  await expect(page.locator('.trash-item input:checked')).toHaveCount(0);
+  await page.locator('#trash-select-all').click();
+  await expect(page.locator('#trash-restore-button')).toBeEnabled();
   const reloadPromise = page.waitForEvent('load');
   await page.locator('#trash-restore-button').click();
   await expect(page.locator('#document-confirm-modal')).not.toBeVisible();
   await reloadPromise;
   await waitForAppReady(page);
-  expect(JSON.stringify(await storedDocuments(page))).toContain('Restore from Trash');
+  const restoredDocuments = JSON.stringify(await storedDocuments(page));
+  expect(restoredDocuments).toContain('Restore from Trash A');
+  expect(restoredDocuments).toContain('Restore from Trash B');
 
   await page.locator('#workspaceSettingsDropdown').click();
   await page.locator('#trash-settings-button').click();
   await expect(page.locator('.trash-item')).toHaveCount(3);
+  await expect(page.locator('#trash-search')).toHaveValue('');
   const deleteRow = page.locator('.trash-item', { hasText: 'Delete from Trash' });
-  await deleteRow.locator('input').check();
+  const remainingIncompleteRow = page.locator('.trash-item', { hasText: 'No expiry' });
+  await deleteRow.locator('input').click();
   await page.locator('#trash-delete-button').click();
+  await expect(page.locator('#document-confirm-modal-title')).toHaveText('Permanently delete “Delete from Trash”?');
   await expect(page.locator('#document-confirm-modal-description')).toHaveText(
     '“Delete from Trash” will be permanently removed from Trash immediately. This action cannot be undone.'
   );
   await page.locator('#document-confirm-modal-cancel').click();
   await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
   await expect(deleteRow.locator('input')).toBeChecked();
+  await remainingIncompleteRow.locator('input').click({ modifiers: ['Control'] });
+  await expect(page.locator('#trash-selection-status')).toHaveText('2 selected');
+  await expect(page.locator('#trash-restore-button')).toBeDisabled();
+  await page.locator('#trash-delete-button').click();
+  await expect(page.locator('#document-confirm-modal-title')).toHaveText('Permanently delete 2 files?');
+  await expect(page.locator('#document-confirm-modal-description')).toHaveText(
+    '“Deleted document” and “Delete from Trash” will be permanently removed from Trash immediately. This action cannot be undone.'
+  );
+  await page.locator('#document-confirm-modal-cancel').click();
+  await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
+  await expect(page.locator('.trash-item input:checked')).toHaveCount(2);
   await page.locator('#trash-delete-button').click();
   await page.locator('#document-confirm-modal-confirm').click();
-  await expect(page.locator('.trash-item')).toHaveCount(2);
-  expect(JSON.stringify(await readWorkspaceStore(page, 'trash'))).not.toContain('trash_ui_delete');
+  await expect(page.locator('.trash-item')).toHaveCount(1);
+  const remainingTrash = JSON.stringify(await readWorkspaceStore(page, 'trash'));
+  expect(remainingTrash).not.toContain('trash_ui_delete');
+  expect(remainingTrash).not.toContain('trash_ui_incomplete');
 
   await page.locator('#trash-empty-button').click();
   await expect(page.locator('#document-confirm-modal-title')).toHaveText('Empty Trash?');
   await page.locator('#document-confirm-modal-confirm').click();
   await expect(page.locator('#trash-empty-state')).toBeVisible();
-  await expect(page.locator('#trash-item-count')).toHaveText('0 items');
+  await expect(page.locator('#trash-empty-title')).toHaveText('Trash is empty');
+  await expect(page.locator('#trash-selection-status')).toHaveText('0 selected');
   expect(await readWorkspaceStore(page, 'trash')).toEqual([]);
 });

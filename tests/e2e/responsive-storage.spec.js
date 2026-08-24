@@ -347,11 +347,23 @@ test('dedicated Trash uses the shared application type scale at compact widths',
   await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('.trash-item')).toHaveCount(1);
   await expect(page.locator('#trash-modal-description')).toContainText('permanently deleted after 30 days');
+  await expect(page.locator('#trash-search')).toBeVisible();
+  await expect(page.locator('#trash-select-all')).toBeEnabled();
   await expect(page.locator('#trash-restore-button')).toBeDisabled();
   await expect(page.locator('#trash-delete-button')).toBeDisabled();
   await page.locator('.trash-item input').check();
+  await expect(page.locator('#trash-selection-status')).toHaveText('1 selected');
+  await expect(page.locator('#trash-select-all')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#trash-restore-button')).toBeEnabled();
   await expect(page.locator('#trash-delete-button')).toBeEnabled();
+  await expect(page.locator('.trash-summary #trash-restore-button')).toHaveCount(1);
+  await expect(page.locator('.trash-summary #trash-delete-button')).toHaveCount(1);
+  expect(await page.locator('.trash-summary .github-import-toolbar-actions > button').evaluateAll(buttons => buttons.map(button => button.id))).toEqual([
+    'trash-select-all',
+    'trash-delete-button',
+    'trash-restore-button'
+  ]);
+  await expect(page.locator('.trash-modal-actions .reset-modal-btn')).toHaveText(['Empty Trash', 'Cancel']);
 
   const typography = await page.evaluate(() => {
     const read = selector => {
@@ -365,6 +377,7 @@ test('dedicated Trash uses the shared application type scale at compact widths',
       itemExpiry: read('.trash-item-expiry'),
       summaryCount: read('.trash-summary .github-import-selected-count'),
       restoreButton: read('#trash-restore-button'),
+      githubToolbarButton: read('#github-import-select-all'),
       closeButton: read('#trash-modal-close')
     };
   });
@@ -373,9 +386,9 @@ test('dedicated Trash uses the shared application type scale at compact widths',
   expect(typography.itemTitle.fontSize).toBe('12px');
   expect(typography.itemExpiry.fontSize).toBe('11px');
   expect(typography.summaryCount.fontSize).toBe('11px');
+  expect(typography.restoreButton).toEqual(typography.githubToolbarButton);
   for (const role of [
     'retentionNote',
-    'restoreButton',
     'closeButton'
   ]) {
     expect(typography[role].fontSize).toBe('12px');
@@ -405,16 +418,24 @@ test('dedicated Trash uses the shared application type scale at compact widths',
       trashSummary: read('.trash-summary'),
       githubToolbar: read('.github-import-selection-toolbar:not(.trash-summary)'),
       trashCount: read('.trash-summary .github-import-selected-count'),
-      githubCount: read('#github-import-selected-count')
+      githubCount: read('#github-import-selected-count'),
+      trashSearch: read('#trash-search'),
+      githubSearch: read('#github-import-search'),
+      trashRestore: read('#trash-restore-button'),
+      githubSelectAll: read('#github-import-select-all')
     };
   });
   expect(sharedComponentStyles.retention).toEqual(sharedComponentStyles.storageRecovery);
   expect(sharedComponentStyles.trashSummary).toEqual(sharedComponentStyles.githubToolbar);
   expect(sharedComponentStyles.trashCount).toEqual(sharedComponentStyles.githubCount);
+  expect(sharedComponentStyles.trashSearch).toEqual(sharedComponentStyles.githubSearch);
+  expect(sharedComponentStyles.trashRestore).toEqual(sharedComponentStyles.githubSelectAll);
   await expect(page.locator('.trash-summary')).toHaveCSS('display', 'grid');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.locator('#trash-search')).toBeVisible();
+  await expect(page.locator('#trash-select-all')).toBeVisible();
   await expect(page.locator('#trash-empty-button')).toBeVisible();
   await expect(page.locator('#trash-restore-button')).toBeVisible();
   await expect(page.locator('#trash-delete-button')).toBeVisible();
@@ -422,7 +443,7 @@ test('dedicated Trash uses the shared application type scale at compact widths',
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.setViewportSize({ width: 667, height: 375 });
-  for (const selector of ['#trash-empty-button', '#trash-restore-button', '#trash-delete-button', '#trash-modal-close']) {
+  for (const selector of ['#trash-search', '#trash-select-all', '#trash-empty-button', '#trash-restore-button', '#trash-delete-button', '#trash-modal-close']) {
     await expect(page.locator(selector)).toBeVisible();
   }
   const modalBounds = await page.locator('#trash-modal .trash-modal-box').boundingBox();

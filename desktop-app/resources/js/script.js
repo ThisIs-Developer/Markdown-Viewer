@@ -923,14 +923,18 @@ document.addEventListener("DOMContentLoaded", async function () {
   const trashModal = document.getElementById("trash-modal");
   const trashModalClose = document.getElementById("trash-modal-close");
   const trashModalCloseIcon = document.getElementById("trash-modal-close-icon");
+  const trashSearchInput = document.getElementById("trash-search");
+  const trashSelectAllButton = document.getElementById("trash-select-all");
   const trashList = document.getElementById("trash-list");
   const trashEmptyState = document.getElementById("trash-empty-state");
-  const trashItemCount = document.getElementById("trash-item-count");
+  const trashEmptyTitle = document.getElementById("trash-empty-title");
+  const trashEmptyDescription = document.getElementById("trash-empty-description");
   const trashSelectionStatus = document.getElementById("trash-selection-status");
   const trashRestoreButton = document.getElementById("trash-restore-button");
   const trashDeleteButton = document.getElementById("trash-delete-button");
   const trashEmptyButton = document.getElementById("trash-empty-button");
   const trashModalError = document.getElementById("trash-modal-error");
+  let trashModalBusy = false;
   const saveStatus = document.getElementById("save-status");
   const saveStatusIcon = document.getElementById("save-status-icon");
   const saveStatusText = document.getElementById("save-status-text");
@@ -1197,44 +1201,110 @@ document.addEventListener("DOMContentLoaded", async function () {
     return 'Today';
   }
 
-  function getSelectedTrashId() {
-    const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
-    return selected ? selected.value : '';
+  function getSelectedTrashInputs() {
+    return trashList
+      ? Array.from(trashList.querySelectorAll('input[name="trash-selected-item"]:checked'))
+      : [];
+  }
+
+  function getSelectedTrashIds() {
+    return getSelectedTrashInputs().map(function(input) { return input.value; });
+  }
+
+  function describeSelectedTrashFiles(inputs) {
+    const names = inputs.slice(0, 3).map(function(input) {
+      return '“' + String(input.dataset.trashTitle || 'deleted file') + '”';
+    });
+    let label = names.join(', ');
+    if (names.length === 2) label = names.join(' and ');
+    if (names.length === 3) label = names.slice(0, 2).join(', ') + ', and ' + names[2];
+    if (inputs.length > names.length) {
+      label += ', and ' + (inputs.length - names.length).toLocaleString() + ' more file' +
+        (inputs.length - names.length === 1 ? '' : 's');
+    }
+    return label;
+  }
+
+  function getVisibleTrashInputs() {
+    if (!trashList) return [];
+    return Array.from(trashList.querySelectorAll('.trash-item:not([hidden]) input[name="trash-selected-item"]'));
   }
 
   function updateTrashSelectionState() {
-    const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
-    const restorable = Boolean(selected && selected.dataset.trashRestorable === 'true');
+    const selected = getSelectedTrashInputs();
+    const restorable = selected.length > 0 && selected.every(function(input) {
+      return input.dataset.trashRestorable === 'true';
+    });
     if (trashList) {
       trashList.querySelectorAll('.trash-item').forEach(function(row) {
         const input = row.querySelector('input[name="trash-selected-item"]');
         row.classList.toggle('is-selected', Boolean(input && input.checked));
       });
     }
-    if (trashRestoreButton) trashRestoreButton.disabled = !restorable;
-    if (trashDeleteButton) trashDeleteButton.disabled = !selected;
+    if (trashRestoreButton) trashRestoreButton.disabled = trashModalBusy || !restorable;
+    if (trashDeleteButton) trashDeleteButton.disabled = trashModalBusy || selected.length === 0;
     if (trashSelectionStatus) {
-      trashSelectionStatus.textContent = selected
-        ? '1 selected' + (restorable ? '' : ' · recovery unavailable')
-        : '0 selected';
+      trashSelectionStatus.textContent = selected.length.toLocaleString() + ' selected';
+    }
+    if (trashSelectAllButton) {
+      const visibleInputs = getVisibleTrashInputs();
+      const allVisibleSelected = visibleInputs.length > 0 && visibleInputs.every(function(input) { return input.checked; });
+      const label = allVisibleSelected ? 'Deselect visible files' : 'Select all visible files';
+      trashSelectAllButton.disabled = trashModalBusy || visibleInputs.length === 0;
+      trashSelectAllButton.setAttribute('aria-pressed', allVisibleSelected ? 'true' : 'false');
+      trashSelectAllButton.setAttribute('aria-label', label);
+      trashSelectAllButton.title = label;
     }
   }
 
-  function renderTrashItems(items, selectedTrashId) {
+  function updateTrashFilter() {
     if (!trashList) return;
+    const query = String(trashSearchInput && trashSearchInput.value || '').trim().toLocaleLowerCase();
+    const rows = Array.from(trashList.querySelectorAll('.trash-item'));
+    let visibleCount = 0;
+    rows.forEach(function(row) {
+      const matches = !query || String(row.dataset.trashSearch || '').includes(query);
+      row.hidden = !matches;
+      if (matches) visibleCount += 1;
+    });
+    trashList.hidden = visibleCount === 0;
+    if (trashEmptyState) {
+      trashEmptyState.hidden = visibleCount > 0;
+      if (trashEmptyTitle) trashEmptyTitle.textContent = rows.length ? 'No matching files' : 'Trash is empty';
+      if (trashEmptyDescription) {
+        trashEmptyDescription.textContent = rows.length
+          ? 'Try a different search.'
+          : 'Deleted files will appear here for 30 days.';
+      }
+    }
+    updateTrashSelectionState();
+  }
+
+  function toggleVisibleTrashSelection() {
+    const visibleInputs = getVisibleTrashInputs();
+    if (!visibleInputs.length) return;
+    const shouldSelect = !visibleInputs.every(function(input) { return input.checked; });
+    visibleInputs.forEach(function(input) { input.checked = shouldSelect; });
+    updateTrashSelectionState();
+  }
+
+  function renderTrashItems(items, selectedTrashIds) {
+    if (!trashList) return;
+    const selectedIds = new Set(Array.isArray(selectedTrashIds) ? selectedTrashIds : []);
     trashList.textContent = '';
     items.forEach(function(item) {
       const row = document.createElement('label');
       row.className = 'trash-item';
       row.dataset.trashId = item.trashId;
+      row.dataset.trashSearch = getTrashItemTitle(item).toLocaleLowerCase();
 
       const input = document.createElement('input');
-      input.type = 'radio';
+      input.type = 'checkbox';
       input.name = 'trash-selected-item';
       input.value = item.trashId;
       input.dataset.trashTitle = getTrashItemTitle(item);
       input.dataset.trashRestorable = item.restorable === false ? 'false' : 'true';
-      input.checked = item.trashId === selectedTrashId;
+      input.checked = selectedIds.has(item.trashId);
       input.addEventListener('change', updateTrashSelectionState);
 
       const icon = document.createElement('i');
@@ -1258,18 +1328,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (item.restorable === false) row.title = 'Recovery data is incomplete; this item is kept until manually deleted.';
       trashList.appendChild(row);
     });
-    if (trashEmptyState) trashEmptyState.hidden = items.length > 0;
-    if (trashItemCount) {
-      trashItemCount.textContent = items.length.toLocaleString() + ' item' + (items.length === 1 ? '' : 's');
-    }
     if (trashEmptyButton) trashEmptyButton.disabled = items.length === 0;
-    updateTrashSelectionState();
+    updateTrashFilter();
   }
 
   async function refreshTrashModal(options) {
     if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
     const settings = options || {};
-    const selectedTrashId = settings.preserveSelection ? getSelectedTrashId() : '';
+    const selectedTrashIds = settings.preserveSelection ? getSelectedTrashIds() : [];
     await workspaceStorage.init();
     let maintenanceError = null;
     try {
@@ -1278,7 +1344,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       maintenanceError = error;
     }
     const items = await workspaceStorage.listTrash();
-    renderTrashItems(items, selectedTrashId);
+    renderTrashItems(items, selectedTrashIds);
     if (maintenanceError) {
       setTrashModalError('Some expired items could not be removed and were kept in Trash. ' +
         (maintenanceError.message || 'Try again later.'));
@@ -1290,7 +1356,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function openTrashModal(opener, options) {
     if (!trashModal) return;
+    const settings = options || {};
     if (opener && !trashModal.contains(opener)) trashModalOpener = opener;
+    if (!settings.preserveSelection && trashSearchInput) trashSearchInput.value = '';
     setTrashModalError('');
     const description = document.getElementById('trash-modal-description');
     if (description) {
@@ -1302,10 +1370,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       returnFocus: trashModalOpener || opener || document.activeElement
     });
     try {
-      await refreshTrashModal(options);
+      await refreshTrashModal(settings);
     } catch (error) {
       setTrashModalError(error && error.message ? error.message : 'Unable to load Trash.');
-      renderTrashItems([], '');
+      renderTrashItems([], []);
     }
   }
 
@@ -1325,12 +1393,15 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function setTrashModalBusy(busy) {
+    trashModalBusy = Boolean(busy);
     const box = trashModal && trashModal.querySelector('.trash-modal-box');
     if (box) {
       if (busy) box.setAttribute('aria-busy', 'true');
       else box.removeAttribute('aria-busy');
     }
     if (trashList) trashList.querySelectorAll('input').forEach(function(input) { input.disabled = busy; });
+    if (trashSearchInput) trashSearchInput.disabled = busy;
+    if (trashSelectAllButton) trashSelectAllButton.disabled = busy;
     if (trashEmptyButton) trashEmptyButton.disabled = busy || !trashList || !trashList.children.length;
     if (busy) {
       if (trashRestoreButton) trashRestoreButton.disabled = true;
@@ -1340,41 +1411,71 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function restoreSelectedTrashItem() {
-    const trashId = getSelectedTrashId();
-    if (!trashId) return;
+  async function restoreSelectedTrashItems() {
+    const selected = getSelectedTrashInputs();
+    if (!selected.length || selected.some(function(input) { return input.dataset.trashRestorable !== 'true'; })) return;
     setTrashModalBusy(true);
     setTrashModalError('');
-    try {
-      await workspaceStorage.restoreTrashItem(trashId);
-      showAppToast('The selected file was restored. Reloading the workspace…', {
-        tone: 'info',
-        title: 'Restore complete'
+    let restoredCount = 0;
+    const failures = [];
+    for (const input of selected) {
+      try {
+        await workspaceStorage.restoreTrashItem(input.value);
+        restoredCount += 1;
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    if (restoredCount > 0) {
+      const restoredLabel = restoredCount.toLocaleString() + ' file' + (restoredCount === 1 ? '' : 's') + ' restored.';
+      const failureLabel = failures.length
+        ? ' ' + failures.length.toLocaleString() + ' item' + (failures.length === 1 ? ' was' : 's were') + ' kept in Trash.'
+        : '';
+      showAppToast(restoredLabel + failureLabel + ' Reloading the workspace…', {
+        tone: failures.length ? 'error' : 'info',
+        title: failures.length ? 'Restore partly complete' : 'Restore complete'
       });
       closeTrashModal();
       window.setTimeout(function() { window.location.reload(); }, 300);
-    } catch (error) {
-      const message = error && error.message ? error.message : 'Unable to restore the selected file.';
-      setTrashModalError(message);
-      setTrashModalBusy(false);
+      return;
     }
+    const firstError = failures[0];
+    const message = firstError && firstError.message ? firstError.message : 'Unable to restore the selected files.';
+    setTrashModalError(message);
+    setTrashModalBusy(false);
   }
 
-  async function permanentlyDeleteSelectedTrashItem() {
-    const trashId = getSelectedTrashId();
-    if (!trashId) return;
+  async function permanentlyDeleteSelectedTrashItems() {
+    const selected = getSelectedTrashInputs();
+    if (!selected.length) return;
     let reopenOptions = {};
     setTrashModalBusy(true);
     setTrashModalError('');
+    let deletedCount = 0;
+    const failures = [];
+    for (const input of selected) {
+      try {
+        await workspaceStorage.permanentlyDeleteTrashItem(input.value);
+        deletedCount += 1;
+      } catch (error) {
+        failures.push(error);
+      }
+    }
     try {
-      await workspaceStorage.permanentlyDeleteTrashItem(trashId);
-      await refreshTrashModal();
-      showAppToast('The selected file was permanently deleted.', {
+      await refreshTrashModal({ preserveSelection: failures.length > 0 });
+      if (deletedCount > 0) showAppToast(deletedCount.toLocaleString() + ' selected file' + (deletedCount === 1 ? '' : 's') + ' permanently deleted.', {
         tone: 'info',
         title: 'Deleted from Trash'
       });
+      if (failures.length) {
+        const firstError = failures[0];
+        const message = failures.length.toLocaleString() + ' item' + (failures.length === 1 ? ' was' : 's were') + ' kept in Trash. ' +
+          (firstError && firstError.message ? firstError.message : 'Try again.');
+        setTrashModalError(message);
+        reopenOptions = { preserveSelection: true, errorMessage: message };
+      }
     } catch (error) {
-      const message = error && error.message ? error.message : 'Unable to permanently delete the selected file.';
+      const message = error && error.message ? error.message : 'Unable to refresh Trash after permanent deletion.';
       setTrashModalError(message);
       reopenOptions = { preserveSelection: true, errorMessage: message };
     } finally {
@@ -22078,23 +22179,30 @@ ${selector} .arrowheadPath {
 
   if (trashModalClose) trashModalClose.addEventListener('click', closeTrashModal);
   if (trashModalCloseIcon) trashModalCloseIcon.addEventListener('click', closeTrashModal);
+  if (trashSearchInput) trashSearchInput.addEventListener('input', updateTrashFilter);
+  if (trashSelectAllButton) trashSelectAllButton.addEventListener('click', toggleVisibleTrashSelection);
   if (trashRestoreButton) {
     trashRestoreButton.addEventListener('click', function() {
-      const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
-      if (!selected) return;
-      void restoreSelectedTrashItem();
+      if (!getSelectedTrashInputs().length) return;
+      void restoreSelectedTrashItems();
     });
   }
   if (trashDeleteButton) {
     trashDeleteButton.addEventListener('click', function() {
-      const selected = trashList && trashList.querySelector('input[name="trash-selected-item"]:checked');
-      if (!selected) return;
-      const filename = String(selected.dataset.trashTitle || 'deleted file');
+      const selected = getSelectedTrashInputs();
+      if (!selected.length) return;
+      const filename = String(selected[0].dataset.trashTitle || 'deleted file');
+      const multiple = selected.length > 1;
+      const selectedFiles = describeSelectedTrashFiles(selected);
       openDocumentConfirmation({
-        title: 'Permanently delete “' + filename + '”?',
-        description: '“' + filename + '” will be permanently removed from Trash immediately. This action cannot be undone.',
+        title: multiple
+          ? 'Permanently delete ' + selected.length.toLocaleString() + ' files?'
+          : 'Permanently delete “' + filename + '”?',
+        description: multiple
+          ? selectedFiles + ' will be permanently removed from Trash immediately. This action cannot be undone.'
+          : '“' + filename + '” will be permanently removed from Trash immediately. This action cannot be undone.',
         confirmText: 'Delete Permanently',
-        onConfirm: function() { permanentlyDeleteSelectedTrashItem(); },
+        onConfirm: function() { permanentlyDeleteSelectedTrashItems(); },
         onCancel: function() { reopenTrashModalAfterConfirmation({ preserveSelection: true }); }
       });
     });

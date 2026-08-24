@@ -7203,7 +7203,8 @@ a:focus {
   pointer-events: none;
 }
 
-#github-import-search {
+#github-import-search,
+#trash-search {
   width: 100%;
   min-width: 0;
   min-height: 40px;
@@ -7216,11 +7217,13 @@ a:focus {
   font-size: var(--ui-font-md);
 }
 
-#github-import-search::placeholder {
+#github-import-search::placeholder,
+#trash-search::placeholder {
   color: var(--text-secondary);
 }
 
-#github-import-search:focus-visible {
+#github-import-search:focus-visible,
+#trash-search:focus-visible {
   border-color: var(--accent-color);
   outline: 2px solid color-mix(in srgb, var(--accent-color) 24%, transparent);
   outline-offset: 1px;
@@ -7258,7 +7261,11 @@ a:focus {
 #github-import-select-all[aria-pressed="true"],
 #github-import-select-all[aria-pressed="true"]:hover,
 #github-import-select-all[aria-pressed="true"]:focus-visible,
-#github-import-select-all[aria-pressed="true"]:active {
+#github-import-select-all[aria-pressed="true"]:active,
+#trash-select-all[aria-pressed="true"],
+#trash-select-all[aria-pressed="true"]:hover,
+#trash-select-all[aria-pressed="true"]:focus-visible,
+#trash-select-all[aria-pressed="true"]:active {
   border-color: transparent;
   color: var(--accent-color);
   background: transparent;
@@ -7450,6 +7457,7 @@ a:focus {
   }
 
   #github-import-search,
+  #trash-search,
   .github-import-toolbar-btn.tool-button {
     min-height: 44px;
   }
@@ -7510,6 +7518,7 @@ a:focus {
 
 @media (max-width: 900px) and (max-height: 500px) {
   #github-import-search,
+  #trash-search,
   .github-import-toolbar-btn.tool-button,
   .github-tree-folder-label,
   .github-tree-file-btn {
@@ -7668,7 +7677,8 @@ a:focus {
   left: auto;
 }
 
-[dir="rtl"] #github-import-search {
+[dir="rtl"] #github-import-search,
+[dir="rtl"] #trash-search {
   padding-right: 36px;
   padding-left: 12px;
 }
@@ -11740,22 +11750,17 @@ html[data-theme="dark"] .mermaid svg {
 
 .trash-modal-actions {
   align-items: center;
-  flex-wrap: wrap;
-}
-
-.trash-modal-actions .reset-modal-btn,
-.trash-primary-actions {
-  display: inline-flex;
-  align-items: center;
 }
 
 .trash-modal-actions .reset-modal-btn {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
   gap: 7px;
 }
 
-.trash-primary-actions {
-  gap: 8px;
+.trash-toolbar-delete {
+  color: var(--color-danger-fg);
 }
 
 .trash-empty-action {
@@ -12407,10 +12412,6 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
   .trash-modal-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .trash-primary-actions {
-    display: contents;
   }
 
   .trash-modal-actions .reset-modal-btn {

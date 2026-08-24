@@ -643,32 +643,39 @@
                 <p id="trash-modal-description">Deleted files are automatically and permanently deleted after 30 days.</p>
               </div>
               <div class="trash-summary github-import-selection-toolbar">
-                <output class="github-import-selected-count" aria-live="polite">
-                  <i class="lucide lucide-files" aria-hidden="true"></i>
-                  <span id="trash-item-count">0 items</span>
-                </output>
+                <label class="github-import-search" for="trash-search">
+                  <i class="lucide lucide-search" aria-hidden="true"></i>
+                  <input type="search" id="trash-search" placeholder="Search Trash" autocomplete="off" spellcheck="false">
+                </label>
                 <div class="github-import-selection-actions">
                   <output class="github-import-selected-count" role="status" aria-live="polite">
                     <i class="lucide lucide-check" aria-hidden="true"></i>
                     <span id="trash-selection-status">0 selected</span>
                   </output>
+                  <div class="github-import-toolbar-actions" role="group" aria-label="Trash selection actions">
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="trash-select-all" aria-label="Select all files" title="Select all files" aria-pressed="false" disabled>
+                      <i class="lucide lucide-check-check" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn trash-toolbar-delete" id="trash-delete-button" aria-label="Delete selected files permanently" title="Delete selected files permanently" disabled>
+                      <i class="lucide lucide-trash-2" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="tool-button document-command-btn github-import-toolbar-btn" id="trash-restore-button" aria-label="Restore selected files" title="Restore selected files" disabled>
+                      <i class="lucide lucide-undo-2" aria-hidden="true"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div id="trash-list" class="trash-list" role="radiogroup" aria-label="Deleted files"></div>
+              <div id="trash-list" class="trash-list" role="group" aria-label="Deleted files"></div>
               <div id="trash-empty-state" class="trash-empty-state">
                 <i class="lucide lucide-trash-2" aria-hidden="true"></i>
-                <strong>Trash is empty</strong>
-                <span>Deleted files will appear here for 30 days.</span>
+                <strong id="trash-empty-title">Trash is empty</strong>
+                <span id="trash-empty-description">Deleted files will appear here for 30 days.</span>
               </div>
               <p id="trash-modal-error" class="document-modal-error" role="alert" hidden></p>
             </div>
             <div class="reset-modal-actions trash-modal-actions">
               <button type="button" class="reset-modal-btn reset-modal-cancel trash-empty-action" id="trash-empty-button" disabled><i class="lucide lucide-trash-2" aria-hidden="true"></i> Empty Trash</button>
-              <div class="trash-primary-actions">
-                <button type="button" class="reset-modal-btn storage-primary-action" id="trash-restore-button" disabled><i class="lucide lucide-undo-2" aria-hidden="true"></i> Restore</button>
-                <button type="button" class="reset-modal-btn reset-modal-confirm" id="trash-delete-button" disabled><i class="lucide lucide-trash-2" aria-hidden="true"></i> Delete Permanently</button>
-                <button type="button" class="reset-modal-btn reset-modal-cancel" id="trash-modal-close">Close</button>
-              </div>
+              <button type="button" class="reset-modal-btn reset-modal-cancel" id="trash-modal-close">Cancel</button>
             </div>
           </div>
         </div>
