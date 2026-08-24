@@ -4160,6 +4160,21 @@ a:focus {
   color: var(--success-color);
 }
 
+html[data-private-mode="true"] .app-status-bar {
+  border-top-color: color-mix(in srgb, var(--accent-color) 42%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-color) 8%, var(--header-bg));
+}
+
+.app-save-status.is-private {
+  min-width: 0;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--accent-color) 38%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
 .app-save-status.is-saving i {
   color: var(--accent-color);
   animation: save-status-spin 0.9s linear infinite;

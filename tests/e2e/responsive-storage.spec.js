@@ -115,6 +115,11 @@ test('private mode pauses writes without deleting existing saved documents', asy
   await page.locator('#private-mode-toggle').click();
   await expect(page.locator('#private-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#private-mode-description')).toHaveText('Session activity is not persisted');
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'true');
+  await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'private');
+  await expect(page.locator('#save-status')).toHaveClass(/is-private/);
+  await expect(page.locator('#save-status-text')).toHaveText('Incognito');
+  await expect(page.locator('#save-status-icon')).toHaveClass(/lucide-hat-glasses/);
   await page.keyboard.press('Escape');
 
   await setEditorContent(page, '# Private Content\n\nDo not store this.');
@@ -123,6 +128,7 @@ test('private mode pauses writes without deleting existing saved documents', asy
   const stored = JSON.stringify(await storedDocuments(page));
   expect(stored).toContain('Persisted Before Private Mode');
   expect(stored).not.toContain('Private Content');
+  await expect(page.locator('#save-status-text')).toHaveText('Incognito');
 });
 
 test('reset workspace permanently deletes documents and blocks repeated clicks', async ({ page }) => {

@@ -1047,12 +1047,14 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function updatePrivateModeButton() {
-    if (!privateModeToggle) return;
     const enabled = isPrivateStorageMode();
-    privateModeToggle.classList.toggle('is-active', enabled);
-    privateModeToggle.setAttribute('aria-pressed', String(enabled));
-    privateModeToggle.setAttribute('aria-label', enabled ? 'Turn private mode off' : 'Turn private mode on');
-    privateModeToggle.setAttribute('title', enabled ? 'Turn private mode off' : 'Turn private mode on');
+    document.documentElement.dataset.privateMode = enabled ? 'true' : 'false';
+    if (privateModeToggle) {
+      privateModeToggle.classList.toggle('is-active', enabled);
+      privateModeToggle.setAttribute('aria-pressed', String(enabled));
+      privateModeToggle.setAttribute('aria-label', enabled ? 'Turn private mode off' : 'Turn private mode on');
+      privateModeToggle.setAttribute('title', enabled ? 'Turn private mode off' : 'Turn private mode on');
+    }
     const description = document.getElementById('private-mode-description');
     if (description) {
       description.textContent = enabled
@@ -1065,6 +1067,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       mobilePrivateModeToggle.setAttribute('aria-label', enabled ? 'Turn private mode off' : 'Turn private mode on');
       mobilePrivateModeToggle.setAttribute('title', enabled ? 'Turn private mode off' : 'Turn private mode on');
     }
+    updateSaveStatus('saved');
   }
 
   async function setPrivateStorageMode(enabled) {
@@ -10525,15 +10528,22 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function updateSaveStatus(state) {
     if (!saveStatus || !saveStatusIcon || !saveStatusText) return;
-    const nextState = state === 'saving' || state === 'error' ? state : 'saved';
+    const requestedState = state === 'saving' || state === 'error' ? state : 'saved';
+    const nextState = isPrivateStorageMode() && requestedState !== 'error' ? 'private' : requestedState;
     const presentation = {
       saving: { icon: 'lucide lucide-refresh-cw', text: 'Saving...' },
       saved: { icon: 'lucide lucide-check', text: 'All changes saved' },
+      private: { icon: 'lucide lucide-hat-glasses', text: 'Incognito' },
       error: { icon: 'lucide lucide-circle-alert', text: 'Changes not saved' }
     }[nextState];
-    saveStatus.classList.remove('is-saving', 'is-saved', 'is-error');
+    saveStatus.classList.remove('is-saving', 'is-saved', 'is-private', 'is-error');
     saveStatus.classList.add('is-' + nextState);
     saveStatus.dataset.state = nextState;
+    if (nextState === 'private') {
+      saveStatus.title = 'Private mode is on. Session changes are not saved.';
+    } else {
+      saveStatus.removeAttribute('title');
+    }
     saveStatusIcon.className = presentation.icon;
     saveStatusText.textContent = presentation.text;
   }
