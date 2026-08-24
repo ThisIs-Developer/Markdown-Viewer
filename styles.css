@@ -11748,23 +11748,7 @@ html[data-theme="dark"] .mermaid svg {
   font-size: var(--ui-font-md);
 }
 
-.trash-modal-actions {
-  align-items: center;
-}
-
-.trash-modal-actions .reset-modal-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
-
 .trash-toolbar-delete {
-  color: var(--color-danger-fg);
-}
-
-.trash-empty-action {
-  margin-inline-end: auto;
   color: var(--color-danger-fg);
 }
 
@@ -12407,16 +12391,6 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
 
   .app-modal-box > .reset-modal-actions {
     padding: 10px 14px;
-  }
-
-  .trash-modal-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .trash-modal-actions .reset-modal-btn {
-    width: 100%;
-    margin: 0;
   }
 
   .mermaid-modal-diagram,

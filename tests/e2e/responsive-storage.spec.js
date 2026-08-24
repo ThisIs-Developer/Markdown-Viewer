@@ -363,7 +363,7 @@ test('dedicated Trash uses the shared application type scale at compact widths',
     'trash-delete-button',
     'trash-restore-button'
   ]);
-  await expect(page.locator('.trash-modal-actions .reset-modal-btn')).toHaveText(['Empty Trash', 'Cancel']);
+  await expect(page.locator('.trash-modal-actions .reset-modal-btn')).toHaveText(['Cancel', 'Empty Trash']);
 
   const typography = await page.evaluate(() => {
     const read = selector => {
