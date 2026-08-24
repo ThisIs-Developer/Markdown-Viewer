@@ -362,17 +362,17 @@ test('dedicated Trash uses the shared application type scale at compact widths',
       modalTitle: read('#trash-modal-title'),
       retentionNote: read('#trash-modal-description'),
       itemTitle: read('.trash-item-title'),
-      itemType: read('.trash-item-type'),
-      itemMeta: read('.trash-item-meta'),
+      itemExpiry: read('.trash-item-expiry'),
+      summaryCount: read('.trash-summary .github-import-selected-count'),
       restoreButton: read('#trash-restore-button'),
       closeButton: read('#trash-modal-close')
     };
   });
 
   expect(typography.modalTitle.fontSize).toBe('13px');
-  expect(typography.itemTitle.fontSize).toBe('13px');
-  expect(typography.itemType.fontSize).toBe('11px');
-  expect(typography.itemMeta.fontSize).toBe('11px');
+  expect(typography.itemTitle.fontSize).toBe('12px');
+  expect(typography.itemExpiry.fontSize).toBe('11px');
+  expect(typography.summaryCount.fontSize).toBe('11px');
   for (const role of [
     'retentionNote',
     'restoreButton',
@@ -381,6 +381,37 @@ test('dedicated Trash uses the shared application type scale at compact widths',
     expect(typography[role].fontSize).toBe('12px');
     expect(typography[role].fontFamily).toBe(typography.retentionNote.fontFamily);
   }
+  await expect(page.locator('.trash-item-type, .trash-item-meta, .trash-item-copy')).toHaveCount(0);
+  await expect(page.locator('.trash-item-expiry')).toHaveText('30 days');
+  await expect(page.locator('.trash-item-expiry .lucide-clock-3')).toBeVisible();
+  await expect(page.locator('.trash-item-icon')).toHaveClass(/lucide-file-text/);
+  const fileIcon = await page.locator('.trash-item-icon').evaluate(icon => ({
+    tagName: icon.tagName,
+    parentClass: icon.parentElement.className,
+    borderWidth: getComputedStyle(icon).borderWidth,
+    borderRadius: getComputedStyle(icon).borderRadius
+  }));
+  expect(fileIcon).toEqual({ tagName: 'I', parentClass: 'trash-item is-selected', borderWidth: '0px', borderRadius: '0px' });
+  await expect(page.locator('.trash-item-title')).toHaveCSS('font-weight', '400');
+  const sharedComponentStyles = await page.evaluate(() => {
+    const properties = ['alignItems', 'gap', 'padding', 'borderRadius', 'backgroundColor', 'borderColor', 'color', 'fontFamily', 'fontSize'];
+    const read = (selector, pseudo) => {
+      const style = getComputedStyle(document.querySelector(selector), pseudo);
+      return Object.fromEntries(properties.map(property => [property, style[property]]));
+    };
+    return {
+      retention: read('.trash-retention-note'),
+      storageRecovery: read('.storage-recovery-note:not(.trash-retention-note)'),
+      trashSummary: read('.trash-summary'),
+      githubToolbar: read('.github-import-selection-toolbar:not(.trash-summary)'),
+      trashCount: read('.trash-summary .github-import-selected-count'),
+      githubCount: read('#github-import-selected-count')
+    };
+  });
+  expect(sharedComponentStyles.retention).toEqual(sharedComponentStyles.storageRecovery);
+  expect(sharedComponentStyles.trashSummary).toEqual(sharedComponentStyles.githubToolbar);
+  expect(sharedComponentStyles.trashCount).toEqual(sharedComponentStyles.githubCount);
+  await expect(page.locator('.trash-summary')).toHaveCSS('display', 'grid');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.setViewportSize({ width: 375, height: 812 });

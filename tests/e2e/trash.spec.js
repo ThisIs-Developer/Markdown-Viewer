@@ -218,7 +218,8 @@ test('dedicated Trash restores, permanently deletes, and empties selected data',
   await expect(page.locator('.trash-item')).toHaveCount(4);
   await expect(page.locator('#trash-empty-button')).toBeEnabled();
 
-  const incompleteRow = page.locator('.trash-item', { hasText: 'Recovery data incomplete' });
+  const incompleteRow = page.locator('.trash-item', { hasText: 'No expiry' });
+  await expect(incompleteRow).toHaveAttribute('title', /Recovery data is incomplete/);
   await incompleteRow.locator('input').check();
   await expect(page.locator('#trash-restore-button')).toBeDisabled();
   await expect(page.locator('#trash-delete-button')).toBeEnabled();

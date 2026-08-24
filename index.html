@@ -638,13 +638,21 @@
               </button>
             </div>
             <div class="modal-body trash-modal-body">
-              <div class="trash-retention-note">
+              <div class="storage-recovery-note trash-retention-note">
                 <i class="lucide lucide-clock-3" aria-hidden="true"></i>
                 <p id="trash-modal-description">Deleted files are automatically and permanently deleted after 30 days.</p>
               </div>
-              <div class="trash-summary">
-                <span id="trash-item-count">0 items</span>
-                <span id="trash-selection-status" role="status" aria-live="polite">Select a file to manage it</span>
+              <div class="trash-summary github-import-selection-toolbar">
+                <output class="github-import-selected-count" aria-live="polite">
+                  <i class="lucide lucide-files" aria-hidden="true"></i>
+                  <span id="trash-item-count">0 items</span>
+                </output>
+                <div class="github-import-selection-actions">
+                  <output class="github-import-selected-count" role="status" aria-live="polite">
+                    <i class="lucide lucide-check" aria-hidden="true"></i>
+                    <span id="trash-selection-status">0 selected</span>
+                  </output>
+                </div>
               </div>
               <div id="trash-list" class="trash-list" role="radiogroup" aria-label="Deleted files"></div>
               <div id="trash-empty-state" class="trash-empty-state">

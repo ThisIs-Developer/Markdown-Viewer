@@ -1183,26 +1183,18 @@ document.addEventListener("DOMContentLoaded", async function () {
     return String(item && item.metadata && item.metadata.title || 'Deleted document');
   }
 
-  function getTrashItemTypeLabel(item) {
-    if (item && item.restorable === false) return 'Recovery data incomplete';
-    const kind = item && (item.kind || 'normal-document');
-    if (kind === 'secret-workspace-snapshot') return 'Encrypted workspace snapshot';
-    if (kind === 'secret-record') return 'Encrypted file';
-    return 'Markdown file';
-  }
-
-  function formatTrashExpiry(item) {
+  function formatTrashRemainingTime(item) {
+    if (item && item.restorable === false) return 'No expiry';
     const deletedAt = Number(item && item.deletedAt);
     if (!Number.isSafeInteger(deletedAt) || deletedAt <= 0) {
-      return 'Deletion date unavailable · kept until manually deleted';
+      return 'No expiry';
     }
     const retentionDays = Number(window.MARKDOWN_VIEWER_TRASH_RETENTION_DAYS) || 30;
     const expiresAt = deletedAt + retentionDays * 24 * 60 * 60 * 1000;
     const daysRemaining = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
-    const deletedLabel = 'Deleted ' + new Date(deletedAt).toLocaleString();
-    if (daysRemaining > 1) return deletedLabel + ' · permanently deletes in ' + daysRemaining + ' days';
-    if (daysRemaining === 1) return deletedLabel + ' · permanently deletes tomorrow';
-    return deletedLabel + ' · scheduled for permanent deletion';
+    if (daysRemaining > 1) return daysRemaining + ' days';
+    if (daysRemaining === 1) return '1 day';
+    return 'Today';
   }
 
   function getSelectedTrashId() {
@@ -1223,9 +1215,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (trashDeleteButton) trashDeleteButton.disabled = !selected;
     if (trashSelectionStatus) {
       trashSelectionStatus.textContent = selected
-        ? 'Selected: ' + String(selected.dataset.trashTitle || 'deleted file') +
-          (restorable ? '' : ' · recovery data is incomplete')
-        : 'Select a file to manage it';
+        ? '1 selected' + (restorable ? '' : ' · recovery unavailable')
+        : '0 selected';
     }
   }
 
@@ -1246,30 +1237,25 @@ document.addEventListener("DOMContentLoaded", async function () {
       input.checked = item.trashId === selectedTrashId;
       input.addEventListener('change', updateTrashSelectionState);
 
-      const iconShell = document.createElement('span');
-      iconShell.className = 'trash-item-icon';
       const icon = document.createElement('i');
-      icon.className = 'lucide ' + (item.restorable === false
-        ? 'lucide-triangle-alert'
-        : ((item.kind && item.kind !== 'normal-document') ? 'lucide-lock-keyhole' : 'lucide-file-text'));
+      icon.className = 'lucide trash-item-icon lucide-file-text';
       icon.setAttribute('aria-hidden', 'true');
-      iconShell.appendChild(icon);
 
-      const copy = document.createElement('span');
-      copy.className = 'trash-item-copy';
-      const title = document.createElement('strong');
+      const title = document.createElement('span');
       title.className = 'trash-item-title';
       title.textContent = getTrashItemTitle(item);
-      const type = document.createElement('span');
-      type.className = 'trash-item-type';
-      type.textContent = getTrashItemTypeLabel(item);
-      const meta = document.createElement('span');
-      meta.className = 'trash-item-meta';
-      meta.textContent = formatTrashExpiry(item);
-      copy.append(title, type, meta);
+      const expiry = document.createElement('span');
+      expiry.className = 'trash-item-expiry';
+      const clock = document.createElement('i');
+      clock.className = 'lucide lucide-clock-3';
+      clock.setAttribute('aria-hidden', 'true');
+      const remaining = document.createElement('span');
+      remaining.textContent = formatTrashRemainingTime(item);
+      expiry.append(clock, remaining);
 
-      row.append(input, iconShell, copy);
+      row.append(input, icon, title, expiry);
       row.classList.toggle('is-unrestorable', item.restorable === false);
+      if (item.restorable === false) row.title = 'Recovery data is incomplete; this item is kept until manually deleted.';
       trashList.appendChild(row);
     });
     if (trashEmptyState) trashEmptyState.hidden = items.length > 0;
