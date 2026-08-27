@@ -172,6 +172,7 @@ test('renders the complete manual suite without parser, safety, math, or layout 
     { text: 'Options ran $20, $45, and $99 for the three tiers.', math: 0 },
     { text: 'The cart contains $5, $10, $25, and $100 items.', math: 0 },
     { text: 'Escaped prices cost $20, $45, and $99.', math: 0 },
+    { text: 'Reviewer follow-up without comma boundaries: We spent $20 which caused $45 of loss and $99.', math: 0 },
     { text: 'Mixed currency and math: $20 plus $x^2$.', math: 1 },
     { text: 'Digit adjacency after math remains literal where required: $x$5.', math: 0 }
   ]);

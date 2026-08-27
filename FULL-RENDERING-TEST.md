@@ -726,6 +726,8 @@ The cart contains $5, $10, $25, and $100 items.
 
 Escaped prices cost \$20, \$45, and \$99.
 
+Reviewer follow-up without comma boundaries: We spent \$20 which caused \$45 of loss and \$99.
+
 Mixed currency and math: $20 plus $x^2$.
 
 Digit adjacency after math remains literal where required: $x$5.
@@ -844,13 +846,15 @@ Expected: both links target different headings.
 - List 1, item 2
 * List 2, item 1
 
-Expected: two separate lists.
+Expected: two separate list elements with a clearly visible gap between them.
 
 ### Issue 3: unrelated currency dollars
 
 Options ran $20, $45, and $99 for the three tiers.
 
-Expected: plain currency, no inline math.
+We spent \$20 which caused \$45 of loss and \$99.
+
+Expected: both sentences show plain currency with no inline math. Escaping with `\$` is the deterministic form for ambiguous prose.
 
 ### Issue 4: escaped dollars inside code
 

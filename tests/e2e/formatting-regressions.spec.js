@@ -147,6 +147,16 @@ test('keeps GFM lists separated when the bullet character changes', async ({ pag
   await expect(lists.nth(0).locator('li')).toHaveCount(2);
   await expect(lists.nth(1).locator('li')).toHaveCount(1);
   await expect(lists.nth(2).locator('li')).toHaveCount(2);
+
+  const visualSeparation = await lists.evaluateAll(([firstList, secondList]) => {
+    const firstRect = firstList.getBoundingClientRect();
+    const secondRect = secondList.getBoundingClientRect();
+    return {
+      gap: secondRect.top - firstRect.bottom,
+      fontSize: Number.parseFloat(getComputedStyle(secondList).fontSize)
+    };
+  });
+  expect(visualSeparation.gap).toBeGreaterThanOrEqual(visualSeparation.fontSize * 0.9);
 });
 
 test('distinguishes currency, escaped dollars, and valid inline math', async ({ page }) => {
@@ -154,6 +164,8 @@ test('distinguishes currency, escaped dollars, and valid inline math', async ({ 
     'Options ran $20, $45, and $99 for the three tiers.',
     '',
     'Escaped prices cost \\$20, \\$45, and \\$99.',
+    '',
+    'We spent \\$20 which caused \\$45 of loss and \\$99.',
     '',
     'Before text $x_1^2$ then $x_2^2$ after text.',
     '',
@@ -173,13 +185,16 @@ test('distinguishes currency, escaped dollars, and valid inline math', async ({ 
   await expect(paragraphs.nth(1)).toContainText('Escaped prices cost $20, $45, and $99.');
   await expect(paragraphs.nth(1).locator('.math-inline')).toHaveCount(0);
   await expect(paragraphs.nth(1).locator('.math-literal-dollar')).toHaveCount(3);
+  await expect(paragraphs.nth(2)).toContainText('We spent $20 which caused $45 of loss and $99.');
+  await expect(paragraphs.nth(2).locator('.math-inline')).toHaveCount(0);
+  await expect(paragraphs.nth(2).locator('.math-literal-dollar')).toHaveCount(3);
   await expect(page.locator('#markdown-preview .math-inline')).toHaveCount(4);
   await expect(page.locator('#markdown-preview .math-inline').nth(0)).toHaveText('$x_1^2$');
   await expect(page.locator('#markdown-preview .math-inline').nth(1)).toHaveText('$x_2^2$');
   await expect(page.locator('#markdown-preview .math-inline').nth(2)).toHaveText('$\\sqrt{\\$4}$');
   await expect(page.locator('#markdown-preview .math-inline').nth(3)).toHaveText('$x^2$');
-  await expect(paragraphs.nth(4)).toContainText('Mixed price and math: $20 plus');
-  await expect(paragraphs.nth(4).locator('.math-literal-dollar')).toHaveCount(1);
+  await expect(paragraphs.nth(5)).toContainText('Mixed price and math: $20 plus');
+  await expect(paragraphs.nth(5).locator('.math-literal-dollar')).toHaveCount(1);
 });
 
 test('does not transform dollars or footnotes inside code', async ({ page }) => {
