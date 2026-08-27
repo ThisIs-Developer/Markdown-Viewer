@@ -2710,6 +2710,15 @@ body {
   margin-bottom: 0.2em;
 }
 
+/* CommonMark starts a new list when the bullet character or ordered-list
+   delimiter changes. Keep adjacent list blocks visually distinct too. */
+.markdown-body ul + ul,
+.markdown-body ul + ol,
+.markdown-body ol + ul,
+.markdown-body ol + ol {
+  margin-top: 1em;
+}
+
 .markdown-body ul.contains-task-list,
 .markdown-body li.task-list-item {
   list-style: none;

@@ -2211,41 +2211,65 @@ document.addEventListener("DOMContentLoaded", async function () {
   const renderer = new marked.Renderer();
   const BLOCK_MATH_MARKER_PATTERN = /^\$\$/m;
   const BLOCK_MATH_PATTERN = /^\$\$[ \t]*\n?([\s\S]*?)\n?\$\$[ \t]*(?:\n|$)/;
+  const INLINE_MATH_START_PATTERN = /\\(?:\$|\(|\[)|\$/;
   const RAW_MATH_TEXT_PATTERN = /\$\$|\$[^$]|\\\(|\\\[/;
   const MATHJAX_TEXT_TARGET_SELECTOR = 'p, li, td, th, dd, dt, blockquote, figcaption, h1, h2, h3, h4, h5, h6, .math-block';
   const DEFINITION_LIST_ITEM_PATTERN = /^:[ \t]+(.*)$/;
   const SUPERSCRIPT_PATTERN = /^\^(?!\s)([^^\n]*?\S)\^(?!\^)/;
   const SUBSCRIPT_PATTERN = /^~(?!~)(?!\s)([^~\n]*?\S)~(?!~)/;
   const HIGHLIGHT_PATTERN = /^==(?=\S)([\s\S]*?\S)==/;
-  const MARKDOWN_LIST_MARKER_PATTERN = /^(\s*)(?:[-*+]\s+|\d+\.\s+|>\s+)/;
+  const MARKDOWN_LIST_MARKER_PATTERN = /^(\s*)(?:[-*+]\s+|\d{1,9}[.)]\s+|>\s*)/;
+  const DEFINITION_LIST_DISALLOWED_TERM_PATTERN = /^(?: {4}|\t|[ \t]{0,3}(?:`{3,}|~{3,}|#{1,6}(?:[ \t]+|$)|(?:[*_-][ \t]*){3,}$|[=-]+[ \t]*$|\[[^\]\n]+\]:[ \t]*\S|<!--|<\?|<![A-Z]|<!\[CDATA\[|<\/?[a-zA-Z][\w:-]*(?:\s|>|\/>)))/;
+  const GFM_TABLE_DELIMITER_PATTERN = /^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)+\|?[ \t]*$/;
   const EMPTY_LINE_PATTERN = /^\s*$/;
   const footnoteDefinitions = new Map();
   const footnoteOrder = [];
   const footnoteRefCounts = new Map();
-  const footnoteFirstRefId = new Map();
-  let anonymousFootnoteCounter = 0;
+  const footnoteSlugs = new Map();
+  const usedFootnoteSlugs = new Set();
+  const usedHeadingIds = new Set();
   let suppressFootnotePreprocess = false;
 
   function resetExtendedMarkdownState() {
     footnoteDefinitions.clear();
     footnoteOrder.length = 0;
     footnoteRefCounts.clear();
-    footnoteFirstRefId.clear();
-    anonymousFootnoteCounter = 0;
+    footnoteSlugs.clear();
+    usedFootnoteSlugs.clear();
+    usedHeadingIds.clear();
   }
 
-  function normalizeFootnoteId(id) {
-    const normalized = String(id || "")
+  function normalizeFootnoteLabel(id) {
+    return String(id || "")
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    if (normalized) {
-      return normalized;
+      .replace(/\s+/g, " ");
+  }
+
+  function getFootnoteSlug(label) {
+    if (footnoteSlugs.has(label)) {
+      return footnoteSlugs.get(label);
     }
 
-    anonymousFootnoteCounter += 1;
-    return `footnote-${anonymousFootnoteCounter}`;
+    const baseSlug = String(label || "")
+      .replace(/\s+/g, "-")
+      .replace(/[^\p{L}\p{N}\p{M}_-]+/gu, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "") || "footnote";
+    let slug = baseSlug;
+    let suffix = 1;
+    while (usedFootnoteSlugs.has(slug)) {
+      slug = `${baseSlug}-${suffix}`;
+      suffix += 1;
+    }
+    usedFootnoteSlugs.add(slug);
+    footnoteSlugs.set(label, slug);
+    return slug;
+  }
+
+  function getFootnoteReferenceId(label, referenceNumber) {
+    const slug = getFootnoteSlug(label);
+    return `fnref-${slug}${referenceNumber > 1 ? `-${referenceNumber}` : ""}`;
   }
 
   function escapeHtmlAttribute(value) {
@@ -2311,6 +2335,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (/^\[[^\]\n]+\]:\s+\S+/m.test(markdown)) return false;
     if (/\[\^[^\]\n]+\]/.test(markdown)) return false;
     if (/\n:[ \t]+/.test(markdown)) return false;
+    if (/^[ \t]{0,3}(?:[*+-]|\d{1,9}[.)])(?:[ \t]+|$)/m.test(markdown)) return false;
+    if (/^(?: {4}|\t)\S/m.test(markdown)) return false;
+    if (/^[ \t]{0,3}(?:<!--|<\?|<![A-Z]|<!\[CDATA\[)/m.test(markdown)) return false;
     if (/^\s{0,3}<\/?[a-zA-Z][\w:-]*(?:\s|>|\/>)/m.test(markdown)) return false;
     return true;
   }
@@ -2484,106 +2511,163 @@ document.addEventListener("DOMContentLoaded", async function () {
       .join("");
   }
 
-  function extractFootnoteDefinitions(markdown) {
-    const lines = markdown.split("\n");
-    const preservedLines = [];
-    let index = 0;
-
-    while (index < lines.length) {
-      const match = /^([ \t]{0,3})\[\^([^\]\n]+)\]:[ \t]*(.*)$/.exec(lines[index]);
-      if (!match) {
-        preservedLines.push(lines[index]);
-        index += 1;
-        continue;
-      }
-
-      const baseIndent = match[1] || "";
-      const id = match[2].trim();
-      const definitionLines = [match[3] || ""];
-      index += 1;
-
-      while (index < lines.length) {
-        const line = lines[index];
-        if (!line.startsWith(baseIndent)) {
-          break;
-        }
-
-        const lineAfterBase = line.slice(baseIndent.length);
-        const indentedMatch = /^(?: {2,}|\t)(.*)$/.exec(lineAfterBase);
-        if (indentedMatch) {
-          definitionLines.push(indentedMatch[1]);
-          index += 1;
-          continue;
-        }
-
-        if (lineAfterBase.trim() === "") {
-          const nextLine = lines[index + 1] || "";
-          const nextAfterBase = nextLine.startsWith(baseIndent)
-            ? nextLine.slice(baseIndent.length)
-            : "";
-          if (/^(?: {2,}|\t)/.test(nextAfterBase)) {
-            definitionLines.push("");
-            index += 1;
-            continue;
-          }
-        }
-
-        break;
-      }
-
-      footnoteDefinitions.set(id, definitionLines.join("\n").trim());
-    }
-
-    return preservedLines.join("\n");
-  }
-
-  function applyFootnotes(markdown) {
-    const markdownWithReferences = markdown.replace(/\[\^([^\]\n]+)\]/g, function(match, idText) {
-      const id = idText.trim();
-      if (!id) {
-        return match;
-      }
-
-      if (!footnoteOrder.includes(id)) {
-        footnoteOrder.push(id);
-      }
-
-      const refCount = (footnoteRefCounts.get(id) || 0) + 1;
-      footnoteRefCounts.set(id, refCount);
-
-      const normalizedId = normalizeFootnoteId(id);
-      const refId = `fnref-${normalizedId}${refCount > 1 ? `-${refCount}` : ""}`;
-      if (!footnoteFirstRefId.has(id)) {
-        footnoteFirstRefId.set(id, refId);
-      }
-
-      const noteNumber = footnoteOrder.indexOf(id) + 1;
-      const safeRefId = escapeHtmlAttribute(refId);
-      const safeNormalizedId = escapeHtmlAttribute(normalizedId);
-      return `<sup id="${safeRefId}" class="footnote-ref"><a href="#fn-${safeNormalizedId}" aria-label="Footnote ${noteNumber}">[${noteNumber}]</a></sup>`;
-    });
-
+  function renderFootnotesSection() {
     const footnotesHtml = footnoteOrder
       .filter((id) => footnoteDefinitions.has(id))
       .map((id) => {
-        const normalizedId = normalizeFootnoteId(id);
-        const backRefId = footnoteFirstRefId.get(id) || `fnref-${normalizedId}`;
-        const safeNormalizedId = escapeHtmlAttribute(normalizedId);
-        const safeBackRefId = escapeHtmlAttribute(backRefId);
-        const backRefHtml = `<a href="#${safeBackRefId}" class="footnote-backref" aria-label="Back to content">←</a>`;
+        const slug = getFootnoteSlug(id);
+        const referenceCount = footnoteRefCounts.get(id) || 1;
+        const safeSlug = escapeHtmlAttribute(slug);
+        const backRefHtml = Array.from({ length: referenceCount }, (_, index) => {
+          const referenceNumber = index + 1;
+          const backRefId = escapeHtmlAttribute(getFootnoteReferenceId(id, referenceNumber));
+          const occurrenceLabel = referenceNumber > 1 ? ` ${referenceNumber}` : "";
+          const occurrenceMarker = referenceNumber > 1 ? `<sup>${referenceNumber}</sup>` : "";
+          return `<a href="#${backRefId}" class="footnote-backref" aria-label="Back to content${occurrenceLabel}">←${occurrenceMarker}</a>`;
+        }).join(" ");
         const noteHtml = renderDefinitionContent(
           footnoteDefinitions.get(id) || "",
           { appendHtml: backRefHtml }
         );
-        return `<li id="fn-${safeNormalizedId}">${noteHtml}</li>`;
+        return `<li id="fn-${safeSlug}">${noteHtml}</li>`;
       })
       .join("");
 
-    if (!footnotesHtml) {
-      return markdownWithReferences;
+    return footnotesHtml
+      ? `<section class="footnotes"><hr><ol>${footnotesHtml}</ol></section>`
+      : "";
+  }
+
+  function isEscapedCharacter(source, index) {
+    let backslashCount = 0;
+    for (let cursor = index - 1; cursor >= 0 && source[cursor] === "\\"; cursor -= 1) {
+      backslashCount += 1;
+    }
+    return backslashCount % 2 === 1;
+  }
+
+  function findClosingMathDelimiter(source, delimiter, startIndex) {
+    for (let index = startIndex; index <= source.length - delimiter.length; index += 1) {
+      if (source[index] === "\n") return -1;
+      if (source.startsWith(delimiter, index) && !isEscapedCharacter(source, index)) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  function tokenizeDollarMath(source) {
+    if (source.startsWith("$$")) {
+      const closeIndex = findClosingMathDelimiter(source, "$$", 2);
+      if (closeIndex > 2) {
+        return {
+          type: "inlineMath",
+          raw: source.slice(0, closeIndex + 2),
+          display: true,
+        };
+      }
+      return null;
     }
 
-    return `${markdownWithReferences}\n\n<section class="footnotes"><hr><ol>${footnotesHtml}</ol></section>`;
+    if (source[0] !== "$" || !source[1] || /[\s$]/.test(source[1])) {
+      return null;
+    }
+
+    for (let index = 1; index < source.length; index += 1) {
+      if (source[index] === "\n") break;
+      if (source[index] !== "$" || isEscapedCharacter(source, index)) continue;
+      if (/\s/.test(source[index - 1]) || /\d/.test(source[index + 1] || "")) return null;
+      return {
+        type: "inlineMath",
+        raw: source.slice(0, index + 1),
+        display: false,
+      };
+    }
+
+    return null;
+  }
+
+  function readBalancedTexGroup(source, startIndex) {
+    if (source[startIndex] !== "{") return null;
+    let depth = 0;
+    for (let index = startIndex; index < source.length; index += 1) {
+      if (isEscapedCharacter(source, index)) continue;
+      if (source[index] === "{") {
+        depth += 1;
+      } else if (source[index] === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          return { endIndex: index, content: source.slice(startIndex + 1, index) };
+        }
+      }
+    }
+    return null;
+  }
+
+  function normalizeLegacyMathSyntax(source) {
+    const tex = String(source || "");
+    let normalized = "";
+    let index = 0;
+
+    while (index < tex.length) {
+      if (tex.startsWith("\\^", index) && !isEscapedCharacter(tex, index)) {
+        normalized += "^";
+        index += 2;
+        continue;
+      }
+
+      if (
+        !tex.startsWith("\\color", index) ||
+        isEscapedCharacter(tex, index) ||
+        /[a-zA-Z]/.test(tex[index + 6] || "")
+      ) {
+        normalized += tex[index];
+        index += 1;
+        continue;
+      }
+
+      let colorGroupStart = index + 6;
+      while (/[ \t]/.test(tex[colorGroupStart] || "")) colorGroupStart += 1;
+      const colorGroup = readBalancedTexGroup(tex, colorGroupStart);
+      if (!colorGroup) {
+        normalized += tex[index];
+        index += 1;
+        continue;
+      }
+
+      let contentGroupStart = colorGroup.endIndex + 1;
+      while (/[ \t]/.test(tex[contentGroupStart] || "")) contentGroupStart += 1;
+      const contentGroup = readBalancedTexGroup(tex, contentGroupStart);
+      if (!contentGroup) {
+        normalized += tex[index];
+        index += 1;
+        continue;
+      }
+
+      normalized += `{\\color{${colorGroup.content}}${normalizeLegacyMathSyntax(contentGroup.content)}}`;
+      index = contentGroup.endIndex + 1;
+    }
+
+    return normalized;
+  }
+
+  function createUniqueHeadingId(raw) {
+    const baseId = String(raw || "")
+      .toLowerCase()
+      .trim()
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^\p{L}\p{N}\p{M}_-]/gu, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'heading';
+    let id = baseId;
+    let suffix = 0;
+    while (usedHeadingIds.has(id)) {
+      suffix += 1;
+      id = `${baseId}-${suffix}`;
+    }
+    usedHeadingIds.add(id);
+    return id;
   }
 
   const blockMathExtension = {
@@ -2608,8 +2692,126 @@ document.addEventListener("DOMContentLoaded", async function () {
       };
     },
     renderer(token) {
-      return `<div class="math-block">$$\n${token.text}\n$$</div>\n`;
+      return `<div class="math-block tex2jax_process">$$\n${escapeHtml(normalizeLegacyMathSyntax(token.text))}\n$$</div>\n`;
     }
+  };
+  const footnoteDefinitionExtension = {
+    name: "footnoteDefinition",
+    level: "block",
+    start(src) {
+      const match = src.match(/(?:^|\n)[ \t]{0,3}\[\^[^\]\n]+\]:/);
+      if (!match) return undefined;
+      return match.index + (match[0][0] === "\n" ? 1 : 0);
+    },
+    tokenizer(src) {
+      if (suppressFootnotePreprocess) return undefined;
+      const lines = src.split("\n");
+      const match = /^([ \t]{0,3})\[\^([^\]\n]+)\]:[ \t]*(.*)$/.exec(lines[0]);
+      if (!match) return undefined;
+
+      const baseIndent = match[1] || "";
+      const id = normalizeFootnoteLabel(match[2]);
+      const definitionLines = [match[3] || ""];
+      const rawLines = [lines[0]];
+      let index = 1;
+      while (index < lines.length) {
+        const line = lines[index];
+        if (!line.startsWith(baseIndent)) break;
+        const lineAfterBase = line.slice(baseIndent.length);
+        const indentedMatch = /^(?: {2,}|\t)(.*)$/.exec(lineAfterBase);
+        if (indentedMatch) {
+          rawLines.push(line);
+          definitionLines.push(indentedMatch[1]);
+          index += 1;
+          continue;
+        }
+        if (lineAfterBase.trim() === "") {
+          const nextLine = lines[index + 1] || "";
+          const nextAfterBase = nextLine.startsWith(baseIndent)
+            ? nextLine.slice(baseIndent.length)
+            : "";
+          if (/^(?: {2,}|\t)/.test(nextAfterBase)) {
+            rawLines.push(line);
+            definitionLines.push("");
+            index += 1;
+            continue;
+          }
+        }
+        break;
+      }
+
+      let raw = rawLines.join("\n");
+      if (src.startsWith(raw + "\n")) raw += "\n";
+      if (id && !footnoteDefinitions.has(id)) {
+        footnoteDefinitions.set(id, definitionLines.join("\n").trim());
+      }
+      return { type: "footnoteDefinition", raw };
+    },
+    renderer() {
+      return "";
+    },
+  };
+  const footnoteReferenceExtension = {
+    name: "footnoteReference",
+    level: "inline",
+    start(src) {
+      if (suppressFootnotePreprocess) return undefined;
+      const index = src.indexOf("[^");
+      return index >= 0 ? index : undefined;
+    },
+    tokenizer(src) {
+      if (suppressFootnotePreprocess) return undefined;
+      const match = /^\[\^([^\]\n]+)\]/.exec(src);
+      if (!match) return undefined;
+      return { type: "footnoteReference", raw: match[0], id: match[1].trim() };
+    },
+    renderer(token) {
+      const id = normalizeFootnoteLabel(token.id);
+      if (!id || !footnoteDefinitions.has(id)) return escapeHtml(token.raw);
+      if (!footnoteOrder.includes(id)) footnoteOrder.push(id);
+      const refCount = (footnoteRefCounts.get(id) || 0) + 1;
+      footnoteRefCounts.set(id, refCount);
+      const slug = getFootnoteSlug(id);
+      const refId = getFootnoteReferenceId(id, refCount);
+      const noteNumber = footnoteOrder.indexOf(id) + 1;
+      return `<sup id="${escapeHtmlAttribute(refId)}" class="footnote-ref"><a href="#fn-${escapeHtmlAttribute(slug)}" aria-label="Footnote ${noteNumber}">[${noteNumber}]</a></sup>`;
+    },
+  };
+  const inlineMathExtension = {
+    name: "inlineMath",
+    level: "inline",
+    start(src) {
+      const match = INLINE_MATH_START_PATTERN.exec(src);
+      return match ? match.index : undefined;
+    },
+    tokenizer(src) {
+      if (src.startsWith("\\$")) {
+        return { type: "inlineMath", raw: "\\$", literalDollar: true };
+      }
+      if (src.startsWith("\\(") || src.startsWith("\\[")) {
+        const opening = src.slice(0, 2);
+        const closing = opening === "\\(" ? "\\)" : "\\]";
+        const closeIndex = findClosingMathDelimiter(src, closing, 2);
+        if (closeIndex >= 2) {
+          return {
+            type: "inlineMath",
+            raw: src.slice(0, closeIndex + 2),
+            display: opening === "\\[",
+          };
+        }
+        return undefined;
+      }
+      if (src[0] !== "$" || isEscapedCharacter(src, 0)) return undefined;
+      const mathToken = tokenizeDollarMath(src);
+      return mathToken || { type: "inlineMath", raw: "$", literalDollar: true };
+    },
+    renderer(token) {
+      if (token.literalDollar) {
+        return '<span class="math-literal-dollar tex2jax_ignore">&#36;</span>';
+      }
+      const displayClass = token.display ? ' math-display-inline' : '';
+      return `<span class="math-inline tex2jax_process${displayClass}">${escapeHtml(normalizeLegacyMathSyntax(token.raw))}</span>`;
+    },
   };
   const definitionListExtension = {
     name: "definitionList",
@@ -2622,23 +2824,29 @@ document.addEventListener("DOMContentLoaded", async function () {
       return match.index + 1;
     },
     tokenizer(src) {
+      if (this.lexer && this.lexer.state && !this.lexer.state.top) return undefined;
       const lines = src.split("\n");
       if (lines.length < 2) {
         return undefined;
       }
 
-      const term = lines[0];
-      if (EMPTY_LINE_PATTERN.test(term) || MARKDOWN_LIST_MARKER_PATTERN.test(term)) {
-        return undefined;
+      const terms = [];
+      const rawLines = [];
+      let index = 0;
+      while (index < lines.length && !DEFINITION_LIST_ITEM_PATTERN.test(lines[index])) {
+        const term = lines[index];
+        if (
+          EMPTY_LINE_PATTERN.test(term) ||
+          MARKDOWN_LIST_MARKER_PATTERN.test(term) ||
+          DEFINITION_LIST_DISALLOWED_TERM_PATTERN.test(term) ||
+          GFM_TABLE_DELIMITER_PATTERN.test(term)
+        ) return undefined;
+        terms.push(term.trim());
+        rawLines.push(term);
+        index += 1;
       }
-
-      if (!DEFINITION_LIST_ITEM_PATTERN.test(lines[1])) {
-        return undefined;
-      }
-
+      if (terms.length === 0 || index >= lines.length) return undefined;
       const definitions = [];
-      const rawLines = [term];
-      let index = 1;
       while (index < lines.length) {
         const itemMatch = DEFINITION_LIST_ITEM_PATTERN.exec(lines[index]);
         if (!itemMatch) {
@@ -2689,16 +2897,18 @@ document.addEventListener("DOMContentLoaded", async function () {
       return {
         type: "definitionList",
         raw: raw,
-        term: term.trim(),
+        terms: terms,
         definitions: definitions,
       };
     },
     renderer(token) {
-      const termHtml = parseInlineWithoutFootnotes(token.term);
+      const termHtml = token.terms
+        .map((term) => `<dt>${parseInlineWithoutFootnotes(term)}</dt>`)
+        .join("");
       const definitionHtml = token.definitions
         .map((definition) => `<dd>${renderDefinitionContent(definition)}</dd>`)
         .join("");
-      return `<dl><dt>${termHtml}</dt>${definitionHtml}</dl>\n`;
+      return `<dl>${termHtml}${definitionHtml}</dl>\n`;
     },
   };
   const superscriptExtension = {
@@ -2720,7 +2930,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       };
     },
     renderer(token) {
-      return `<sup>${marked.parseInline(token.text)}</sup>`;
+      return `<sup>${parseInlineWithoutFootnotes(token.text)}</sup>`;
     },
   };
   const subscriptExtension = {
@@ -2742,7 +2952,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       };
     },
     renderer(token) {
-      return `<sub>${marked.parseInline(token.text)}</sub>`;
+      return `<sub>${parseInlineWithoutFootnotes(token.text)}</sub>`;
     },
   };
   const highlightExtension = {
@@ -2764,7 +2974,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       };
     },
     renderer(token) {
-      return `<mark>${marked.parseInline(token.text)}</mark>`;
+      return `<mark>${parseInlineWithoutFootnotes(token.text)}</mark>`;
     },
   };
 
@@ -2852,7 +3062,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     if (language === 'math') {
-      return `<div class="math-block">$$\n${code}\n$$</div>\n`;
+      return `<div class="math-block tex2jax_process">$$\n${escapeHtml(normalizeLegacyMathSyntax(code))}\n$$</div>\n`;
     }
     
     const validLanguage = hljs.getLanguage(language) ? language : "plaintext";
@@ -2863,16 +3073,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   };
 
   renderer.heading = function (text, level, raw) {
-    let id = raw
-      .toLowerCase()
-      .trim()
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/[^\w-]/g, '')
-      .replace(/-+/g, '-');
-    if (!id) {
-      id = 'heading-' + Math.random().toString(36).substr(2, 9);
-    }
+    const id = createUniqueHeadingId(raw);
     return `<h${level} id="${id}">${text}</h${level}>`;
   };
 
@@ -2945,7 +3146,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   marked.use({
     extensions: [
       blockMathExtension,
+      footnoteDefinitionExtension,
       definitionListExtension,
+      inlineMathExtension,
+      footnoteReferenceExtension,
       superscriptExtension,
       subscriptExtension,
       highlightExtension,
@@ -2956,11 +3160,11 @@ document.addEventListener("DOMContentLoaded", async function () {
           return markdown;
         }
         resetExtendedMarkdownState();
-        // ✅ Replace escaped dollar signs before marked.js strips the backslash.
-        // This prevents MathJax from treating lone $ as a math delimiter.
-        const normalizedMarkdown = normalizeMarkmapFences(markdown);
-        const protectedMarkdown = normalizedMarkdown.replace(/\\\$/g, '&#36;');
-        return applyFootnotes(extractFootnoteDefinitions(protectedMarkdown));
+        return normalizeMarkmapFences(markdown);
+      },
+      postprocess(html) {
+        if (suppressFootnotePreprocess) return html;
+        return html + renderFootnotesSection();
       },
     },
   });
@@ -11617,10 +11821,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function disposeDocumentSplitPreviewResources() {
     if (!documentSplitPreview) return;
     documentSplitPreview.querySelectorAll('.geojson-map, .topojson-map').forEach(function(node) {
-      if (node._leafletMap) {
-        node._leafletMap.remove();
-        node._leafletMap = null;
-      }
+      disposeMapNode(node);
     });
     activeStlViews.forEach(function(view, id) {
       if (view.container && documentSplitPreview.contains(view.container)) {
@@ -13167,6 +13368,15 @@ document.addEventListener("DOMContentLoaded", async function () {
   function disposeStlView(viewId) {
     const view = activeStlViews.get(viewId);
     if (!view) return;
+
+    if (view.resizeObserver) {
+      view.resizeObserver.disconnect();
+      view.resizeObserver = null;
+    }
+    if (view.resizeFrameId) {
+      cancelAnimationFrame(view.resizeFrameId);
+      view.resizeFrameId = null;
+    }
     
     if (view.animationFrameId) {
       cancelAnimationFrame(view.animationFrameId);
@@ -13195,6 +13405,44 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
     activeStlViews.delete(viewId);
+  }
+
+  function disposeMapNode(node) {
+    if (!node) return;
+    if (node._leafletResizeObserver) {
+      node._leafletResizeObserver.disconnect();
+      node._leafletResizeObserver = null;
+    }
+    if (node._leafletResizeFrame) {
+      cancelAnimationFrame(node._leafletResizeFrame);
+      node._leafletResizeFrame = null;
+    }
+    if (node._leafletMap) {
+      node._leafletMap.remove();
+      node._leafletMap = null;
+    }
+  }
+
+  function observeMapNodeSize(node, map) {
+    if (typeof ResizeObserver === 'undefined' || !node || !map || typeof map.invalidateSize !== 'function') return;
+    let lastWidth = node.clientWidth;
+    let lastHeight = node.clientHeight;
+    const observer = new ResizeObserver(function(entries) {
+      const entry = entries[0];
+      const width = entry ? Math.round(entry.contentRect.width) : node.clientWidth;
+      const height = entry ? Math.round(entry.contentRect.height) : node.clientHeight;
+      if (width === lastWidth && height === lastHeight) return;
+      lastWidth = width;
+      lastHeight = height;
+      if (node._leafletResizeFrame) cancelAnimationFrame(node._leafletResizeFrame);
+      node._leafletResizeFrame = requestAnimationFrame(function() {
+        node._leafletResizeFrame = null;
+        if (!node.isConnected || node._leafletMap !== map || width <= 0 || height <= 0) return;
+        map.invalidateSize({ animate: false, pan: false });
+      });
+    });
+    node._leafletResizeObserver = observer;
+    observer.observe(node);
   }
 
   function renderMapNode(node, isTopo, context) {
@@ -13235,13 +13483,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       if (!geojsonData) return;
       
-      if (node._leafletMap) {
-        node._leafletMap.remove();
-        node._leafletMap = null;
-      }
+      disposeMapNode(node);
       node.innerHTML = '';
       const map = L.map(node);
       node._leafletMap = map;
+      observeMapNodeSize(node, map);
       
       const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
       let tileUrl;
@@ -13494,8 +13740,32 @@ document.addEventListener("DOMContentLoaded", async function () {
       gridHelper,
       initialPosition,
       initialTarget,
-      animationFrameId: null
+      animationFrameId: null,
+      resizeObserver: null,
+      resizeFrameId: null
     };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      let lastWidth = width;
+      let lastHeight = height;
+      view.resizeObserver = new ResizeObserver(function(entries) {
+        const entry = entries[0];
+        const nextWidth = entry ? Math.round(entry.contentRect.width) : container.clientWidth;
+        const nextHeight = entry ? Math.round(entry.contentRect.height) : container.clientHeight;
+        if (nextWidth === lastWidth && nextHeight === lastHeight) return;
+        lastWidth = nextWidth;
+        lastHeight = nextHeight;
+        if (view.resizeFrameId) cancelAnimationFrame(view.resizeFrameId);
+        view.resizeFrameId = requestAnimationFrame(function() {
+          view.resizeFrameId = null;
+          if (!container.isConnected || nextWidth <= 0 || nextHeight <= 0) return;
+          renderer.setSize(nextWidth, nextHeight);
+          camera.aspect = nextWidth / nextHeight;
+          camera.updateProjectionMatrix();
+        });
+      });
+      view.resizeObserver.observe(container);
+    }
     
     activeStlViews.set(viewId, view);
     animate();

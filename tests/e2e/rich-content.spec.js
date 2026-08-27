@@ -179,3 +179,56 @@ test('renders STL content into a 3D preview surface', async ({ page }) => {
   await expect(page.locator('.stl-container canvas').first()).toBeVisible();
   await expect(page.locator('.stl-toolbar').first()).toBeVisible();
 });
+
+test('resizes maps and STL previews when the preview pane changes width', async ({ page }) => {
+  await page.evaluate(() => {
+    window.__mapInvalidationWidths = [];
+    window.L = {
+      map(node) {
+        const pane = document.createElement('div');
+        pane.className = 'leaflet-map-pane';
+        pane.textContent = 'Resizable map';
+        node.appendChild(pane);
+        return {
+          remove() { pane.remove(); },
+          fitBounds() {},
+          setView() {},
+          eachLayer() {},
+          invalidateSize() { window.__mapInvalidationWidths.push(node.clientWidth); },
+          attributionControl: {
+            addAttribution() {},
+            removeAttribution() {}
+          }
+        };
+      },
+      tileLayer() {
+        return { addTo() { return this; } };
+      },
+      geoJSON() {
+        return {
+          addTo() { return this; },
+          getBounds() {
+            return { isValid() { return false; } };
+          }
+        };
+      }
+    };
+  });
+
+  const markdown = '# Responsive rich content\n\n```geojson\n{"type":"FeatureCollection","features":[]}\n```\n\n'
+    + await fixture('stl.md');
+  await setEditorContent(page, markdown);
+
+  const map = page.locator('.geojson-map').first();
+  const canvas = page.locator('.stl-container canvas').first();
+  await expect(map).toBeVisible();
+  await expect(canvas).toBeVisible();
+  const splitMapWidth = await map.evaluate(node => node.clientWidth);
+  const splitCanvasWidth = await canvas.evaluate(node => node.getBoundingClientRect().width);
+
+  await page.getByRole('button', { name: 'Preview Markdown' }).click();
+
+  await expect.poll(() => map.evaluate(node => node.clientWidth)).toBeGreaterThan(splitMapWidth);
+  await expect.poll(() => canvas.evaluate(node => node.getBoundingClientRect().width)).toBeGreaterThan(splitCanvasWidth);
+  await expect.poll(() => page.evaluate(() => window.__mapInvalidationWidths.at(-1) || 0)).toBeGreaterThan(splitMapWidth);
+});
