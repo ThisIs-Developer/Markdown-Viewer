@@ -18162,11 +18162,11 @@ ${selector} .arrowheadPath {
     return Math.max(min, Math.min(max, parsed));
   }
 
-  function buildMarkdownTable(columns, rows) {
+  function buildMarkdownTable(columns, totalRows) {
     const header = Array.from({ length: columns }, (_, index) => `Column ${index + 1}`).join(' | ');
     const divider = Array.from({ length: columns }, () => '---').join(' | ');
-    const bodyRows = Array.from({ length: rows }, () => `| ${Array.from({ length: columns }, () => 'Value').join(' | ')} |`);
-    return `| ${header} |\n| ${divider} |\n${bodyRows.join('\n')}\n`;
+    const bodyRows = Array.from({ length: Math.max(0, totalRows - 1) }, () => `| ${Array.from({ length: columns }, () => 'Value').join(' | ')} |`);
+    return `| ${header} |\n| ${divider} |${bodyRows.length ? `\n${bodyRows.join('\n')}` : ''}\n`;
   }
 
   function loadEmojiEntries() {
@@ -18248,20 +18248,23 @@ ${selector} .arrowheadPath {
     const start = markdownEditor.selectionStart;
     const end = markdownEditor.selectionEnd;
     columnInput.value = '3';
-    rowInput.value = '1';
+    rowInput.value = '3';
     modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
 
     function insertTable() {
       const columns = clampNumber(columnInput.value, 1, 20, 3);
-      const rows = clampNumber(rowInput.value, 1, 20, 1);
+      const rows = clampNumber(rowInput.value, 1, 20, 3);
       const table = buildMarkdownTable(columns, rows);
       modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
       cleanup();
       insertMarkdownBlock(table, start, end);
     }
 
     function closeModal() {
       modal.style.display = 'none';
+      modal.setAttribute('aria-hidden', 'true');
       cleanup();
     }
 
@@ -21971,6 +21974,100 @@ ${selector} .arrowheadPath {
   function initMarkdownFormatToolbar() {
     if (!markdownFormatToolbar) return;
 
+    const tablePickerGrid = document.getElementById('table-picker-grid');
+    const tablePickerStatus = document.getElementById('table-picker-status');
+    const customTableButton = document.getElementById('custom-table-button');
+    const tablePickerCells = [];
+
+    function updateTablePicker(columns, rows) {
+      tablePickerCells.forEach(function(cell) {
+        const cellColumns = Number(cell.getAttribute('data-table-columns'));
+        const cellRows = Number(cell.getAttribute('data-table-rows'));
+        cell.classList.toggle('is-selected', cellColumns <= columns && cellRows <= rows);
+      });
+      if (tablePickerStatus) tablePickerStatus.textContent = `${columns} columns × ${rows} rows`;
+    }
+
+    function resetTablePicker() {
+      tablePickerCells.forEach(function(cell, index) {
+        cell.classList.remove('is-selected');
+        cell.tabIndex = index === 0 ? 0 : -1;
+      });
+      if (tablePickerStatus) tablePickerStatus.textContent = translateUiString('Select table size');
+    }
+
+    function insertQuickTable(columns, rows) {
+      const table = buildMarkdownTable(columns, rows);
+      insertMarkdownBlock(table);
+    }
+
+    if (tablePickerGrid) {
+      for (let row = 1; row <= 8; row += 1) {
+        const gridRow = document.createElement('div');
+        gridRow.className = 'markdown-table-picker-row';
+        gridRow.setAttribute('role', 'row');
+        for (let column = 1; column <= 8; column += 1) {
+          const cell = document.createElement('button');
+          cell.type = 'button';
+          cell.className = 'markdown-table-picker-cell';
+          cell.setAttribute('role', 'gridcell');
+          cell.setAttribute('data-table-columns', String(column));
+          cell.setAttribute('data-table-rows', String(row));
+          cell.setAttribute('aria-label', `${column} columns, ${row} rows`);
+          cell.setAttribute('aria-colindex', String(column));
+          cell.setAttribute('aria-rowindex', String(row));
+          cell.tabIndex = tablePickerCells.length === 0 ? 0 : -1;
+          cell.addEventListener('pointerenter', function() { updateTablePicker(column, row); });
+          cell.addEventListener('focus', function() { updateTablePicker(column, row); });
+          cell.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeToolbarMenus();
+            insertQuickTable(column, row);
+          });
+          cell.addEventListener('keydown', function(event) {
+            const currentIndex = tablePickerCells.indexOf(cell);
+            let nextIndex = -1;
+            if (event.key === 'ArrowRight' && column < 8) nextIndex = currentIndex + 1;
+            if (event.key === 'ArrowLeft' && column > 1) nextIndex = currentIndex - 1;
+            if (event.key === 'ArrowDown' && row < 8) nextIndex = currentIndex + 8;
+            if (event.key === 'ArrowUp' && row > 1) nextIndex = currentIndex - 8;
+            if (event.key === 'Home') nextIndex = currentIndex - column + 1;
+            if (event.key === 'End') nextIndex = currentIndex + (8 - column);
+            if (event.key === 'ArrowDown' && row === 8 && customTableButton) {
+              event.preventDefault();
+              event.stopPropagation();
+              customTableButton.focus();
+              return;
+            }
+            if (['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) && nextIndex < 0) {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
+            if (nextIndex < 0) return;
+            event.preventDefault();
+            event.stopPropagation();
+            tablePickerCells.forEach(function(item) { item.tabIndex = -1; });
+            tablePickerCells[nextIndex].tabIndex = 0;
+            tablePickerCells[nextIndex].focus();
+          });
+          tablePickerCells.push(cell);
+          gridRow.appendChild(cell);
+        }
+        tablePickerGrid.appendChild(gridRow);
+      }
+    }
+
+    if (customTableButton) {
+      customTableButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeToolbarMenus();
+        openTableModal();
+      });
+    }
+
     function closeToolbarMenus(options) {
       const settings = options || {};
       markdownFormatToolbar.querySelectorAll('[data-toolbar-menu-toggle]').forEach(function(toggle) {
@@ -21980,6 +22077,7 @@ ${selector} .arrowheadPath {
       markdownFormatToolbar.querySelectorAll('[data-toolbar-menu].open').forEach(function(menu) {
         menu.classList.remove('open');
       });
+      resetTablePicker();
       if (settings.restoreFocus && settings.toggle) settings.toggle.focus();
     }
 
@@ -22002,14 +22100,15 @@ ${selector} .arrowheadPath {
       toggle.setAttribute('aria-expanded', 'true');
       menu.classList.add('open');
       positionToolbarMenu(toggle, menu);
+      if (menu.getAttribute('data-toolbar-menu') === 'table') resetTablePicker();
       if (focusFirst) {
-        const first = menu.querySelector('.markdown-tool-menu-item:not(:disabled)');
+        const first = menu.querySelector('.markdown-table-picker-cell, .markdown-tool-menu-item:not(:disabled)');
         if (first) first.focus();
       }
     }
 
     markdownFormatToolbar.addEventListener('mousedown', function(e) {
-      if (e.target.closest('[data-md-action], [data-toolbar-menu-toggle]')) e.preventDefault();
+      if (e.target.closest('[data-md-action], [data-toolbar-menu-toggle], .markdown-table-picker-cell, #custom-table-button')) e.preventDefault();
     });
     markdownFormatToolbar.addEventListener('click', function(e) {
       const toggle = e.target.closest('[data-toolbar-menu-toggle]');
@@ -30296,7 +30395,7 @@ ${selector} .arrowheadPath {
     const modalImgTitle = document.getElementById('image-modal-title');
     if (modalImgTitle) modalImgTitle.textContent = translateUiString('Insert image, GIF, or video');
     const modalTableTitle = document.getElementById('table-modal-title');
-    if (modalTableTitle) modalTableTitle.textContent = translateUiString('Insert table');
+    if (modalTableTitle) modalTableTitle.textContent = translateUiString('Custom table');
     const modalFindTitle = document.getElementById('find-replace-title');
     if (modalFindTitle) modalFindTitle.textContent = translateUiString('Find & Replace');
 

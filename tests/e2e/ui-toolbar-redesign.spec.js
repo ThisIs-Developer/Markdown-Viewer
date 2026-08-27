@@ -76,7 +76,8 @@ test('shared application overlays use compact type, spacing, and surface styling
   await page.keyboard.press('Escape');
   await expect(page.locator('#alert-modal')).toBeHidden();
 
-  await page.locator('[data-md-action="table"]').click();
+  await page.locator('#table-picker-toggle').click();
+  await page.locator('#custom-table-button').click();
   const tableSurface = await page.locator('#table-modal .reset-modal-box').evaluate(element => {
     const style = getComputedStyle(element);
     return { radius: style.borderRadius, padding: style.padding, fontSize: style.fontSize };

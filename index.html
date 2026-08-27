@@ -551,7 +551,15 @@
           <div class="markdown-toolbar-group markdown-toolbar-group--content" role="group" aria-label="Content insertion">
             <button type="button" class="markdown-tool-btn" data-md-action="link" title="Link (Ctrl/Cmd+K)" aria-label="Link" aria-keyshortcuts="Control+K Meta+K"><i class="lucide lucide-link-2"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="image" title="Image, GIF, or video" aria-label="Insert image, GIF, or video"><i class="lucide lucide-image" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="table" title="Table" aria-label="Table"><i class="lucide lucide-table-2" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" id="table-picker-toggle" data-toolbar-menu-toggle="table" aria-haspopup="dialog" aria-expanded="false" aria-controls="table-picker-menu" title="Table" aria-label="Insert table"><i class="lucide lucide-table-2" aria-hidden="true"></i></button>
+            <div class="markdown-tool-menu markdown-table-picker" id="table-picker-menu" data-toolbar-menu="table" role="dialog" aria-label="Insert table">
+              <div class="markdown-table-picker-content">
+                <p class="markdown-table-picker-status" id="table-picker-status" aria-live="polite">Select table size</p>
+                <div class="markdown-table-picker-grid" id="table-picker-grid" role="grid" aria-label="Quick table selector, up to 8 columns and 8 rows" aria-colcount="8" aria-rowcount="8"></div>
+              </div>
+              <div class="markdown-tool-menu-separator" role="separator"></div>
+              <button type="button" class="markdown-tool-menu-item" id="custom-table-button"><i class="lucide lucide-table-properties" aria-hidden="true"></i><span>Custom table…</span></button>
+            </div>
             <button type="button" class="markdown-tool-btn" data-md-action="reference" title="Reference" aria-label="Insert reference"><i class="lucide lucide-bookmark" aria-hidden="true"></i></button>
           </div>
           <div class="markdown-toolbar-group markdown-toolbar-group--technical" role="group" aria-label="Technical content">
@@ -1306,17 +1314,18 @@
         <div id="table-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="table-modal-title" aria-hidden="true" style="display:none;">
           <div class="reset-modal-box reset-modal-box--wide app-modal-box">
             <div class="modal-header">
-              <p id="table-modal-title" class="reset-modal-message">Insert table</p>
+              <p id="table-modal-title" class="reset-modal-message">Custom table</p>
               <button type="button" class="modal-close-btn" data-modal-cancel="table-modal-cancel" aria-label="Close table dialog"><i class="lucide lucide-x" aria-hidden="true"></i></button>
             </div>
             <div class="modal-body">
               <div class="reset-modal-field">
-                <label class="reset-modal-label" for="table-modal-columns">Column count</label>
+                <label class="reset-modal-label" for="table-modal-columns">Columns</label>
                 <input type="number" id="table-modal-columns" class="rename-modal-input" min="1" max="20" value="3" />
               </div>
               <div class="reset-modal-field">
-                <label class="reset-modal-label" for="table-modal-rows">Row count</label>
-                <input type="number" id="table-modal-rows" class="rename-modal-input" min="1" max="20" value="1" />
+                <label class="reset-modal-label" for="table-modal-rows">Rows (including header)</label>
+                <input type="number" id="table-modal-rows" class="rename-modal-input" min="1" max="20" value="3" aria-describedby="table-modal-rows-help" />
+                <p class="modal-subtext" id="table-modal-rows-help">The header is included in the row count.</p>
               </div>
             </div>
             <div class="reset-modal-actions">
