@@ -11821,10 +11821,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function disposeDocumentSplitPreviewResources() {
     if (!documentSplitPreview) return;
     documentSplitPreview.querySelectorAll('.geojson-map, .topojson-map').forEach(function(node) {
-      if (node._leafletMap) {
-        node._leafletMap.remove();
-        node._leafletMap = null;
-      }
+      disposeMapNode(node);
     });
     activeStlViews.forEach(function(view, id) {
       if (view.container && documentSplitPreview.contains(view.container)) {
@@ -13371,6 +13368,15 @@ document.addEventListener("DOMContentLoaded", async function () {
   function disposeStlView(viewId) {
     const view = activeStlViews.get(viewId);
     if (!view) return;
+
+    if (view.resizeObserver) {
+      view.resizeObserver.disconnect();
+      view.resizeObserver = null;
+    }
+    if (view.resizeFrameId) {
+      cancelAnimationFrame(view.resizeFrameId);
+      view.resizeFrameId = null;
+    }
     
     if (view.animationFrameId) {
       cancelAnimationFrame(view.animationFrameId);
@@ -13399,6 +13405,44 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
     activeStlViews.delete(viewId);
+  }
+
+  function disposeMapNode(node) {
+    if (!node) return;
+    if (node._leafletResizeObserver) {
+      node._leafletResizeObserver.disconnect();
+      node._leafletResizeObserver = null;
+    }
+    if (node._leafletResizeFrame) {
+      cancelAnimationFrame(node._leafletResizeFrame);
+      node._leafletResizeFrame = null;
+    }
+    if (node._leafletMap) {
+      node._leafletMap.remove();
+      node._leafletMap = null;
+    }
+  }
+
+  function observeMapNodeSize(node, map) {
+    if (typeof ResizeObserver === 'undefined' || !node || !map || typeof map.invalidateSize !== 'function') return;
+    let lastWidth = node.clientWidth;
+    let lastHeight = node.clientHeight;
+    const observer = new ResizeObserver(function(entries) {
+      const entry = entries[0];
+      const width = entry ? Math.round(entry.contentRect.width) : node.clientWidth;
+      const height = entry ? Math.round(entry.contentRect.height) : node.clientHeight;
+      if (width === lastWidth && height === lastHeight) return;
+      lastWidth = width;
+      lastHeight = height;
+      if (node._leafletResizeFrame) cancelAnimationFrame(node._leafletResizeFrame);
+      node._leafletResizeFrame = requestAnimationFrame(function() {
+        node._leafletResizeFrame = null;
+        if (!node.isConnected || node._leafletMap !== map || width <= 0 || height <= 0) return;
+        map.invalidateSize({ animate: false, pan: false });
+      });
+    });
+    node._leafletResizeObserver = observer;
+    observer.observe(node);
   }
 
   function renderMapNode(node, isTopo, context) {
@@ -13439,13 +13483,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       if (!geojsonData) return;
       
-      if (node._leafletMap) {
-        node._leafletMap.remove();
-        node._leafletMap = null;
-      }
+      disposeMapNode(node);
       node.innerHTML = '';
       const map = L.map(node);
       node._leafletMap = map;
+      observeMapNodeSize(node, map);
       
       const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
       let tileUrl;
@@ -13698,8 +13740,32 @@ document.addEventListener("DOMContentLoaded", async function () {
       gridHelper,
       initialPosition,
       initialTarget,
-      animationFrameId: null
+      animationFrameId: null,
+      resizeObserver: null,
+      resizeFrameId: null
     };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      let lastWidth = width;
+      let lastHeight = height;
+      view.resizeObserver = new ResizeObserver(function(entries) {
+        const entry = entries[0];
+        const nextWidth = entry ? Math.round(entry.contentRect.width) : container.clientWidth;
+        const nextHeight = entry ? Math.round(entry.contentRect.height) : container.clientHeight;
+        if (nextWidth === lastWidth && nextHeight === lastHeight) return;
+        lastWidth = nextWidth;
+        lastHeight = nextHeight;
+        if (view.resizeFrameId) cancelAnimationFrame(view.resizeFrameId);
+        view.resizeFrameId = requestAnimationFrame(function() {
+          view.resizeFrameId = null;
+          if (!container.isConnected || nextWidth <= 0 || nextHeight <= 0) return;
+          renderer.setSize(nextWidth, nextHeight);
+          camera.aspect = nextWidth / nextHeight;
+          camera.updateProjectionMatrix();
+        });
+      });
+      view.resizeObserver.observe(container);
+    }
     
     activeStlViews.set(viewId, view);
     animate();

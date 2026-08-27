@@ -40,6 +40,7 @@ test('comments persist without changing Markdown and retain selection anchors', 
   expect(stored).toContain('"kind":"text"');
 
   await page.reload();
+  await expect(page.locator('#markdown-preview h1')).toHaveText('Stable heading');
   await page.locator('#review-toggle').click();
   await expect(page.locator('.review-thread')).toContainText('Persistent anchored comment.');
   await expect(page.locator('.review-comment-highlight')).toHaveText('stable paragraph');
