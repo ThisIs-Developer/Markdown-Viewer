@@ -8981,6 +8981,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     textNodes.forEach(function(entry) {
+      const intersectsHighlight = entries.some(function(highlight) {
+        return highlight.start < entry.end && highlight.end > entry.start;
+      });
+      if (!intersectsHighlight) return;
       const boundaries = new Set([0, entry.node.nodeValue.length]);
       entries.forEach(function(highlight) {
         const start = Math.max(entry.start, highlight.start);
@@ -8991,7 +8995,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
       });
       const cuts = Array.from(boundaries).sort(function(a, b) { return a - b; });
-      if (cuts.length <= 2) return;
       const fragment = document.createDocumentFragment();
       for (let index = 0; index < cuts.length - 1; index += 1) {
         const localStart = cuts[index];
@@ -30717,7 +30720,16 @@ ${selector} .arrowheadPath {
 
   // Intercept all link clicks in the preview pane to open them securely and prevent page navigation
   if (markdownPreview) {
+    function preventReviewLinkNavigation(event) {
+      const link = event.target && event.target.closest ? event.target.closest('a') : null;
+      if (!reviewModeActive || !link || !markdownPreview.contains(link)) return false;
+      event.preventDefault();
+      return true;
+    }
+
+    markdownPreview.addEventListener('auxclick', preventReviewLinkNavigation);
     markdownPreview.addEventListener('click', function(e) {
+      if (preventReviewLinkNavigation(e)) return;
       const link = e.target.closest('a');
       if (link) {
         const href = link.getAttribute('href');

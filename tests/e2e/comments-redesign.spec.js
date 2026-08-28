@@ -3,7 +3,8 @@ const {
   openApp,
   setEditorContent,
   stubLazyRendererLibraries,
-  storedDocuments
+  storedDocuments,
+  waitForAppReady
 } = require('../helpers/app');
 
 async function selectPreviewText(page, selector, selectedText, clickAfterMouseup = false) {
@@ -200,6 +201,7 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
 
   await page.locator('#review-panel-close').click();
   await page.reload();
+  await waitForAppReady(page);
   await page.locator('#review-toggle').click();
   await expect(page.locator('.review-thread')).toContainText('This wording is clear.');
   await expect(page.locator('.review-thread-dates')).toBeVisible();
@@ -215,6 +217,162 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   expect(persistedHighlightStyle.underline).not.toBe('none');
   expect(persistedHighlightStyle.visibleRects).toBeGreaterThan(0);
   expect(JSON.stringify(await storedDocuments(page))).toContain('This wording is clear.');
+});
+
+test('highlights complete and cross-format inline text-node selections after submit and reload', async ({ page }) => {
+  const leadText = 'A local-first Markdown editor and viewer with live preview.';
+  const mixedText = 'Plain bold italic linked code struck.';
+  const mixedMarkdown = 'Plain **bold** *italic* [linked](https://example.com) `code` ~~struck~~.';
+  await setEditorContent(page, `<div align="center">
+
+  **${leadText}**
+
+  Open, write, organize, review, render, export, and optionally share Markdown.
+
+</div>
+
+${mixedMarkdown}`);
+  await expect(page.locator('#markdown-preview strong').filter({ hasText: leadText })).toBeVisible();
+  await page.locator('#review-toggle').click();
+
+  await addTextComment(page, '#markdown-preview p', leadText, 'Whole bold-node comment.');
+  const leadParagraph = page.locator('#markdown-preview p').filter({ hasText: leadText });
+  await expect(leadParagraph.locator('strong > .review-comment-highlight')).toHaveText(leadText);
+
+  await addTextComment(page, '#markdown-preview p', mixedText, 'Cross-format comment.');
+  const mixedParagraph = page.locator('#markdown-preview p').filter({ hasText: mixedText });
+  await expect.poll(async () => {
+    return (await mixedParagraph.locator('.review-comment-highlight').allTextContents()).join('');
+  }).toBe(mixedText);
+  expect(await mixedParagraph.evaluate(element => ({
+    bold: Boolean(element.querySelector('strong > .review-comment-highlight')),
+    italic: Boolean(element.querySelector('em > .review-comment-highlight')),
+    link: Boolean(element.querySelector('a > .review-comment-highlight')),
+    code: Boolean(element.querySelector('code > .review-comment-highlight')),
+    struck: Boolean(element.querySelector('del > .review-comment-highlight'))
+  }))).toEqual({ bold: true, italic: true, link: true, code: true, struck: true });
+
+  await page.locator('#review-panel-close').click();
+  await setEditorContent(page, `<div align="center">
+
+  ***${leadText}***
+
+  Open, write, organize, review, render, export, and optionally share Markdown.
+
+</div>
+
+Intro ${mixedMarkdown}`);
+  await expect(page.locator('#markdown-preview p').filter({ hasText: `Intro ${mixedText}` })).toBeVisible();
+  await page.locator('#review-toggle').click();
+  await expect(page.locator('#markdown-preview p').filter({ hasText: leadText })
+    .locator('em > strong > .review-comment-highlight')).toHaveText(leadText);
+  await expect.poll(async () => {
+    return (await page.locator('#markdown-preview p').filter({ hasText: `Intro ${mixedText}` })
+      .locator('.review-comment-highlight').allTextContents()).join('');
+  }).toBe(mixedText);
+
+  await page.locator('#review-panel-close').click();
+  await page.reload();
+  await waitForAppReady(page);
+  await page.locator('#review-toggle').click();
+  await expect(page.locator('.review-thread')).toHaveCount(2);
+  await expect(page.locator('#markdown-preview p').filter({ hasText: leadText })
+    .locator('strong > .review-comment-highlight')).toHaveText(leadText);
+  await expect.poll(async () => {
+    return (await page.locator('#markdown-preview p').filter({ hasText: mixedText })
+      .locator('.review-comment-highlight').allTextContents()).join('');
+  }).toBe(mixedText);
+});
+
+test('blocks hyperlinks and linked badges only while Comments mode is active', async ({ page }) => {
+  await setEditorContent(page, `[External link](https://example.com)
+
+[Jump to target](#review-link-target)
+
+<a href="https://github.com/ThisIs-Developer/Markdown-Viewer"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" alt="GitHub badge" width="120" height="24"></a>
+
+<h2 id="review-link-target">Target heading</h2>`);
+  await expect(page.locator('#markdown-preview img[alt="GitHub badge"]')).toBeVisible();
+  await page.evaluate(() => {
+    window.__reviewOpenedUrls = [];
+    window.__reviewAnchorScrolls = 0;
+    window.open = url => {
+      window.__reviewOpenedUrls.push(url);
+      return null;
+    };
+    document.querySelector('#review-link-target').scrollIntoView = () => {
+      window.__reviewAnchorScrolls += 1;
+    };
+  });
+  await page.locator('#review-toggle').click();
+
+  await page.getByRole('link', { name: 'External link' }).click();
+  await page.getByRole('link', { name: 'Jump to target' }).click();
+  await page.locator('#markdown-preview img[alt="GitHub badge"]').click();
+  expect(await page.getByRole('link', { name: 'External link' }).evaluate(link => {
+    return !link.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+  })).toBe(true);
+  await expect(page.locator('#markdown-preview img[alt="GitHub badge"]')).toHaveClass(/is-review-element-selected/);
+  await expect(page.locator('#review-new-comment')).toBeEnabled();
+  expect(await page.evaluate(() => ({
+    openedUrls: window.__reviewOpenedUrls,
+    anchorScrolls: window.__reviewAnchorScrolls
+  }))).toEqual({ openedUrls: [], anchorScrolls: 0 });
+
+  await page.locator('#review-panel-close').click();
+  await page.getByRole('link', { name: 'External link' }).click();
+  await page.getByRole('link', { name: 'Jump to target' }).click();
+  expect(await page.evaluate(() => ({
+    openedUrls: window.__reviewOpenedUrls,
+    anchorScrolls: window.__reviewAnchorScrolls
+  }))).toEqual({ openedUrls: ['https://example.com'], anchorScrolls: 1 });
+});
+
+test('keeps image dimensions and visual alignment stable after adding a comment', async ({ page }) => {
+  await setEditorContent(page, `<div align="center">
+
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" alt="Review logo" width="100" height="100">
+
+</div>`);
+  const image = page.locator('#markdown-preview img[alt="Review logo"]');
+  await expect(image).toBeVisible();
+  const readGeometry = () => image.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const parentRect = element.parentElement.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+    const borderRight = parseFloat(style.borderRightWidth) || 0;
+    const contentWidth = rect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+    const contentCenter = rect.left + borderLeft + paddingLeft + (contentWidth / 2);
+    return {
+      width: rect.width,
+      height: rect.height,
+      paddingLeft,
+      paddingRight,
+      contentCenterOffset: contentCenter - (parentRect.left + (parentRect.width / 2))
+    };
+  });
+  const beforeComment = await readGeometry();
+
+  await page.locator('#review-toggle').click();
+  await image.click();
+  expect(await readGeometry()).toEqual(beforeComment);
+  await page.locator('#review-new-comment').click();
+  expect(await readGeometry()).toEqual(beforeComment);
+  await page.locator('#review-feedback-input').fill('Logo comment.');
+  await page.locator('#review-feedback-submit').click();
+  await expect(image).toHaveClass(/review-comment-element/);
+  const afterComment = await readGeometry();
+  expect(afterComment).toEqual(beforeComment);
+
+  await page.locator('#review-panel-close').click();
+  await page.reload();
+  await waitForAppReady(page);
+  await page.locator('#review-toggle').click();
+  await expect(page.locator('.review-thread')).toContainText('Logo comment.');
+  expect(await readGeometry()).toEqual(beforeComment);
 });
 
 test('synchronizes hover and click states in both directions', async ({ page }) => {
@@ -342,6 +500,7 @@ test('adds nested replies and persists their author and timestamp', async ({ pag
   await expect(card.locator('.review-reply')).toHaveCount(2);
 
   await page.reload();
+  await waitForAppReady(page);
   await expect(page.locator('#markdown-preview h1')).toHaveText('Comments redesign');
   await page.locator('#review-toggle').click();
   await expect(page.locator('#review-panel')).toBeVisible();
