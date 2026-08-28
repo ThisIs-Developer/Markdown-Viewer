@@ -50,10 +50,11 @@ test('Share Snapshot creates a view-only hash link that opens without permanent 
   await expect(sharedPage.locator('#toggle-sync')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
   const formatMenuToggles = sharedPage.locator('#markdown-format-toolbar [data-toolbar-menu-toggle]');
-  await expect(formatMenuToggles).toHaveCount(3);
+  await expect(formatMenuToggles).toHaveCount(4);
   await expect(sharedPage.locator('#markdown-format-toolbar [data-toolbar-menu-toggle]:not(:disabled)')).toHaveCount(0);
   await expect(sharedPage.locator('[data-toolbar-menu-toggle="heading"]')).toHaveCSS('opacity', '0.4');
   await expect(sharedPage.locator('[data-toolbar-menu-toggle="case"]')).toHaveCSS('opacity', '0.4');
+  await expect(sharedPage.locator('[data-toolbar-menu-toggle="table"]')).toHaveCSS('opacity', '0.4');
 
   const storedTabs = JSON.stringify(await storedDocuments(sharedPage));
   expect(storedTabs).not.toContain('This text should survive a snapshot round trip.');

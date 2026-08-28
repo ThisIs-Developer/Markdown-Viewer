@@ -3873,6 +3873,58 @@ body {
   background: var(--border-color);
 }
 
+.markdown-table-picker {
+  width: min(230px, calc(100vw - 16px));
+  padding: 6px;
+}
+
+.markdown-table-picker-content {
+  padding: 6px;
+}
+
+.markdown-table-picker-status {
+  min-height: 18px;
+  margin: 0 0 8px;
+  color: var(--text-color);
+  font-size: var(--ui-font-md);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.markdown-table-picker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.markdown-table-picker-row {
+  display: grid;
+  grid-template-columns: repeat(var(--table-picker-size, 8), 1fr);
+  gap: 4px;
+}
+
+.markdown-table-picker-cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--button-bg);
+  cursor: pointer;
+}
+
+.markdown-table-picker-cell:hover,
+.markdown-table-picker-cell:focus-visible,
+.markdown-table-picker-cell.is-selected {
+  border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 18%, var(--button-bg));
+  outline: none;
+}
+
+.markdown-table-picker-cell:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 28%, transparent);
+}
+
 
 
 /* Loading indicators */
@@ -11539,6 +11591,33 @@ html[data-theme="dark"] .mermaid svg {
 
 .app-modal-box > .modal-header + .reset-modal-actions {
   border-top: 0;
+}
+
+/* Keep the custom table form compact: it only contains two numeric values. */
+#table-modal .table-modal-box {
+  width: min(92vw, 320px);
+  min-width: 0;
+  max-width: 320px;
+}
+
+#table-modal .table-modal-box > .modal-header {
+  padding: 10px 12px;
+}
+
+#table-modal .table-modal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  overflow: visible;
+}
+
+#table-modal .reset-modal-field {
+  min-width: 0;
+}
+
+#table-modal .table-modal-box > .reset-modal-actions {
+  padding: 8px 12px;
 }
 
 .storage-settings-body {
