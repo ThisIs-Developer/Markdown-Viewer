@@ -281,6 +281,50 @@ Intro ${mixedMarkdown}`);
   }).toBe(mixedText);
 });
 
+test('blocks hyperlinks and linked badges only while Comments mode is active', async ({ page }) => {
+  await setEditorContent(page, `[External link](https://example.com)
+
+[Jump to target](#review-link-target)
+
+<a href="https://github.com/ThisIs-Developer/Markdown-Viewer"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" alt="GitHub badge" width="120" height="24"></a>
+
+<h2 id="review-link-target">Target heading</h2>`);
+  await expect(page.locator('#markdown-preview img[alt="GitHub badge"]')).toBeVisible();
+  await page.evaluate(() => {
+    window.__reviewOpenedUrls = [];
+    window.__reviewAnchorScrolls = 0;
+    window.open = url => {
+      window.__reviewOpenedUrls.push(url);
+      return null;
+    };
+    document.querySelector('#review-link-target').scrollIntoView = () => {
+      window.__reviewAnchorScrolls += 1;
+    };
+  });
+  await page.locator('#review-toggle').click();
+
+  await page.getByRole('link', { name: 'External link' }).click();
+  await page.getByRole('link', { name: 'Jump to target' }).click();
+  await page.locator('#markdown-preview img[alt="GitHub badge"]').click();
+  expect(await page.getByRole('link', { name: 'External link' }).evaluate(link => {
+    return !link.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+  })).toBe(true);
+  await expect(page.locator('#markdown-preview img[alt="GitHub badge"]')).toHaveClass(/is-review-element-selected/);
+  await expect(page.locator('#review-new-comment')).toBeEnabled();
+  expect(await page.evaluate(() => ({
+    openedUrls: window.__reviewOpenedUrls,
+    anchorScrolls: window.__reviewAnchorScrolls
+  }))).toEqual({ openedUrls: [], anchorScrolls: 0 });
+
+  await page.locator('#review-panel-close').click();
+  await page.getByRole('link', { name: 'External link' }).click();
+  await page.getByRole('link', { name: 'Jump to target' }).click();
+  expect(await page.evaluate(() => ({
+    openedUrls: window.__reviewOpenedUrls,
+    anchorScrolls: window.__reviewAnchorScrolls
+  }))).toEqual({ openedUrls: ['https://example.com'], anchorScrolls: 1 });
+});
+
 test('synchronizes hover and click states in both directions', async ({ page }) => {
   await page.locator('#review-toggle').click();
   await selectPreviewText(page, '#markdown-preview p', 'precise phrase');

@@ -30720,7 +30720,16 @@ ${selector} .arrowheadPath {
 
   // Intercept all link clicks in the preview pane to open them securely and prevent page navigation
   if (markdownPreview) {
+    function preventReviewLinkNavigation(event) {
+      const link = event.target && event.target.closest ? event.target.closest('a') : null;
+      if (!reviewModeActive || !link || !markdownPreview.contains(link)) return false;
+      event.preventDefault();
+      return true;
+    }
+
+    markdownPreview.addEventListener('auxclick', preventReviewLinkNavigation);
     markdownPreview.addEventListener('click', function(e) {
+      if (preventReviewLinkNavigation(e)) return;
       const link = e.target.closest('a');
       if (link) {
         const href = link.getAttribute('href');
