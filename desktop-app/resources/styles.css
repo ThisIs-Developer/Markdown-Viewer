@@ -11593,6 +11593,33 @@ html[data-theme="dark"] .mermaid svg {
   border-top: 0;
 }
 
+/* Keep the custom table form compact: it only contains two numeric values. */
+#table-modal .table-modal-box {
+  width: min(92vw, 320px);
+  min-width: 0;
+  max-width: 320px;
+}
+
+#table-modal .table-modal-box > .modal-header {
+  padding: 10px 12px;
+}
+
+#table-modal .table-modal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  overflow: visible;
+}
+
+#table-modal .reset-modal-field {
+  min-width: 0;
+}
+
+#table-modal .table-modal-box > .reset-modal-actions {
+  padding: 8px 12px;
+}
+
 .storage-settings-body {
   display: flex;
   flex-direction: column;

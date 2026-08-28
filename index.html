@@ -1312,20 +1312,19 @@
 
         <!-- Table Modal -->
         <div id="table-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="table-modal-title" aria-hidden="true" style="display:none;">
-          <div class="reset-modal-box reset-modal-box--wide app-modal-box">
+          <div class="reset-modal-box app-modal-box table-modal-box">
             <div class="modal-header">
               <p id="table-modal-title" class="reset-modal-message">Custom table</p>
               <button type="button" class="modal-close-btn" data-modal-cancel="table-modal-cancel" aria-label="Close table dialog"><i class="lucide lucide-x" aria-hidden="true"></i></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body table-modal-fields">
               <div class="reset-modal-field">
                 <label class="reset-modal-label" for="table-modal-columns">Columns</label>
                 <input type="number" id="table-modal-columns" class="rename-modal-input" min="1" max="20" value="3" />
               </div>
               <div class="reset-modal-field">
-                <label class="reset-modal-label" for="table-modal-rows">Rows (including header)</label>
-                <input type="number" id="table-modal-rows" class="rename-modal-input" min="1" max="20" value="3" aria-describedby="table-modal-rows-help" />
-                <p class="modal-subtext" id="table-modal-rows-help">The header is included in the row count.</p>
+                <label class="reset-modal-label" for="table-modal-rows">Total rows</label>
+                <input type="number" id="table-modal-rows" class="rename-modal-input" min="1" max="20" value="3" />
               </div>
             </div>
             <div class="reset-modal-actions">

@@ -119,7 +119,7 @@ test('quick table selector supports keyboard dimension selection', async ({ page
   await expect(editor).toHaveValue('| Column 1 | Column 2 |\n| --- | --- |\n| Value | Value |\n');
 });
 
-test('custom table dialog explains and applies total row count', async ({ page }) => {
+test('custom table dialog is compact and applies total row count', async ({ page }) => {
   await openApp(page);
 
   const editor = page.locator('#markdown-editor');
@@ -133,8 +133,19 @@ test('custom table dialog explains and applies total row count', async ({ page }
   await expect(page.locator('#table-modal')).toBeVisible();
   await expect(page.locator('#table-modal')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('#table-modal-title')).toHaveText('Custom table');
-  await expect(page.locator('label[for="table-modal-rows"]')).toHaveText('Rows (including header)');
-  await expect(page.locator('#table-modal-rows-help')).toHaveText('The header is included in the row count.');
+  await expect(page.locator('label[for="table-modal-rows"]')).toHaveText('Total rows');
+  await expect(page.getByText('The header is included in the row count.')).toHaveCount(0);
+
+  const dialogBox = page.locator('#table-modal .table-modal-box');
+  const columnsField = page.locator('#table-modal-columns');
+  const rowsField = page.locator('#table-modal-rows');
+  const [dialogBounds, columnsBounds, rowsBounds] = await Promise.all([
+    dialogBox.boundingBox(),
+    columnsField.boundingBox(),
+    rowsField.boundingBox()
+  ]);
+  expect(dialogBounds.width).toBeLessThanOrEqual(320);
+  expect(Math.abs(columnsBounds.y - rowsBounds.y)).toBeLessThan(2);
   await page.locator('#table-modal-columns').fill('2');
   await page.locator('#table-modal-rows').fill('2');
   await page.locator('#table-modal-insert').click();
