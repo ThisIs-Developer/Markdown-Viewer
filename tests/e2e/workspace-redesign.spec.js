@@ -127,6 +127,12 @@ test('custom table dialog is compact and applies total row count', async ({ page
   const pickerIcon = page.locator('#table-picker-toggle i');
   await expect(pickerIcon).toHaveClass('lucide lucide-grid-2x2');
   expect(await pickerIcon.evaluate(element => getComputedStyle(element).maskImage)).not.toBe('none');
+  const pickerIconSvg = await pickerIcon.evaluate(element => {
+    const maskImage = getComputedStyle(element).maskImage;
+    const encodedSvg = maskImage.match(/base64,([^"')]+)/)?.[1];
+    return encodedSvg ? atob(encodedSvg) : '';
+  });
+  expect(pickerIconSvg).toContain('xmlns="http://www.w3.org/2000/svg"');
   await page.locator('#table-picker-toggle').click();
   const customIcon = page.locator('#custom-table-button i');
   await expect(customIcon).toHaveClass(/lucide-grid-2x2-plus/);
