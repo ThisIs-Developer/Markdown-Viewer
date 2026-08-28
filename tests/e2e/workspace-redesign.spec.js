@@ -75,12 +75,19 @@ test('quick table selector inserts dimensions with the header included in the ro
   const firstCellBox = await cells.first().boundingBox();
   expect(pickerBox.x).toBeGreaterThanOrEqual(0);
   expect(pickerBox.x + pickerBox.width).toBeLessThanOrEqual(320);
-  expect(firstCellBox.width).toBeGreaterThanOrEqual(24);
+  expect(firstCellBox.width).toBeGreaterThanOrEqual(21);
+  expect(firstCellBox.width).toBeLessThanOrEqual(23);
+  await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(0);
+  await expect(page.locator('#table-picker-status')).toHaveText('Select table size');
 
   const largest = page.locator('.markdown-table-picker-cell[data-table-columns="6"][data-table-rows="6"]');
   await largest.hover();
   await expect(page.locator('#table-picker-status')).toHaveText('6 columns × 6 rows');
   await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(36);
+
+  await page.locator('#custom-table-button').hover();
+  await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(0);
+  await expect(page.locator('#table-picker-status')).toHaveText('Select table size');
 
   const target = page.locator('.markdown-table-picker-cell[data-table-columns="2"][data-table-rows="3"]');
   await target.hover();

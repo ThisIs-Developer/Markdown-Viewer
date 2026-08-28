@@ -3874,7 +3874,7 @@ body {
 }
 
 .markdown-table-picker {
-  width: min(230px, calc(100vw - 16px));
+  width: min(178px, calc(100vw - 16px));
   padding: 6px;
 }
 

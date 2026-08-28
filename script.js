@@ -21989,12 +21989,16 @@ ${selector} .arrowheadPath {
       if (tablePickerStatus) tablePickerStatus.textContent = `${columns} columns × ${rows} rows`;
     }
 
+    function clearTablePickerPreview() {
+      tablePickerCells.forEach(function(cell) { cell.classList.remove('is-selected'); });
+      if (tablePickerStatus) tablePickerStatus.textContent = translateUiString('Select table size');
+    }
+
     function resetTablePicker() {
+      clearTablePickerPreview();
       tablePickerCells.forEach(function(cell, index) {
-        cell.classList.remove('is-selected');
         cell.tabIndex = index === 0 ? 0 : -1;
       });
-      if (tablePickerStatus) tablePickerStatus.textContent = translateUiString('Select table size');
     }
 
     function insertQuickTable(columns, rows) {
@@ -22061,9 +22065,13 @@ ${selector} .arrowheadPath {
         }
         tablePickerGrid.appendChild(gridRow);
       }
+      tablePickerGrid.addEventListener('pointerleave', function() {
+        if (!tablePickerGrid.contains(document.activeElement)) clearTablePickerPreview();
+      });
     }
 
     if (customTableButton) {
+      customTableButton.addEventListener('focus', clearTablePickerPreview);
       customTableButton.addEventListener('click', function(event) {
         event.preventDefault();
         event.stopPropagation();
