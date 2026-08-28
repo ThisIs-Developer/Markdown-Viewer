@@ -3776,6 +3776,10 @@ body {
   justify-content: space-between;
 }
 
+[data-toolbar-menu-toggle="case"] > .lucide-case-sensitive {
+  font-size: inherit;
+}
+
 .markdown-tool-menu--heading {
   min-width: 150px;
 }

@@ -280,25 +280,34 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
   await expect(page.locator('[data-md-action="clear-formatting"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="help"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="info"]')).toBeVisible();
-  await expect(page.locator('[data-toolbar-menu-toggle="heading"]')).toBeVisible();
+  const headingToggle = page.locator('[data-toolbar-menu-toggle="heading"]');
+  await expect(headingToggle).toBeVisible();
   const caseToggle = page.locator('[data-toolbar-menu-toggle="case"]');
   await expect(caseToggle).toBeVisible();
-  await expect(caseToggle).toHaveClass('markdown-tool-btn');
+  await expect(caseToggle).toHaveClass(await headingToggle.getAttribute('class'));
   await expect(caseToggle.locator(':scope > .lucide-case-sensitive')).toHaveCount(1);
   expect(await caseToggle.locator(':scope > .lucide-case-sensitive').evaluate(element => getComputedStyle(element).maskImage)).not.toBe('none');
   await expect(caseToggle.locator(':scope > span')).toHaveCount(0);
-  await expect(caseToggle.locator(':scope > .lucide-chevron-down')).toHaveCount(0);
-  const caseGeometry = await caseToggle.evaluate(button => ({
-    width: button.getBoundingClientRect().width,
-    height: button.getBoundingClientRect().height,
-    iconSize: getComputedStyle(button.querySelector('i')).fontSize
-  }));
-  const boldGeometry = await page.locator('[data-md-action="bold"]').evaluate(button => ({
-    width: button.getBoundingClientRect().width,
-    height: button.getBoundingClientRect().height,
-    iconSize: getComputedStyle(button.querySelector('i')).fontSize
-  }));
-  expect(caseGeometry).toEqual(boldGeometry);
+  await expect(caseToggle.locator(':scope > .lucide-chevron-down')).toHaveCount(1);
+  const readToggleStyles = (toggle, mainSelector) => toggle.evaluate((button, selector) => {
+    const style = getComputedStyle(button);
+    const mainStyle = getComputedStyle(button.querySelector(selector));
+    const chevronStyle = getComputedStyle(button.querySelector('.lucide-chevron-down'));
+    return {
+      width: button.getBoundingClientRect().width,
+      height: button.getBoundingClientRect().height,
+      padding: style.padding,
+      gap: style.gap,
+      borderRadius: style.borderRadius,
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+      mainSize: mainStyle.fontSize,
+      chevronSize: chevronStyle.fontSize,
+      chevronOpacity: chevronStyle.opacity
+    };
+  }, mainSelector);
+  expect(await readToggleStyles(caseToggle, '.lucide-case-sensitive'))
+    .toEqual(await readToggleStyles(headingToggle, '.markdown-tool-select-label'));
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="insert"], [data-toolbar-menu="insert"]')).toHaveCount(0);
   await expect(page.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
