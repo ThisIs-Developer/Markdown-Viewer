@@ -103,6 +103,9 @@ test('custom table dialog explains and applies total row count', async ({ page }
   const editor = page.locator('#markdown-editor');
   await editor.fill('');
   await page.locator('#table-picker-toggle').click();
+  const customIcon = page.locator('#custom-table-button i');
+  await expect(customIcon).toHaveClass(/lucide-grid-3x3/);
+  expect(await customIcon.evaluate(element => getComputedStyle(element).maskImage)).not.toBe('none');
   await page.locator('#custom-table-button').click();
 
   await expect(page.locator('#table-modal')).toBeVisible();
