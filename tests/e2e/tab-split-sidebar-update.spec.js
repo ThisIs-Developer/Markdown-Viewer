@@ -281,7 +281,12 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
   await expect(page.locator('[data-md-action="help"]')).toHaveCount(0);
   await expect(page.locator('[data-md-action="info"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="heading"]')).toBeVisible();
-  await expect(page.locator('[data-toolbar-menu-toggle="case"]')).toBeVisible();
+  const caseToggle = page.locator('[data-toolbar-menu-toggle="case"]');
+  await expect(caseToggle).toBeVisible();
+  await expect(caseToggle).toHaveClass(/markdown-tool-select--icon/);
+  await expect(caseToggle.locator(':scope > .lucide-case-sensitive')).toHaveCount(1);
+  expect(await caseToggle.locator(':scope > .lucide-case-sensitive').evaluate(element => getComputedStyle(element).maskImage)).not.toBe('none');
+  await expect(caseToggle.locator(':scope > span')).toHaveCount(0);
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="insert"], [data-toolbar-menu="insert"]')).toHaveCount(0);
   await expect(page.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);
