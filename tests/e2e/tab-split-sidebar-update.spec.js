@@ -306,10 +306,10 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
   });
   expect(await readToggleStyles(caseToggle)).toEqual(await readToggleStyles(headingToggle));
   const caseIcon = caseToggle.locator('.lucide-case-sensitive');
-  const largeIconSize = await page.evaluate(() =>
-    getComputedStyle(document.documentElement).getPropertyValue('--ui-icon-size-lg').trim()
+  const enlargedIconSize = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--ui-icon-size-xl').trim()
   );
-  await expect(caseIcon).toHaveCSS('font-size', largeIconSize);
+  await expect(caseIcon).toHaveCSS('font-size', enlargedIconSize);
   expect(await caseIcon.evaluate(icon => Number.parseFloat(getComputedStyle(icon).fontSize)))
     .toBeGreaterThan(await page.locator('[data-md-action="bold"] > i').evaluate(icon => Number.parseFloat(getComputedStyle(icon).fontSize)));
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();

@@ -3781,8 +3781,8 @@ body {
 }
 
 [data-toolbar-menu-toggle="case"] > .lucide-case-sensitive {
-  margin-inline: -1px;
-  font-size: var(--ui-icon-size-lg);
+  margin-inline: -2px;
+  font-size: var(--ui-icon-size-xl);
 }
 
 .markdown-tool-menu--heading {
