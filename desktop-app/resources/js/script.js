@@ -5133,6 +5133,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.lastEditedAt = Number.isFinite(Number(tab.lastEditedAt)) ? Number(tab.lastEditedAt) : tab.createdAt;
     tab.favorite = tab.favorite === true;
     tab.isOpen = tab.isOpen !== false;
+    tab.previewScrollPos = normalizePreviewScrollValue(tab.previewScrollPos);
+    tab.previewScrollLeft = normalizePreviewScrollLeftValue(tab.previewScrollLeft);
 
     if (isTemporaryDocument(tab)) {
       delete tab.workspaceId;
@@ -10947,6 +10949,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       title: title || 'Untitled',
       content: content,
       scrollPos: 0,
+      previewScrollPos: 0,
+      previewScrollLeft: 0,
       viewMode: viewMode,
       reviewThreads: [],
       favorite: false,
@@ -11767,6 +11771,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.content = markdownEditor.value;
     tab.contentLoaded = true;
     tab.scrollPos = markdownEditor.scrollTop;
+    if (
+      previewHasCommittedRender &&
+      previewLastRenderedTabId === tab.id &&
+      !previewContainsSkeleton()
+    ) {
+      savePreviewScrollSnapshot(tab.id, capturePreviewScroll());
+    }
     tab.viewMode = reviewModeActive && reviewPreviousViewModes.has(activeTabId)
       ? reviewPreviousViewModes.get(activeTabId)
       : (currentViewMode || 'split');
@@ -12109,6 +12120,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const previousActiveTabId = activeTabId;
     const swapSplitPanes = tabId === secondarySplitTabId;
     cancelReviewDeleteConfirmation();
+    cancelPendingMainScrollSync();
     saveCurrentTabState();
     saveSecondarySplitState();
     closeReviewComposer();
@@ -12805,12 +12817,49 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
-  function restorePreviewScroll(snapshot) {
+  function normalizePreviewScrollValue(value) {
+    const position = Number(value);
+    return Number.isFinite(position) && position >= 0 ? position : 0;
+  }
+
+  function normalizePreviewScrollLeftValue(value) {
+    const position = Number(value);
+    return Number.isFinite(position) ? position : 0;
+  }
+
+  function getPreviewScrollSnapshot(documentId) {
+    const tab = tabs.find(function(item) { return item.id === documentId; });
+    return {
+      top: normalizePreviewScrollValue(tab && tab.previewScrollPos),
+      left: normalizePreviewScrollLeftValue(tab && tab.previewScrollLeft),
+    };
+  }
+
+  function savePreviewScrollSnapshot(documentId, snapshot) {
+    if (!documentId || !snapshot) return;
+    const tab = tabs.find(function(item) { return item.id === documentId; });
+    if (!tab) return;
+    tab.previewScrollPos = normalizePreviewScrollValue(snapshot.top);
+    tab.previewScrollLeft = normalizePreviewScrollLeftValue(snapshot.left);
+  }
+
+  function restorePreviewScroll(snapshot, context) {
     if (!snapshot || !previewPane) return;
     requestAnimationFrame(function() {
+      if (
+        context &&
+        (
+          context.renderId !== previewRenderGeneration ||
+          context.previewDocumentId !== previewLastRenderedTabId ||
+          context.previewDocumentId !== getActivePreviewDocumentId()
+        )
+      ) {
+        return;
+      }
       const maxTop = Math.max(0, previewPane.scrollHeight - previewPane.clientHeight);
-      previewPane.scrollTop = Math.min(maxTop, snapshot.top);
-      previewPane.scrollLeft = snapshot.left;
+      previewPane.scrollTop = Math.min(maxTop, normalizePreviewScrollValue(snapshot.top));
+      previewPane.scrollLeft = normalizePreviewScrollLeftValue(snapshot.left);
+      if (context) savePreviewScrollSnapshot(context.previewDocumentId, capturePreviewScroll());
     });
   }
 
@@ -12949,8 +12998,16 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function commitPreviewHtml(sanitizedHtml, referenceData, rawVal, context) {
-    const shouldRestoreScroll = previewHasCommittedRender && !previewContainsSkeleton();
-    const scrollSnapshot = shouldRestoreScroll ? capturePreviewScroll() : null;
+    const renderedDocumentId = previewLastRenderedTabId;
+    const renderedScrollSnapshot = previewHasCommittedRender && !previewContainsSkeleton()
+      ? capturePreviewScroll()
+      : null;
+    if (renderedScrollSnapshot) {
+      savePreviewScrollSnapshot(renderedDocumentId, renderedScrollSnapshot);
+    }
+    const scrollSnapshot = renderedDocumentId === context.previewDocumentId && renderedScrollSnapshot
+      ? renderedScrollSnapshot
+      : getPreviewScrollSnapshot(context.previewDocumentId);
 
     mathJaxTypesetRunId += 1;
     clearMathJaxPreviewState(markdownPreview);
@@ -12969,7 +13026,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     markdownPreview.removeAttribute('aria-busy');
     markdownPreview.dataset.renderState = 'ready';
 
-    restorePreviewScroll(scrollSnapshot);
+    restorePreviewScroll(scrollSnapshot, context);
     return patchResult;
   }
 
@@ -16669,10 +16726,17 @@ ${selector} .arrowheadPath {
 
   function syncEditorToPreview() {
     if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling) return;
+    const sourceDocumentId = activeTabId;
+    if (!sourceDocumentId || previewLastRenderedTabId !== sourceDocumentId) return;
     isEditorScrolling = true;
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
+      scrollSyncTimeout = null;
+      if (activeTabId !== sourceDocumentId || previewLastRenderedTabId !== sourceDocumentId) {
+        isEditorScrolling = false;
+        return;
+      }
       const editorScrollRange = markdownEditor.scrollHeight - markdownEditor.clientHeight;
       const editorScrollRatio =
         editorScrollRange > 0 ? markdownEditor.scrollTop / editorScrollRange : 0;
@@ -16692,10 +16756,17 @@ ${selector} .arrowheadPath {
 
   function syncPreviewToEditor() {
     if (!syncScrollingEnabled || isEditorScrolling || isProgrammaticScrolling) return;
+    const sourceDocumentId = previewLastRenderedTabId;
+    if (!sourceDocumentId || activeTabId !== sourceDocumentId) return;
     isPreviewScrolling = true;
 
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
+      scrollSyncTimeout = null;
+      if (activeTabId !== sourceDocumentId || previewLastRenderedTabId !== sourceDocumentId) {
+        isPreviewScrolling = false;
+        return;
+      }
       const previewScrollRange = previewPane.scrollHeight - previewPane.clientHeight;
       const previewScrollRatio =
         previewScrollRange > 0 ? previewPane.scrollTop / previewScrollRange : 0;
@@ -16712,6 +16783,15 @@ ${selector} .arrowheadPath {
         isPreviewScrolling = false;
       }, 50);
     });
+  }
+
+  function cancelPendingMainScrollSync() {
+    if (scrollSyncTimeout) {
+      cancelAnimationFrame(scrollSyncTimeout);
+      scrollSyncTimeout = null;
+    }
+    isEditorScrolling = false;
+    isPreviewScrolling = false;
   }
 
   function toggleSyncScrolling() {
@@ -23005,6 +23085,11 @@ ${selector} .arrowheadPath {
     scheduleEditorOverlayScrollSync();
   });
   previewPane.addEventListener("scroll", function() {
+    const renderedDocumentId = previewLastRenderedTabId;
+    if (renderedDocumentId) {
+      savePreviewScrollSnapshot(renderedDocumentId, capturePreviewScroll());
+    }
+    if (renderedDocumentId !== activeTabId) return;
     if (secondarySplitTabId && currentViewMode === 'preview') {
       syncDocumentSplitScroll(previewPane, documentSplitPreview);
     } else {
@@ -26958,19 +27043,32 @@ ${selector} .arrowheadPath {
 
   function captureLiveTabSnapshot() {
     const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
+    const previewSnapshot = previewLastRenderedTabId === activeTabId
+      ? capturePreviewScroll()
+      : getPreviewScrollSnapshot(activeTabId);
     return {
       content: markdownEditor.value || '',
       scrollPos: markdownEditor.scrollTop || 0,
+      previewScrollPos: previewSnapshot ? previewSnapshot.top : 0,
+      previewScrollLeft: previewSnapshot ? previewSnapshot.left : 0,
       viewMode: currentViewMode || (activeTab && activeTab.viewMode) || 'split'
     };
   }
 
   function restoreLiveOriginalTabState(tabId, snapshot) {
-    const restored = snapshot || { content: '', scrollPos: 0, viewMode: 'split' };
+    const restored = snapshot || {
+      content: '',
+      scrollPos: 0,
+      previewScrollPos: 0,
+      previewScrollLeft: 0,
+      viewMode: 'split'
+    };
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (tab) {
       tab.content = restored.content || '';
       tab.scrollPos = restored.scrollPos || 0;
+      tab.previewScrollPos = normalizePreviewScrollValue(restored.previewScrollPos);
+      tab.previewScrollLeft = normalizePreviewScrollLeftValue(restored.previewScrollLeft);
       tab.viewMode = restored.viewMode || 'split';
     }
 
@@ -27008,6 +27106,8 @@ ${selector} .arrowheadPath {
       tab.content = markdown;
       tab.viewMode = 'split';
       tab.scrollPos = 0;
+      tab.previewScrollPos = 0;
+      tab.previewScrollLeft = 0;
     }
 
     restoreViewMode('split');
@@ -27472,9 +27572,14 @@ ${selector} .arrowheadPath {
       removeTabOnLeave = true;
     } else {
       const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
+      const previewSnapshot = previewLastRenderedTabId === activeTabId
+        ? capturePreviewScroll()
+        : getPreviewScrollSnapshot(activeTabId);
       originalTabSnapshot = options.originalTabSnapshot || (activeTab ? {
         content: typeof markdownEditor.value === 'string' ? markdownEditor.value : activeTab.content,
         scrollPos: typeof markdownEditor.scrollTop === 'number' ? markdownEditor.scrollTop : activeTab.scrollPos,
+        previewScrollPos: previewSnapshot ? previewSnapshot.top : activeTab.previewScrollPos,
+        previewScrollLeft: previewSnapshot ? previewSnapshot.left : activeTab.previewScrollLeft,
         viewMode: currentViewMode || activeTab.viewMode
       } : captureLiveTabSnapshot());
     }
