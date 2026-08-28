@@ -3874,12 +3874,12 @@ body {
 }
 
 .markdown-table-picker {
-  width: min(292px, calc(100vw - 16px));
+  width: min(230px, calc(100vw - 16px));
   padding: 6px;
 }
 
 .markdown-table-picker-content {
-  padding: 4px;
+  padding: 6px;
 }
 
 .markdown-table-picker-status {
@@ -3894,13 +3894,13 @@ body {
 .markdown-table-picker-grid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .markdown-table-picker-row {
   display: grid;
-  grid-template-columns: repeat(var(--table-picker-size, 10), 1fr);
-  gap: 3px;
+  grid-template-columns: repeat(var(--table-picker-size, 6), 1fr);
+  gap: 4px;
 }
 
 .markdown-table-picker-cell {

@@ -21978,7 +21978,7 @@ ${selector} .arrowheadPath {
     const tablePickerStatus = document.getElementById('table-picker-status');
     const customTableButton = document.getElementById('custom-table-button');
     const tablePickerCells = [];
-    const tablePickerSize = clampNumber(tablePickerGrid && tablePickerGrid.getAttribute('data-table-picker-size'), 1, 20, 10);
+    const tablePickerSize = clampNumber(tablePickerGrid && tablePickerGrid.getAttribute('data-table-picker-size'), 1, 20, 6);
 
     function updateTablePicker(columns, rows) {
       tablePickerCells.forEach(function(cell) {
