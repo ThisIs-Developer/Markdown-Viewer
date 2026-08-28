@@ -123,6 +123,48 @@ test('quick table selector supports keyboard dimension selection', async ({ page
   await expect(editor).toHaveValue('| Column 1 | Column 2 |\n| --- | --- |\n| Value | Value |\n');
 });
 
+test('custom table option matches export option styling', async ({ page }) => {
+  await openApp(page);
+
+  const readOptionStyles = locator => locator.evaluate(element => {
+    const itemStyle = getComputedStyle(element);
+    const iconStyle = getComputedStyle(element.querySelector('i'));
+    const labelStyle = getComputedStyle(element.querySelector('.app-menu-label'));
+    return {
+      display: itemStyle.display,
+      minHeight: itemStyle.minHeight,
+      gap: itemStyle.gap,
+      padding: itemStyle.padding,
+      borderRadius: itemStyle.borderRadius,
+      backgroundColor: itemStyle.backgroundColor,
+      color: itemStyle.color,
+      fontSize: itemStyle.fontSize,
+      iconColor: iconStyle.color,
+      iconSize: iconStyle.fontSize,
+      labelColor: labelStyle.color,
+      labelSize: labelStyle.fontSize,
+      labelWeight: labelStyle.fontWeight
+    };
+  });
+
+  await page.locator('#exportDropdown').click();
+  const exportOption = page.locator('#export-md');
+  await expect(exportOption).toBeVisible();
+  const exportRestStyles = await readOptionStyles(exportOption);
+  await exportOption.hover();
+  const exportHoverStyles = await readOptionStyles(exportOption);
+  await page.keyboard.press('Escape');
+
+  await page.locator('#table-picker-toggle').click();
+  const customTableOption = page.locator('#custom-table-button');
+  await expect(customTableOption).toBeVisible();
+  await expect(customTableOption).toHaveClass(/app-menu-item/);
+  await expect(customTableOption.locator('.app-menu-label')).toHaveText('Custom table…');
+  expect(await readOptionStyles(customTableOption)).toEqual(exportRestStyles);
+  await customTableOption.hover();
+  expect(await readOptionStyles(customTableOption)).toEqual(exportHoverStyles);
+});
+
 test('custom table dialog is compact and applies total row count', async ({ page }) => {
   await openApp(page);
 
