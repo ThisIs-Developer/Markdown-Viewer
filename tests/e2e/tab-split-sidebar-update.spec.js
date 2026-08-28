@@ -305,10 +305,13 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
     };
   });
   expect(await readToggleStyles(caseToggle)).toEqual(await readToggleStyles(headingToggle));
-  await expect(caseToggle.locator('.lucide-case-sensitive')).toHaveCSS(
-    'font-size',
-    await page.locator('[data-md-action="bold"] > i').evaluate(icon => getComputedStyle(icon).fontSize)
+  const caseIcon = caseToggle.locator('.lucide-case-sensitive');
+  const largeIconSize = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--ui-icon-size-lg').trim()
   );
+  await expect(caseIcon).toHaveCSS('font-size', largeIconSize);
+  expect(await caseIcon.evaluate(icon => Number.parseFloat(getComputedStyle(icon).fontSize)))
+    .toBeGreaterThan(await page.locator('[data-md-action="bold"] > i').evaluate(icon => Number.parseFloat(getComputedStyle(icon).fontSize)));
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="insert"], [data-toolbar-menu="insert"]')).toHaveCount(0);
   await expect(page.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);

@@ -3780,6 +3780,11 @@ body {
   width: 44px;
 }
 
+[data-toolbar-menu-toggle="case"] > .lucide-case-sensitive {
+  margin-inline: -1px;
+  font-size: var(--ui-icon-size-lg);
+}
+
 .markdown-tool-menu--heading {
   min-width: 150px;
 }
