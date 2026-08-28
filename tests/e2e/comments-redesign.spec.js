@@ -3,7 +3,8 @@ const {
   openApp,
   setEditorContent,
   stubLazyRendererLibraries,
-  storedDocuments
+  storedDocuments,
+  waitForAppReady
 } = require('../helpers/app');
 
 async function selectPreviewText(page, selector, selectedText, clickAfterMouseup = false) {
@@ -200,6 +201,7 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
 
   await page.locator('#review-panel-close').click();
   await page.reload();
+  await waitForAppReady(page);
   await page.locator('#review-toggle').click();
   await expect(page.locator('.review-thread')).toContainText('This wording is clear.');
   await expect(page.locator('.review-thread-dates')).toBeVisible();
@@ -271,6 +273,7 @@ Intro ${mixedMarkdown}`);
 
   await page.locator('#review-panel-close').click();
   await page.reload();
+  await waitForAppReady(page);
   await page.locator('#review-toggle').click();
   await expect(page.locator('.review-thread')).toHaveCount(2);
   await expect(page.locator('#markdown-preview p').filter({ hasText: leadText })
@@ -323,6 +326,53 @@ test('blocks hyperlinks and linked badges only while Comments mode is active', a
     openedUrls: window.__reviewOpenedUrls,
     anchorScrolls: window.__reviewAnchorScrolls
   }))).toEqual({ openedUrls: ['https://example.com'], anchorScrolls: 1 });
+});
+
+test('keeps image dimensions and visual alignment stable after adding a comment', async ({ page }) => {
+  await setEditorContent(page, `<div align="center">
+
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" alt="Review logo" width="100" height="100">
+
+</div>`);
+  const image = page.locator('#markdown-preview img[alt="Review logo"]');
+  await expect(image).toBeVisible();
+  const readGeometry = () => image.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const parentRect = element.parentElement.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+    const borderRight = parseFloat(style.borderRightWidth) || 0;
+    const contentWidth = rect.width - paddingLeft - paddingRight - borderLeft - borderRight;
+    const contentCenter = rect.left + borderLeft + paddingLeft + (contentWidth / 2);
+    return {
+      width: rect.width,
+      height: rect.height,
+      paddingLeft,
+      paddingRight,
+      contentCenterOffset: contentCenter - (parentRect.left + (parentRect.width / 2))
+    };
+  });
+  const beforeComment = await readGeometry();
+
+  await page.locator('#review-toggle').click();
+  await image.click();
+  expect(await readGeometry()).toEqual(beforeComment);
+  await page.locator('#review-new-comment').click();
+  expect(await readGeometry()).toEqual(beforeComment);
+  await page.locator('#review-feedback-input').fill('Logo comment.');
+  await page.locator('#review-feedback-submit').click();
+  await expect(image).toHaveClass(/review-comment-element/);
+  const afterComment = await readGeometry();
+  expect(afterComment).toEqual(beforeComment);
+
+  await page.locator('#review-panel-close').click();
+  await page.reload();
+  await waitForAppReady(page);
+  await page.locator('#review-toggle').click();
+  await expect(page.locator('.review-thread')).toContainText('Logo comment.');
+  expect(await readGeometry()).toEqual(beforeComment);
 });
 
 test('synchronizes hover and click states in both directions', async ({ page }) => {
@@ -450,6 +500,7 @@ test('adds nested replies and persists their author and timestamp', async ({ pag
   await expect(card.locator('.review-reply')).toHaveCount(2);
 
   await page.reload();
+  await waitForAppReady(page);
   await expect(page.locator('#markdown-preview h1')).toHaveText('Comments redesign');
   await page.locator('#review-toggle').click();
   await expect(page.locator('#review-panel')).toBeVisible();

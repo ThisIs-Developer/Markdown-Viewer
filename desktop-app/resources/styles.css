@@ -11428,6 +11428,29 @@ html[data-theme="dark"] .mermaid svg {
   }
 }
 
+/* Comments v2 has no block-side action buttons, so legacy review gutters must
+   not change the dimensions or alignment of rendered content. */
+#markdown-preview .review-target:not(.review-target--diagram):not(.review-target--table),
+#markdown-preview .review-target.has-review-thread:not(.review-target--diagram):not(.review-target--table) {
+  padding-inline-end: 0;
+}
+
+#markdown-preview .review-target--heading.has-review-thread,
+#markdown-preview .review-target--heading.is-review-target-active,
+#markdown-preview .review-target--paragraph.has-review-thread,
+#markdown-preview .review-target--paragraph.is-review-target-active {
+  padding-inline-start: 0;
+}
+
+#markdown-preview .review-target--table,
+#markdown-preview .review-target--table.has-review-thread {
+  max-width: 100%;
+}
+
+#markdown-preview .review-target--diagram {
+  padding-block-end: 0;
+}
+
 /* ========================================
    COMPACT APPLICATION OVERLAYS & MOBILE MENU
    ======================================== */
