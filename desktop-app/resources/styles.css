@@ -3882,6 +3882,10 @@ body {
   padding: 6px;
 }
 
+#custom-table-button:hover {
+  color: var(--text-color);
+}
+
 .markdown-table-picker-status {
   min-height: 18px;
   margin: 0 0 8px;

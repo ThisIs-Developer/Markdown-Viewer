@@ -85,7 +85,11 @@ test('quick table selector inserts dimensions with the header included in the ro
   await expect(page.locator('#table-picker-status')).toHaveText('8 columns × 8 rows');
   await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(64);
 
-  await page.locator('#custom-table-button').hover();
+  const customTableButton = page.locator('#custom-table-button');
+  const customTableLabel = customTableButton.locator('span');
+  const customTableTextColor = await customTableLabel.evaluate(element => getComputedStyle(element).color);
+  await customTableButton.hover();
+  await expect(customTableLabel).toHaveCSS('color', customTableTextColor);
   await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(0);
   await expect(page.locator('#table-picker-status')).toHaveText('Select table size');
 
