@@ -21978,6 +21978,7 @@ ${selector} .arrowheadPath {
     const tablePickerStatus = document.getElementById('table-picker-status');
     const customTableButton = document.getElementById('custom-table-button');
     const tablePickerCells = [];
+    const tablePickerSize = clampNumber(tablePickerGrid && tablePickerGrid.getAttribute('data-table-picker-size'), 1, 20, 10);
 
     function updateTablePicker(columns, rows) {
       tablePickerCells.forEach(function(cell) {
@@ -22002,11 +22003,14 @@ ${selector} .arrowheadPath {
     }
 
     if (tablePickerGrid) {
-      for (let row = 1; row <= 8; row += 1) {
+      tablePickerGrid.style.setProperty('--table-picker-size', String(tablePickerSize));
+      tablePickerGrid.setAttribute('aria-colcount', String(tablePickerSize));
+      tablePickerGrid.setAttribute('aria-rowcount', String(tablePickerSize));
+      for (let row = 1; row <= tablePickerSize; row += 1) {
         const gridRow = document.createElement('div');
         gridRow.className = 'markdown-table-picker-row';
         gridRow.setAttribute('role', 'row');
-        for (let column = 1; column <= 8; column += 1) {
+        for (let column = 1; column <= tablePickerSize; column += 1) {
           const cell = document.createElement('button');
           cell.type = 'button';
           cell.className = 'markdown-table-picker-cell';
@@ -22028,13 +22032,13 @@ ${selector} .arrowheadPath {
           cell.addEventListener('keydown', function(event) {
             const currentIndex = tablePickerCells.indexOf(cell);
             let nextIndex = -1;
-            if (event.key === 'ArrowRight' && column < 8) nextIndex = currentIndex + 1;
+            if (event.key === 'ArrowRight' && column < tablePickerSize) nextIndex = currentIndex + 1;
             if (event.key === 'ArrowLeft' && column > 1) nextIndex = currentIndex - 1;
-            if (event.key === 'ArrowDown' && row < 8) nextIndex = currentIndex + 8;
-            if (event.key === 'ArrowUp' && row > 1) nextIndex = currentIndex - 8;
+            if (event.key === 'ArrowDown' && row < tablePickerSize) nextIndex = currentIndex + tablePickerSize;
+            if (event.key === 'ArrowUp' && row > 1) nextIndex = currentIndex - tablePickerSize;
             if (event.key === 'Home') nextIndex = currentIndex - column + 1;
-            if (event.key === 'End') nextIndex = currentIndex + (8 - column);
-            if (event.key === 'ArrowDown' && row === 8 && customTableButton) {
+            if (event.key === 'End') nextIndex = currentIndex + (tablePickerSize - column);
+            if (event.key === 'ArrowDown' && row === tablePickerSize && customTableButton) {
               event.preventDefault();
               event.stopPropagation();
               customTableButton.focus();

@@ -3874,12 +3874,12 @@ body {
 }
 
 .markdown-table-picker {
-  width: 230px;
+  width: min(292px, calc(100vw - 16px));
   padding: 6px;
 }
 
 .markdown-table-picker-content {
-  padding: 6px;
+  padding: 4px;
 }
 
 .markdown-table-picker-status {
@@ -3894,13 +3894,13 @@ body {
 .markdown-table-picker-grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .markdown-table-picker-row {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(var(--table-picker-size, 10), 1fr);
+  gap: 3px;
 }
 
 .markdown-table-picker-cell {
