@@ -125,7 +125,7 @@ test('custom table dialog is compact and applies total row count', async ({ page
   const editor = page.locator('#markdown-editor');
   await editor.fill('');
   const pickerIcon = page.locator('#table-picker-toggle i');
-  await expect(pickerIcon).toHaveClass(/lucide-grid-3x3/);
+  await expect(pickerIcon).toHaveClass('lucide lucide-grid-2x2');
   expect(await pickerIcon.evaluate(element => getComputedStyle(element).maskImage)).not.toBe('none');
   await page.locator('#table-picker-toggle').click();
   const customIcon = page.locator('#custom-table-button i');
