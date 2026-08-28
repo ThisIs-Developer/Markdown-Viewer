@@ -5,6 +5,12 @@ test.beforeEach(async ({ page }) => {
   await openApp(page);
 });
 
+test('review toolbar uses the messages square main icon', async ({ page }) => {
+  const reviewIcon = page.locator('#review-toggle > i');
+  await expect(reviewIcon).toHaveClass('lucide lucide-messages-square');
+  expect(await reviewIcon.evaluate(icon => getComputedStyle(icon).maskImage)).not.toBe('none');
+});
+
 test('header consolidates icon document actions in the requested order', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const header = page.locator('.header-right');
