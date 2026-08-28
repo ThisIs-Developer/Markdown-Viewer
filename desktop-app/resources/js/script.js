@@ -8981,6 +8981,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     textNodes.forEach(function(entry) {
+      const intersectsHighlight = entries.some(function(highlight) {
+        return highlight.start < entry.end && highlight.end > entry.start;
+      });
+      if (!intersectsHighlight) return;
       const boundaries = new Set([0, entry.node.nodeValue.length]);
       entries.forEach(function(highlight) {
         const start = Math.max(entry.start, highlight.start);
@@ -8991,7 +8995,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
       });
       const cuts = Array.from(boundaries).sort(function(a, b) { return a - b; });
-      if (cuts.length <= 2) return;
       const fragment = document.createDocumentFragment();
       for (let index = 0; index < cuts.length - 1; index += 1) {
         const localStart = cuts[index];

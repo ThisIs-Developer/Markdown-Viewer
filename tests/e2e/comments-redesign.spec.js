@@ -217,6 +217,70 @@ test('uses selection → New → Submit and keeps comment metadata compact', asy
   expect(JSON.stringify(await storedDocuments(page))).toContain('This wording is clear.');
 });
 
+test('highlights complete and cross-format inline text-node selections after submit and reload', async ({ page }) => {
+  const leadText = 'A local-first Markdown editor and viewer with live preview.';
+  const mixedText = 'Plain bold italic linked code struck.';
+  const mixedMarkdown = 'Plain **bold** *italic* [linked](https://example.com) `code` ~~struck~~.';
+  await setEditorContent(page, `<div align="center">
+
+  **${leadText}**
+
+  Open, write, organize, review, render, export, and optionally share Markdown.
+
+</div>
+
+${mixedMarkdown}`);
+  await expect(page.locator('#markdown-preview strong').filter({ hasText: leadText })).toBeVisible();
+  await page.locator('#review-toggle').click();
+
+  await addTextComment(page, '#markdown-preview p', leadText, 'Whole bold-node comment.');
+  const leadParagraph = page.locator('#markdown-preview p').filter({ hasText: leadText });
+  await expect(leadParagraph.locator('strong > .review-comment-highlight')).toHaveText(leadText);
+
+  await addTextComment(page, '#markdown-preview p', mixedText, 'Cross-format comment.');
+  const mixedParagraph = page.locator('#markdown-preview p').filter({ hasText: mixedText });
+  await expect.poll(async () => {
+    return (await mixedParagraph.locator('.review-comment-highlight').allTextContents()).join('');
+  }).toBe(mixedText);
+  expect(await mixedParagraph.evaluate(element => ({
+    bold: Boolean(element.querySelector('strong > .review-comment-highlight')),
+    italic: Boolean(element.querySelector('em > .review-comment-highlight')),
+    link: Boolean(element.querySelector('a > .review-comment-highlight')),
+    code: Boolean(element.querySelector('code > .review-comment-highlight')),
+    struck: Boolean(element.querySelector('del > .review-comment-highlight'))
+  }))).toEqual({ bold: true, italic: true, link: true, code: true, struck: true });
+
+  await page.locator('#review-panel-close').click();
+  await setEditorContent(page, `<div align="center">
+
+  ***${leadText}***
+
+  Open, write, organize, review, render, export, and optionally share Markdown.
+
+</div>
+
+Intro ${mixedMarkdown}`);
+  await expect(page.locator('#markdown-preview p').filter({ hasText: `Intro ${mixedText}` })).toBeVisible();
+  await page.locator('#review-toggle').click();
+  await expect(page.locator('#markdown-preview p').filter({ hasText: leadText })
+    .locator('em > strong > .review-comment-highlight')).toHaveText(leadText);
+  await expect.poll(async () => {
+    return (await page.locator('#markdown-preview p').filter({ hasText: `Intro ${mixedText}` })
+      .locator('.review-comment-highlight').allTextContents()).join('');
+  }).toBe(mixedText);
+
+  await page.locator('#review-panel-close').click();
+  await page.reload();
+  await page.locator('#review-toggle').click();
+  await expect(page.locator('.review-thread')).toHaveCount(2);
+  await expect(page.locator('#markdown-preview p').filter({ hasText: leadText })
+    .locator('strong > .review-comment-highlight')).toHaveText(leadText);
+  await expect.poll(async () => {
+    return (await page.locator('#markdown-preview p').filter({ hasText: mixedText })
+      .locator('.review-comment-highlight').allTextContents()).join('');
+  }).toBe(mixedText);
+});
+
 test('synchronizes hover and click states in both directions', async ({ page }) => {
   await page.locator('#review-toggle').click();
   await selectPreviewText(page, '#markdown-preview p', 'precise phrase');
