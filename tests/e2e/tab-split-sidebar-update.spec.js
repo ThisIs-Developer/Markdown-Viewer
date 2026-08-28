@@ -289,9 +289,8 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
   expect(await caseToggle.locator(':scope > .lucide-case-sensitive').evaluate(element => getComputedStyle(element).maskImage)).not.toBe('none');
   await expect(caseToggle.locator(':scope > span')).toHaveCount(0);
   await expect(caseToggle.locator(':scope > .lucide-chevron-down')).toHaveCount(1);
-  const readToggleStyles = (toggle, mainSelector) => toggle.evaluate((button, selector) => {
+  const readToggleStyles = toggle => toggle.evaluate(button => {
     const style = getComputedStyle(button);
-    const mainStyle = getComputedStyle(button.querySelector(selector));
     const chevronStyle = getComputedStyle(button.querySelector('.lucide-chevron-down'));
     return {
       width: button.getBoundingClientRect().width,
@@ -301,13 +300,15 @@ test('format toolbar consolidates heading, case, alignment, and insert actions',
       borderRadius: style.borderRadius,
       color: style.color,
       backgroundColor: style.backgroundColor,
-      mainSize: mainStyle.fontSize,
       chevronSize: chevronStyle.fontSize,
       chevronOpacity: chevronStyle.opacity
     };
-  }, mainSelector);
-  expect(await readToggleStyles(caseToggle, '.lucide-case-sensitive'))
-    .toEqual(await readToggleStyles(headingToggle, '.markdown-tool-select-label'));
+  });
+  expect(await readToggleStyles(caseToggle)).toEqual(await readToggleStyles(headingToggle));
+  await expect(caseToggle.locator('.lucide-case-sensitive')).toHaveCSS(
+    'font-size',
+    await page.locator('[data-md-action="bold"] > i').evaluate(icon => getComputedStyle(icon).fontSize)
+  );
   await expect(page.locator('[data-toolbar-menu-toggle="alignment"]')).toBeVisible();
   await expect(page.locator('[data-toolbar-menu-toggle="insert"], [data-toolbar-menu="insert"]')).toHaveCount(0);
   await expect(page.locator('.markdown-toolbar-group--content > .markdown-tool-btn')).toHaveCount(4);

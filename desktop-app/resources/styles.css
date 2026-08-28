@@ -3776,8 +3776,8 @@ body {
   justify-content: space-between;
 }
 
-[data-toolbar-menu-toggle="case"] > .lucide-case-sensitive {
-  font-size: inherit;
+[data-toolbar-menu-toggle="case"].markdown-tool-select--heading {
+  width: 44px;
 }
 
 .markdown-tool-menu--heading {
