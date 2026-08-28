@@ -3874,7 +3874,7 @@ body {
 }
 
 .markdown-table-picker {
-  width: min(178px, calc(100vw - 16px));
+  width: min(230px, calc(100vw - 16px));
   padding: 6px;
 }
 
@@ -3899,7 +3899,7 @@ body {
 
 .markdown-table-picker-row {
   display: grid;
-  grid-template-columns: repeat(var(--table-picker-size, 6), 1fr);
+  grid-template-columns: repeat(var(--table-picker-size, 8), 1fr);
   gap: 4px;
 }
 

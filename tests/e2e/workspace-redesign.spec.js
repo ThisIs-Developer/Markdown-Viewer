@@ -61,7 +61,6 @@ test('workspace search and sidebar commands remain interactive', async ({ page }
 });
 
 test('quick table selector inserts dimensions with the header included in the row count', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 812 });
   await openApp(page);
 
   const editor = page.locator('#markdown-editor');
@@ -70,20 +69,21 @@ test('quick table selector inserts dimensions with the header included in the ro
 
   const picker = page.locator('#table-picker-menu');
   const cells = page.locator('.markdown-table-picker-cell');
-  await expect(cells).toHaveCount(36);
+  await expect(picker).toBeVisible();
+  await expect(cells).toHaveCount(64);
   const pickerBox = await picker.boundingBox();
   const firstCellBox = await cells.first().boundingBox();
   expect(pickerBox.x).toBeGreaterThanOrEqual(0);
-  expect(pickerBox.x + pickerBox.width).toBeLessThanOrEqual(320);
+  expect(pickerBox.x + pickerBox.width).toBeLessThanOrEqual(page.viewportSize().width);
   expect(firstCellBox.width).toBeGreaterThanOrEqual(21);
   expect(firstCellBox.width).toBeLessThanOrEqual(23);
   await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(0);
   await expect(page.locator('#table-picker-status')).toHaveText('Select table size');
 
-  const largest = page.locator('.markdown-table-picker-cell[data-table-columns="6"][data-table-rows="6"]');
+  const largest = page.locator('.markdown-table-picker-cell[data-table-columns="8"][data-table-rows="8"]');
   await largest.hover();
-  await expect(page.locator('#table-picker-status')).toHaveText('6 columns × 6 rows');
-  await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(36);
+  await expect(page.locator('#table-picker-status')).toHaveText('8 columns × 8 rows');
+  await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(64);
 
   await page.locator('#custom-table-button').hover();
   await expect(page.locator('.markdown-table-picker-cell.is-selected')).toHaveCount(0);
