@@ -5,6 +5,60 @@ test.beforeEach(async ({ page }) => {
   await openApp(page);
 });
 
+function scrollableMarkdown(label, sectionCount) {
+  return `# ${label}\n\n` + Array.from({ length: sectionCount }, (_, index) =>
+    `## ${label} section ${index + 1}\n\n${label} paragraph ${index + 1} is long enough to make each Preview document independently scrollable.`
+  ).join('\n\n');
+}
+
+async function waitForPreviewDocument(page, label) {
+  await expect(page.locator('#markdown-preview')).toHaveAttribute('data-render-state', 'ready');
+  await expect(page.locator('#markdown-preview h1')).toHaveText(label);
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
+async function switchToPreviewDocument(page, documentId, label) {
+  const tab = page.locator(`#tab-list .tab-item[data-tab-id="${documentId}"]`);
+  if (await tab.getAttribute('aria-selected') !== 'true') await tab.click();
+  await waitForPreviewDocument(page, label);
+}
+
+async function setPreviewScrollRatio(page, ratio) {
+  const position = await page.locator('.preview-pane').evaluate((preview, targetRatio) => {
+    const max = preview.scrollHeight - preview.clientHeight;
+    preview.scrollTop = max * targetRatio;
+    preview.dispatchEvent(new Event('scroll'));
+    return { top: preview.scrollTop, max };
+  }, ratio);
+  expect(position.max).toBeGreaterThan(1000);
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+  return position.top;
+}
+
+async function expectPreviewScroll(page, expectedTop) {
+  await expect.poll(async () => {
+    const actualTop = await page.locator('.preview-pane').evaluate(preview => preview.scrollTop);
+    return Math.abs(actualTop - expectedTop);
+  }).toBeLessThanOrEqual(3);
+}
+
+async function createPreviewDocuments(page, documents) {
+  const ids = [];
+  for (let index = 0; index < documents.length; index += 1) {
+    if (index > 0) await page.locator('#tab-new-btn').click();
+    await setEditorContent(page, scrollableMarkdown(documents[index].label, documents[index].sections));
+    await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+    const activeTab = page.locator('#tab-list .tab-item.active');
+    ids.push(await activeTab.getAttribute('data-tab-id'));
+    await waitForPreviewDocument(page, documents[index].label);
+  }
+  return ids;
+}
+
 test('tab bar uses standard file, menu, and close controls', async ({ page }) => {
   const tab = page.locator('#tab-list .tab-item.active');
   await expect(tab.locator('.tab-file-icon')).toHaveClass(/lucide-file-text/);
@@ -117,6 +171,115 @@ test('split view uses one combined tab and offers only edit or preview modes', a
   await page.getByRole('menuitem', { name: 'Exit split view' }).click();
   await expect(page.locator('#document-split-pane')).toBeHidden();
   await expect(page.locator('.view-toolbar [data-view-mode="split"]')).toBeEnabled();
+});
+
+test('Preview scroll positions stay isolated per document with sync enabled', async ({ page }) => {
+  const [documentA, documentB] = await createPreviewDocuments(page, [
+    { label: 'Preview document A', sections: 75 },
+    { label: 'Preview document B', sections: 35 }
+  ]);
+
+  await switchToPreviewDocument(page, documentA, 'Preview document A');
+  const positionA = await setPreviewScrollRatio(page, 0.23);
+  await switchToPreviewDocument(page, documentB, 'Preview document B');
+  await expectPreviewScroll(page, 0);
+  const positionB = await setPreviewScrollRatio(page, 0.74);
+  expect(Math.abs(positionA - positionB)).toBeGreaterThan(300);
+
+  await switchToPreviewDocument(page, documentA, 'Preview document A');
+  await expectPreviewScroll(page, positionA);
+  await page.locator('.view-toolbar [data-view-mode="editor"]').click();
+  await expect(page.locator('#markdown-editor')).toBeVisible();
+  await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+  await waitForPreviewDocument(page, 'Preview document A');
+  await expectPreviewScroll(page, positionA);
+  await page.locator('.view-toolbar [data-view-mode="split"]').click();
+  await expect(page.locator('#markdown-editor')).toBeVisible();
+  await expect(page.locator('#markdown-preview')).toBeVisible();
+  await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+  await waitForPreviewDocument(page, 'Preview document A');
+  await expectPreviewScroll(page, positionA);
+
+  await switchToPreviewDocument(page, documentB, 'Preview document B');
+  await expectPreviewScroll(page, positionB);
+});
+
+test('Preview scroll positions stay isolated per document with sync disabled', async ({ page }) => {
+  await page.locator('#toggle-sync').click();
+  await expect(page.locator('#toggle-sync')).toHaveAttribute('aria-pressed', 'false');
+  const [documentA, documentB] = await createPreviewDocuments(page, [
+    { label: 'Independent Preview A', sections: 60 },
+    { label: 'Independent Preview B', sections: 90 }
+  ]);
+
+  await switchToPreviewDocument(page, documentA, 'Independent Preview A');
+  const positionA = await setPreviewScrollRatio(page, 0.67);
+  await switchToPreviewDocument(page, documentB, 'Independent Preview B');
+  const positionB = await setPreviewScrollRatio(page, 0.31);
+
+  await switchToPreviewDocument(page, documentA, 'Independent Preview A');
+  await expectPreviewScroll(page, positionA);
+  await page.locator('.view-toolbar [data-view-mode="editor"]').click();
+  await expect.poll(() => page.locator('#markdown-editor').evaluate(editor => editor.scrollTop)).toBe(0);
+  await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+  await waitForPreviewDocument(page, 'Independent Preview A');
+  await expectPreviewScroll(page, positionA);
+
+  await switchToPreviewDocument(page, documentB, 'Independent Preview B');
+  await expectPreviewScroll(page, positionB);
+});
+
+test('three Preview documents retain positions after tab reordering and repeated switching', async ({ page }) => {
+  const labels = ['Preview sequence A', 'Preview sequence B', 'Preview sequence C'];
+  const ids = await createPreviewDocuments(page, [
+    { label: labels[0], sections: 45 },
+    { label: labels[1], sections: 75 },
+    { label: labels[2], sections: 105 }
+  ]);
+  const expectedPositions = [];
+  const targetRatios = [0.2, 0.5, 0.8];
+
+  for (let index = 0; index < ids.length; index += 1) {
+    await switchToPreviewDocument(page, ids[index], labels[index]);
+    expectedPositions[index] = await setPreviewScrollRatio(page, targetRatios[index]);
+  }
+
+  await page.locator(`#tab-list .tab-item[data-tab-id="${ids[2]}"]`).dragTo(
+    page.locator(`#tab-list .tab-item[data-tab-id="${ids[0]}"]`)
+  );
+  await expect.poll(() => page.locator('#tab-list .tab-item').evaluateAll(tabs =>
+    tabs.map(tab => tab.getAttribute('data-tab-id'))
+  )).toEqual([ids[2], ids[0], ids[1]]);
+
+  for (const index of [0, 1, 2, 0, 2, 1]) {
+    await switchToPreviewDocument(page, ids[index], labels[index]);
+    await expectPreviewScroll(page, expectedPositions[index]);
+  }
+});
+
+test('newly opened and reopened documents do not inherit another Preview position', async ({ page }) => {
+  const [documentA, documentB] = await createPreviewDocuments(page, [
+    { label: 'Preview reopen A', sections: 80 },
+    { label: 'Preview reopen B', sections: 40 }
+  ]);
+
+  await expectPreviewScroll(page, 0);
+  const positionB = await setPreviewScrollRatio(page, 0.57);
+  await page.locator(`#tab-list .tab-item[data-tab-id="${documentB}"] .tab-close-btn`).click();
+  await switchToPreviewDocument(page, documentA, 'Preview reopen A');
+  const positionA = await setPreviewScrollRatio(page, 0.82);
+  expect(Math.abs(positionA - positionB)).toBeGreaterThan(300);
+
+  await page.locator(`.document-tree-row[data-document-id="${documentB}"] .document-tree-main`).click();
+  await waitForPreviewDocument(page, 'Preview reopen B');
+  await expectPreviewScroll(page, positionB);
+
+  await switchToPreviewDocument(page, documentA, 'Preview reopen A');
+  await page.locator('#tab-new-btn').click();
+  await setEditorContent(page, scrollableMarkdown('Brand new Preview document', 55));
+  await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+  await waitForPreviewDocument(page, 'Brand new Preview document');
+  await expectPreviewScroll(page, 0);
 });
 
 test('header groups document actions before application preferences', async ({ page }) => {
