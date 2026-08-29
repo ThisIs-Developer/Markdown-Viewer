@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME=' 'sha256-NnbK2LG1LUwYyZ1xgJN7k3oK4oTvHY4o9852VxwNA/o='; script-src-attr 'none'; worker-src 'self'; connect-src 'self' https://markdownviewer.pages.dev https://api.github.com https://raw.githubusercontent.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://kroki.io https://www.plantuml.com https://mermaid.ink https://paulrosen.github.io wss://markdownviewer.pages.dev ws://localhost:* ws://127.0.0.1:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'unsafe-inline'; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data: https:; manifest-src 'self'; frame-src 'none'">
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
-    <link rel="preload" href="/styles.css" as="style">
-    <link rel="preload" href="/js/workspace-storage.js" as="script">
-    <link rel="preload" href="/js/script.js" as="script">
+    <!-- Local assets are discovered through their real stylesheet and script tags to avoid unused-preload warnings. -->
 
     <!-- PWA Web Manifest -->
     

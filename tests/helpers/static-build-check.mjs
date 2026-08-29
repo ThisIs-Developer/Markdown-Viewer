@@ -176,8 +176,18 @@ if (normalizedLanguageResponse.status !== 308 || normalizedLanguageResponse.head
 }
 
 const routes = JSON.parse(fs.readFileSync(path.join(rootDir, '_routes.json'), 'utf8'));
-for (const route of ['/', '/api/*']) {
+for (const route of ['/', '/api/*', '/live-room/*']) {
   if (!routes.include?.includes(route)) throw new Error(`_routes.json must include ${route}.`);
+}
+
+for (const stalePreload of [
+  '<link rel="preload" href="styles.css"',
+  '<link rel="preload" href="workspace-storage.js"',
+  '<link rel="preload" href="script.js"'
+]) {
+  if (indexHtml.includes(stalePreload)) {
+    throw new Error(`index.html contains an unused preload hint: ${stalePreload}`);
+  }
 }
 
 const redirects = fs.readFileSync(path.join(rootDir, '_redirects'), 'utf8');
