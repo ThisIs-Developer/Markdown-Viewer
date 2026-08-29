@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-site-verification" content="ddzT8Hre9alfB1FfrA_bLf2RmrPVO56uO6usAG-ddSc" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME=' 'sha256-NnbK2LG1LUwYyZ1xgJN7k3oK4oTvHY4o9852VxwNA/o='; script-src-attr 'none'; worker-src 'self'; connect-src 'self' https://markdownviewer.pages.dev https://api.github.com https://raw.githubusercontent.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://kroki.io https://www.plantuml.com https://mermaid.ink https://paulrosen.github.io wss://markdownviewer.pages.dev ws://localhost:* ws://127.0.0.1:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'unsafe-inline'; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data: https:; manifest-src 'self'; frame-src 'none'">
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
     <link rel="preload" href="/styles.css" as="style">
@@ -698,7 +699,8 @@
             </div>
             <div class="modal-body">
               <p class="share-modal-description">Choose how the PDF should be generated.</p>
-              <div class="share-mode-cards">
+              <div class="live-share-section-title mb-2">Generation Method</div>
+              <div class="share-mode-cards mb-3">
                 <label class="share-mode-card is-selected" id="pdf-export-card-vector" for="pdf-export-mode-vector">
                   <input type="radio" id="pdf-export-mode-vector" name="pdf-export-mode" value="vector" checked />
                   <span class="share-card-icon"><i class="lucide lucide-file-text"></i></span>
@@ -718,10 +720,111 @@
                   <span class="share-card-check"><i class="lucide lucide-check"></i></span>
                 </label>
               </div>
+              <div class="live-share-section-title mb-2">Appearance</div>
+              <div class="share-mode-cards share-mode-cards--grid">
+                <label class="share-mode-card is-selected" id="pdf-export-theme-card-light" for="pdf-export-theme-light">
+                  <input type="radio" id="pdf-export-theme-light" name="pdf-export-theme" value="light" checked />
+                  <span class="share-card-icon"><i class="lucide lucide-sun"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Light mode</span>
+                    <span class="share-card-desc">Clean white background, optimal for printing.</span>
+                  </span>
+                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
+                </label>
+                <label class="share-mode-card" id="pdf-export-theme-card-dark" for="pdf-export-theme-dark">
+                  <input type="radio" id="pdf-export-theme-dark" name="pdf-export-theme" value="dark" />
+                  <span class="share-card-icon"><i class="lucide lucide-moon"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Dark mode</span>
+                    <span class="share-card-desc">Dark background with light text, matches dark theme.</span>
+                  </span>
+                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
+                </label>
+              </div>
             </div>
             <div class="reset-modal-actions">
               <button class="reset-modal-btn reset-modal-cancel" id="pdf-export-cancel">Cancel</button>
               <button class="reset-modal-btn reset-modal-confirm" id="pdf-export-confirm">Export</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- HTML Export Options Modal -->
+        <div id="html-export-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="html-export-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box">
+            <div class="modal-header">
+              <p id="html-export-title" class="reset-modal-message">Export HTML Options</p>
+              <button type="button" class="modal-close-btn" id="html-export-close" aria-label="Close HTML export dialog">
+                <i class="lucide lucide-x"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="share-modal-description">Choose how the HTML document should be styled.</p>
+              <div class="live-share-section-title mb-2">Appearance</div>
+              <div class="share-mode-cards share-mode-cards--grid">
+                <label class="share-mode-card is-selected" id="html-export-theme-card-light" for="html-export-theme-light">
+                  <input type="radio" id="html-export-theme-light" name="html-export-theme" value="light" checked />
+                  <span class="share-card-icon"><i class="lucide lucide-sun"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Light mode</span>
+                    <span class="share-card-desc">Clean white background, optimal for printing and light viewing.</span>
+                  </span>
+                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
+                </label>
+                <label class="share-mode-card" id="html-export-theme-card-dark" for="html-export-theme-dark">
+                  <input type="radio" id="html-export-theme-dark" name="html-export-theme" value="dark" />
+                  <span class="share-card-icon"><i class="lucide lucide-moon"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Dark mode</span>
+                    <span class="share-card-desc">Dark background with light text, matches dark theme.</span>
+                  </span>
+                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
+                </label>
+              </div>
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="html-export-cancel">Cancel</button>
+              <button class="reset-modal-btn reset-modal-confirm" id="html-export-confirm">Export</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PNG Export Options Modal -->
+        <div id="png-export-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="png-export-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box">
+            <div class="modal-header">
+              <p id="png-export-title" class="reset-modal-message">Export Image Options</p>
+              <button type="button" class="modal-close-btn" id="png-export-close" aria-label="Close Image export dialog">
+                <i class="lucide lucide-x"></i>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p class="share-modal-description">Choose how the exported image should be styled.</p>
+              <div class="live-share-section-title mb-2">Appearance</div>
+              <div class="share-mode-cards share-mode-cards--grid">
+                <label class="share-mode-card is-selected" id="png-export-theme-card-light" for="png-export-theme-light">
+                  <input type="radio" id="png-export-theme-light" name="png-export-theme" value="light" checked />
+                  <span class="share-card-icon"><i class="lucide lucide-sun"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Light mode</span>
+                    <span class="share-card-desc">Clean white background, optimal for light viewing.</span>
+                  </span>
+                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
+                </label>
+                <label class="share-mode-card" id="png-export-theme-card-dark" for="png-export-theme-dark">
+                  <input type="radio" id="png-export-theme-dark" name="png-export-theme" value="dark" />
+                  <span class="share-card-icon"><i class="lucide lucide-moon"></i></span>
+                  <span class="share-card-body">
+                    <span class="share-card-title">Dark mode</span>
+                    <span class="share-card-desc">Dark background with light text, matches dark theme.</span>
+                  </span>
+                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
+                </label>
+              </div>
+            </div>
+            <div class="reset-modal-actions">
+              <button class="reset-modal-btn reset-modal-cancel" id="png-export-cancel">Cancel</button>
+              <button class="reset-modal-btn reset-modal-confirm" id="png-export-confirm">Export</button>
             </div>
           </div>
         </div>

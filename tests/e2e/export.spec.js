@@ -33,6 +33,8 @@ test('exports Markdown as a download', async ({ page }) => {
 
 test('exports rendered HTML as a download', async ({ page }) => {
   await page.locator('#export-html').dispatchEvent('click');
+  await expect(page.locator('#html-export-modal')).toHaveClass(/is-visible/);
+  await page.locator('#html-export-confirm').click();
 
   await expect.poll(() => page.evaluate(() => window.__savedFiles.at(-1))).toMatchObject({
     name: expect.stringMatching(/\.html$/),
@@ -51,6 +53,8 @@ test('browser PDF export opens options and triggers window.print for vector mode
 
 test('PNG export produces an image download with a mocked local canvas renderer', async ({ page }) => {
   await page.locator('#export-png').dispatchEvent('click');
+  await expect(page.locator('#png-export-modal')).toHaveClass(/is-visible/);
+  await page.locator('#png-export-confirm').click();
 
   await expect.poll(() => page.evaluate(() => window.__savedFiles.at(-1)), { timeout: 20_000 }).toMatchObject({
     name: expect.stringMatching(/\.png$/),

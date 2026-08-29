@@ -369,6 +369,26 @@ document.addEventListener("DOMContentLoaded", async function () {
   const pdfExportCardRaster = document.getElementById("pdf-export-card-raster");
   const pdfExportModeVector = document.getElementById("pdf-export-mode-vector");
   const pdfExportModeRaster = document.getElementById("pdf-export-mode-raster");
+  const pdfExportThemeCardLight = document.getElementById("pdf-export-theme-card-light");
+  const pdfExportThemeCardDark = document.getElementById("pdf-export-theme-card-dark");
+  const pdfExportThemeLight = document.getElementById("pdf-export-theme-light");
+  const pdfExportThemeDark = document.getElementById("pdf-export-theme-dark");
+  const htmlExportModal = document.getElementById("html-export-modal");
+  const htmlExportClose = document.getElementById("html-export-close");
+  const htmlExportCancelBtn = document.getElementById("html-export-cancel");
+  const htmlExportConfirmBtn = document.getElementById("html-export-confirm");
+  const htmlExportThemeCardLight = document.getElementById("html-export-theme-card-light");
+  const htmlExportThemeCardDark = document.getElementById("html-export-theme-card-dark");
+  const htmlExportThemeLight = document.getElementById("html-export-theme-light");
+  const htmlExportThemeDark = document.getElementById("html-export-theme-dark");
+  const pngExportModal = document.getElementById("png-export-modal");
+  const pngExportClose = document.getElementById("png-export-close");
+  const pngExportCancelBtn = document.getElementById("png-export-cancel");
+  const pngExportConfirmBtn = document.getElementById("png-export-confirm");
+  const pngExportThemeCardLight = document.getElementById("png-export-theme-card-light");
+  const pngExportThemeCardDark = document.getElementById("png-export-theme-card-dark");
+  const pngExportThemeLight = document.getElementById("png-export-theme-light");
+  const pngExportThemeDark = document.getElementById("png-export-theme-dark");
   const exportPng = document.getElementById("export-png");
   const copyMarkdownButton = document.getElementById("copy-markdown-button");
   const dragOverlay = document.getElementById("drag-overlay");
@@ -3208,6 +3228,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const blockquotes = container.querySelectorAll("blockquote");
     blockquotes.forEach((blockquote) => {
+      if (blockquote.classList.contains("markdown-alert")) return;
       let firstParagraph = null;
       for (const child of blockquote.children) {
         if (child.tagName === "P") {
@@ -3259,10 +3280,32 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function parseFrontmatter(markdown) {
-    const match = markdown.match(/^\s*---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/);
+    if (typeof markdown !== 'string') return { frontmatter: null, body: '' };
+    if (!markdown.startsWith('---')) return { frontmatter: null, body: markdown };
+    const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
     if (!match) return { frontmatter: null, body: markdown };
+
+    const content = match[1].trim();
+    if (!content || !/^[a-zA-Z0-9_-]+\s*:/m.test(content)) {
+      return { frontmatter: null, body: markdown };
+    }
+    if (/^#|^\s*\||^\s*```|^\s*[-*+]\s+\[/m.test(content)) {
+      return { frontmatter: null, body: markdown };
+    }
+
     try {
-      const data = jsyaml.load(match[1]) || {};
+      const data = jsyaml.load(match[1]);
+      if (!data || typeof data !== 'object' || Array.isArray(data) || Object.prototype.toString.call(data) !== '[object Object]') {
+        return { frontmatter: null, body: markdown };
+      }
+      const keys = Object.keys(data);
+      if (keys.length === 0) {
+        return { frontmatter: null, body: markdown };
+      }
+      const isValid = keys.every(k => typeof k === 'string' && k.length > 0 && k.length < 100 && !/[#|`\r\n]/.test(k));
+      if (!isValid) {
+        return { frontmatter: null, body: markdown };
+      }
       return { frontmatter: data, body: markdown.slice(match[0].length) };
     } catch (e) {
       console.warn('Frontmatter YAML parse error:', e);
@@ -14288,18 +14331,23 @@ ${selector} .arrowheadPath {
       console.warn('STL print theme preparation failed:', error);
     }
 
+    try {
+      enhanceGitHubAlerts(markdownPreview);
+    } catch (_) {}
+
     await waitForBrowserPrintFrame();
   }
 
-  async function prepareBrowserPrintExport() {
+  async function prepareBrowserPrintExport(exportTheme = 'light') {
     const root = document.documentElement;
     const previousTheme = root.getAttribute('data-theme') || initialTheme || 'light';
     const previousPrintExport = root.getAttribute('data-browser-print-export');
-    const shouldForceLightTheme = previousTheme === 'dark';
+    const targetTheme = exportTheme === 'dark' ? 'dark' : 'light';
+    const shouldChangeTheme = previousTheme !== targetTheme;
 
-    root.setAttribute('data-browser-print-export', 'light');
-    if (shouldForceLightTheme) {
-      root.setAttribute('data-theme', 'light');
+    root.setAttribute('data-browser-print-export', targetTheme);
+    if (shouldChangeTheme) {
+      root.setAttribute('data-theme', targetTheme);
     }
 
     await renderThemeSensitivePreviewContentForPrint();
@@ -14317,7 +14365,7 @@ ${selector} .arrowheadPath {
         root.setAttribute('data-browser-print-export', previousPrintExport);
       }
 
-      if (shouldForceLightTheme) {
+      if (shouldChangeTheme) {
         root.setAttribute('data-theme', previousTheme);
         renderThemeSensitivePreviewContentForPrint().catch(function(error) {
           console.warn('Preview theme restoration after print failed:', error);
@@ -14326,12 +14374,12 @@ ${selector} .arrowheadPath {
     };
   }
 
-  async function runBrowserPrintExport() {
+  async function runBrowserPrintExport(exportTheme = 'light') {
     const previousDocumentTitle = document.title;
     document.title = getBrowserPrintDocumentTitle();
     let restoreBrowserPrintExport;
     try {
-      restoreBrowserPrintExport = await prepareBrowserPrintExport();
+      restoreBrowserPrintExport = await prepareBrowserPrintExport(exportTheme);
     } catch (error) {
       document.title = previousDocumentTitle;
       throw error;
@@ -14508,6 +14556,7 @@ ${selector} .arrowheadPath {
     roots.forEach(function(root) {
       processEmojis(root);
       enhancePreviewCodeBlocks(root);
+      enhanceGitHubAlerts(root);
     });
 
     enhanceReleaseNotesPreview();
@@ -23421,7 +23470,44 @@ ${selector} .arrowheadPath {
     }
   });
 
-  exportHtml.addEventListener("click", function () {
+  htmlExportClose?.addEventListener("click", () => closeAppModal(htmlExportModal));
+  htmlExportCancelBtn?.addEventListener("click", () => closeAppModal(htmlExportModal));
+
+  function syncHtmlExportThemeCardStyles() {
+    if (htmlExportThemeDark?.checked) {
+      htmlExportThemeCardDark?.classList.add('is-selected');
+      htmlExportThemeCardLight?.classList.remove('is-selected');
+    } else {
+      htmlExportThemeCardLight?.classList.add('is-selected');
+      htmlExportThemeCardDark?.classList.remove('is-selected');
+    }
+  }
+
+  htmlExportThemeLight?.addEventListener('change', syncHtmlExportThemeCardStyles);
+  htmlExportThemeDark?.addEventListener('change', syncHtmlExportThemeCardStyles);
+
+  exportHtml.addEventListener("click", function (event) {
+    event.preventDefault();
+    if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
+    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
+    if (currentTheme === 'dark') {
+      if (htmlExportThemeDark) htmlExportThemeDark.checked = true;
+    } else {
+      if (htmlExportThemeLight) htmlExportThemeLight.checked = true;
+    }
+    syncHtmlExportThemeCardStyles();
+    openAppModal(htmlExportModal);
+  });
+
+  htmlExportConfirmBtn?.addEventListener("click", function (event) {
+    event.preventDefault();
+    closeAppModal(htmlExportModal);
+    const selectedTheme = document.querySelector('input[name="html-export-theme"]:checked')?.value || 'light';
+    generateHtmlExport(selectedTheme);
+  });
+
+  function generateHtmlExport(exportTheme = 'light') {
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
     try {
@@ -23438,9 +23524,22 @@ ${selector} .arrowheadPath {
       tempContainer.innerHTML = sanitizedHtml;
       applyReferencePreviewLinks(tempContainer, referenceData.definitions);
       enhanceGitHubAlerts(tempContainer);
+      tempContainer.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar').forEach(function(el) {
+        el.remove();
+      });
+      tempContainer.querySelectorAll('.diagram-viewer.is-loading, .mermaid-container.is-loading, .abc-container.is-loading').forEach(function(el) {
+        el.classList.remove('is-loading');
+      });
+      tempContainer.querySelectorAll('.mermaid').forEach(function(node) {
+        const rawCode = node.getAttribute('data-original-code');
+        if (rawCode) {
+          try {
+            node.textContent = decodeURIComponent(rawCode);
+          } catch (_) {}
+        }
+      });
       const enhancedHtml = tempContainer.innerHTML;
-      const isDarkTheme =
-        document.documentElement.getAttribute("data-theme") === "dark";
+      const isDarkTheme = exportTheme === "dark";
       const cssTheme = isDarkTheme
         ? "https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown-dark.min.css"
         : "https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.3.0/github-markdown.min.css";
@@ -23448,7 +23547,7 @@ ${selector} .arrowheadPath {
         ? "sha384-tah+rtrY/RrDGiE3nwf/q5WWsyjjRO4iOPWuZi/NpDqjWEEsEU9fPpjX2f5lremS"
         : "sha384-hZuxRjC/Dsr4zEx1JlUhDQqkvqBPp2VLHsgXfnxPq1ULDy1eIdWCiux7nvO1RIZP";
       const fullHtml = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-color-mode="${isDarkTheme ? 'dark' : 'light'}" data-dark-theme="dark" data-light-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23470,13 +23569,23 @@ ${selector} .arrowheadPath {
   <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js" integrity="sha384-zkWMJO4sgpPUzyuOgDx8HB/K55glbAwajEpk1Go2NWRuPkPA/wIhoEJTuSkmOYrV" crossorigin="anonymous"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.5.2/abcjs-basic-min.js" integrity="sha384-nxKtRsFgPYIlwn4dow7ndIEZj9Ud11cUkJdJVOUjHhm8dFHiL0+VF356f6xBzeaL" crossorigin="anonymous"></script>
   <style>
+      :root, html, body, .markdown-body {
+          color-scheme: ${isDarkTheme ? "dark" : "light"} !important;
+          --color-canvas-default: ${isDarkTheme ? "#0d1117" : "#ffffff"} !important;
+          --color-canvas-subtle: ${isDarkTheme ? "#161b22" : "#f6f8fa"} !important;
+          --color-border-default: ${isDarkTheme ? "#30363d" : "#d0d7de"} !important;
+          --color-border-muted: ${isDarkTheme ? "#21262d" : "#d8dee4"} !important;
+          --color-fg-default: ${isDarkTheme ? "#c9d1d9" : "#24292e"} !important;
+          --color-fg-muted: ${isDarkTheme ? "#8b949e" : "#57606a"} !important;
+          --color-fg-subtle: ${isDarkTheme ? "#6e7681" : "#6e7781"} !important;
+      }
       html {
-          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"};
+          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"} !important;
       }
       body {
           margin: 0;
-          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"};
-          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"};
+          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"} !important;
+          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"} !important;
       }
       .markdown-body {
           box-sizing: border-box;
@@ -23485,8 +23594,53 @@ ${selector} .arrowheadPath {
           width: fit-content;
           margin: 0 auto;
           padding: 45px;
-          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"};
-          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"};
+          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"} !important;
+          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"} !important;
+      }
+      .markdown-body table {
+          border-collapse: collapse !important;
+          width: 100% !important;
+      }
+      .markdown-body table tr {
+          background-color: ${isDarkTheme ? "#0d1117" : "#ffffff"} !important;
+          border-top: 1px solid ${isDarkTheme ? "#30363d" : "#d8dee4"} !important;
+      }
+      .markdown-body table tr:nth-child(2n) {
+          background-color: ${isDarkTheme ? "#161b22" : "#f6f8fa"} !important;
+      }
+      .markdown-body table th,
+      .markdown-body table td {
+          border: 1px solid ${isDarkTheme ? "#30363d" : "#d0d7de"} !important;
+          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"} !important;
+      }
+      .markdown-body table th {
+          background-color: ${isDarkTheme ? "#161b22" : "#f6f8fa"} !important;
+          font-weight: 600 !important;
+      }
+      .markdown-body table td {
+          background-color: transparent !important;
+      }
+      .markdown-body blockquote:not(.markdown-alert) {
+          color: ${isDarkTheme ? "#8b949e" : "#57606a"} !important;
+          border-left: 0.25em solid ${isDarkTheme ? "#30363d" : "#d0d7de"} !important;
+          background-color: transparent !important;
+      }
+      .markdown-body hr {
+          background-color: ${isDarkTheme ? "#30363d" : "#d0d7de"} !important;
+          border: 0 !important;
+          border-bottom: 1px solid ${isDarkTheme ? "#30363d" : "#d0d7de"} !important;
+          height: 0.25em !important;
+      }
+      .markdown-body code,
+      .markdown-body tt {
+          background-color: ${isDarkTheme ? "rgba(110, 118, 129, 0.4)" : "rgba(175, 184, 193, 0.2)"} !important;
+          color: ${isDarkTheme ? "#c9d1d9" : "#24292e"} !important;
+      }
+      .markdown-body pre {
+          background-color: ${isDarkTheme ? "#161b22" : "#f6f8fa"} !important;
+      }
+      .markdown-body pre code {
+          background-color: transparent !important;
       }
       .markdown-body > p,
       .markdown-body > ul,
@@ -23677,6 +23831,13 @@ ${selector} .arrowheadPath {
           border: 0;
       }
 
+      .diagram-status,
+      .diagram-toolbar,
+      .mermaid-toolbar,
+      .abc-toolbar {
+          display: none !important;
+      }
+
       @media (max-width: 767px) {
           .markdown-body {
               padding: 15px;
@@ -23736,7 +23897,32 @@ ${selector} .arrowheadPath {
           }
           if (window.mermaid) {
               try {
-                  window.mermaid.initialize({ startOnLoad: true, theme: '${isDarkTheme ? "dark" : "default"}', gantt: { useWidth: 1200 } });
+                  window.mermaid.initialize({
+                      startOnLoad: false,
+                      theme: '${isDarkTheme ? "dark" : "default"}',
+                      securityLevel: 'loose',
+                      gantt: { useWidth: 1200 }
+                  });
+                  var mermaidNodes = document.querySelectorAll('.mermaid');
+                  if (mermaidNodes.length > 0) {
+                      mermaidNodes.forEach(function(node) {
+                          var rawCode = node.getAttribute('data-original-code');
+                          if (rawCode) {
+                              try { node.textContent = decodeURIComponent(rawCode); } catch (_) {}
+                          }
+                      });
+                      if (typeof window.mermaid.run === 'function') {
+                          window.mermaid.run({
+                              nodes: Array.from(mermaidNodes)
+                          }).then(function() {
+                              queueMarkdownExportFit();
+                          }).catch(function(err) {
+                              console.warn('Mermaid run error:', err);
+                          });
+                      } else if (typeof window.mermaid.init === 'function') {
+                          window.mermaid.init(undefined, mermaidNodes);
+                      }
+                  }
               } catch (e) {
                   console.warn('Mermaid initialization failed:', e);
               }
@@ -23773,7 +23959,7 @@ ${selector} .arrowheadPath {
       console.error("HTML export failed:", e);
       alert("HTML export failed: " + e.message);
     }
-  });
+  }
 
   // ============================================
   // Page-Break Detection Functions (Story 1.1)
@@ -24783,10 +24969,31 @@ ${selector} .arrowheadPath {
 
   pdfExportClose?.addEventListener("click", () => closeAppModal(pdfExportModal));
 
+  function syncPdfExportThemeCardStyles() {
+    if (pdfExportThemeDark?.checked) {
+      pdfExportThemeCardDark?.classList.add('is-selected');
+      pdfExportThemeCardLight?.classList.remove('is-selected');
+    } else {
+      pdfExportThemeCardLight?.classList.add('is-selected');
+      pdfExportThemeCardDark?.classList.remove('is-selected');
+    }
+  }
+
+  pdfExportThemeLight?.addEventListener('change', syncPdfExportThemeCardStyles);
+  pdfExportThemeDark?.addEventListener('change', syncPdfExportThemeCardStyles);
+
   exportPdf.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
+    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
+    if (currentTheme === 'dark') {
+      if (pdfExportThemeDark) pdfExportThemeDark.checked = true;
+    } else {
+      if (pdfExportThemeLight) pdfExportThemeLight.checked = true;
+    }
+    syncPdfExportThemeCardStyles();
+    syncPdfExportCardStyles();
     openAppModal(pdfExportModal);
   });
 
@@ -24809,13 +25016,14 @@ ${selector} .arrowheadPath {
     event.preventDefault();
     closeAppModal(pdfExportModal);
 
-    const selectedMode = document.querySelector('input[name="pdf-export-mode"]:checked')?.value;
+    const selectedMode = document.querySelector('input[name="pdf-export-mode"]:checked')?.value || 'vector';
+    const selectedTheme = document.querySelector('input[name="pdf-export-theme"]:checked')?.value || 'light';
 
     if (selectedMode === "vector") {
-      logPdfExportDebug("PDF (Vector) export button clicked!");
-      await runBrowserPrintExport();
+      logPdfExportDebug("PDF (Vector) export button clicked with theme:", selectedTheme);
+      await runBrowserPrintExport(selectedTheme);
     } else if (selectedMode === "raster") {
-      logPdfExportDebug("PDF export button clicked!");
+      logPdfExportDebug("PDF export button clicked with theme:", selectedTheme);
       if (activePdfExport) {
         logPdfExportDebug("PDF export already active, ignoring click");
         return;
@@ -24857,7 +25065,9 @@ ${selector} .arrowheadPath {
       await waitForPdfFrame(progressState);
       const tempElement = document.createElement("div");
       progressState.tempElement = tempElement;
-      tempElement.className = "markdown-body pdf-export";
+      const isDarkTheme = selectedTheme === "dark";
+      tempElement.className = "markdown-body pdf-export " + (isDarkTheme ? "theme-dark" : "theme-light");
+      tempElement.setAttribute('data-theme', isDarkTheme ? "dark" : "light");
       tempElement.innerHTML = sanitizedHtml;
       enhanceGitHubAlerts(tempElement);
       tempElement.style.padding = "0px";
@@ -24868,9 +25078,8 @@ ${selector} .arrowheadPath {
       tempElement.style.left = "-9999px";
       tempElement.style.top = "0";
 
-      const currentTheme = document.documentElement.getAttribute("data-theme");
-      tempElement.style.backgroundColor = currentTheme === "dark" ? "#0d1117" : "#ffffff";
-      tempElement.style.color = currentTheme === "dark" ? "#c9d1d9" : "#24292e";
+      tempElement.style.backgroundColor = isDarkTheme ? "#0d1117" : "#ffffff";
+      tempElement.style.color = isDarkTheme ? "#c9d1d9" : "#24292e";
 
       document.body.appendChild(tempElement);
       await waitForPdfFrame(progressState);
@@ -24883,14 +25092,34 @@ ${selector} .arrowheadPath {
             await runPdfAbortable(progressState, loadScript(CDN.mermaid));
           }
           throwIfPdfExportAborted(progressState.signal);
-          initMermaid(true);
+
+          mermaidNodes.forEach(node => {
+            const rawCode = node.getAttribute('data-original-code');
+            if (rawCode) {
+              try { node.textContent = decodeURIComponent(rawCode); }
+              catch (_) { node.textContent = rawCode; }
+            }
+            node.removeAttribute('data-processed');
+          });
+
+          if (typeof mermaid !== 'undefined') {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: isDarkTheme ? 'dark' : 'default',
+              securityLevel: 'strict',
+              flowchart: { useMaxWidth: true, htmlLabels: true },
+              fontSize: 16,
+              gantt: { useWidth: 1200 }
+            });
+          }
           await runPdfAbortable(progressState, mermaid.init(undefined, mermaidNodes));
-          tempElement.querySelectorAll('.mermaid-container.is-loading').forEach(container => {
+          tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
+          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => {
             container.classList.remove('is-loading');
           });
 
           // Convert all rendered Mermaid SVGs inside tempElement to <img> tags with data URI sources
-          const compiledMermaids = tempElement.querySelectorAll('.mermaid-container');
+          const compiledMermaids = tempElement.querySelectorAll('.mermaid-container, .diagram-viewer[data-diagram-engine="mermaid"]');
           compiledMermaids.forEach(container => {
             const svgElement = container.querySelector('svg');
             if (svgElement) {
@@ -24931,10 +25160,11 @@ ${selector} .arrowheadPath {
         } catch (mermaidError) {
           if (mermaidError instanceof PdfExportCancelledError) throw mermaidError;
           console.warn("Mermaid rendering issue:", mermaidError);
-          tempElement.querySelectorAll('.mermaid-container.is-loading').forEach(container => {
+          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => {
             container.classList.remove('is-loading');
           });
         }
+        tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
         throwIfPdfExportAborted(progressState.signal);
         await waitForPdfFrame(progressState);
       }
@@ -25037,6 +25267,7 @@ ${selector} .arrowheadPath {
         mathScripts.forEach(el => el.remove());
       }
 
+      tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar').forEach(el => el.remove());
       await waitForPdfFrame(progressState);
       fitExportElementToContent(tempElement);
       await waitForPdfFrame(progressState);
@@ -25078,6 +25309,7 @@ ${selector} .arrowheadPath {
         useCORS: true,
         allowTaint: false,
         logging: false,
+        backgroundColor: isDarkTheme ? "#0d1117" : "#ffffff",
         windowWidth: Math.max(PAGE_CONFIG.windowWidth, Math.ceil(tempElement.getBoundingClientRect().width)),
         windowHeight: Math.ceil(tempElement.getBoundingClientRect().height)
       }));
@@ -25102,6 +25334,14 @@ ${selector} .arrowheadPath {
 
         if (page > 0) pdf.addPage();
 
+        if (isDarkTheme) {
+          pdf.setFillColor(13, 17, 23); // #0d1117
+          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+        } else {
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+        }
+
         const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
         const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
         const destHeight = sourceHeight / scaleFactor;
@@ -25111,6 +25351,8 @@ ${selector} .arrowheadPath {
         pageCanvas.height = sourceHeight;
 
         const ctx = pageCanvas.getContext('2d');
+        ctx.fillStyle = isDarkTheme ? "#0d1117" : "#ffffff";
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
         ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
 
         const imgData = pageCanvas.toDataURL('image/png');
@@ -25136,11 +25378,47 @@ ${selector} .arrowheadPath {
     }
   });
 
-  exportPng.addEventListener("click", async function (event) {
+  pngExportClose?.addEventListener("click", () => closeAppModal(pngExportModal));
+  pngExportCancelBtn?.addEventListener("click", () => closeAppModal(pngExportModal));
+
+  function syncPngExportThemeCardStyles() {
+    if (pngExportThemeDark?.checked) {
+      pngExportThemeCardDark?.classList.add('is-selected');
+      pngExportThemeCardLight?.classList.remove('is-selected');
+    } else {
+      pngExportThemeCardLight?.classList.add('is-selected');
+      pngExportThemeCardDark?.classList.remove('is-selected');
+    }
+  }
+
+  pngExportThemeLight?.addEventListener('change', syncPngExportThemeCardStyles);
+  pngExportThemeDark?.addEventListener('change', syncPngExportThemeCardStyles);
+
+  exportPng.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
-    logPdfExportDebug("PNG export button clicked!");
+    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
+    if (currentTheme === 'dark') {
+      if (pngExportThemeDark) pngExportThemeDark.checked = true;
+    } else {
+      if (pngExportThemeLight) pngExportThemeLight.checked = true;
+    }
+    syncPngExportThemeCardStyles();
+    openAppModal(pngExportModal);
+  });
+
+  pngExportConfirmBtn?.addEventListener("click", async function (event) {
+    event.preventDefault();
+    closeAppModal(pngExportModal);
+    const selectedTheme = document.querySelector('input[name="png-export-theme"]:checked')?.value || 'light';
+    await generatePngExport(selectedTheme);
+  });
+
+  async function generatePngExport(exportTheme = 'light') {
+    if (!hasActiveOpenDocument()) return;
+    if (isReleaseNotesActive()) return;
+    logPdfExportDebug("PNG export starting with theme:", exportTheme);
     if (activePdfExport) {
       logPdfExportDebug("Export already active, ignoring click");
       return;
@@ -25175,7 +25453,9 @@ ${selector} .arrowheadPath {
       await waitForPdfFrame(progressState);
       const tempElement = document.createElement("div");
       progressState.tempElement = tempElement;
-      tempElement.className = "markdown-body pdf-export";
+      const isDarkTheme = exportTheme === "dark";
+      tempElement.className = "markdown-body pdf-export " + (isDarkTheme ? "theme-dark" : "theme-light");
+      tempElement.setAttribute('data-theme', isDarkTheme ? "dark" : "light");
       tempElement.innerHTML = sanitizedHtml;
       enhanceGitHubAlerts(tempElement);
       tempElement.style.padding = "40px"; // Give some padding for PNG
@@ -25186,9 +25466,8 @@ ${selector} .arrowheadPath {
       tempElement.style.left = "-9999px";
       tempElement.style.top = "0";
 
-      const currentTheme = document.documentElement.getAttribute("data-theme");
-      tempElement.style.backgroundColor = currentTheme === "dark" ? "#0d1117" : "#ffffff";
-      tempElement.style.color = currentTheme === "dark" ? "#c9d1d9" : "#24292e";
+      tempElement.style.backgroundColor = isDarkTheme ? "#0d1117" : "#ffffff";
+      tempElement.style.color = isDarkTheme ? "#c9d1d9" : "#24292e";
 
       document.body.appendChild(tempElement);
       await waitForPdfFrame(progressState);
@@ -25201,29 +25480,54 @@ ${selector} .arrowheadPath {
             await runPdfAbortable(progressState, loadScript(CDN.mermaid));
           }
           throwIfPdfExportAborted(progressState.signal);
-          initMermaid(true);
-          await runPdfAbortable(progressState, mermaid.init(undefined, mermaidNodes));
-          tempElement.querySelectorAll('.mermaid-container.is-loading').forEach(container => container.classList.remove('is-loading'));
 
-          const compiledMermaids = tempElement.querySelectorAll('.mermaid-container');
+          mermaidNodes.forEach(node => {
+            const rawCode = node.getAttribute('data-original-code');
+            if (rawCode) {
+              try { node.textContent = decodeURIComponent(rawCode); }
+              catch (_) { node.textContent = rawCode; }
+            }
+            node.removeAttribute('data-processed');
+          });
+
+          if (typeof mermaid !== 'undefined') {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: isDarkTheme ? 'dark' : 'default',
+              securityLevel: 'strict',
+              flowchart: { useMaxWidth: true, htmlLabels: true },
+              fontSize: 16,
+              gantt: { useWidth: 1200 }
+            });
+          }
+          await runPdfAbortable(progressState, mermaid.init(undefined, mermaidNodes));
+          tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
+          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => container.classList.remove('is-loading'));
+
+          const compiledMermaids = tempElement.querySelectorAll('.mermaid-container, .diagram-viewer[data-diagram-engine="mermaid"]');
           compiledMermaids.forEach(container => {
             const svgElement = container.querySelector('svg');
             if (svgElement) {
-              const width = svgElement.getBoundingClientRect().width || 600;
-              const height = svgElement.getBoundingClientRect().height || 400;
+              const rect = svgElement.getBoundingClientRect();
+              const width = rect.width || svgElement.clientWidth || parseFloat(svgElement.getAttribute('width')) || 600;
+              const height = rect.height || svgElement.clientHeight || parseFloat(svgElement.getAttribute('height')) || 400;
               const clonedSvg = svgElement.cloneNode(true);
               clonedSvg.setAttribute('width', width);
               clonedSvg.setAttribute('height', height);
               if (!clonedSvg.getAttribute('viewBox')) {
                 clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
               }
+              clonedSvg.style.width = `${width}px`;
+              clonedSvg.style.height = `${height}px`;
               const svgString = new XMLSerializer().serializeToString(clonedSvg);
               const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
               const img = document.createElement('img');
               img.className = 'mermaid-img';
+              if (svgElement.id) img.id = svgElement.id + '-img';
               img.src = 'data:image/svg+xml;base64,' + svgBase64;
               img.style.width = `${width}px`;
               img.style.height = `${height}px`;
+              img.style.maxWidth = '100%';
               img.style.display = 'block';
               img.style.margin = '0 auto';
               container.innerHTML = '';
@@ -25233,7 +25537,9 @@ ${selector} .arrowheadPath {
         } catch (e) {
           if (e instanceof PdfExportCancelledError) throw e;
           console.warn("Mermaid issue:", e);
+          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => container.classList.remove('is-loading'));
         }
+        tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
         throwIfPdfExportAborted(progressState.signal);
         await waitForPdfFrame(progressState);
       }
@@ -25250,14 +25556,16 @@ ${selector} .arrowheadPath {
             const abcCode = decodeURIComponent(node.getAttribute('data-original-code') || '');
             if (abcCode) ABCJS.renderAbc(node.id, abcCode, { responsive: 'resize' });
           });
-          tempElement.querySelectorAll('.abc-container.is-loading').forEach(container => container.classList.remove('is-loading'));
+          tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .abc-toolbar').forEach(el => el.remove());
+          tempElement.querySelectorAll('.abc-container.is-loading, .diagram-viewer.is-loading').forEach(container => container.classList.remove('is-loading'));
 
-          const compiledAbcs = tempElement.querySelectorAll('.abc-container');
+          const compiledAbcs = tempElement.querySelectorAll('.abc-container, .diagram-viewer[data-diagram-engine="abc"]');
           compiledAbcs.forEach(container => {
             const svgElement = container.querySelector('svg');
             if (svgElement) {
-              const width = svgElement.getBoundingClientRect().width || 600;
-              const height = svgElement.getBoundingClientRect().height || 400;
+              const rect = svgElement.getBoundingClientRect();
+              const width = rect.width || svgElement.clientWidth || parseFloat(svgElement.getAttribute('width')) || 600;
+              const height = rect.height || svgElement.clientHeight || parseFloat(svgElement.getAttribute('height')) || 400;
               const clonedSvg = svgElement.cloneNode(true);
               clonedSvg.setAttribute('width', width);
               clonedSvg.setAttribute('height', height);
@@ -25267,9 +25575,12 @@ ${selector} .arrowheadPath {
               const svgString = new XMLSerializer().serializeToString(clonedSvg);
               const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
               const img = document.createElement('img');
+              img.className = 'abc-img';
+              if (svgElement.id) img.id = svgElement.id + '-img';
               img.src = 'data:image/svg+xml;base64,' + svgBase64;
               img.style.width = `${width}px`;
               img.style.height = `${height}px`;
+              img.style.maxWidth = '100%';
               img.style.display = 'block';
               img.style.margin = '0 auto';
               container.innerHTML = '';
@@ -25280,6 +25591,7 @@ ${selector} .arrowheadPath {
           if (e instanceof PdfExportCancelledError) throw e;
           console.warn("ABC rendering issue:", e);
         }
+        tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .abc-toolbar').forEach(el => el.remove());
         throwIfPdfExportAborted(progressState.signal);
         await waitForPdfFrame(progressState);
       }
@@ -25290,6 +25602,7 @@ ${selector} .arrowheadPath {
           await runPdfAbortable(progressState, MathJax.typesetPromise([tempElement]));
         } catch (e) {
           if (e instanceof PdfExportCancelledError) throw e;
+          console.warn("MathJax rendering issue:", e);
         }
         throwIfPdfExportAborted(progressState.signal);
         const assistiveElements = tempElement.querySelectorAll('mjx-assistive-mml');
@@ -25306,6 +25619,7 @@ ${selector} .arrowheadPath {
         mathScripts.forEach(el => el.remove());
       }
 
+      tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar').forEach(el => el.remove());
       await waitForPdfFrame(progressState);
       fitExportElementToContent(tempElement);
       await waitForPdfFrame(progressState);
@@ -25325,6 +25639,7 @@ ${selector} .arrowheadPath {
         useCORS: true,
         allowTaint: false,
         logging: false,
+        backgroundColor: isDarkTheme ? "#0d1117" : "#ffffff",
         windowWidth: Math.max(1000, Math.ceil(tempElement.getBoundingClientRect().width)),
         windowHeight: Math.ceil(tempElement.getBoundingClientRect().height)
       }));
@@ -25347,7 +25662,7 @@ ${selector} .arrowheadPath {
     } finally {
       cleanupPdfExport(progressState);
     }
-  });
+  }
 
   copyMarkdownButton.addEventListener("click", async function () {
     if (isReleaseNotesActive()) return;

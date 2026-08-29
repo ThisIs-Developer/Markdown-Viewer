@@ -7,6 +7,8 @@
     "node": ">=22 <27"
   },
   "scripts": {
+    "start": "node tests/helpers/static-server.mjs",
+    "dev": "node tests/helpers/static-server.mjs",
     "build": "npm run check:static",
     "check:static": "node tests/helpers/static-build-check.mjs",
     "test": "npm run check:static && npm run test:e2e",
