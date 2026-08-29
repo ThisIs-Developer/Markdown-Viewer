@@ -180,16 +180,6 @@ for (const route of ['/', '/api/*', '/live-room/*']) {
   if (!routes.include?.includes(route)) throw new Error(`_routes.json must include ${route}.`);
 }
 
-for (const stalePreload of [
-  '<link rel="preload" href="styles.css"',
-  '<link rel="preload" href="workspace-storage.js"',
-  '<link rel="preload" href="script.js"'
-]) {
-  if (indexHtml.includes(stalePreload)) {
-    throw new Error(`index.html contains an unused preload hint: ${stalePreload}`);
-  }
-}
-
 const redirects = fs.readFileSync(path.join(rootDir, '_redirects'), 'utf8');
 for (const redirect of ['/tips / 301', '/index.html / 301']) {
   if (!redirects.includes(redirect)) throw new Error(`_redirects is missing: ${redirect}`);

@@ -12,7 +12,9 @@
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
-    <!-- Local assets are discovered through their real stylesheet and script tags to avoid unused-preload warnings. -->
+    <link rel="preload" href="styles.css" as="style">
+    <link rel="preload" href="workspace-storage.js" as="script">
+    <link rel="preload" href="script.js" as="script">
 
     <!-- Canonical Link -->
     <link rel="canonical" href="https://markdownviewer.pages.dev/" data-seo-field="canonical">
