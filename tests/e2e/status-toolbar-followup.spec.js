@@ -89,7 +89,8 @@ test('header consolidates icon document actions in the requested order', async (
   const newMenu = page.locator('[aria-labelledby="importDropdown"]');
   await expect(newMenu).toBeVisible();
   await expect(newMenu.locator('.app-menu-label')).toHaveText(['New document', 'From files', 'From GitHub']);
-  const newWidth = await newMenu.evaluate(menu => menu.getBoundingClientRect().width);
+  // Verify the layout width, not the transient visual scale during menu-open motion.
+  const newWidth = await newMenu.evaluate(menu => menu.offsetWidth);
   expect(newWidth).toBeGreaterThanOrEqual(167.5);
   expect(newWidth).toBeLessThanOrEqual(220);
   await page.keyboard.press('Escape');
@@ -99,7 +100,7 @@ test('header consolidates icon document actions in the requested order', async (
   await expect(exportMenu).toBeVisible();
   await expect(exportMenu.locator('.app-menu-label')).toHaveText(['Markdown (.md)', 'HTML', 'PDF', 'Image (.png)']);
   await expect(exportMenu.locator('.settings-menu-header, .app-menu-description')).toHaveCount(0);
-  const exportWidth = await exportMenu.evaluate(menu => menu.getBoundingClientRect().width);
+  const exportWidth = await exportMenu.evaluate(menu => menu.offsetWidth);
   expect(exportWidth).toBeGreaterThanOrEqual(167.5);
   expect(exportWidth).toBeLessThanOrEqual(220);
 });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markdown-viewer-cache-v3.10.1';
+const CACHE_NAME = 'markdown-viewer-cache-v3.10.1-seo-indexing';
 
 // PERF-011: Split precache into critical (local files) and lazy (CDN libraries)
 // Critical assets are precached during SW install for instant offline startup
@@ -9,6 +9,8 @@ const CRITICAL_ASSETS = [
   './script.js',
   './preview-worker.js',
   './styles.css',
+  './assets/seo-metadata.mjs',
+  './seo/locales.mjs',
   './assets/lucide-icons.css',
   './RELEASE_NOTES',
   './sample.md',
@@ -30,6 +32,8 @@ const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/script.js',
   '/preview-worker.js',
   '/styles.css',
+  '/assets/seo-metadata.mjs',
+  '/seo/locales.mjs',
   '/assets/lucide-icons.css',
   '/sw.js'
 ]);

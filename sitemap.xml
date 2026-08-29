@@ -4,7 +4,7 @@
   <url>
     <loc>https://markdownviewer.pages.dev/</loc>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
     <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
     <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
@@ -18,7 +18,272 @@
     <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
     <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
     <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=zh</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=ko</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=pt</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=es</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=fr</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=de</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=ru</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=it</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=tr</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=pl</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=tw</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=uk</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
+  </url>
+  <url>
+    <loc>https://markdownviewer.pages.dev/?lang=bg</loc>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://markdownviewer.pages.dev/?lang=pt" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://markdownviewer.pages.dev/?lang=es" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://markdownviewer.pages.dev/?lang=fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://markdownviewer.pages.dev/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="ru" href="https://markdownviewer.pages.dev/?lang=ru" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://markdownviewer.pages.dev/?lang=it" />
+    <xhtml:link rel="alternate" hreflang="tr" href="https://markdownviewer.pages.dev/?lang=tr" />
+    <xhtml:link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl" />
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw" />
+    <xhtml:link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk" />
+    <xhtml:link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg" />
   </url>
 </urlset>
