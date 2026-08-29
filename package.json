@@ -9,9 +9,11 @@
   "scripts": {
     "start": "node tests/helpers/static-server.mjs",
     "dev": "node tests/helpers/static-server.mjs",
-    "build": "npm run check:static",
+    "build": "npm run check:static && npm run check:seo",
     "check:static": "node tests/helpers/static-build-check.mjs",
-    "test": "npm run check:static && npm run test:e2e",
+    "check:seo": "node seo/generate-sitemap.mjs --check",
+    "seo:sitemap": "node seo/generate-sitemap.mjs",
+    "test": "npm run build && npm run test:e2e",
     "test:install": "playwright install chromium firefox webkit",
     "test:e2e": "playwright test --project=chromium",
     "test:e2e:smoke": "playwright test tests/e2e/smoke.spec.js --project=chromium",

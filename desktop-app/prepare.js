@@ -323,11 +323,13 @@ async function prepareOfflineDependencies() {
   html = html.replace(/href="script\.js"/g, 'href="/js/script.js"');
   
   // PERF-034: Strip web-specific SEO tags, canonical, hreflang, preconnect, manifest and JSON-LD structured data for desktop build
+  html = html.replace(/\s*<meta name="google-site-verification"[^>]*>/i, '');
   html = html.replace(/<!-- DNS Prefetch & Preconnect CDN Origins to Warm Up Latency -->[\s\S]*?<!-- PERF-015:/i, '<!-- PERF-015:');
   html = html.replace(/<!-- Canonical Link -->[\s\S]*?<!-- PWA Web Manifest -->/i, '<!-- PWA Web Manifest -->');
   html = html.replace(/<link rel="manifest" href="manifest\.json">/i, '');
   html = html.replace(/<!-- Primary Meta Tags -->[\s\S]*?<!-- JSON-LD Structured Data Schema/i, '<!-- JSON-LD Structured Data Schema');
-  html = html.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+  html = html.replace(/<script\b[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/i, '');
+  html = html.replace(/\s*<!-- Browser fallback for hosts that do not run the Cloudflare Pages SEO middleware\. -->\s*<script type="module" src="assets\/seo-metadata\.mjs"><\/script>/i, '');
 
   // Inject Neutralino script tags
   html = html.replace(

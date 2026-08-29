@@ -17,11 +17,11 @@
     <link rel="preload" href="script.js" as="script">
 
     <!-- Canonical Link -->
-    <link rel="canonical" href="https://markdownviewer.pages.dev/">
+    <link rel="canonical" href="https://markdownviewer.pages.dev/" data-seo-field="canonical">
 
     <!-- Multilingual Hreflang Tags for Search Crawlers -->
     <link rel="alternate" hreflang="x-default" href="https://markdownviewer.pages.dev/">
-    <link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/?lang=en">
+    <link rel="alternate" hreflang="en" href="https://markdownviewer.pages.dev/">
     <link rel="alternate" hreflang="zh-Hans" href="https://markdownviewer.pages.dev/?lang=zh">
     <link rel="alternate" hreflang="ja" href="https://markdownviewer.pages.dev/?lang=ja">
     <link rel="alternate" hreflang="ko" href="https://markdownviewer.pages.dev/?lang=ko">
@@ -35,17 +35,18 @@
     <link rel="alternate" hreflang="pl" href="https://markdownviewer.pages.dev/?lang=pl">
     <link rel="alternate" hreflang="zh-Hant" href="https://markdownviewer.pages.dev/?lang=tw">
     <link rel="alternate" hreflang="uk" href="https://markdownviewer.pages.dev/?lang=uk">
+    <link rel="alternate" hreflang="bg" href="https://markdownviewer.pages.dev/?lang=bg">
 
     <!-- PWA Web Manifest -->
     <link rel="manifest" href="manifest.json">
 
     <!-- Primary Meta Tags -->
-    <meta name="title" content="Markdown Viewer - Online Markdown Editor with Live Preview">
-    <meta name="description" content="Client-side Markdown editor with GFM live preview, diagrams, export, Share Snapshot, Live Share, and no login required.">
+    <meta name="title" content="Markdown Viewer - Online Markdown Editor with Live Preview" data-seo-field="meta-title">
+    <meta name="description" content="Client-side Markdown editor with GFM live preview, diagrams, export, Share Snapshot, Live Share, and no login required." data-seo-field="description">
     <meta name="keywords" content="Markdown Viewer, online Markdown editor, Markdown viewer, live Markdown preview, GFM, Markdown diagrams, Markdown export">
     <meta name="author" content="ThisIs-Developer">
     <meta name="robots" content="index, follow, max-image-preview:large">
-    <meta name="language" content="English">
+    <meta name="language" content="English" data-seo-field="language">
     <meta name="distribution" content="global">
     <meta name="rating" content="general">
     <meta name="application-name" content="Markdown Viewer">
@@ -53,21 +54,21 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://markdownviewer.pages.dev/">
-    <meta property="og:title" content="Markdown Viewer - Online Markdown Editor with Live Preview">
-    <meta property="og:description" content="Client-side Markdown editor with GFM live preview, diagrams, export, Share Snapshot, Live Share, and no login required.">
+    <meta property="og:url" content="https://markdownviewer.pages.dev/" data-seo-field="og-url">
+    <meta property="og:title" content="Markdown Viewer - Online Markdown Editor with Live Preview" data-seo-field="og-title">
+    <meta property="og:description" content="Client-side Markdown editor with GFM live preview, diagrams, export, Share Snapshot, Live Share, and no login required." data-seo-field="og-description">
     <meta property="og:image" content="https://markdownviewer.pages.dev/assets/icon.jpg">
     <meta property="og:site_name" content="Markdown Viewer">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://markdownviewer.pages.dev/">
-    <meta property="twitter:title" content="Markdown Viewer - Online Markdown Editor with Live Preview">
-    <meta property="twitter:description" content="Client-side Markdown editor with GFM live preview, diagrams, export, Share Snapshot, Live Share, and no login required.">
+    <meta property="twitter:url" content="https://markdownviewer.pages.dev/" data-seo-field="twitter-url">
+    <meta property="twitter:title" content="Markdown Viewer - Online Markdown Editor with Live Preview" data-seo-field="twitter-title">
+    <meta property="twitter:description" content="Client-side Markdown editor with GFM live preview, diagrams, export, Share Snapshot, Live Share, and no login required." data-seo-field="twitter-description">
     <meta property="twitter:image" content="https://markdownviewer.pages.dev/assets/icon.jpg">
 
     <!-- JSON-LD Structured Data Schema for Search Rich Snippets -->
-    <script type="application/ld+json">
+    <script type="application/ld+json" id="application-schema">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
@@ -112,7 +113,9 @@
     }
     </script>
 
-    <title>Markdown Viewer - Online Markdown Editor with Live Preview</title>
+    <title data-seo-field="document-title">Markdown Viewer - Online Markdown Editor with Live Preview</title>
+    <!-- Browser fallback for hosts that do not run the Cloudflare Pages SEO middleware. -->
+    <script type="module" src="assets/seo-metadata.mjs"></script>
     <link href="assets/icon.jpg" rel="icon" type="image/jpg">
     <!-- Updated libraries to latest versions with Subresource Integrity (SRI) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
@@ -226,21 +229,21 @@
                                     <i class="lucide lucide-languages" aria-hidden="true"></i><span class="app-menu-copy"><span id="current-lang-label" class="app-menu-label">English</span><span class="app-menu-description">Application language</span></span>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end app-command-menu settings-language-menu" aria-labelledby="languageDropdown">
-                                    <li><a class="dropdown-item lang-select-item active" href="#" data-lang="en">English</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="zh">简体中文</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="ja">日本語</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="ko">한국어</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="pt">Português (Brasil)</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="es">Español</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="fr">Français</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="de">Deutsch</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="ru">Русский</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="it">Italiano</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="tr">Türkçe</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="pl">Polski</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="tw">繁體中文</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="uk">Українська</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="bg">Български</a></li>
+                                    <li><a class="dropdown-item lang-select-item active" href="/" data-lang="en">English</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=zh" data-lang="zh">简体中文</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=ja" data-lang="ja">日本語</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=ko" data-lang="ko">한국어</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=pt" data-lang="pt">Português (Brasil)</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=es" data-lang="es">Español</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=fr" data-lang="fr">Français</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=de" data-lang="de">Deutsch</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=ru" data-lang="ru">Русский</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=it" data-lang="it">Italiano</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=tr" data-lang="tr">Türkçe</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=pl" data-lang="pl">Polski</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=tw" data-lang="tw">繁體中文</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=uk" data-lang="uk">Українська</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=bg" data-lang="bg">Български</a></li>
                                 </ul>
                             </div>
                             <div class="settings-menu-divider" role="separator"></div>
@@ -385,21 +388,21 @@
                                                 <span class="mobile-menu-item-label"><i class="lucide lucide-languages" aria-hidden="true"></i><span>Language: <span id="mobile-current-lang-label">English</span></span></span>
                                             </button>
                                             <ul class="dropdown-menu app-command-menu settings-language-menu mobile-language-menu w-100" aria-labelledby="mobileLanguageDropdown">
-                                    <li><a class="dropdown-item lang-select-item active" href="#" data-lang="en">English</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="zh">简体中文</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="ja">日本語</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="ko">한국어</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="pt">Português (Brasil)</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="es">Español</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="fr">Français</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="de">Deutsch</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="ru">Русский</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="it">Italiano</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="tr">Türkçe</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="pl">Polski</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="tw">繁體中文</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="uk">Українська</a></li>
-                                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="bg">Български</a></li>
+                                    <li><a class="dropdown-item lang-select-item active" href="/" data-lang="en">English</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=zh" data-lang="zh">简体中文</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=ja" data-lang="ja">日本語</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=ko" data-lang="ko">한국어</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=pt" data-lang="pt">Português (Brasil)</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=es" data-lang="es">Español</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=fr" data-lang="fr">Français</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=de" data-lang="de">Deutsch</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=ru" data-lang="ru">Русский</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=it" data-lang="it">Italiano</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=tr" data-lang="tr">Türkçe</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=pl" data-lang="pl">Polski</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=tw" data-lang="tw">繁體中文</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=uk" data-lang="uk">Українська</a></li>
+                                    <li><a class="dropdown-item lang-select-item" href="/?lang=bg" data-lang="bg">Български</a></li>
                                             </ul>
                                         </div>
                                         <button id="mobile-private-mode-toggle" class="mobile-menu-item mobile-settings-item mobile-settings-toggle" type="button" aria-pressed="false" title="Turn private mode on">

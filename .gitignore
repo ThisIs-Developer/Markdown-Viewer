@@ -7,6 +7,7 @@ desktop-app/resources/libs/
 # Testing reports and outputs
 playwright-report/
 test-results/
+.wrangler/
 .pytest_cache/
 __pycache__/
 

@@ -30928,8 +30928,10 @@ ${selector} .arrowheadPath {
       
       // Update browser search parameters dynamically without page reload
       const url = new URL(window.location.href);
-      url.searchParams.set('lang', lang);
+      if (lang === 'en') url.searchParams.delete('lang');
+      else url.searchParams.set('lang', lang);
       window.history.replaceState({}, '', url.toString());
+      window.MarkdownViewerSeo?.applyForLanguage(lang);
     }
   });
 
