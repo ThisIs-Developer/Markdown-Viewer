@@ -9,6 +9,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   const RELEASE_NOTES_SEEN_VERSION_KEY = 'markdownViewerReleaseNotesSeenVersion';
   const DIRTY_DOCUMENT_JOURNAL_PREFIX = 'markdownViewerDirtyDocument:';
   const SECRET_DIRTY_DOCUMENT_JOURNAL_PREFIX = 'markdownViewerSecretDirtyDocument:';
+  const PDF_EXPORT_THEME_KEY = 'markdownViewerExportPdfTheme';
+  const HTML_EXPORT_THEME_KEY = 'markdownViewerExportHtmlTheme';
+  const PNG_EXPORT_THEME_KEY = 'markdownViewerExportPngTheme';
   const DOCUMENT_STORAGE_KEYS = new Set([
     'markdownViewerGlobalState',
     'markdownViewerTabs',
@@ -62,7 +65,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       RELEASE_NOTES_PENDING_MODE_KEY,
       RELEASE_NOTES_SEEN_VERSION_KEY,
       'find-replace-docked',
-      'app-lang'
+      'app-lang',
+      PDF_EXPORT_THEME_KEY,
+      HTML_EXPORT_THEME_KEY,
+      PNG_EXPORT_THEME_KEY
     ];
     for (const key of keys) {
       try {
@@ -23474,24 +23480,40 @@ ${selector} .arrowheadPath {
   htmlExportCancelBtn?.addEventListener("click", () => closeAppModal(htmlExportModal));
 
   function syncHtmlExportThemeCardStyles() {
-    if (htmlExportThemeDark?.checked) {
-      htmlExportThemeCardDark?.classList.add('is-selected');
-      htmlExportThemeCardLight?.classList.remove('is-selected');
+    const isDark = Boolean(htmlExportThemeDark?.checked);
+    if (isDark) {
+      htmlExportThemeCardDark?.classList.add('is-active', 'is-selected');
+      htmlExportThemeCardLight?.classList.remove('is-active', 'is-selected');
     } else {
-      htmlExportThemeCardLight?.classList.add('is-selected');
-      htmlExportThemeCardDark?.classList.remove('is-selected');
+      htmlExportThemeCardLight?.classList.add('is-active', 'is-selected');
+      htmlExportThemeCardDark?.classList.remove('is-active', 'is-selected');
     }
   }
 
-  htmlExportThemeLight?.addEventListener('change', syncHtmlExportThemeCardStyles);
-  htmlExportThemeDark?.addEventListener('change', syncHtmlExportThemeCardStyles);
+  function getStoredHtmlExportTheme() {
+    try {
+      const stored = localStorage.getItem(HTML_EXPORT_THEME_KEY);
+      if (stored === 'dark' || stored === 'light') return stored;
+    } catch (_) {}
+    return null;
+  }
+
+  htmlExportThemeLight?.addEventListener('change', () => {
+    syncHtmlExportThemeCardStyles();
+    saveStorageItem(HTML_EXPORT_THEME_KEY, 'light');
+  });
+  htmlExportThemeDark?.addEventListener('change', () => {
+    syncHtmlExportThemeCardStyles();
+    saveStorageItem(HTML_EXPORT_THEME_KEY, 'dark');
+  });
 
   exportHtml.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
-    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
-    if (currentTheme === 'dark') {
+    const storedTheme = getStoredHtmlExportTheme();
+    const effectiveTheme = storedTheme || (document.documentElement.getAttribute("data-theme") === 'dark' ? 'dark' : 'light');
+    if (effectiveTheme === 'dark') {
       if (htmlExportThemeDark) htmlExportThemeDark.checked = true;
     } else {
       if (htmlExportThemeLight) htmlExportThemeLight.checked = true;
@@ -23504,6 +23526,7 @@ ${selector} .arrowheadPath {
     event.preventDefault();
     closeAppModal(htmlExportModal);
     const selectedTheme = document.querySelector('input[name="html-export-theme"]:checked')?.value || 'light';
+    saveStorageItem(HTML_EXPORT_THEME_KEY, selectedTheme);
     generateHtmlExport(selectedTheme);
   });
 
@@ -24970,24 +24993,40 @@ ${selector} .arrowheadPath {
   pdfExportClose?.addEventListener("click", () => closeAppModal(pdfExportModal));
 
   function syncPdfExportThemeCardStyles() {
-    if (pdfExportThemeDark?.checked) {
-      pdfExportThemeCardDark?.classList.add('is-selected');
-      pdfExportThemeCardLight?.classList.remove('is-selected');
+    const isDark = Boolean(pdfExportThemeDark?.checked);
+    if (isDark) {
+      pdfExportThemeCardDark?.classList.add('is-active', 'is-selected');
+      pdfExportThemeCardLight?.classList.remove('is-active', 'is-selected');
     } else {
-      pdfExportThemeCardLight?.classList.add('is-selected');
-      pdfExportThemeCardDark?.classList.remove('is-selected');
+      pdfExportThemeCardLight?.classList.add('is-active', 'is-selected');
+      pdfExportThemeCardDark?.classList.remove('is-active', 'is-selected');
     }
   }
 
-  pdfExportThemeLight?.addEventListener('change', syncPdfExportThemeCardStyles);
-  pdfExportThemeDark?.addEventListener('change', syncPdfExportThemeCardStyles);
+  function getStoredPdfExportTheme() {
+    try {
+      const stored = localStorage.getItem(PDF_EXPORT_THEME_KEY);
+      if (stored === 'dark' || stored === 'light') return stored;
+    } catch (_) {}
+    return null;
+  }
+
+  pdfExportThemeLight?.addEventListener('change', () => {
+    syncPdfExportThemeCardStyles();
+    saveStorageItem(PDF_EXPORT_THEME_KEY, 'light');
+  });
+  pdfExportThemeDark?.addEventListener('change', () => {
+    syncPdfExportThemeCardStyles();
+    saveStorageItem(PDF_EXPORT_THEME_KEY, 'dark');
+  });
 
   exportPdf.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
-    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
-    if (currentTheme === 'dark') {
+    const storedTheme = getStoredPdfExportTheme();
+    const effectiveTheme = storedTheme || (document.documentElement.getAttribute("data-theme") === 'dark' ? 'dark' : 'light');
+    if (effectiveTheme === 'dark') {
       if (pdfExportThemeDark) pdfExportThemeDark.checked = true;
     } else {
       if (pdfExportThemeLight) pdfExportThemeLight.checked = true;
@@ -25018,6 +25057,7 @@ ${selector} .arrowheadPath {
 
     const selectedMode = document.querySelector('input[name="pdf-export-mode"]:checked')?.value || 'vector';
     const selectedTheme = document.querySelector('input[name="pdf-export-theme"]:checked')?.value || 'light';
+    saveStorageItem(PDF_EXPORT_THEME_KEY, selectedTheme);
 
     if (selectedMode === "vector") {
       logPdfExportDebug("PDF (Vector) export button clicked with theme:", selectedTheme);
@@ -25382,24 +25422,40 @@ ${selector} .arrowheadPath {
   pngExportCancelBtn?.addEventListener("click", () => closeAppModal(pngExportModal));
 
   function syncPngExportThemeCardStyles() {
-    if (pngExportThemeDark?.checked) {
-      pngExportThemeCardDark?.classList.add('is-selected');
-      pngExportThemeCardLight?.classList.remove('is-selected');
+    const isDark = Boolean(pngExportThemeDark?.checked);
+    if (isDark) {
+      pngExportThemeCardDark?.classList.add('is-active', 'is-selected');
+      pngExportThemeCardLight?.classList.remove('is-active', 'is-selected');
     } else {
-      pngExportThemeCardLight?.classList.add('is-selected');
-      pngExportThemeCardDark?.classList.remove('is-selected');
+      pngExportThemeCardLight?.classList.add('is-active', 'is-selected');
+      pngExportThemeCardDark?.classList.remove('is-active', 'is-selected');
     }
   }
 
-  pngExportThemeLight?.addEventListener('change', syncPngExportThemeCardStyles);
-  pngExportThemeDark?.addEventListener('change', syncPngExportThemeCardStyles);
+  function getStoredPngExportTheme() {
+    try {
+      const stored = localStorage.getItem(PNG_EXPORT_THEME_KEY);
+      if (stored === 'dark' || stored === 'light') return stored;
+    } catch (_) {}
+    return null;
+  }
+
+  pngExportThemeLight?.addEventListener('change', () => {
+    syncPngExportThemeCardStyles();
+    saveStorageItem(PNG_EXPORT_THEME_KEY, 'light');
+  });
+  pngExportThemeDark?.addEventListener('change', () => {
+    syncPngExportThemeCardStyles();
+    saveStorageItem(PNG_EXPORT_THEME_KEY, 'dark');
+  });
 
   exportPng.addEventListener("click", function (event) {
     event.preventDefault();
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
-    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
-    if (currentTheme === 'dark') {
+    const storedTheme = getStoredPngExportTheme();
+    const effectiveTheme = storedTheme || (document.documentElement.getAttribute("data-theme") === 'dark' ? 'dark' : 'light');
+    if (effectiveTheme === 'dark') {
       if (pngExportThemeDark) pngExportThemeDark.checked = true;
     } else {
       if (pngExportThemeLight) pngExportThemeLight.checked = true;
@@ -25412,6 +25468,7 @@ ${selector} .arrowheadPath {
     event.preventDefault();
     closeAppModal(pngExportModal);
     const selectedTheme = document.querySelector('input[name="png-export-theme"]:checked')?.value || 'light';
+    saveStorageItem(PNG_EXPORT_THEME_KEY, selectedTheme);
     await generatePngExport(selectedTheme);
   });
 
