@@ -8209,37 +8209,54 @@ a:focus {
 }
 
 .export-appearance-label {
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
 }
 
 .export-appearance-title {
   color: var(--text-color);
-  font-size: var(--ui-font-md);
-  font-weight: 600;
+  font-size: var(--ui-font-lg);
+  font-weight: 650;
 }
 
 .export-appearance-memory {
-  gap: 2px;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success-color) 10%, transparent);
   color: var(--success-color);
-  font-size: var(--ui-font-xs);
+  font-size: var(--ui-font-sm);
   font-weight: 500;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
 .export-appearance-memory i {
-  font-size: var(--ui-icon-size-xs);
+  font-size: var(--ui-icon-size-sm);
   line-height: 1;
 }
 
 .export-theme-toggle {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: 144px;
+  width: 132px;
   flex: 0 0 auto;
+  border-color: var(--border-color);
+  border-radius: 9px;
+  background: var(--segmented-bg);
 }
 
 .export-theme-option {
-  min-height: 28px;
+  min-height: 32px;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: var(--ui-font-md);
+}
+
+.export-theme-option.is-active {
+  border-color: color-mix(in srgb, var(--text-color) 8%, transparent);
+  background: var(--segmented-surface);
+  box-shadow: var(--segmented-shadow);
 }
 
 .export-theme-option input[type="radio"] {
@@ -8251,7 +8268,7 @@ a:focus {
 }
 
 .export-theme-option i {
-  font-size: var(--ui-icon-size-sm);
+  font-size: var(--ui-icon-size-md);
   line-height: 1;
 }
 

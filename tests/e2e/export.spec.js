@@ -379,15 +379,19 @@ test('export modals use compact segmented theme toggles and restore previous sel
       memoryText: memory.textContent.trim(),
       memoryColor: memoryStyle.color,
       memoryFontSize: memoryStyle.fontSize,
+      memoryBackground: memoryStyle.backgroundColor,
+      memoryBorderRadius: memoryStyle.borderRadius,
       successColor
     };
   });
   expect(pdfAppearanceLayout.gap).toBeLessThanOrEqual(12);
-  expect(pdfAppearanceLayout.toggleWidth).toBe(144);
+  expect(pdfAppearanceLayout.toggleWidth).toBe(132);
   expect(pdfAppearanceLayout.toggleBorderColor).toBe(pdfAppearanceLayout.appBorderColor);
   expect(pdfAppearanceLayout.memoryText).toBe('Remembered');
   expect(pdfAppearanceLayout.memoryColor).toBe(pdfAppearanceLayout.successColor);
-  expect(pdfAppearanceLayout.memoryFontSize).toBe('10px');
+  expect(pdfAppearanceLayout.memoryFontSize).toBe('11px');
+  expect(pdfAppearanceLayout.memoryBackground).not.toBe('rgba(0, 0, 0, 0)');
+  expect(pdfAppearanceLayout.memoryBorderRadius).toBe('999px');
   await page.locator('#pdf-export-theme-card-dark').click();
   await expect(page.locator('#pdf-export-theme-dark')).toBeChecked();
   await page.locator('#pdf-export-cancel').click();
