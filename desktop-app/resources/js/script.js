@@ -3683,7 +3683,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return { markmap, root: transformed.root, options };
   }
 
-  async function renderMarkmapIntoElement(node, source, compact) {
+  async function renderMarkmapIntoElement(node, source, compact, exportCapture) {
     const { markmap, root, options } = await buildMarkmap(source);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const { width, height } = getMarkmapViewportSize(node, root, compact);
@@ -3704,16 +3704,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       svg.style.maxHeight = 'min(70vh, 900px)';
     }
     node.replaceChildren(svg);
+    const shouldFreezeLayout = compact || exportCapture;
     const markmapOptions = Object.assign({
       zoom: false,
       pan: false,
       autoFit: false
-    }, options, compact ? { duration: 0 } : {});
+    }, options, shouldFreezeLayout ? { duration: 0 } : {});
     // Avoid Markmap.create() which fires setData() in a detached promise chain.
     // Instead, construct manually and await setData() so rendering is guaranteed
     // to complete before we measure bounds or serialize the SVG.
     const instance = new markmap.Markmap(svg, markmapOptions);
-    if (compact) {
+    if (shouldFreezeLayout) {
       // Override D3 transitions to apply attributes synchronously
       instance.transition = (sel) => sel;
     }
@@ -3729,15 +3730,27 @@ document.addEventListener("DOMContentLoaded", async function () {
       const rect = instance.state.rect;
       const treeWidth = rect.x2 - rect.x1;
       const treeHeight = rect.y2 - rect.y1;
-      if (compact) {
+      if (shouldFreezeLayout) {
         const pad = 16;
-        svg.setAttribute('viewBox', `${rect.x1 - pad} ${rect.y1 - pad} ${treeWidth + pad * 2} ${treeHeight + pad * 2}`);
-        svg.setAttribute('width', String(treeWidth + pad * 2));
-        svg.setAttribute('height', String(treeHeight + pad * 2));
+        const fittedWidth = Math.max(1, treeWidth + pad * 2);
+        const fittedHeight = Math.max(1, treeHeight + pad * 2);
+        svg.setAttribute('viewBox', `${rect.x1 - pad} ${rect.y1 - pad} ${fittedWidth} ${fittedHeight}`);
+        svg.setAttribute('width', String(fittedWidth));
+        svg.setAttribute('height', String(fittedHeight));
         svg.style.width = '100%';
-        svg.style.height = '100%';
-        svg.style.minHeight = '0';
-        svg.style.maxHeight = '100%';
+        if (compact) {
+          svg.style.height = '100%';
+          svg.style.minHeight = '0';
+          svg.style.maxHeight = '100%';
+        } else {
+          const fittedDisplayHeight = Math.max(220, Math.min(620, Math.round(width * fittedHeight / fittedWidth)));
+          node.style.setProperty('--markmap-height', `${fittedDisplayHeight}px`);
+          svg.style.setProperty('--markmap-height', `${fittedDisplayHeight}px`);
+          svg.style.height = `${fittedDisplayHeight}px`;
+          svg.style.minHeight = `${fittedDisplayHeight}px`;
+          svg.style.maxHeight = 'none';
+          svg.dataset.exportFitted = 'true';
+        }
       } else {
         const computedHeight = Math.max(200, Math.ceil(treeHeight) + 40);
         svg.setAttribute('height', String(computedHeight));
@@ -3747,13 +3760,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         svg.style.minHeight = `${computedHeight}px`;
       }
     }
-    fitMarkmap();
-    setTimeout(fitMarkmap, 120);
-    setTimeout(fitMarkmap, 500);
-    svg.querySelectorAll('image, img').forEach(image => {
-      image.addEventListener('load', fitMarkmap, { once: true });
-      image.addEventListener('error', fitMarkmap, { once: true });
-    });
+    if (!exportCapture) {
+      fitMarkmap();
+      setTimeout(fitMarkmap, 120);
+      setTimeout(fitMarkmap, 500);
+      svg.querySelectorAll('image, img').forEach(image => {
+        image.addEventListener('load', fitMarkmap, { once: true });
+        image.addEventListener('error', fitMarkmap, { once: true });
+      });
+    }
     normalizeDiagramSvg(node, 'markmap', source);
     return svg;
   }
@@ -3967,7 +3982,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     setDiagramRenderState(container, 'loading', `Rendering ${REMOTE_DIAGRAM_ENGINES[engine].label}…`);
     try {
       if (engine === 'markmap') {
-        await renderMarkmapIntoElement(node, source, false);
+        await renderMarkmapIntoElement(node, source, false, Boolean(context && context.exportCapture));
         if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
         setDiagramRenderState(container, 'ready');
         mountDiagramViewer(container, engine);
