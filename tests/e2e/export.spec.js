@@ -357,6 +357,23 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await page.locator('#export-pdf').dispatchEvent('click');
   await expect(page.locator('#pdf-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#pdf-export-modal .export-theme-toggle')).toBeVisible();
+  const pdfAppearanceLayout = await page.evaluate(() => {
+    const rasterCard = document.querySelector('#pdf-export-card-raster');
+    const appearance = document.querySelector('#pdf-export-modal .export-appearance-setting');
+    const toggle = document.querySelector('#pdf-export-modal .export-theme-toggle');
+    const rasterRect = rasterCard.getBoundingClientRect();
+    const appearanceRect = appearance.getBoundingClientRect();
+    const toggleStyle = getComputedStyle(toggle);
+    return {
+      gap: Math.round(appearanceRect.top - rasterRect.bottom),
+      toggleWidth: Math.round(toggle.getBoundingClientRect().width),
+      toggleBorderColor: toggleStyle.borderColor,
+      appBorderColor: getComputedStyle(rasterCard).borderColor
+    };
+  });
+  expect(pdfAppearanceLayout.gap).toBeLessThanOrEqual(12);
+  expect(pdfAppearanceLayout.toggleWidth).toBe(144);
+  expect(pdfAppearanceLayout.toggleBorderColor).toBe(pdfAppearanceLayout.appBorderColor);
   await page.locator('#pdf-export-theme-card-dark').click();
   await expect(page.locator('#pdf-export-theme-dark')).toBeChecked();
   await page.locator('#pdf-export-cancel').click();

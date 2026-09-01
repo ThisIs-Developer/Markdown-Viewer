@@ -8194,51 +8194,28 @@ a:focus {
   opacity: 1;
 }
 
-/* Compact Modern Export Theme Selector */
+/* Compact export theme selector; extends the shared segmented-control UI. */
 .export-appearance-setting {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
 }
 
 .export-appearance-title {
   color: var(--text-color);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-size: var(--ui-font-md);
+  font-weight: 600;
 }
 
 .export-theme-toggle {
-  display: inline-grid;
-  grid-template-columns: repeat(2, 78px);
-  gap: 3px;
-  width: auto;
-  padding: 3px;
-  border: 1px solid var(--border-color);
-  border-radius: 7px;
-  background: var(--button-bg);
-  box-shadow: inset 0 1px 2px rgba(31, 35, 40, 0.04);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 144px;
+  flex: 0 0 auto;
 }
 
 .export-theme-option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.2;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-  user-select: none;
+  min-height: 28px;
 }
 
 .export-theme-option input[type="radio"] {
@@ -8249,23 +8226,8 @@ a:focus {
   pointer-events: none;
 }
 
-.export-theme-option:hover:not(.is-active) {
-  background: var(--button-hover);
-  color: var(--text-color);
-}
-
-.export-theme-option.is-active,
-.export-theme-option.is-selected {
-  background: var(--bg-color);
-  color: var(--accent-color);
-  font-weight: 600;
-  border-color: var(--border-color);
-  border-color: color-mix(in srgb, var(--accent-color) 32%, var(--border-color));
-  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
-}
-
 .export-theme-option i {
-  font-size: 14px;
+  font-size: var(--ui-icon-size-sm);
   line-height: 1;
 }
 
