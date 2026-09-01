@@ -361,19 +361,33 @@ test('export modals use compact segmented theme toggles and restore previous sel
     const rasterCard = document.querySelector('#pdf-export-card-raster');
     const appearance = document.querySelector('#pdf-export-modal .export-appearance-setting');
     const toggle = document.querySelector('#pdf-export-modal .export-theme-toggle');
+    const memory = document.querySelector('#pdf-export-modal .export-appearance-memory');
     const rasterRect = rasterCard.getBoundingClientRect();
     const appearanceRect = appearance.getBoundingClientRect();
     const toggleStyle = getComputedStyle(toggle);
+    const memoryStyle = getComputedStyle(memory);
+    const successColorProbe = document.createElement('span');
+    successColorProbe.style.color = 'var(--success-color)';
+    document.body.appendChild(successColorProbe);
+    const successColor = getComputedStyle(successColorProbe).color;
+    successColorProbe.remove();
     return {
       gap: Math.round(appearanceRect.top - rasterRect.bottom),
       toggleWidth: Math.round(toggle.getBoundingClientRect().width),
       toggleBorderColor: toggleStyle.borderColor,
-      appBorderColor: getComputedStyle(rasterCard).borderColor
+      appBorderColor: getComputedStyle(rasterCard).borderColor,
+      memoryText: memory.textContent.trim(),
+      memoryColor: memoryStyle.color,
+      memoryFontSize: memoryStyle.fontSize,
+      successColor
     };
   });
   expect(pdfAppearanceLayout.gap).toBeLessThanOrEqual(12);
   expect(pdfAppearanceLayout.toggleWidth).toBe(144);
   expect(pdfAppearanceLayout.toggleBorderColor).toBe(pdfAppearanceLayout.appBorderColor);
+  expect(pdfAppearanceLayout.memoryText).toBe('Remembered');
+  expect(pdfAppearanceLayout.memoryColor).toBe(pdfAppearanceLayout.successColor);
+  expect(pdfAppearanceLayout.memoryFontSize).toBe('10px');
   await page.locator('#pdf-export-theme-card-dark').click();
   await expect(page.locator('#pdf-export-theme-dark')).toBeChecked();
   await page.locator('#pdf-export-cancel').click();

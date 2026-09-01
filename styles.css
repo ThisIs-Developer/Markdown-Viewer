@@ -8202,10 +8202,34 @@ a:focus {
   gap: 12px;
 }
 
+.export-appearance-label,
+.export-appearance-memory {
+  display: inline-flex;
+  align-items: center;
+}
+
+.export-appearance-label {
+  gap: 7px;
+  min-width: 0;
+}
+
 .export-appearance-title {
   color: var(--text-color);
   font-size: var(--ui-font-md);
   font-weight: 600;
+}
+
+.export-appearance-memory {
+  gap: 2px;
+  color: var(--success-color);
+  font-size: var(--ui-font-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.export-appearance-memory i {
+  font-size: var(--ui-icon-size-xs);
+  line-height: 1;
 }
 
 .export-theme-toggle {
