@@ -8196,16 +8196,11 @@ a:focus {
 
 /* Compact Modern Export Theme Selector */
 .export-appearance-setting {
-  display: grid;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.export-appearance-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: 14px;
 }
 
 .export-appearance-title {
@@ -8215,27 +8210,14 @@ a:focus {
   letter-spacing: 0.01em;
 }
 
-.export-appearance-saved {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1;
-}
-
-.export-appearance-saved i {
-  color: var(--accent-color);
-  font-size: 11px;
-}
-
 .export-theme-toggle {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
+  display: inline-grid;
+  grid-template-columns: repeat(2, 78px);
+  gap: 3px;
+  width: auto;
+  padding: 3px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 7px;
   background: var(--button-bg);
   box-shadow: inset 0 1px 2px rgba(31, 35, 40, 0.04);
 }
@@ -8245,14 +8227,14 @@ a:focus {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 38px;
-  padding: 8px 12px;
+  min-height: 32px;
+  padding: 6px 10px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 5px;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.2;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
@@ -13378,69 +13360,69 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     color: var(--color-fg-default) !important;
   }
 
-  .frontmatter-table tr:nth-child(odd) th,
-  .frontmatter-table tr:nth-child(odd) td,
-  .frontmatter-table tr:nth-child(even) th,
-  .frontmatter-table tr:nth-child(even) td {
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(odd) th,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(odd) td,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(even) th,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(even) td {
     background-color: #ffffff !important;
   }
 
-  .frontmatter-table tr:nth-child(2n) th,
-  .frontmatter-table tr:nth-child(2n) td {
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(2n) th,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(2n) td {
     background-color: #f6f8fa !important;
   }
 
-  .fm-complex,
-  .fm-tag {
+  html:not([data-browser-print-export="dark"]) .fm-complex,
+  html:not([data-browser-print-export="dark"]) .fm-tag {
     background: #f6f8fa !important;
     border-color: var(--color-border-default) !important;
     color: var(--color-fg-default) !important;
   }
 
-  .markdown-body table tr,
-  [data-theme="dark"] .markdown-body table tr {
+  html:not([data-browser-print-export="dark"]) .markdown-body table tr,
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table tr {
     background-color: #ffffff !important;
     color: var(--color-fg-default) !important;
   }
 
-  .markdown-body table tr:nth-child(2n),
-  [data-theme="dark"] .markdown-body table tr:nth-child(2n) {
+  html:not([data-browser-print-export="dark"]) .markdown-body table tr:nth-child(2n),
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table tr:nth-child(2n) {
     background-color: #f6f8fa !important;
   }
 
-  .markdown-body table th,
-  .markdown-body table td,
-  [data-theme="dark"] .markdown-body table th,
-  [data-theme="dark"] .markdown-body table td {
+  html:not([data-browser-print-export="dark"]) .markdown-body table th,
+  html:not([data-browser-print-export="dark"]) .markdown-body table td,
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table th,
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table td {
     border-color: var(--color-border-default) !important;
     color: var(--color-fg-default) !important;
   }
 
-  .markdown-body .markdown-alert-note {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-note {
     color: #0969da !important;
     border-left-color: #0969da !important;
     background-color: #ddf4ff !important;
   }
 
-  .markdown-body .markdown-alert-tip {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-tip {
     color: #1a7f37 !important;
     border-left-color: #1a7f37 !important;
     background-color: #dafbe1 !important;
   }
 
-  .markdown-body .markdown-alert-important {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-important {
     color: #8250df !important;
     border-left-color: #8250df !important;
     background-color: #fbefff !important;
   }
 
-  .markdown-body .markdown-alert-warning {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-warning {
     color: #9a6700 !important;
     border-left-color: #9a6700 !important;
     background-color: #fff8c5 !important;
   }
 
-  .markdown-body .markdown-alert-caution {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-caution {
     color: #cf222e !important;
     border-left-color: #cf222e !important;
     background-color: #ffebe9 !important;
@@ -13450,89 +13432,89 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     color: var(--color-fg-default) !important;
   }
 
-  .mermaid-container,
-  .abc-container,
-  .geojson-container,
-  .topojson-container,
-  .stl-container,
-  .plantuml-container,
-  .d2-container,
-  .graphviz-container,
-  .diagram-viewer,
-  .diagram-surface,
-  .diagram-status {
+  html:not([data-browser-print-export="dark"]) .mermaid-container,
+  html:not([data-browser-print-export="dark"]) .abc-container,
+  html:not([data-browser-print-export="dark"]) .geojson-container,
+  html:not([data-browser-print-export="dark"]) .topojson-container,
+  html:not([data-browser-print-export="dark"]) .stl-container,
+  html:not([data-browser-print-export="dark"]) .plantuml-container,
+  html:not([data-browser-print-export="dark"]) .d2-container,
+  html:not([data-browser-print-export="dark"]) .graphviz-container,
+  html:not([data-browser-print-export="dark"]) .diagram-viewer,
+  html:not([data-browser-print-export="dark"]) .diagram-surface,
+  html:not([data-browser-print-export="dark"]) .diagram-status {
     background: #ffffff !important;
     border-color: var(--color-border-default) !important;
     color: var(--color-fg-default) !important;
   }
 
-  .diagram-status,
-  .diagram-viewer.is-error>.diagram-status {
+  html:not([data-browser-print-export="dark"]) .diagram-status,
+  html:not([data-browser-print-export="dark"]) .diagram-viewer.is-error>.diagram-status {
     background: #f6f8fa !important;
   }
 
-  .markdown-body svg,
-  .markdown-body img,
-  .plantuml-diagram img,
-  .plantuml-img,
-  .d2-diagram img,
-  .d2-img,
-  .graphviz-diagram img,
-  .graphviz-img,
-  .plantuml-diagram>svg,
-  .graphviz-diagram>svg,
-  .d2-diagram>svg,
-  .diagram-surface svg {
+  html:not([data-browser-print-export="dark"]) .markdown-body svg,
+  html:not([data-browser-print-export="dark"]) .markdown-body img,
+  html:not([data-browser-print-export="dark"]) .plantuml-diagram img,
+  html:not([data-browser-print-export="dark"]) .plantuml-img,
+  html:not([data-browser-print-export="dark"]) .d2-diagram img,
+  html:not([data-browser-print-export="dark"]) .d2-img,
+  html:not([data-browser-print-export="dark"]) .graphviz-diagram img,
+  html:not([data-browser-print-export="dark"]) .graphviz-img,
+  html:not([data-browser-print-export="dark"]) .plantuml-diagram>svg,
+  html:not([data-browser-print-export="dark"]) .graphviz-diagram>svg,
+  html:not([data-browser-print-export="dark"]) .d2-diagram>svg,
+  html:not([data-browser-print-export="dark"]) .diagram-surface svg {
     filter: none !important;
     background: transparent !important;
   }
 
-  .markdown-body .mermaid svg {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid svg {
     background: #ffffff !important;
     color: #24292f !important;
   }
 
-  .markdown-body .mermaid text,
-  .markdown-body .mermaid tspan,
-  .markdown-body .mermaid .nodeLabel,
-  .markdown-body .mermaid .edgeLabel,
-  .markdown-body .mermaid .label,
-  .markdown-body .mermaid span {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid text,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid tspan,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .nodeLabel,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .edgeLabel,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .label,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid span {
     color: #24292f !important;
     fill: #24292f !important;
   }
 
-  .markdown-body .mermaid .node rect,
-  .markdown-body .mermaid .node circle,
-  .markdown-body .mermaid .node ellipse,
-  .markdown-body .mermaid .node polygon,
-  .markdown-body .mermaid .actor,
-  .markdown-body .mermaid .note,
-  .markdown-body .mermaid .labelBox {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node rect,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node circle,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node ellipse,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node polygon,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .actor,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .note,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .labelBox {
     fill: #f6f8fa !important;
     stroke: #8c959f !important;
   }
 
-  .markdown-body .mermaid .edgeLabel,
-  .markdown-body .mermaid .cluster rect {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .edgeLabel,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .cluster rect {
     background-color: #ffffff !important;
     fill: #ffffff !important;
     color: #24292f !important;
   }
 
-  .markdown-body .mermaid .flowchart-link,
-  .markdown-body .mermaid .edgePath .path,
-  .markdown-body .mermaid .messageLine0,
-  .markdown-body .mermaid .messageLine1,
-  .markdown-body .mermaid .loopLine,
-  .markdown-body .mermaid .activation0,
-  .markdown-body .mermaid .activation1,
-  .markdown-body .mermaid .activation2 {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .flowchart-link,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .edgePath .path,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .messageLine0,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .messageLine1,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .loopLine,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .activation0,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .activation1,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .activation2 {
     stroke: #57606a !important;
   }
 
-  .markdown-body .mermaid marker path,
-  .markdown-body .mermaid .arrowheadPath {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid marker path,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .arrowheadPath {
     fill: #57606a !important;
     stroke: #57606a !important;
   }
@@ -13544,14 +13526,14 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     color: var(--color-fg-default) !important;
   }
 
-  .stl-viewer canvas,
-  .geojson-map,
-  .topojson-map {
+  html:not([data-browser-print-export="dark"]) .stl-viewer canvas,
+  html:not([data-browser-print-export="dark"]) .geojson-map,
+  html:not([data-browser-print-export="dark"]) .topojson-map {
     background: #ffffff !important;
   }
 
-  body,
-  html {
+  html:not([data-browser-print-export="dark"]),
+  html:not([data-browser-print-export="dark"]) body {
     height: auto !important;
     overflow: visible !important;
     background: white !important;

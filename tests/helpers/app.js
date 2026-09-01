@@ -227,10 +227,14 @@ async function stubLazyRendererLibraries(page) {
     };
 
     window.mermaid = window.mermaid || {
-      initialize() {},
+      __theme: 'default',
+      initialize(options = {}) { this.__theme = options.theme || 'default'; },
       render(id) {
+        const isDark = this.__theme === 'dark';
+        const nodeFill = isDark ? '#1f2328' : '#ddf4ff';
+        const textFill = isDark ? '#c9d1d9' : '#24292f';
         return Promise.resolve({
-          svg: '<svg id="' + id + '" xmlns="http://www.w3.org/2000/svg" width="260" height="100" role="img"><rect width="260" height="100" fill="#ddf4ff"></rect><text x="130" y="55" text-anchor="middle">Mermaid test diagram</text></svg>'
+          svg: '<svg id="' + id + '" xmlns="http://www.w3.org/2000/svg" width="260" height="100" role="img"><rect width="260" height="100" fill="' + nodeFill + '"></rect><text x="130" y="55" text-anchor="middle" fill="' + textFill + '">Mermaid test diagram</text></svg>'
         });
       }
     };
@@ -346,10 +350,14 @@ async function stubLazyRendererLibraries(page) {
       contentType: 'application/javascript',
       body: `
         window.mermaid = {
-          initialize() {},
+          __theme: 'default',
+          initialize(options = {}) { this.__theme = options.theme || 'default'; },
           render(id, source) {
+            const isDark = this.__theme === 'dark';
+            const nodeFill = isDark ? '#1f2328' : '#ddf4ff';
+            const textFill = isDark ? '#c9d1d9' : '#24292f';
             return Promise.resolve({
-              svg: '<svg id="' + id + '" xmlns="http://www.w3.org/2000/svg" width="260" height="100" role="img"><rect width="260" height="100" fill="#ddf4ff"/><text x="130" y="55" text-anchor="middle">Mermaid test diagram</text></svg>'
+              svg: '<svg id="' + id + '" xmlns="http://www.w3.org/2000/svg" width="260" height="100" role="img"><rect width="260" height="100" fill="' + nodeFill + '"/><text x="130" y="55" text-anchor="middle" fill="' + textFill + '">Mermaid test diagram</text></svg>'
             });
           }
         };

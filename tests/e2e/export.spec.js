@@ -214,6 +214,73 @@ test('vector PDF renders every diagram off-screen without changing the app theme
   }))).toEqual({ appTheme: 'light', exportTheme: null, snapshots: 0 });
 });
 
+test('dark vector PDF keeps tables and diagrams dark in print media', async ({ page }) => {
+  await setEditorContent(page, `---
+title: Dark PDF
+description: Print colors should stay dark
+tags:
+  - export
+  - diagrams
+---
+
+# Dark export
+
+\`\`\`mermaid
+flowchart LR
+  A --> B
+\`\`\`
+
+\`\`\`plantuml
+@startuml
+Alice -> Bob: Hello
+@enduml
+\`\`\``);
+  await page.evaluate(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    window.print = () => { window.__darkPrintPrepared = true; };
+  });
+
+  await page.locator('#export-pdf').dispatchEvent('click');
+  await page.locator('#pdf-export-theme-card-dark').click();
+  await page.locator('#pdf-export-confirm').click();
+  await expect.poll(() => page.evaluate(() => window.__darkPrintPrepared), { timeout: 20_000 }).toBe(true);
+  await page.emulateMedia({ media: 'print' });
+
+  const printStyles = await page.locator('.browser-print-export-snapshot').evaluate(root => {
+    const style = element => getComputedStyle(element);
+    const frontmatterCell = root.querySelector('.frontmatter-table td');
+    const mermaidSvg = root.querySelector('.mermaid svg');
+    const mermaidRect = root.querySelector('.mermaid svg rect');
+    const mermaidText = root.querySelector('.mermaid svg text');
+    const plantUmlSvg = root.querySelector('.plantuml-diagram svg');
+    return {
+      rootBackground: style(root).backgroundColor,
+      cellBackground: style(frontmatterCell).backgroundColor,
+      mermaidBackground: style(mermaidSvg).backgroundColor,
+      mermaidNodeFill: style(mermaidRect).fill,
+      mermaidTextFill: style(mermaidText).fill,
+      plantUmlFilter: style(plantUmlSvg).filter,
+      appDisplay: style(document.querySelector('.app-container')).display,
+      appTheme: document.documentElement.getAttribute('data-theme')
+    };
+  });
+
+  expect(printStyles).toEqual({
+    rootBackground: 'rgb(13, 17, 23)',
+    cellBackground: 'rgb(22, 27, 34)',
+    mermaidBackground: 'rgba(0, 0, 0, 0)',
+    mermaidNodeFill: 'rgb(31, 35, 40)',
+    mermaidTextFill: 'rgb(201, 209, 217)',
+    plantUmlFilter: 'invert(0.88) hue-rotate(180deg)',
+    appDisplay: 'none',
+    appTheme: 'light'
+  });
+
+  await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await page.emulateMedia({ media: 'screen' });
+  await expect(page.locator('.browser-print-export-snapshot')).toHaveCount(0);
+});
+
 test('PNG export produces an image download with a mocked local canvas renderer', async ({ page }) => {
   await page.locator('#export-png').dispatchEvent('click');
   await expect(page.locator('#png-export-modal')).toHaveClass(/is-visible/);
