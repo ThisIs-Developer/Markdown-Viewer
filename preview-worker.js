@@ -776,7 +776,7 @@ function ensureLibraries(urls) {
 }
 
 function isSegmentedPreviewSafe(markdown) {
-  if (/^\s*---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.test(markdown)) return false;
+  if (typeof markdown === 'string' && markdown.startsWith('---') && /^---\r?\n[a-zA-Z0-9_-]+\s*:[\s\S]*?\r?\n---(?:\r?\n|$)/.test(markdown)) return false;
   if (/^\[[^\]\n]+\]:\s+\S+/m.test(markdown)) return false;
   if (/\[\^[^\]\n]+\]/.test(markdown)) return false;
   if (/\n:[ \t]+/.test(markdown)) return false;
