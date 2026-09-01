@@ -4949,6 +4949,54 @@ a:focus {
   --color-border-muted: #21262d !important;
 }
 
+/* Keep exported SVG diagrams readable in the chosen export theme, independent
+   of the theme currently used by the application shell. */
+.pdf-export.theme-light .plantuml-diagram > svg,
+.pdf-export.theme-light .graphviz-diagram > svg,
+.pdf-export.theme-light .d2-diagram > svg,
+.pdf-export.theme-light .kroki-diagram > svg,
+.pdf-export.theme-light .abc-notation > svg,
+.pdf-export.theme-light .diagram-surface > img {
+  filter: none !important;
+}
+
+.pdf-export.theme-dark .plantuml-diagram > svg,
+.pdf-export.theme-dark .graphviz-diagram > svg,
+.pdf-export.theme-dark .d2-diagram > svg:not([data-diagram-native-dark="true"]),
+.pdf-export.theme-dark .kroki-diagram > svg {
+  filter: invert(0.88) hue-rotate(180deg) !important;
+}
+
+.pdf-export.theme-dark .d2-diagram > svg[data-diagram-native-dark="true"],
+.pdf-export.theme-dark .markmap-diagram > svg {
+  filter: none !important;
+}
+
+.pdf-export .abc-notation svg {
+  color: var(--color-fg-default) !important;
+  background: transparent !important;
+}
+
+.pdf-export .abc-notation svg path,
+.pdf-export .abc-notation svg text {
+  fill: currentColor !important;
+}
+
+.pdf-export .abc-notation svg text {
+  stroke: none !important;
+}
+
+.pdf-export .abc-notation svg .abcjs-staff,
+.pdf-export .abc-notation svg .abcjs-staff-extra,
+.pdf-export .abc-notation svg .abcjs-bar,
+.pdf-export .abc-notation svg .abcjs-ledger,
+.pdf-export .abc-notation svg .abcjs-stem,
+.pdf-export .abc-notation svg .abcjs-beam,
+.pdf-export .abc-notation svg .abcjs-slur,
+.pdf-export .abc-notation svg .abcjs-tie {
+  stroke: currentColor !important;
+}
+
 /* Hide toolbar and status indicators in export captures */
 .pdf-export .diagram-status,
 .pdf-export .diagram-toolbar,
@@ -8147,15 +8195,49 @@ a:focus {
 }
 
 /* Compact Modern Export Theme Selector */
+.export-appearance-setting {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.export-appearance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-appearance-title {
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.export-appearance-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.export-appearance-saved i {
+  color: var(--accent-color);
+  font-size: 11px;
+}
+
 .export-theme-toggle {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--button-bg);
-  box-shadow: inset 0 1px 1px rgba(31, 35, 40, 0.03);
+  box-shadow: inset 0 1px 2px rgba(31, 35, 40, 0.04);
 }
 
 .export-theme-option {
@@ -8163,14 +8245,14 @@ a:focus {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 32px;
-  padding: 6px 12px;
+  min-height: 38px;
+  padding: 8px 12px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1.2;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
@@ -8193,10 +8275,11 @@ a:focus {
 .export-theme-option.is-active,
 .export-theme-option.is-selected {
   background: var(--bg-color);
-  color: var(--text-color);
+  color: var(--accent-color);
   font-weight: 600;
   border-color: var(--border-color);
-  box-shadow: 0 1px 2px rgba(31, 35, 40, 0.12);
+  border-color: color-mix(in srgb, var(--accent-color) 32%, var(--border-color));
+  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.12);
 }
 
 .export-theme-option i {
@@ -12983,6 +13066,23 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     position: static !important;
     margin: 0 !important;
     max-width: 100% !important;
+  }
+
+  html[data-browser-print-export] .app-container {
+    display: none !important;
+  }
+
+  html[data-browser-print-export] .browser-print-export-snapshot {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 15mm 20mm !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
   }
 
   html:not([data-browser-print-export="dark"]),

@@ -523,6 +523,27 @@ async function stubExportLibraries(page) {
       ctx.fillText('PNG export test', 20, 40);
       return canvas;
     };
+    window.jspdf = {
+      jsPDF: class {
+        constructor() {
+          this.internal = {
+            pageSize: {
+              getWidth() { return 210; },
+              getHeight() { return 297; }
+            }
+          };
+        }
+        addPage() {}
+        setFillColor() {}
+        rect() {}
+        addImage() {}
+        save(name) {
+          if (Array.isArray(window.__savedFiles)) {
+            window.__savedFiles.push({ name, type: 'application/pdf', size: 1 });
+          }
+        }
+      }
+    };
   });
 }
 
