@@ -358,6 +358,8 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await expect(page.locator('#pdf-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#pdf-export-modal .export-theme-toggle')).toBeVisible();
   const pdfAppearanceLayout = await page.evaluate(() => {
+    const methodCards = document.querySelector('#pdf-export-modal .pdf-export-method-cards');
+    const vectorCard = document.querySelector('#pdf-export-card-vector');
     const rasterCard = document.querySelector('#pdf-export-card-raster');
     const appearance = document.querySelector('#pdf-export-modal .export-appearance-setting');
     const toggle = document.querySelector('#pdf-export-modal .export-theme-toggle');
@@ -366,6 +368,11 @@ test('export modals use compact segmented theme toggles and restore previous sel
     const appearanceRect = appearance.getBoundingClientRect();
     const toggleStyle = getComputedStyle(toggle);
     const memoryStyle = getComputedStyle(memory);
+    const vectorTitle = vectorCard.querySelector('.pdf-export-method-title');
+    const rasterTitle = rasterCard.querySelector('.pdf-export-method-title');
+    const recommendedBadge = vectorCard.querySelector('.pdf-export-method-badge');
+    const vectorDescription = vectorCard.querySelector('.pdf-export-method-description');
+    const rasterDescription = rasterCard.querySelector('.pdf-export-method-description');
     const successColorProbe = document.createElement('span');
     successColorProbe.style.color = 'var(--success-color)';
     document.body.appendChild(successColorProbe);
@@ -373,6 +380,19 @@ test('export modals use compact segmented theme toggles and restore previous sel
     successColorProbe.remove();
     return {
       gap: Math.round(appearanceRect.top - rasterRect.bottom),
+      methodColumns: getComputedStyle(methodCards).gridTemplateColumns.split(' ').length,
+      vectorCardWidth: Math.round(vectorCard.getBoundingClientRect().width),
+      rasterCardWidth: Math.round(rasterRect.width),
+      vectorCardHeight: Math.round(vectorCard.getBoundingClientRect().height),
+      rasterCardHeight: Math.round(rasterRect.height),
+      vectorTitleFont: getComputedStyle(vectorTitle).fontSize,
+      rasterTitleFont: getComputedStyle(rasterTitle).fontSize,
+      vectorDescriptionFont: getComputedStyle(vectorDescription).fontSize,
+      rasterDescriptionFont: getComputedStyle(rasterDescription).fontSize,
+      vectorDescription: vectorDescription.textContent.trim(),
+      rasterDescription: rasterDescription.textContent.trim(),
+      badgeText: recommendedBadge.textContent.trim(),
+      badgeFitsCard: recommendedBadge.getBoundingClientRect().right <= vectorCard.getBoundingClientRect().right - 8,
       toggleWidth: Math.round(toggle.getBoundingClientRect().width),
       toggleBorderColor: toggleStyle.borderColor,
       appBorderColor: getComputedStyle(rasterCard).borderColor,
@@ -385,6 +405,15 @@ test('export modals use compact segmented theme toggles and restore previous sel
     };
   });
   expect(pdfAppearanceLayout.gap).toBeLessThanOrEqual(12);
+  expect(pdfAppearanceLayout.methodColumns).toBe(2);
+  expect(pdfAppearanceLayout.vectorCardWidth).toBe(pdfAppearanceLayout.rasterCardWidth);
+  expect(pdfAppearanceLayout.vectorCardHeight).toBe(pdfAppearanceLayout.rasterCardHeight);
+  expect(pdfAppearanceLayout.vectorTitleFont).toBe(pdfAppearanceLayout.rasterTitleFont);
+  expect(pdfAppearanceLayout.vectorDescriptionFont).toBe(pdfAppearanceLayout.rasterDescriptionFont);
+  expect(pdfAppearanceLayout.vectorDescription).toBe('Fastest. Uses your browser print dialog.');
+  expect(pdfAppearanceLayout.rasterDescription).toBe('Best for keeping tables, diagrams, and equations together.');
+  expect(pdfAppearanceLayout.badgeText).toBe('Recommended');
+  expect(pdfAppearanceLayout.badgeFitsCard).toBe(true);
   expect(pdfAppearanceLayout.toggleWidth).toBe(132);
   expect(pdfAppearanceLayout.toggleBorderColor).toBe(pdfAppearanceLayout.appBorderColor);
   expect(pdfAppearanceLayout.memoryText).toBe('Remembered');

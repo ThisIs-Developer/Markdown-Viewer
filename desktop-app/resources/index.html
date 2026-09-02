@@ -699,24 +699,29 @@
             <div class="modal-body">
               <p class="share-modal-description">Choose how the PDF should be generated.</p>
               <div class="live-share-section-title mb-2">Generation Method</div>
-              <div class="share-mode-cards">
-                <label class="share-mode-card is-selected" id="pdf-export-card-vector" for="pdf-export-mode-vector">
+              <div class="pdf-export-method-cards">
+                <label class="pdf-export-method-card is-selected" id="pdf-export-card-vector" for="pdf-export-mode-vector">
                   <input type="radio" id="pdf-export-mode-vector" name="pdf-export-mode" value="vector" checked />
-                  <span class="share-card-icon"><i class="lucide lucide-file-text"></i></span>
-                  <span class="share-card-body">
-                    <span class="share-card-title">Browser Print (Recommended)</span>
-                    <span class="share-card-desc">Faster, suggested for large documents. Note: images, diagrams, etc. might break.</span>
+                  <span class="pdf-export-method-radio" aria-hidden="true"></span>
+                  <span class="pdf-export-method-icon"><i class="lucide lucide-download" aria-hidden="true"></i></span>
+                  <span class="pdf-export-method-content">
+                    <span class="pdf-export-method-heading">
+                      <span class="pdf-export-method-title">Browser Print</span>
+                      <span class="pdf-export-method-badge">Recommended</span>
+                    </span>
+                    <span class="pdf-export-method-description">Fastest. Uses your browser print dialog.</span>
                   </span>
-                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
                 </label>
-                <label class="share-mode-card" id="pdf-export-card-raster" for="pdf-export-mode-raster">
+                <label class="pdf-export-method-card" id="pdf-export-card-raster" for="pdf-export-mode-raster">
                   <input type="radio" id="pdf-export-mode-raster" name="pdf-export-mode" value="raster" />
-                  <span class="share-card-icon"><i class="lucide lucide-file-text"></i></span>
-                  <span class="share-card-body">
-                    <span class="share-card-title">Legacy Raster PDF</span>
-                    <span class="share-card-desc">Intelligently plans page breaks to keep images, tables, equations, and diagrams together. Blocks move to the next page when there is not enough space. Recommended for short documents.</span>
+                  <span class="pdf-export-method-radio" aria-hidden="true"></span>
+                  <span class="pdf-export-method-icon"><i class="lucide lucide-file-text" aria-hidden="true"></i></span>
+                  <span class="pdf-export-method-content">
+                    <span class="pdf-export-method-heading">
+                      <span class="pdf-export-method-title">Legacy Raster PDF</span>
+                    </span>
+                    <span class="pdf-export-method-description">Best for keeping tables, diagrams, and equations together.</span>
                   </span>
-                  <span class="share-card-check"><i class="lucide lucide-check"></i></span>
                 </label>
               </div>
               <div class="export-appearance-setting">
