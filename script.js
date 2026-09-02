@@ -2039,6 +2039,34 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  async function clearLegacyWorkspaceStateForReset() {
+    const resetKeys = new Set(DOCUMENT_STORAGE_KEYS);
+    const storageAreas = [localStorage, sessionStorage];
+    storageAreas.forEach(function(storage) {
+      try {
+        for (let index = storage.length - 1; index >= 0; index -= 1) {
+          const key = storage.key(index);
+          if (!key) continue;
+          if (
+            resetKeys.has(key) ||
+            key.startsWith(DIRTY_DOCUMENT_JOURNAL_PREFIX) ||
+            key.startsWith(SECRET_DIRTY_DOCUMENT_JOURNAL_PREFIX)
+          ) {
+            storage.removeItem(key);
+          }
+        }
+      } catch (_) {}
+    });
+
+    if (!isNeutralinoRuntimeAvailable()) return;
+    for (const key of resetKeys) {
+      try {
+        if (Neutralino.storage.removeData) await Neutralino.storage.removeData(key);
+        else await Neutralino.storage.setData(key, '');
+      } catch (_) {}
+    }
+  }
+
   async function importWorkspaceBackup(input) {
     closeStorageSettings();
     showImportProgress(100, {
@@ -12544,10 +12572,13 @@ document.addEventListener("DOMContentLoaded", async function () {
       try {
         await Promise.all([
           workspacePersistenceChain.catch(function() {}),
-          secretWorkspaceSaveChain.catch(function() {})
+          secretWorkspaceSaveChain.catch(function() {}),
+          secretDirtyJournalChain.catch(function() {}),
+          organizationPersistenceChain.catch(function() {})
         ]);
         updateImportProgress(25, 100, 'Clearing workspace settings…');
         await replaceApplicationPreferences({});
+        await clearLegacyWorkspaceStateForReset();
         updateImportProgress(55, 100, 'Permanently deleting workspace files…');
         resetStarted = true;
         await workspaceStorage.resetAllData();
