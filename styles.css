@@ -8422,16 +8422,6 @@ a:focus {
   line-height: 1;
 }
 
-:is(#html-export-modal, #png-export-modal) .export-appearance-setting {
-  align-items: stretch;
-  flex-direction: column;
-  gap: 8px;
-}
-
-:is(#html-export-modal, #png-export-modal) .export-theme-toggle {
-  width: 100%;
-}
-
 @media (max-width: 359.98px) {
   .export-appearance-setting {
     align-items: stretch;

@@ -343,6 +343,16 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await expect(page.locator('#html-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#html-export-modal .export-theme-toggle')).toBeVisible();
   await expect.poll(() => page.locator('#html-export-modal .export-appearance-setting').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const htmlExportLayout = await page.locator('#html-export-modal').evaluate(modal => {
+    const box = modal.querySelector('.reset-modal-box');
+    const appearance = modal.querySelector('.export-appearance-setting');
+    const toggle = modal.querySelector('.export-theme-toggle');
+    return {
+      modalWidth: Math.round(box.getBoundingClientRect().width),
+      appearanceDirection: getComputedStyle(appearance).flexDirection,
+      toggleWidth: Math.round(toggle.getBoundingClientRect().width)
+    };
+  });
   await page.locator('#html-export-theme-card-dark').click();
   await expect(page.locator('#html-export-theme-dark')).toBeChecked();
   await page.locator('#html-export-cancel').click();
@@ -359,6 +369,7 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await expect(page.locator('#pdf-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#pdf-export-modal .export-theme-toggle')).toBeVisible();
   const pdfAppearanceLayout = await page.evaluate(() => {
+    const modalBox = document.querySelector('#pdf-export-modal .reset-modal-box');
     const methodCards = document.querySelector('#pdf-export-modal .pdf-export-method-cards');
     const vectorCard = document.querySelector('#pdf-export-card-vector');
     const rasterCard = document.querySelector('#pdf-export-card-raster');
@@ -382,7 +393,9 @@ test('export modals use compact segmented theme toggles and restore previous sel
     const successColor = getComputedStyle(successColorProbe).color;
     successColorProbe.remove();
     return {
+      modalWidth: Math.round(modalBox.getBoundingClientRect().width),
       gap: Math.round(appearanceRect.top - rasterRect.bottom),
+      appearanceDirection: appearanceStyle.flexDirection,
       appearanceBorderRadius: appearanceStyle.borderRadius,
       appearancePaddingTop: appearanceStyle.paddingTop,
       appearanceBackground: appearanceStyle.backgroundColor,
@@ -416,6 +429,9 @@ test('export modals use compact segmented theme toggles and restore previous sel
     };
   });
   expect(pdfAppearanceLayout.gap).toBeLessThanOrEqual(12);
+  expect(htmlExportLayout.modalWidth).toBe(pdfAppearanceLayout.modalWidth);
+  expect(htmlExportLayout.appearanceDirection).toBe(pdfAppearanceLayout.appearanceDirection);
+  expect(htmlExportLayout.toggleWidth).toBe(pdfAppearanceLayout.toggleWidth);
   expect(pdfAppearanceLayout.appearanceBorderRadius).toBe('10px');
   expect(pdfAppearanceLayout.appearancePaddingTop).toBe('10px');
   expect(pdfAppearanceLayout.appearanceBackground).not.toBe('rgba(0, 0, 0, 0)');
@@ -456,6 +472,19 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await expect(page.locator('#png-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#png-export-modal .export-theme-toggle')).toBeVisible();
   await expect.poll(() => page.locator('#png-export-modal .export-appearance-setting').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const pngExportLayout = await page.locator('#png-export-modal').evaluate(modal => {
+    const box = modal.querySelector('.reset-modal-box');
+    const appearance = modal.querySelector('.export-appearance-setting');
+    const toggle = modal.querySelector('.export-theme-toggle');
+    return {
+      modalWidth: Math.round(box.getBoundingClientRect().width),
+      appearanceDirection: getComputedStyle(appearance).flexDirection,
+      toggleWidth: Math.round(toggle.getBoundingClientRect().width)
+    };
+  });
+  expect(pngExportLayout.modalWidth).toBe(pdfAppearanceLayout.modalWidth);
+  expect(pngExportLayout.appearanceDirection).toBe(pdfAppearanceLayout.appearanceDirection);
+  expect(pngExportLayout.toggleWidth).toBe(pdfAppearanceLayout.toggleWidth);
   await page.locator('#png-export-theme-card-dark').click();
   await expect(page.locator('#png-export-theme-dark')).toBeChecked();
   await page.locator('#png-export-cancel').click();
