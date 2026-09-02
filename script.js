@@ -5726,7 +5726,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.querySelectorAll('.document-menu-context').forEach(function(menu) { menu.remove(); });
   }
 
-  function openDocumentMenu(button, menu, position, returnFocus) {
+  function openDocumentMenu(button, menu, position, returnFocus, options) {
     closeTabMenus();
     closeDocumentSidebarMenus();
     if (!menu) return;
@@ -5748,7 +5748,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       positionTabMenu(button, menu);
     }
     const firstAction = menu.querySelector('[role="menuitem"]');
-    if (firstAction) firstAction.focus();
+    if (firstAction && (!options || options.focusFirstAction !== false)) firstAction.focus();
   }
 
   function createDocumentMenuButton(label, actions) {
@@ -6229,6 +6229,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   function openDocumentSurfaceContextMenu(surface, event) {
     const context = getDocumentSurfaceContext(surface);
     if (!context) return;
+    const preserveEditorSelection = Boolean(
+      context.editor &&
+      context.selectedText &&
+      event &&
+      event.button === 2
+    );
     if (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -6249,7 +6255,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       virtualButton,
       virtualButton._documentMenu,
       getContextMenuPosition(event, surface),
-      surface
+      surface,
+      { focusFirstAction: !preserveEditorSelection }
     );
   }
 
@@ -12802,6 +12809,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     [markdownEditor, markdownPreview, documentSplitEditor, documentSplitPreview].forEach(function(surface) {
       if (!surface) return;
+      if (surface === markdownEditor || surface === documentSplitEditor) {
+        surface.addEventListener('mousedown', function(event) {
+          if (event.button === 2 && surface.selectionStart !== surface.selectionEnd) {
+            event.preventDefault();
+          }
+        });
+      }
       surface.addEventListener('contextmenu', function(event) {
         openDocumentSurfaceContextMenu(surface, event);
       });

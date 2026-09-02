@@ -60,6 +60,26 @@ test('formatting toolbar applies bold to the selected text', async ({ page }) =>
   await expect(page.locator('#markdown-preview strong')).toHaveText('bold me');
 });
 
+test('right-clicking selected text keeps the editor selection active', async ({ page }) => {
+  const editor = page.locator('#markdown-editor');
+  const selectedText = 'keep this selected';
+  await setEditorContent(page, selectedText);
+  await page.getByRole('button', { name: 'Edit Markdown' }).click();
+  await editor.evaluate((element, end) => {
+    element.focus();
+    element.setSelectionRange(0, end);
+  }, selectedText.length);
+
+  await editor.click({ button: 'right', position: { x: 40, y: 18 } });
+
+  await expect(page.locator('.document-menu-context')).toBeVisible();
+  await expect.poll(() => editor.evaluate(element => ({
+    start: element.selectionStart,
+    end: element.selectionEnd,
+    active: document.activeElement === element
+  }))).toEqual({ start: 0, end: selectedText.length, active: true });
+});
+
 test('tabs can be created, renamed, duplicated, and deleted', async ({ page }) => {
   await page.locator('#tab-new-btn').click();
   await expect(page.locator('#tab-list [role="tab"]')).toHaveCount(2);
