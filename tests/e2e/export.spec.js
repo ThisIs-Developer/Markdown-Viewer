@@ -373,6 +373,7 @@ test('export modals use compact segmented theme toggles and restore previous sel
     const recommendedBadge = vectorCard.querySelector('.pdf-export-method-badge');
     const vectorDescription = vectorCard.querySelector('.pdf-export-method-description');
     const rasterDescription = rasterCard.querySelector('.pdf-export-method-description');
+    const methodRadio = vectorCard.querySelector('.pdf-export-method-radio');
     const successColorProbe = document.createElement('span');
     successColorProbe.style.color = 'var(--success-color)';
     document.body.appendChild(successColorProbe);
@@ -385,6 +386,11 @@ test('export modals use compact segmented theme toggles and restore previous sel
       rasterCardWidth: Math.round(rasterRect.width),
       vectorCardHeight: Math.round(vectorCard.getBoundingClientRect().height),
       rasterCardHeight: Math.round(rasterRect.height),
+      methodRadioWidth: Math.round(methodRadio.getBoundingClientRect().width),
+      selectedCardShadow: getComputedStyle(vectorCard).boxShadow,
+      methodIconCount: methodCards.querySelectorAll('.pdf-export-method-icon').length,
+      vectorTitle: vectorTitle.textContent.trim(),
+      rasterTitle: rasterTitle.textContent.trim(),
       vectorTitleFont: getComputedStyle(vectorTitle).fontSize,
       rasterTitleFont: getComputedStyle(rasterTitle).fontSize,
       vectorDescriptionFont: getComputedStyle(vectorDescription).fontSize,
@@ -408,10 +414,15 @@ test('export modals use compact segmented theme toggles and restore previous sel
   expect(pdfAppearanceLayout.methodColumns).toBe(2);
   expect(pdfAppearanceLayout.vectorCardWidth).toBe(pdfAppearanceLayout.rasterCardWidth);
   expect(pdfAppearanceLayout.vectorCardHeight).toBe(pdfAppearanceLayout.rasterCardHeight);
+  expect(pdfAppearanceLayout.methodRadioWidth).toBe(16);
+  expect(pdfAppearanceLayout.selectedCardShadow).toBe('none');
+  expect(pdfAppearanceLayout.methodIconCount).toBe(0);
+  expect(pdfAppearanceLayout.vectorTitle).toBe('Browser Print');
+  expect(pdfAppearanceLayout.rasterTitle).toBe('Precision PDF');
   expect(pdfAppearanceLayout.vectorTitleFont).toBe(pdfAppearanceLayout.rasterTitleFont);
   expect(pdfAppearanceLayout.vectorDescriptionFont).toBe(pdfAppearanceLayout.rasterDescriptionFont);
-  expect(pdfAppearanceLayout.vectorDescription).toBe('Fastest. Uses your browser print dialog.');
-  expect(pdfAppearanceLayout.rasterDescription).toBe('Best for keeping tables, diagrams, and equations together.');
+  expect(pdfAppearanceLayout.vectorDescription).toBe('Fast export using your browser print dialog.');
+  expect(pdfAppearanceLayout.rasterDescription).toBe('Keeps tables, diagrams, and equations together.');
   expect(pdfAppearanceLayout.badgeText).toBe('Recommended');
   expect(pdfAppearanceLayout.badgeFitsCard).toBe(true);
   expect(pdfAppearanceLayout.toggleWidth).toBe(132);

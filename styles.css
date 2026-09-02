@@ -8205,10 +8205,10 @@ a:focus {
 .pdf-export-method-card {
   position: relative;
   display: grid;
-  grid-template-columns: 20px 24px minmax(0, 1fr);
+  grid-template-columns: 16px minmax(0, 1fr);
   align-items: start;
   min-width: 0;
-  min-height: 116px;
+  min-height: 96px;
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--border-color);
@@ -8225,7 +8225,7 @@ a:focus {
   background: color-mix(in srgb, var(--accent-color) 3%, var(--bg-color));
 }
 
-.pdf-export-method-card:focus-within {
+.pdf-export-method-card:has(input:focus-visible) {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
 }
@@ -8233,7 +8233,7 @@ a:focus {
 .pdf-export-method-card.is-selected {
   border-color: var(--accent-color);
   background: color-mix(in srgb, var(--accent-color) 7%, var(--bg-color));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 12%, transparent);
+  box-shadow: none;
 }
 
 .pdf-export-method-card > input[type="radio"] {
@@ -8246,8 +8246,8 @@ a:focus {
 
 .pdf-export-method-radio {
   position: relative;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   margin-top: 1px;
   border: 1.5px solid var(--border-color);
   border-radius: 50%;
@@ -8257,7 +8257,7 @@ a:focus {
 
 .pdf-export-method-radio::after {
   position: absolute;
-  inset: 6px;
+  inset: 5px;
   border-radius: 50%;
   background: #ffffff;
   content: "";
@@ -8274,20 +8274,6 @@ a:focus {
 .pdf-export-method-card.is-selected .pdf-export-method-radio::after {
   opacity: 1;
   transform: scale(1);
-}
-
-.pdf-export-method-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: var(--text-secondary);
-  font-size: var(--ui-icon-size-lg);
-}
-
-.pdf-export-method-card.is-selected .pdf-export-method-icon {
-  color: var(--accent-color);
 }
 
 .pdf-export-method-content {
@@ -8325,9 +8311,9 @@ a:focus {
 }
 
 .pdf-export-method-description {
-  min-height: calc(3 * 1.45em);
+  min-height: calc(2 * 1.45em);
   color: var(--text-secondary);
-  font-size: var(--ui-font-md);
+  font-size: var(--ui-font-sm);
   font-weight: 400;
   line-height: 1.45;
 }
