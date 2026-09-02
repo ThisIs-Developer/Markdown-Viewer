@@ -4949,6 +4949,54 @@ a:focus {
   --color-border-muted: #21262d !important;
 }
 
+/* Keep exported SVG diagrams readable in the chosen export theme, independent
+   of the theme currently used by the application shell. */
+.pdf-export.theme-light .plantuml-diagram > svg,
+.pdf-export.theme-light .graphviz-diagram > svg,
+.pdf-export.theme-light .d2-diagram > svg,
+.pdf-export.theme-light .kroki-diagram > svg,
+.pdf-export.theme-light .abc-notation > svg,
+.pdf-export.theme-light .diagram-surface > img {
+  filter: none !important;
+}
+
+.pdf-export.theme-dark .plantuml-diagram > svg,
+.pdf-export.theme-dark .graphviz-diagram > svg,
+.pdf-export.theme-dark .d2-diagram > svg:not([data-diagram-native-dark="true"]),
+.pdf-export.theme-dark .kroki-diagram > svg {
+  filter: invert(0.88) hue-rotate(180deg) !important;
+}
+
+.pdf-export.theme-dark .d2-diagram > svg[data-diagram-native-dark="true"],
+.pdf-export.theme-dark .markmap-diagram > svg {
+  filter: none !important;
+}
+
+.pdf-export .abc-notation svg {
+  color: var(--color-fg-default) !important;
+  background: transparent !important;
+}
+
+.pdf-export .abc-notation svg path,
+.pdf-export .abc-notation svg text {
+  fill: currentColor !important;
+}
+
+.pdf-export .abc-notation svg text {
+  stroke: none !important;
+}
+
+.pdf-export .abc-notation svg .abcjs-staff,
+.pdf-export .abc-notation svg .abcjs-staff-extra,
+.pdf-export .abc-notation svg .abcjs-bar,
+.pdf-export .abc-notation svg .abcjs-ledger,
+.pdf-export .abc-notation svg .abcjs-stem,
+.pdf-export .abc-notation svg .abcjs-beam,
+.pdf-export .abc-notation svg .abcjs-slur,
+.pdf-export .abc-notation svg .abcjs-tie {
+  stroke: currentColor !important;
+}
+
 /* Hide toolbar and status indicators in export captures */
 .pdf-export .diagram-status,
 .pdf-export .diagram-toolbar,
@@ -8146,35 +8194,219 @@ a:focus {
   opacity: 1;
 }
 
-/* Compact Modern Export Theme Selector */
-.export-theme-toggle {
+/* Equal PDF export method cards */
+.pdf-export-method-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px;
-  padding: 3px;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.pdf-export-method-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+  min-height: 96px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--button-bg);
-  box-shadow: inset 0 1px 1px rgba(31, 35, 40, 0.03);
+  border-radius: 10px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  user-select: none;
+}
+
+.pdf-export-method-card:hover {
+  border-color: color-mix(in srgb, var(--accent-color) 48%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-color) 3%, var(--bg-color));
+}
+
+.pdf-export-method-card:has(input:focus-visible) {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.pdf-export-method-card.is-selected {
+  border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 7%, var(--bg-color));
+  box-shadow: none;
+}
+
+.pdf-export-method-card > input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pdf-export-method-radio {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--bg-color);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.pdf-export-method-radio::after {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #ffffff;
+  content: "";
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.pdf-export-method-card.is-selected .pdf-export-method-radio {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+}
+
+.pdf-export-method-card.is-selected .pdf-export-method-radio::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pdf-export-method-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdf-export-method-heading {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.pdf-export-method-title {
+  flex: 0 0 auto;
+  color: var(--text-color);
+  font-size: var(--ui-font-lg);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.pdf-export-method-badge {
+  flex: 0 0 auto;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+  color: var(--accent-color);
+  font-size: var(--ui-icon-size-xs);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pdf-export-method-description {
+  min-height: calc(2 * 1.45em);
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+@media (max-width: 479.98px) {
+  .pdf-export-method-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-export-method-card {
+    min-height: 0;
+  }
+
+  .pdf-export-method-description {
+    min-height: 0;
+  }
+}
+
+/* Compact export theme selector; extends the shared segmented-control UI. */
+.export-appearance-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 6%, transparent);
+}
+
+.export-appearance-label,
+.export-appearance-memory {
+  display: inline-flex;
+  align-items: center;
+}
+
+.export-appearance-label {
+  gap: 8px;
+  min-width: 0;
+}
+
+.export-appearance-title {
+  color: var(--text-color);
+  font-size: var(--ui-font-lg);
+  font-weight: 650;
+}
+
+.export-appearance-memory {
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--success-color) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success-color) 10%, transparent);
+  color: var(--success-color);
+  font-size: var(--ui-font-sm);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.export-appearance-memory i {
+  font-size: var(--ui-icon-size-sm);
+  line-height: 1;
+}
+
+.export-theme-toggle {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 132px;
+  flex: 0 0 auto;
+  border-color: var(--border-color);
+  border-radius: 9px;
+  background: var(--segmented-bg);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text-color) 7%, transparent);
 }
 
 .export-theme-option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
   min-height: 32px;
-  padding: 6px 12px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.2;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-  user-select: none;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: var(--ui-font-md);
+}
+
+.export-theme-option.is-active {
+  border-color: color-mix(in srgb, var(--text-color) 8%, transparent);
+  background: var(--segmented-surface);
+  box-shadow: var(--segmented-shadow);
+}
+
+.export-theme-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .export-theme-option input[type="radio"] {
@@ -8185,23 +8417,21 @@ a:focus {
   pointer-events: none;
 }
 
-.export-theme-option:hover:not(.is-active) {
-  background: var(--button-hover);
-  color: var(--text-color);
-}
-
-.export-theme-option.is-active,
-.export-theme-option.is-selected {
-  background: var(--bg-color);
-  color: var(--text-color);
-  font-weight: 600;
-  border-color: var(--border-color);
-  box-shadow: 0 1px 2px rgba(31, 35, 40, 0.12);
-}
-
 .export-theme-option i {
-  font-size: 14px;
+  font-size: var(--ui-icon-size-md);
   line-height: 1;
+}
+
+@media (max-width: 359.98px) {
+  .export-appearance-setting {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .export-theme-toggle {
+    width: 100%;
+  }
 }
 
 #share-modal .share-mode-cards {
@@ -12985,6 +13215,23 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     max-width: 100% !important;
   }
 
+  html[data-browser-print-export] .app-container {
+    display: none !important;
+  }
+
+  html[data-browser-print-export] .browser-print-export-snapshot {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 15mm 20mm !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
   html:not([data-browser-print-export="dark"]),
   html:not([data-browser-print-export="dark"]) body,
   html:not([data-browser-print-export="dark"]) .preview-pane {
@@ -13278,69 +13525,69 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     color: var(--color-fg-default) !important;
   }
 
-  .frontmatter-table tr:nth-child(odd) th,
-  .frontmatter-table tr:nth-child(odd) td,
-  .frontmatter-table tr:nth-child(even) th,
-  .frontmatter-table tr:nth-child(even) td {
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(odd) th,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(odd) td,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(even) th,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(even) td {
     background-color: #ffffff !important;
   }
 
-  .frontmatter-table tr:nth-child(2n) th,
-  .frontmatter-table tr:nth-child(2n) td {
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(2n) th,
+  html:not([data-browser-print-export="dark"]) .frontmatter-table tr:nth-child(2n) td {
     background-color: #f6f8fa !important;
   }
 
-  .fm-complex,
-  .fm-tag {
+  html:not([data-browser-print-export="dark"]) .fm-complex,
+  html:not([data-browser-print-export="dark"]) .fm-tag {
     background: #f6f8fa !important;
     border-color: var(--color-border-default) !important;
     color: var(--color-fg-default) !important;
   }
 
-  .markdown-body table tr,
-  [data-theme="dark"] .markdown-body table tr {
+  html:not([data-browser-print-export="dark"]) .markdown-body table tr,
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table tr {
     background-color: #ffffff !important;
     color: var(--color-fg-default) !important;
   }
 
-  .markdown-body table tr:nth-child(2n),
-  [data-theme="dark"] .markdown-body table tr:nth-child(2n) {
+  html:not([data-browser-print-export="dark"]) .markdown-body table tr:nth-child(2n),
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table tr:nth-child(2n) {
     background-color: #f6f8fa !important;
   }
 
-  .markdown-body table th,
-  .markdown-body table td,
-  [data-theme="dark"] .markdown-body table th,
-  [data-theme="dark"] .markdown-body table td {
+  html:not([data-browser-print-export="dark"]) .markdown-body table th,
+  html:not([data-browser-print-export="dark"]) .markdown-body table td,
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table th,
+  html:not([data-browser-print-export="dark"]) [data-theme="dark"] .markdown-body table td {
     border-color: var(--color-border-default) !important;
     color: var(--color-fg-default) !important;
   }
 
-  .markdown-body .markdown-alert-note {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-note {
     color: #0969da !important;
     border-left-color: #0969da !important;
     background-color: #ddf4ff !important;
   }
 
-  .markdown-body .markdown-alert-tip {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-tip {
     color: #1a7f37 !important;
     border-left-color: #1a7f37 !important;
     background-color: #dafbe1 !important;
   }
 
-  .markdown-body .markdown-alert-important {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-important {
     color: #8250df !important;
     border-left-color: #8250df !important;
     background-color: #fbefff !important;
   }
 
-  .markdown-body .markdown-alert-warning {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-warning {
     color: #9a6700 !important;
     border-left-color: #9a6700 !important;
     background-color: #fff8c5 !important;
   }
 
-  .markdown-body .markdown-alert-caution {
+  html:not([data-browser-print-export="dark"]) .markdown-body .markdown-alert-caution {
     color: #cf222e !important;
     border-left-color: #cf222e !important;
     background-color: #ffebe9 !important;
@@ -13350,89 +13597,89 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     color: var(--color-fg-default) !important;
   }
 
-  .mermaid-container,
-  .abc-container,
-  .geojson-container,
-  .topojson-container,
-  .stl-container,
-  .plantuml-container,
-  .d2-container,
-  .graphviz-container,
-  .diagram-viewer,
-  .diagram-surface,
-  .diagram-status {
+  html:not([data-browser-print-export="dark"]) .mermaid-container,
+  html:not([data-browser-print-export="dark"]) .abc-container,
+  html:not([data-browser-print-export="dark"]) .geojson-container,
+  html:not([data-browser-print-export="dark"]) .topojson-container,
+  html:not([data-browser-print-export="dark"]) .stl-container,
+  html:not([data-browser-print-export="dark"]) .plantuml-container,
+  html:not([data-browser-print-export="dark"]) .d2-container,
+  html:not([data-browser-print-export="dark"]) .graphviz-container,
+  html:not([data-browser-print-export="dark"]) .diagram-viewer,
+  html:not([data-browser-print-export="dark"]) .diagram-surface,
+  html:not([data-browser-print-export="dark"]) .diagram-status {
     background: #ffffff !important;
     border-color: var(--color-border-default) !important;
     color: var(--color-fg-default) !important;
   }
 
-  .diagram-status,
-  .diagram-viewer.is-error>.diagram-status {
+  html:not([data-browser-print-export="dark"]) .diagram-status,
+  html:not([data-browser-print-export="dark"]) .diagram-viewer.is-error>.diagram-status {
     background: #f6f8fa !important;
   }
 
-  .markdown-body svg,
-  .markdown-body img,
-  .plantuml-diagram img,
-  .plantuml-img,
-  .d2-diagram img,
-  .d2-img,
-  .graphviz-diagram img,
-  .graphviz-img,
-  .plantuml-diagram>svg,
-  .graphviz-diagram>svg,
-  .d2-diagram>svg,
-  .diagram-surface svg {
+  html:not([data-browser-print-export="dark"]) .markdown-body svg,
+  html:not([data-browser-print-export="dark"]) .markdown-body img,
+  html:not([data-browser-print-export="dark"]) .plantuml-diagram img,
+  html:not([data-browser-print-export="dark"]) .plantuml-img,
+  html:not([data-browser-print-export="dark"]) .d2-diagram img,
+  html:not([data-browser-print-export="dark"]) .d2-img,
+  html:not([data-browser-print-export="dark"]) .graphviz-diagram img,
+  html:not([data-browser-print-export="dark"]) .graphviz-img,
+  html:not([data-browser-print-export="dark"]) .plantuml-diagram>svg,
+  html:not([data-browser-print-export="dark"]) .graphviz-diagram>svg,
+  html:not([data-browser-print-export="dark"]) .d2-diagram>svg,
+  html:not([data-browser-print-export="dark"]) .diagram-surface svg {
     filter: none !important;
     background: transparent !important;
   }
 
-  .markdown-body .mermaid svg {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid svg {
     background: #ffffff !important;
     color: #24292f !important;
   }
 
-  .markdown-body .mermaid text,
-  .markdown-body .mermaid tspan,
-  .markdown-body .mermaid .nodeLabel,
-  .markdown-body .mermaid .edgeLabel,
-  .markdown-body .mermaid .label,
-  .markdown-body .mermaid span {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid text,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid tspan,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .nodeLabel,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .edgeLabel,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .label,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid span {
     color: #24292f !important;
     fill: #24292f !important;
   }
 
-  .markdown-body .mermaid .node rect,
-  .markdown-body .mermaid .node circle,
-  .markdown-body .mermaid .node ellipse,
-  .markdown-body .mermaid .node polygon,
-  .markdown-body .mermaid .actor,
-  .markdown-body .mermaid .note,
-  .markdown-body .mermaid .labelBox {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node rect,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node circle,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node ellipse,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .node polygon,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .actor,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .note,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .labelBox {
     fill: #f6f8fa !important;
     stroke: #8c959f !important;
   }
 
-  .markdown-body .mermaid .edgeLabel,
-  .markdown-body .mermaid .cluster rect {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .edgeLabel,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .cluster rect {
     background-color: #ffffff !important;
     fill: #ffffff !important;
     color: #24292f !important;
   }
 
-  .markdown-body .mermaid .flowchart-link,
-  .markdown-body .mermaid .edgePath .path,
-  .markdown-body .mermaid .messageLine0,
-  .markdown-body .mermaid .messageLine1,
-  .markdown-body .mermaid .loopLine,
-  .markdown-body .mermaid .activation0,
-  .markdown-body .mermaid .activation1,
-  .markdown-body .mermaid .activation2 {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .flowchart-link,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .edgePath .path,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .messageLine0,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .messageLine1,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .loopLine,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .activation0,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .activation1,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .activation2 {
     stroke: #57606a !important;
   }
 
-  .markdown-body .mermaid marker path,
-  .markdown-body .mermaid .arrowheadPath {
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid marker path,
+  html:not([data-browser-print-export="dark"]) .markdown-body .mermaid .arrowheadPath {
     fill: #57606a !important;
     stroke: #57606a !important;
   }
@@ -13444,14 +13691,14 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     color: var(--color-fg-default) !important;
   }
 
-  .stl-viewer canvas,
-  .geojson-map,
-  .topojson-map {
+  html:not([data-browser-print-export="dark"]) .stl-viewer canvas,
+  html:not([data-browser-print-export="dark"]) .geojson-map,
+  html:not([data-browser-print-export="dark"]) .topojson-map {
     background: #ffffff !important;
   }
 
-  body,
-  html {
+  html:not([data-browser-print-export="dark"]),
+  html:not([data-browser-print-export="dark"]) body {
     height: auto !important;
     overflow: visible !important;
     background: white !important;

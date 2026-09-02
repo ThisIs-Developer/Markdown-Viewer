@@ -174,6 +174,11 @@ test('reset workspace permanently deletes documents and blocks repeated clicks',
   await openApp(page);
   await setEditorContent(page, '# Delete On Reset\n\nThis document must be removed.');
   await expect.poll(async () => JSON.stringify(await storedDocuments(page))).toContain('Delete On Reset');
+  await page.locator('#sidebar-new-folder').click();
+  await page.locator('#document-name-modal-input').fill('Delete Folder On Reset');
+  await page.locator('#document-name-modal-confirm').click();
+  await expect(page.locator('.document-tree-row[data-tree-type="folder"]')).toContainText('Delete Folder On Reset');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('markdownViewerDocumentOrganization'))).toContain('Delete Folder On Reset');
   await page.evaluate(async () => {
     localStorage.setItem('find-replace-docked', 'true');
     const storage = new window.MarkdownWorkspaceStorage();
@@ -210,6 +215,11 @@ test('reset workspace permanently deletes documents and blocks repeated clicks',
   await expect.poll(async () => JSON.stringify(await storedDocuments(page)), {
     timeout: 15_000
   }).not.toContain('Delete On Reset');
+  await expect(page.locator('.document-tree-row[data-tree-type="folder"]')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => {
+    const organization = JSON.parse(localStorage.getItem('markdownViewerDocumentOrganization') || '{}');
+    return Array.isArray(organization.folders) ? organization.folders.length : 0;
+  })).toBe(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem('find-replace-docked'))).toBeNull();
   await expect.poll(() => page.evaluate(async () => {
     const storage = new window.MarkdownWorkspaceStorage();

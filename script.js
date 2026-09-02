@@ -2039,6 +2039,34 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  async function clearLegacyWorkspaceStateForReset() {
+    const resetKeys = new Set(DOCUMENT_STORAGE_KEYS);
+    const storageAreas = [localStorage, sessionStorage];
+    storageAreas.forEach(function(storage) {
+      try {
+        for (let index = storage.length - 1; index >= 0; index -= 1) {
+          const key = storage.key(index);
+          if (!key) continue;
+          if (
+            resetKeys.has(key) ||
+            key.startsWith(DIRTY_DOCUMENT_JOURNAL_PREFIX) ||
+            key.startsWith(SECRET_DIRTY_DOCUMENT_JOURNAL_PREFIX)
+          ) {
+            storage.removeItem(key);
+          }
+        }
+      } catch (_) {}
+    });
+
+    if (!isNeutralinoRuntimeAvailable()) return;
+    for (const key of resetKeys) {
+      try {
+        if (Neutralino.storage.removeData) await Neutralino.storage.removeData(key);
+        else await Neutralino.storage.setData(key, '');
+      } catch (_) {}
+    }
+  }
+
   async function importWorkspaceBackup(input) {
     closeStorageSettings();
     showImportProgress(100, {
@@ -2189,9 +2217,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   let _lastMermaidTheme = null;
   let _mermaidThemeReinitTimeout = null;
   let _themeTransitionTimeout = null;
-  const initMermaid = (forceReinit) => {
+  const initMermaid = (forceReinit, themeOverride) => {
     if (typeof mermaid === 'undefined') return; // PERF-002: Not loaded yet
-    const currentTheme = document.documentElement.getAttribute("data-theme");
+    const currentTheme = themeOverride || document.documentElement.getAttribute("data-theme");
     const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
     
     // Skip re-initialization if theme hasn't changed (PERF-005)
@@ -3683,7 +3711,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return { markmap, root: transformed.root, options };
   }
 
-  async function renderMarkmapIntoElement(node, source, compact) {
+  async function renderMarkmapIntoElement(node, source, compact, exportCapture) {
     const { markmap, root, options } = await buildMarkmap(source);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const { width, height } = getMarkmapViewportSize(node, root, compact);
@@ -3704,16 +3732,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       svg.style.maxHeight = 'min(70vh, 900px)';
     }
     node.replaceChildren(svg);
+    const shouldFreezeLayout = compact || exportCapture;
     const markmapOptions = Object.assign({
       zoom: false,
       pan: false,
       autoFit: false
-    }, options, compact ? { duration: 0 } : {});
+    }, options, shouldFreezeLayout ? { duration: 0 } : {});
     // Avoid Markmap.create() which fires setData() in a detached promise chain.
     // Instead, construct manually and await setData() so rendering is guaranteed
     // to complete before we measure bounds or serialize the SVG.
     const instance = new markmap.Markmap(svg, markmapOptions);
-    if (compact) {
+    if (shouldFreezeLayout) {
       // Override D3 transitions to apply attributes synchronously
       instance.transition = (sel) => sel;
     }
@@ -3729,15 +3758,27 @@ document.addEventListener("DOMContentLoaded", async function () {
       const rect = instance.state.rect;
       const treeWidth = rect.x2 - rect.x1;
       const treeHeight = rect.y2 - rect.y1;
-      if (compact) {
+      if (shouldFreezeLayout) {
         const pad = 16;
-        svg.setAttribute('viewBox', `${rect.x1 - pad} ${rect.y1 - pad} ${treeWidth + pad * 2} ${treeHeight + pad * 2}`);
-        svg.setAttribute('width', String(treeWidth + pad * 2));
-        svg.setAttribute('height', String(treeHeight + pad * 2));
+        const fittedWidth = Math.max(1, treeWidth + pad * 2);
+        const fittedHeight = Math.max(1, treeHeight + pad * 2);
+        svg.setAttribute('viewBox', `${rect.x1 - pad} ${rect.y1 - pad} ${fittedWidth} ${fittedHeight}`);
+        svg.setAttribute('width', String(fittedWidth));
+        svg.setAttribute('height', String(fittedHeight));
         svg.style.width = '100%';
-        svg.style.height = '100%';
-        svg.style.minHeight = '0';
-        svg.style.maxHeight = '100%';
+        if (compact) {
+          svg.style.height = '100%';
+          svg.style.minHeight = '0';
+          svg.style.maxHeight = '100%';
+        } else {
+          const fittedDisplayHeight = Math.max(220, Math.min(620, Math.round(width * fittedHeight / fittedWidth)));
+          node.style.setProperty('--markmap-height', `${fittedDisplayHeight}px`);
+          svg.style.setProperty('--markmap-height', `${fittedDisplayHeight}px`);
+          svg.style.height = `${fittedDisplayHeight}px`;
+          svg.style.minHeight = `${fittedDisplayHeight}px`;
+          svg.style.maxHeight = 'none';
+          svg.dataset.exportFitted = 'true';
+        }
       } else {
         const computedHeight = Math.max(200, Math.ceil(treeHeight) + 40);
         svg.setAttribute('height', String(computedHeight));
@@ -3747,13 +3788,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         svg.style.minHeight = `${computedHeight}px`;
       }
     }
-    fitMarkmap();
-    setTimeout(fitMarkmap, 120);
-    setTimeout(fitMarkmap, 500);
-    svg.querySelectorAll('image, img').forEach(image => {
-      image.addEventListener('load', fitMarkmap, { once: true });
-      image.addEventListener('error', fitMarkmap, { once: true });
-    });
+    if (!exportCapture) {
+      fitMarkmap();
+      setTimeout(fitMarkmap, 120);
+      setTimeout(fitMarkmap, 500);
+      svg.querySelectorAll('image, img').forEach(image => {
+        image.addEventListener('load', fitMarkmap, { once: true });
+        image.addEventListener('error', fitMarkmap, { once: true });
+      });
+    }
     normalizeDiagramSvg(node, 'markmap', source);
     return svg;
   }
@@ -3967,7 +4010,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     setDiagramRenderState(container, 'loading', `Rendering ${REMOTE_DIAGRAM_ENGINES[engine].label}…`);
     try {
       if (engine === 'markmap') {
-        await renderMarkmapIntoElement(node, source, false);
+        await renderMarkmapIntoElement(node, source, false, Boolean(context && context.exportCapture));
         if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
         setDiagramRenderState(container, 'ready');
         mountDiagramViewer(container, engine);
@@ -4001,25 +4044,26 @@ document.addEventListener("DOMContentLoaded", async function () {
       ['.kroki-diagram', null]
     ];
     const renderAdapterTargets = function() {
-      if (!isPreviewRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return Promise.resolve([]);
+      const renderPromises = [];
       adapterTargets.forEach(([selector, fixedEngine]) => {
         queryPreviewRoots(roots, selector).forEach(node => {
           const engine = fixedEngine || node.closest('[data-diagram-engine]')?.dataset.diagramEngine;
           if (engine && REMOTE_DIAGRAM_ENGINES[engine]) {
-            renderRemoteDiagramNode(node, engine, context);
+            renderPromises.push(renderRemoteDiagramNode(node, engine, context));
           }
         });
       });
+      return Promise.all(renderPromises);
     };
 
     if (typeof pako === 'undefined') {
-      loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
+      return loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
         console.warn('Failed to load diagram encoder; POST fallbacks remain available', error);
-        renderAdapterTargets();
+        return renderAdapterTargets();
       });
-    } else {
-      renderAdapterTargets();
     }
+    return renderAdapterTargets();
   }
 
   function typesetMathJaxTargets(mathTargets, context) {
@@ -12528,10 +12572,13 @@ document.addEventListener("DOMContentLoaded", async function () {
       try {
         await Promise.all([
           workspacePersistenceChain.catch(function() {}),
-          secretWorkspaceSaveChain.catch(function() {})
+          secretWorkspaceSaveChain.catch(function() {}),
+          secretDirtyJournalChain.catch(function() {}),
+          organizationPersistenceChain.catch(function() {})
         ]);
         updateImportProgress(25, 100, 'Clearing workspace settings…');
         await replaceApplicationPreferences({});
+        await clearLegacyWorkspaceStateForReset();
         updateImportProgress(55, 100, 'Permanently deleting workspace files…');
         resetStarted = true;
         await workspaceStorage.resetAllData();
@@ -13327,7 +13374,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     const renderLoadedNodes = function(forceInit) {
       if (!isPreviewRenderContextCurrent(context)) return Promise.resolve([]);
-      initMermaid(forceInit);
+      initMermaid(forceInit, context && context.theme);
       return renderMermaidNodeList(nodes, context, toolbarRoot)
         .catch(function(error) {
           if (!isPreviewRenderContextCurrent(context)) return [];
@@ -13436,22 +13483,21 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function renderAbcNodes(roots, context) {
     const abcNodes = queryPreviewRoots(roots, '.abc-notation');
-    if (abcNodes.length === 0) return;
+    if (abcNodes.length === 0) return Promise.resolve([]);
 
     const renderNodes = function() {
-      if (!isPreviewRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return [];
       abcNodes.forEach(function(node) {
-        setTimeout(function() {
-          renderAbcNotationNode(node, context);
-        }, 0);
+        renderAbcNotationNode(node, context);
       });
+      return abcNodes;
     };
     const loadAndRender = function() {
-      loadDiagramLibrary(CDN.abcjs).then(function() {
-        if (!isPreviewRenderContextCurrent(context)) return;
-        renderNodes();
+      return loadDiagramLibrary(CDN.abcjs).then(function() {
+        if (!isPreviewRenderContextCurrent(context)) return [];
+        return renderNodes();
       }).catch(function(error) {
-        if (!isPreviewRenderContextCurrent(context)) return;
+        if (!isPreviewRenderContextCurrent(context)) return [];
         console.warn('Failed to load abcjs:', error);
         abcNodes.forEach(function(node) {
           const container = node.closest('.abc-container');
@@ -13464,14 +13510,14 @@ document.addEventListener("DOMContentLoaded", async function () {
             );
           }
         });
+        return [];
       });
     };
 
     if (typeof ABCJS === 'undefined') {
-      loadAndRender();
-    } else {
-      renderNodes();
+      return loadAndRender();
     }
+    return Promise.resolve(renderNodes());
   }
 
   function disposeStlView(viewId) {
@@ -13493,7 +13539,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (view.controls) {
       view.controls.dispose();
     }
-    if (view.scene) {
+    if (view.scene && typeof view.scene.traverse === 'function') {
       view.scene.traverse(node => {
         if (node.geometry) {
           node.geometry.dispose();
@@ -13598,7 +13644,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       node._leafletMap = map;
       observeMapNodeSize(node, map);
       
-      const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
+      const currentTheme = (context && context.theme) || document.documentElement.getAttribute("data-theme") || 'light';
       let tileUrl;
       let tileAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
       
@@ -13612,7 +13658,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       
       L.tileLayer(tileUrl, {
         attribution: tileAttribution,
-        maxZoom: 19
+        maxZoom: 19,
+        crossOrigin: context && context.exportCapture ? true : false
       }).addTo(map);
       
       const geojsonLayer = L.geoJSON(geojsonData, {
@@ -13656,12 +13703,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renderMapNodes(roots, context) {
     const geojsonNodes = queryPreviewRoots(roots, '.geojson-map');
     const topojsonNodes = queryPreviewRoots(roots, '.topojson-map');
-    if (geojsonNodes.length === 0 && topojsonNodes.length === 0) return;
+    if (geojsonNodes.length === 0 && topojsonNodes.length === 0) return Promise.resolve([]);
 
     const renderAll = function() {
-      if (!isPreviewRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return [];
       geojsonNodes.forEach(function(node) { renderMapNode(node, false, context); });
       topojsonNodes.forEach(function(node) { renderMapNode(node, true, context); });
+      return geojsonNodes.concat(topojsonNodes);
     };
     const loadPromises = [];
     if (typeof L === 'undefined') {
@@ -13677,18 +13725,18 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     if (loadPromises.length === 0) {
-      renderAll();
-      return;
+      return Promise.resolve(renderAll());
     }
-    Promise.all(loadPromises).then(function() {
-      renderAll();
+    return Promise.all(loadPromises).then(function() {
+      return renderAll();
     }).catch(function(error) {
-      if (!isPreviewRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return [];
       console.warn('Failed to load map libraries:', error);
       geojsonNodes.concat(topojsonNodes).forEach(function(node) {
         const container = node.closest('.geojson-container') || node.closest('.topojson-container');
         if (container) container.classList.remove('is-loading');
       });
+      return [];
     });
   }
 
@@ -13723,7 +13771,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  function renderStlInContainer(container, code, viewId) {
+  function renderStlInContainer(container, code, viewId, themeOverride) {
     validateStlSource(code);
     const width = container.clientWidth || 400;
     const height = container.clientHeight || 400;
@@ -13787,7 +13835,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const maxDim = Math.max(size.x, size.y, size.z);
     
     // Add grid helper (underneath the model, matching the theme)
-    const currentTheme = document.documentElement.getAttribute("data-theme") || 'light';
+    const currentTheme = themeOverride || document.documentElement.getAttribute("data-theme") || 'light';
     const gridColorCenter = currentTheme === 'dark' ? 0x888888 : 0xaaaaaa;
     const gridColor = currentTheme === 'dark' ? 0x333742 : 0xcccccc;
     
@@ -14061,7 +14109,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     
     try {
       node.innerHTML = '';
-      const view = renderStlInContainer(node, decodedCode, nodeId);
+      const view = renderStlInContainer(node, decodedCode, nodeId, context && context.theme);
       
       if (container) container.classList.remove('is-loading');
       
@@ -14076,11 +14124,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function renderStlNodes(roots, context) {
     const stlNodes = queryPreviewRoots(roots, '.stl-viewer');
-    if (stlNodes.length === 0) return;
+    if (stlNodes.length === 0) return Promise.resolve([]);
 
     const renderAll = function() {
-      if (!isPreviewRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return [];
       stlNodes.forEach(function(node) { renderStlNode(node, context); });
+      return stlNodes;
     };
     const loadLoaderAndControls = function() {
       if (!isPreviewRenderContextCurrent(context)) return Promise.resolve();
@@ -14097,18 +14146,19 @@ document.addEventListener("DOMContentLoaded", async function () {
       ? loadScript(CDN.three)
       : Promise.resolve();
 
-    threeReady.then(function() {
+    return threeReady.then(function() {
       if (!isPreviewRenderContextCurrent(context)) return null;
       return loadLoaderAndControls();
     }).then(function() {
-      renderAll();
+      return renderAll();
     }).catch(function(error) {
-      if (!isPreviewRenderContextCurrent(context)) return;
+      if (!isPreviewRenderContextCurrent(context)) return [];
       console.warn('Failed to load Three.js libraries:', error);
       stlNodes.forEach(function(node) {
         const container = node.closest('.stl-container');
         if (container) container.classList.remove('is-loading');
       });
+      return [];
     });
   }
 
@@ -14346,23 +14396,22 @@ ${selector} .arrowheadPath {
 
   async function prepareBrowserPrintExport(exportTheme = 'light') {
     const root = document.documentElement;
-    const previousTheme = root.getAttribute('data-theme') || initialTheme || 'light';
     const previousPrintExport = root.getAttribute('data-browser-print-export');
-    const targetTheme = exportTheme === 'dark' ? 'dark' : 'light';
-    const shouldChangeTheme = previousTheme !== targetTheme;
+    const targetTheme = getExportTheme(exportTheme);
+    let printSnapshot = null;
 
-    root.setAttribute('data-browser-print-export', targetTheme);
-    if (shouldChangeTheme) {
-      root.setAttribute('data-theme', targetTheme);
+    try {
+      printSnapshot = await createExportRenderElement(markdownEditor.value, targetTheme, 'print');
+      printSnapshot.classList.add('browser-print-export-snapshot');
+      printSnapshot.setAttribute('aria-hidden', 'true');
+      root.setAttribute('data-browser-print-export', targetTheme);
+      await waitForBrowserPrintFrame();
+    } catch (error) {
+      if (printSnapshot) disposeExportRenderElement(printSnapshot);
+      if (previousPrintExport === null) root.removeAttribute('data-browser-print-export');
+      else root.setAttribute('data-browser-print-export', previousPrintExport);
+      throw error;
     }
-
-    await renderThemeSensitivePreviewContentForPrint();
-
-    if (document.fonts && document.fonts.ready) {
-      await withBrowserPrintTimeout(document.fonts.ready.catch(() => null), 1500);
-    }
-    await withBrowserPrintTimeout(waitForAllImages(markdownPreview), 2500);
-    await waitForBrowserPrintFrame();
 
     return function restoreBrowserPrintExport() {
       if (previousPrintExport === null) {
@@ -14370,13 +14419,7 @@ ${selector} .arrowheadPath {
       } else {
         root.setAttribute('data-browser-print-export', previousPrintExport);
       }
-
-      if (shouldChangeTheme) {
-        root.setAttribute('data-theme', previousTheme);
-        renderThemeSensitivePreviewContentForPrint().catch(function(error) {
-          console.warn('Preview theme restoration after print failed:', error);
-        });
-      }
+      disposeExportRenderElement(printSnapshot);
     };
   }
 
@@ -24164,7 +24207,7 @@ ${selector} .arrowheadPath {
         window.auditedTempElement = state.tempElement;
         console.log("Skipped tempElement removal for audit");
       } else {
-        state.tempElement.parentNode.removeChild(state.tempElement);
+        disposeExportRenderElement(state.tempElement);
       }
     }
     if (state.overlay && state.overlay.parentNode) {
@@ -24986,6 +25029,119 @@ ${selector} .arrowheadPath {
     return Promise.all(promises);
   }
 
+  function getExportTheme(theme) {
+    return theme === 'dark' ? 'dark' : 'light';
+  }
+
+  function buildExportHtml(markdown) {
+    const { frontmatter, body } = parseFrontmatter(markdown);
+    const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
+    const referenceData = extractReferenceDefinitions(body);
+    const html = tableHtml + marked.parse(referenceData.cleanedMarkdown);
+    return {
+      html: DOMPurify.sanitize(html, {
+        ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input', 'video', 'source'],
+        ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code', 'aria-label', 'controls', 'preload', 'playsinline'],
+        ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
+      }),
+      referenceData
+    };
+  }
+
+  function removeExportOnlyControls(root) {
+    root.querySelectorAll(
+      '.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar, ' +
+      '.plantuml-toolbar, .d2-toolbar, .graphviz-toolbar, .stl-toolbar, .review-target-actions'
+    ).forEach(element => element.remove());
+    root.querySelectorAll('.is-loading').forEach(element => element.classList.remove('is-loading'));
+  }
+
+  function disposeExportRenderElement(root) {
+    if (!root) return;
+    root.querySelectorAll('.geojson-map, .topojson-map').forEach(disposeMapNode);
+    root.querySelectorAll('.stl-viewer[id]').forEach(node => disposeStlView(node.id));
+    clearMathJaxPreviewState(root);
+    if (root.parentNode) root.parentNode.removeChild(root);
+  }
+
+  async function waitForExportWork(state, promise) {
+    return state ? runPdfAbortable(state, promise) : promise;
+  }
+
+  async function renderExportRichContent(root, markdown, exportTheme, state) {
+    const theme = getExportTheme(exportTheme);
+    const context = {
+      theme,
+      exportCapture: true,
+      isCurrent() {
+        return root.isConnected && !(state && state.signal.aborted);
+      }
+    };
+
+    const mermaidNodes = Array.from(root.querySelectorAll('.mermaid'));
+    if (mermaidNodes.length > 0) {
+      await waitForExportWork(state, renderMermaidNodes(mermaidNodes, context, root));
+    }
+
+    await waitForExportWork(state, Promise.all([
+      renderAbcNodes([root], context),
+      renderMapNodes([root], context),
+      renderStlNodes([root], context),
+      renderRemoteDiagramNodes([root], context)
+    ]));
+
+    if (markdownLikelyContainsMath(markdown)) {
+      await waitForExportWork(state, ensureMathJaxReady());
+      if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
+        await waitForExportWork(state, MathJax.typesetPromise([root]));
+      }
+    }
+
+    root.querySelectorAll('mjx-assistive-mml, script[type*="math"], script[type*="tex"]').forEach(element => element.remove());
+    removeExportOnlyControls(root);
+
+    await waitForExportWork(state, Promise.all([
+      waitForAllImages(root),
+      document.fonts ? document.fonts.ready : Promise.resolve()
+    ]));
+    await waitForBrowserPrintFrame();
+  }
+
+  async function createExportRenderElement(markdown, exportTheme, mode, state) {
+    const theme = getExportTheme(exportTheme);
+    const { html, referenceData } = buildExportHtml(markdown);
+    const root = document.createElement('article');
+    root.className = `markdown-body pdf-export theme-${theme} export-render-root`;
+    root.setAttribute('data-theme', theme);
+    root.setAttribute('data-export-render-mode', mode);
+    root.innerHTML = html;
+    root.style.boxSizing = 'border-box';
+    root.style.position = 'fixed';
+    root.style.left = '-12000px';
+    root.style.top = '0';
+    root.style.margin = '0';
+    root.style.width = mode === 'pdf' ? '210mm' : '1000px';
+    root.style.padding = mode === 'image' ? '40px' : mode === 'print' ? '45px' : '0';
+    root.style.fontSize = mode === 'pdf' ? '14px' : '16px';
+    root.style.backgroundColor = theme === 'dark' ? '#0d1117' : '#ffffff';
+    root.style.color = theme === 'dark' ? '#c9d1d9' : '#24292e';
+    document.body.appendChild(root);
+    if (state) state.tempElement = root;
+
+    applyReferencePreviewLinks(root, referenceData.definitions);
+    enhanceGitHubAlerts(root);
+
+    try {
+      await renderExportRichContent(root, markdown, theme, state);
+      return root;
+    } catch (error) {
+      if (!state || !window.keepTempElementForAudit) {
+        disposeExportRenderElement(root);
+      }
+      throw error;
+    }
+  }
+
   // ============================================
   // End Oversized Graphics Scaling Functions
   // ============================================
@@ -25093,219 +25249,13 @@ ${selector} .arrowheadPath {
       updatePdfProgress(progressState, 15, "Parsing markdown");
       await waitForPdfFrame(progressState);
       const markdown = markdownEditor.value;
-      const html = marked.parse(markdown);
-      const sanitizedHtml = DOMPurify.sanitize(html, {
-        ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input', 'video', 'source'],
-        ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code', 'aria-label', 'controls', 'preload', 'playsinline'],
-        ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
-      });
       throwIfPdfExportAborted(progressState.signal);
 
-      updatePdfProgress(progressState, 24, "Preparing document");
+      updatePdfProgress(progressState, 24, "Rendering document content");
       await waitForPdfFrame(progressState);
-      const tempElement = document.createElement("div");
-      progressState.tempElement = tempElement;
       const isDarkTheme = selectedTheme === "dark";
-      tempElement.className = "markdown-body pdf-export " + (isDarkTheme ? "theme-dark" : "theme-light");
-      tempElement.setAttribute('data-theme', isDarkTheme ? "dark" : "light");
-      tempElement.innerHTML = sanitizedHtml;
-      enhanceGitHubAlerts(tempElement);
-      tempElement.style.padding = "0px";
-      tempElement.style.width = "210mm";
-      tempElement.style.margin = "0 auto";
-      tempElement.style.fontSize = "14px";
-      tempElement.style.position = "fixed";
-      tempElement.style.left = "-9999px";
-      tempElement.style.top = "0";
-
-      tempElement.style.backgroundColor = isDarkTheme ? "#0d1117" : "#ffffff";
-      tempElement.style.color = isDarkTheme ? "#c9d1d9" : "#24292e";
-
-      document.body.appendChild(tempElement);
+      const tempElement = await createExportRenderElement(markdown, selectedTheme, 'pdf', progressState);
       await waitForPdfFrame(progressState);
-
-      const mermaidNodes = tempElement.querySelectorAll('.mermaid');
-      if (mermaidNodes.length > 0) {
-        updatePdfProgress(progressState, 34, "Rendering diagrams");
-        try {
-          if (typeof mermaid === 'undefined') {
-            await runPdfAbortable(progressState, loadScript(CDN.mermaid));
-          }
-          throwIfPdfExportAborted(progressState.signal);
-
-          mermaidNodes.forEach(node => {
-            const rawCode = node.getAttribute('data-original-code');
-            if (rawCode) {
-              try { node.textContent = decodeURIComponent(rawCode); }
-              catch (_) { node.textContent = rawCode; }
-            }
-            node.removeAttribute('data-processed');
-          });
-
-          if (typeof mermaid !== 'undefined') {
-            mermaid.initialize({
-              startOnLoad: false,
-              theme: isDarkTheme ? 'dark' : 'default',
-              securityLevel: 'strict',
-              flowchart: { useMaxWidth: true, htmlLabels: true },
-              fontSize: 16,
-              gantt: { useWidth: 1200 }
-            });
-          }
-          await runPdfAbortable(progressState, mermaid.init(undefined, mermaidNodes));
-          tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
-          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => {
-            container.classList.remove('is-loading');
-          });
-
-          // Convert all rendered Mermaid SVGs inside tempElement to <img> tags with data URI sources
-          const compiledMermaids = tempElement.querySelectorAll('.mermaid-container, .diagram-viewer[data-diagram-engine="mermaid"]');
-          compiledMermaids.forEach(container => {
-            const svgElement = container.querySelector('svg');
-            if (svgElement) {
-              const rect = svgElement.getBoundingClientRect();
-              const width = rect.width || svgElement.clientWidth || parseFloat(svgElement.getAttribute('width')) || 600;
-              const height = rect.height || svgElement.clientHeight || parseFloat(svgElement.getAttribute('height')) || 400;
-
-              const clonedSvg = svgElement.cloneNode(true);
-              clonedSvg.setAttribute('width', width);
-              clonedSvg.setAttribute('height', height);
-              if (!clonedSvg.getAttribute('viewBox')) {
-                clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-              }
-              clonedSvg.style.width = `${width}px`;
-              clonedSvg.style.height = `${height}px`;
-
-              const svgString = new XMLSerializer().serializeToString(clonedSvg);
-              const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
-              
-              const img = document.createElement('img');
-              img.className = 'mermaid-img';
-              if (svgElement.id) img.id = svgElement.id + '-img';
-              img.src = 'data:image/svg+xml;base64,' + svgBase64;
-              
-              img.style.width = `${width}px`;
-              img.style.height = `${height}px`;
-              img.style.maxWidth = '100%';
-              img.style.display = 'block';
-              img.style.margin = '0 auto';
-              
-              img.dataset.originalWidth = String(width);
-              img.dataset.originalHeight = String(height);
-
-              container.innerHTML = '';
-              container.appendChild(img);
-            }
-          });
-        } catch (mermaidError) {
-          if (mermaidError instanceof PdfExportCancelledError) throw mermaidError;
-          console.warn("Mermaid rendering issue:", mermaidError);
-          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => {
-            container.classList.remove('is-loading');
-          });
-        }
-        tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
-        throwIfPdfExportAborted(progressState.signal);
-        await waitForPdfFrame(progressState);
-      }
-
-      const abcNodes = tempElement.querySelectorAll('.abc-notation');
-      if (abcNodes.length > 0) {
-        updatePdfProgress(progressState, 40, "Rendering music notation");
-        try {
-          if (typeof ABCJS === 'undefined') {
-            await runPdfAbortable(progressState, loadScript(CDN.abcjs));
-          }
-          throwIfPdfExportAborted(progressState.signal);
-          
-          abcNodes.forEach(node => {
-            const abcCode = decodeURIComponent(node.getAttribute('data-original-code') || '');
-            if (abcCode) {
-              ABCJS.renderAbc(node.id, abcCode, { responsive: 'resize' });
-            }
-          });
-          
-          tempElement.querySelectorAll('.abc-container.is-loading').forEach(container => {
-            container.classList.remove('is-loading');
-          });
-
-          // Convert all rendered ABC SVGs inside tempElement to <img> tags with data URI sources
-          const compiledAbcs = tempElement.querySelectorAll('.abc-container');
-          compiledAbcs.forEach(container => {
-            const svgElement = container.querySelector('svg');
-            if (svgElement) {
-              const rect = svgElement.getBoundingClientRect();
-              const width = rect.width || svgElement.clientWidth || parseFloat(svgElement.getAttribute('width')) || 600;
-              const height = rect.height || svgElement.clientHeight || parseFloat(svgElement.getAttribute('height')) || 400;
-
-              const clonedSvg = svgElement.cloneNode(true);
-              clonedSvg.setAttribute('width', width);
-              clonedSvg.setAttribute('height', height);
-              if (!clonedSvg.getAttribute('viewBox')) {
-                clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-              }
-              clonedSvg.style.width = `${width}px`;
-              clonedSvg.style.height = `${height}px`;
-
-              const svgString = new XMLSerializer().serializeToString(clonedSvg);
-              const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
-              
-              const img = document.createElement('img');
-              img.className = 'abc-img';
-              img.src = 'data:image/svg+xml;base64,' + svgBase64;
-              
-              img.style.width = `${width}px`;
-              img.style.height = `${height}px`;
-              img.style.maxWidth = '100%';
-              img.style.display = 'block';
-              img.style.margin = '0 auto';
-              
-              img.dataset.originalWidth = String(width);
-              img.dataset.originalHeight = String(height);
-
-              container.innerHTML = '';
-              container.appendChild(img);
-            }
-          });
-        } catch (abcError) {
-          if (abcError instanceof PdfExportCancelledError) throw abcError;
-          console.warn("ABC rendering issue:", abcError);
-          tempElement.querySelectorAll('.abc-container.is-loading').forEach(container => {
-            container.classList.remove('is-loading');
-          });
-        }
-        throwIfPdfExportAborted(progressState.signal);
-        await waitForPdfFrame(progressState);
-      }
-
-      if (window.MathJax && markdownLikelyContainsMath(markdown)) {
-        updatePdfProgress(progressState, 44, "Rendering math");
-        try {
-          await runPdfAbortable(progressState, MathJax.typesetPromise([tempElement]));
-        } catch (mathJaxError) {
-          if (mathJaxError instanceof PdfExportCancelledError) throw mathJaxError;
-          console.warn("MathJax rendering issue:", mathJaxError);
-        }
-        throwIfPdfExportAborted(progressState.signal);
-
-        // Hide MathJax assistive elements that cause duplicate text in PDF
-        // These are screen reader elements that html2canvas captures as visible
-        // Use multiple CSS properties to ensure html2canvas doesn't render them
-        const assistiveElements = tempElement.querySelectorAll('mjx-assistive-mml');
-        assistiveElements.forEach(el => {
-          el.style.display = 'none';
-          el.style.visibility = 'hidden';
-          el.style.position = 'absolute';
-          el.style.width = '0';
-          el.style.height = '0';
-          el.style.overflow = 'hidden';
-          el.remove(); // Remove entirely from DOM
-        });
-
-        // Also hide any MathJax script elements that might contain source
-        const mathScripts = tempElement.querySelectorAll('script[type*="math"], script[type*="tex"]');
-        mathScripts.forEach(el => el.remove());
-      }
 
       tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar').forEach(el => el.remove());
       await waitForPdfFrame(progressState);
@@ -25498,183 +25448,13 @@ ${selector} .arrowheadPath {
       updatePdfProgress(progressState, 25, "Parsing markdown");
       await waitForPdfFrame(progressState);
       const markdown = markdownEditor.value;
-      const html = marked.parse(markdown);
-      const sanitizedHtml = DOMPurify.sanitize(html, {
-        ADD_TAGS: ['mjx-container', 'svg', 'path', 'g', 'marker', 'defs', 'pattern', 'clipPath', 'input', 'video', 'source'],
-        ADD_ATTR: ['id', 'class', 'style', 'align', 'viewBox', 'd', 'fill', 'stroke', 'transform', 'marker-end', 'marker-start', 'type', 'checked', 'disabled', 'data-original-code', 'aria-label', 'controls', 'preload', 'playsinline'],
-        ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
-      });
       throwIfPdfExportAborted(progressState.signal);
 
-      updatePdfProgress(progressState, 40, "Preparing document");
+      updatePdfProgress(progressState, 40, "Rendering document content");
       await waitForPdfFrame(progressState);
-      const tempElement = document.createElement("div");
-      progressState.tempElement = tempElement;
       const isDarkTheme = exportTheme === "dark";
-      tempElement.className = "markdown-body pdf-export " + (isDarkTheme ? "theme-dark" : "theme-light");
-      tempElement.setAttribute('data-theme', isDarkTheme ? "dark" : "light");
-      tempElement.innerHTML = sanitizedHtml;
-      enhanceGitHubAlerts(tempElement);
-      tempElement.style.padding = "40px"; // Give some padding for PNG
-      tempElement.style.width = "1000px";
-      tempElement.style.margin = "0 auto";
-      tempElement.style.fontSize = "16px";
-      tempElement.style.position = "fixed";
-      tempElement.style.left = "-9999px";
-      tempElement.style.top = "0";
-
-      tempElement.style.backgroundColor = isDarkTheme ? "#0d1117" : "#ffffff";
-      tempElement.style.color = isDarkTheme ? "#c9d1d9" : "#24292e";
-
-      document.body.appendChild(tempElement);
+      const tempElement = await createExportRenderElement(markdown, exportTheme, 'image', progressState);
       await waitForPdfFrame(progressState);
-
-      const mermaidNodes = tempElement.querySelectorAll('.mermaid');
-      if (mermaidNodes.length > 0) {
-        updatePdfProgress(progressState, 50, "Rendering diagrams");
-        try {
-          if (typeof mermaid === 'undefined') {
-            await runPdfAbortable(progressState, loadScript(CDN.mermaid));
-          }
-          throwIfPdfExportAborted(progressState.signal);
-
-          mermaidNodes.forEach(node => {
-            const rawCode = node.getAttribute('data-original-code');
-            if (rawCode) {
-              try { node.textContent = decodeURIComponent(rawCode); }
-              catch (_) { node.textContent = rawCode; }
-            }
-            node.removeAttribute('data-processed');
-          });
-
-          if (typeof mermaid !== 'undefined') {
-            mermaid.initialize({
-              startOnLoad: false,
-              theme: isDarkTheme ? 'dark' : 'default',
-              securityLevel: 'strict',
-              flowchart: { useMaxWidth: true, htmlLabels: true },
-              fontSize: 16,
-              gantt: { useWidth: 1200 }
-            });
-          }
-          await runPdfAbortable(progressState, mermaid.init(undefined, mermaidNodes));
-          tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
-          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => container.classList.remove('is-loading'));
-
-          const compiledMermaids = tempElement.querySelectorAll('.mermaid-container, .diagram-viewer[data-diagram-engine="mermaid"]');
-          compiledMermaids.forEach(container => {
-            const svgElement = container.querySelector('svg');
-            if (svgElement) {
-              const rect = svgElement.getBoundingClientRect();
-              const width = rect.width || svgElement.clientWidth || parseFloat(svgElement.getAttribute('width')) || 600;
-              const height = rect.height || svgElement.clientHeight || parseFloat(svgElement.getAttribute('height')) || 400;
-              const clonedSvg = svgElement.cloneNode(true);
-              clonedSvg.setAttribute('width', width);
-              clonedSvg.setAttribute('height', height);
-              if (!clonedSvg.getAttribute('viewBox')) {
-                clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-              }
-              clonedSvg.style.width = `${width}px`;
-              clonedSvg.style.height = `${height}px`;
-              const svgString = new XMLSerializer().serializeToString(clonedSvg);
-              const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
-              const img = document.createElement('img');
-              img.className = 'mermaid-img';
-              if (svgElement.id) img.id = svgElement.id + '-img';
-              img.src = 'data:image/svg+xml;base64,' + svgBase64;
-              img.style.width = `${width}px`;
-              img.style.height = `${height}px`;
-              img.style.maxWidth = '100%';
-              img.style.display = 'block';
-              img.style.margin = '0 auto';
-              container.innerHTML = '';
-              container.appendChild(img);
-            }
-          });
-        } catch (e) {
-          if (e instanceof PdfExportCancelledError) throw e;
-          console.warn("Mermaid issue:", e);
-          tempElement.querySelectorAll('.mermaid-container.is-loading, .diagram-viewer.is-loading').forEach(container => container.classList.remove('is-loading'));
-        }
-        tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar').forEach(el => el.remove());
-        throwIfPdfExportAborted(progressState.signal);
-        await waitForPdfFrame(progressState);
-      }
-      
-      const abcNodes = tempElement.querySelectorAll('.abc-notation');
-      if (abcNodes.length > 0) {
-        updatePdfProgress(progressState, 60, "Rendering music notation");
-        try {
-          if (typeof ABCJS === 'undefined') {
-            await runPdfAbortable(progressState, loadScript(CDN.abcjs));
-          }
-          throwIfPdfExportAborted(progressState.signal);
-          abcNodes.forEach(node => {
-            const abcCode = decodeURIComponent(node.getAttribute('data-original-code') || '');
-            if (abcCode) ABCJS.renderAbc(node.id, abcCode, { responsive: 'resize' });
-          });
-          tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .abc-toolbar').forEach(el => el.remove());
-          tempElement.querySelectorAll('.abc-container.is-loading, .diagram-viewer.is-loading').forEach(container => container.classList.remove('is-loading'));
-
-          const compiledAbcs = tempElement.querySelectorAll('.abc-container, .diagram-viewer[data-diagram-engine="abc"]');
-          compiledAbcs.forEach(container => {
-            const svgElement = container.querySelector('svg');
-            if (svgElement) {
-              const rect = svgElement.getBoundingClientRect();
-              const width = rect.width || svgElement.clientWidth || parseFloat(svgElement.getAttribute('width')) || 600;
-              const height = rect.height || svgElement.clientHeight || parseFloat(svgElement.getAttribute('height')) || 400;
-              const clonedSvg = svgElement.cloneNode(true);
-              clonedSvg.setAttribute('width', width);
-              clonedSvg.setAttribute('height', height);
-              if (!clonedSvg.getAttribute('viewBox')) {
-                clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-              }
-              const svgString = new XMLSerializer().serializeToString(clonedSvg);
-              const svgBase64 = btoa(unescape(encodeURIComponent(svgString)));
-              const img = document.createElement('img');
-              img.className = 'abc-img';
-              if (svgElement.id) img.id = svgElement.id + '-img';
-              img.src = 'data:image/svg+xml;base64,' + svgBase64;
-              img.style.width = `${width}px`;
-              img.style.height = `${height}px`;
-              img.style.maxWidth = '100%';
-              img.style.display = 'block';
-              img.style.margin = '0 auto';
-              container.innerHTML = '';
-              container.appendChild(img);
-            }
-          });
-        } catch (e) {
-          if (e instanceof PdfExportCancelledError) throw e;
-          console.warn("ABC rendering issue:", e);
-        }
-        tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .abc-toolbar').forEach(el => el.remove());
-        throwIfPdfExportAborted(progressState.signal);
-        await waitForPdfFrame(progressState);
-      }
-
-      if (window.MathJax && markdownLikelyContainsMath(markdown)) {
-        updatePdfProgress(progressState, 70, "Rendering math");
-        try {
-          await runPdfAbortable(progressState, MathJax.typesetPromise([tempElement]));
-        } catch (e) {
-          if (e instanceof PdfExportCancelledError) throw e;
-          console.warn("MathJax rendering issue:", e);
-        }
-        throwIfPdfExportAborted(progressState.signal);
-        const assistiveElements = tempElement.querySelectorAll('mjx-assistive-mml');
-        assistiveElements.forEach(el => {
-          el.style.display = 'none';
-          el.style.visibility = 'hidden';
-          el.style.position = 'absolute';
-          el.style.width = '0';
-          el.style.height = '0';
-          el.style.overflow = 'hidden';
-          el.remove();
-        });
-        const mathScripts = tempElement.querySelectorAll('script[type*="math"], script[type*="tex"]');
-        mathScripts.forEach(el => el.remove());
-      }
 
       tempElement.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar').forEach(el => el.remove());
       await waitForPdfFrame(progressState);
