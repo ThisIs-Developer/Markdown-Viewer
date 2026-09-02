@@ -342,6 +342,7 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await page.locator('#export-html').dispatchEvent('click');
   await expect(page.locator('#html-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#html-export-modal .export-theme-toggle')).toBeVisible();
+  await expect.poll(() => page.locator('#html-export-modal .export-appearance-setting').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.locator('#html-export-theme-card-dark').click();
   await expect(page.locator('#html-export-theme-dark')).toBeChecked();
   await page.locator('#html-export-cancel').click();
@@ -366,6 +367,7 @@ test('export modals use compact segmented theme toggles and restore previous sel
     const memory = document.querySelector('#pdf-export-modal .export-appearance-memory');
     const rasterRect = rasterCard.getBoundingClientRect();
     const appearanceRect = appearance.getBoundingClientRect();
+    const appearanceStyle = getComputedStyle(appearance);
     const toggleStyle = getComputedStyle(toggle);
     const memoryStyle = getComputedStyle(memory);
     const vectorTitle = vectorCard.querySelector('.pdf-export-method-title');
@@ -381,6 +383,9 @@ test('export modals use compact segmented theme toggles and restore previous sel
     successColorProbe.remove();
     return {
       gap: Math.round(appearanceRect.top - rasterRect.bottom),
+      appearanceBorderRadius: appearanceStyle.borderRadius,
+      appearancePaddingTop: appearanceStyle.paddingTop,
+      appearanceBackground: appearanceStyle.backgroundColor,
       methodColumns: getComputedStyle(methodCards).gridTemplateColumns.split(' ').length,
       vectorCardWidth: Math.round(vectorCard.getBoundingClientRect().width),
       rasterCardWidth: Math.round(rasterRect.width),
@@ -411,6 +416,9 @@ test('export modals use compact segmented theme toggles and restore previous sel
     };
   });
   expect(pdfAppearanceLayout.gap).toBeLessThanOrEqual(12);
+  expect(pdfAppearanceLayout.appearanceBorderRadius).toBe('10px');
+  expect(pdfAppearanceLayout.appearancePaddingTop).toBe('10px');
+  expect(pdfAppearanceLayout.appearanceBackground).not.toBe('rgba(0, 0, 0, 0)');
   expect(pdfAppearanceLayout.methodColumns).toBe(2);
   expect(pdfAppearanceLayout.vectorCardWidth).toBe(pdfAppearanceLayout.rasterCardWidth);
   expect(pdfAppearanceLayout.vectorCardHeight).toBe(pdfAppearanceLayout.rasterCardHeight);
@@ -447,6 +455,7 @@ test('export modals use compact segmented theme toggles and restore previous sel
   await page.locator('#export-png').dispatchEvent('click');
   await expect(page.locator('#png-export-modal')).toHaveClass(/is-visible/);
   await expect(page.locator('#png-export-modal .export-theme-toggle')).toBeVisible();
+  await expect.poll(() => page.locator('#png-export-modal .export-appearance-setting').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.locator('#png-export-theme-card-dark').click();
   await expect(page.locator('#png-export-theme-dark')).toBeChecked();
   await page.locator('#png-export-cancel').click();

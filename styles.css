@@ -8338,6 +8338,11 @@ a:focus {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-color) 6%, transparent);
 }
 
 .export-appearance-label,
@@ -8360,6 +8365,7 @@ a:focus {
 .export-appearance-memory {
   gap: 4px;
   padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--success-color) 18%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--success-color) 10%, transparent);
   color: var(--success-color);
@@ -8381,6 +8387,7 @@ a:focus {
   border-color: var(--border-color);
   border-radius: 9px;
   background: var(--segmented-bg);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--text-color) 7%, transparent);
 }
 
 .export-theme-option {
@@ -8397,6 +8404,11 @@ a:focus {
   box-shadow: var(--segmented-shadow);
 }
 
+.export-theme-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 .export-theme-option input[type="radio"] {
   position: absolute;
   opacity: 0;
@@ -8408,6 +8420,28 @@ a:focus {
 .export-theme-option i {
   font-size: var(--ui-icon-size-md);
   line-height: 1;
+}
+
+:is(#html-export-modal, #png-export-modal) .export-appearance-setting {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:is(#html-export-modal, #png-export-modal) .export-theme-toggle {
+  width: 100%;
+}
+
+@media (max-width: 359.98px) {
+  .export-appearance-setting {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .export-theme-toggle {
+    width: 100%;
+  }
 }
 
 #share-modal .share-mode-cards {
