@@ -50,18 +50,19 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 
 | Area | Implemented behavior |
 | :--- | :--- |
-| Workspace | No application document-count limit, nested Folders, Recent, Favorites, search, tabs, bulk actions, and encrypted Secret Workspace |
-| Editing | Editor, Split view, Preview, formatting toolbar, custom undo/redo, Find and Replace, LTR/RTL, large-Document rendering paths |
+| Workspace | No application document-count limit, nested Folders, Recent, Favorites, search, tabs, bulk actions, encrypted Secret Workspace, and 30-day recoverable Trash |
+| Editing | Editor, Split view, Preview, formatting toolbar with an 8×8 quick table selector, custom undo/redo, Find and Replace, LTR/RTL, and large-Document rendering paths |
 | Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
-| Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown, HTML, Browser Print, legacy raster PDF, and PNG export |
+| Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown plus remembered Light/Dark HTML, Browser Print, legacy raster PDF, and PNG export, with complete rich-content preparation for PDF and PNG |
 | Sharing | URL-hash or KV-backed Share Snapshot; WebSocket Live Share with host/edit/view capabilities |
 | Delivery | Static web, PWA, Docker, Cloudflare, and seven Neutralino desktop targets |
 
 ## Privacy at a Glance
 
 - Web documents are local per-document IndexedDB records; desktop documents are ordinary `.md` files in a durable vault.
-- Private mode pauses new Document-state persistence while keeping existing normal and Secret Workspace data.
+- Private mode pauses new Document-state persistence for the current page session while keeping existing normal and Secret Workspace data; reload or exit resets it.
+- Deleted normal and encrypted files remain in Trash for 30 days unless restored or permanently deleted sooner.
 - **Storage and Backup** exports or restores a folder-preserving ZIP and can retain Secret Workspace ciphertext.
 - **Reset workspace** permanently deletes all local workspace data and preferences after confirmation; use its Backup route first when needed.
 - Managed media is public-by-link and expires 90 days after the most recent upload of identical content.

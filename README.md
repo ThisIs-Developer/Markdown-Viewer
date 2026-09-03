@@ -56,9 +56,9 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 ## Highlights
 
-- **Workspace and documents:** organize documents in nested folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, and an encrypted Secret Workspace.
+- **Workspace and documents:** organize documents in nested folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, an encrypted Secret Workspace, and a 30-day Trash for recoverable normal and encrypted files.
 - **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash and desktop history stay outside the backup.
-- **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, selection-anchored comments, and threaded replies.
+- **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, per-document Preview positions, selection-anchored comments, and threaded replies.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
 
@@ -69,7 +69,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="3D STL Full screen" width="90%" />
 </p>
 
-- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF.
+- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF with remembered Light or Dark appearance and complete rich-content preparation for PDF and PNG.
 
 - **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
 
@@ -155,6 +155,7 @@ Remote renderer services receive the source of the diagram they render. Do not s
 
 - Workspace backup import does not merge workspaces; it permanently replaces the current workspace after confirmation.
 - Workspace backups do not include trash, desktop history, or crash-recovery journals.
+- Recognized Trash records are permanently removed after 30 days; corrupt, incomplete, or future-format records remain for manual review.
 - A local Markdown file larger than 10 MB is rejected.
 - The GitHub credential vault stores up to 50 named PAT entries; each token name is limited to 60 characters.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.

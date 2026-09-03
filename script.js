@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function () {
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
-  const APP_VERSION = '3.10.1';
+  const APP_VERSION = '3.10.2';
   const RELEASE_NOTES_TAB_KIND = 'release-notes';
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
   const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';

@@ -26,7 +26,7 @@ Markdown Viewer is local-first: normal editing, Preview rendering, local file im
 | Theme, direction, view, and related preferences | `markdownViewerGlobalState` | Mirrored |
 | Interface language | `app-lang` | Local browser value; restored in prepared desktop use where available |
 | Find and Replace docking preference | `find-replace-docked` | Local browser value; restored in prepared desktop use where available |
-| Private mode preference | `markdownViewerPrivateMode` | Remains locally so the mode survives reload |
+| Private mode state | In memory only | Cleared on reload or exit so the next page session resumes persistence |
 | Deleted documents and encrypted recovery records | IndexedDB `trash` store | Recoverable records under `.markdown-viewer/trash` in the vault |
 
 Temporary Share Snapshot and Live Share participant tabs are removed before normal tab persistence. Opening someone else's link therefore does not silently add that temporary document to the saved Workspace.

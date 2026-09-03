@@ -39,7 +39,7 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 - Normal tabs autosave as independent browser records or desktop vault files. Only the opened document content is loaded.
 - Markdown Viewer does not impose a document-count limit; available browser quota or filesystem capacity is the practical limit.
 - Temporary Share Snapshot and Live Share tabs are not saved to the recipient's workspace.
-- Use **Private mode** from Workspace settings to pause normal Document-state persistence for the session. Existing normal and Secret Workspace documents remain intact.
+- Use **Private mode** from Workspace settings to pause normal Document-state persistence for the current page session. A red incognito status remains visible while it is active; reload or exit resets the mode and resumes normal persistence. Existing normal and Secret Workspace documents remain intact.
 - Use **Storage and Backup** to inspect usage and file counts, view the browser's read-only persistence status, export or import a folder-preserving ZIP, or open the fixed desktop vault.
 - Use **Reset workspace** only when you intend to permanently delete all workspace files, folders, settings, Secret Workspace data, history, and trash. The confirmation links directly to Backup.
 - Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
@@ -53,7 +53,7 @@ Normal Workspace storage is local. Managed media, GitHub import, remote renderer
 The toolbar can:
 
 - Format text as bold, italic, strikethrough, quote, inline code, fenced code, terminal block, headings, lists, and horizontal rules.
-- Insert links, images, reference links, tables, date/time stamps, emoji shortcodes, symbols/entities, GitHub alerts, and diagram templates.
+- Insert links, images, reference links, date/time stamps, emoji shortcodes, symbols/entities, GitHub alerts, and diagram templates. The table action offers an 8×8 quick selector with pointer and keyboard navigation plus a **Custom table** dialog for dimensions up to 20×20; row counts include the header.
 - Change selected text to title case, uppercase, or lowercase.
 - Insert left, center, or right aligned HTML blocks.
 - Switch document direction between LTR and RTL.
@@ -136,12 +136,12 @@ Export names use the active tab title when possible.
 | Export | Behavior | Main Limitations |
 | :--- | :--- | :--- |
 | Markdown | Saves the raw `.md` text. | Browser downloads or desktop native save dialog only. |
-| HTML | Saves standalone rendered HTML with sanitized content, styles, renderer support hooks, a restrictive CSP, and SRI metadata where applicable. | External content referenced by the document may still load remotely when opened. |
-| PDF: Browser Print | Temporarily prepares a light print preview, refreshes theme-sensitive diagrams, then calls `window.print()`. Recommended for most long documents. | Browser print engines vary; author-specified dark colors inside diagrams, SVGs, HTML, or images are preserved. |
-| PDF: Legacy Raster | Uses `html2canvas` and `jsPDF` with page-break planning. | Memory-heavy for very long documents; cross-origin images need CORS. |
-| PNG | Captures the rendered document to a PNG. | Browser canvas limits apply; cross-origin images need CORS. |
+| HTML | Saves standalone rendered HTML with sanitized content, styles, renderer support hooks, a restrictive CSP, and a remembered Light or Dark appearance. | External content referenced by the document may still load remotely when opened. |
+| PDF: Browser Print | Builds a Light or Dark off-screen snapshot, prepares all supported rich content, then calls `window.print()` without changing the visible app theme. Recommended for most long documents. | Browser print engines vary; author-specified colors inside diagrams, SVGs, HTML, or images are preserved. |
+| PDF: Legacy Raster | Captures the same prepared Light or Dark snapshot with `html2canvas` and `jsPDF`, using page-break planning. | Memory-heavy for very long documents; cross-origin images need CORS. |
+| PNG | Captures a high-resolution Light or Dark rich-content snapshot to PNG. | Browser canvas limits apply; cross-origin images need CORS. |
 
-Raster PDF and PNG exports render Mermaid, ABC, and MathJax in an off-screen capture before saving. Export progress can be cancelled.
+Each export format remembers its appearance independently. PDF and PNG preparation waits for Mermaid, ABC, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, math, fonts, and images; Markmaps are fitted to printable bounds. Export progress can be cancelled where the format supports progress reporting.
 
 ## Share Markdown with Snapshot Links
 

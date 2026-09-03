@@ -35,7 +35,7 @@ Desktop-only files:
 - A Markdown file passed as a launch argument is loaded into the editor.
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
-- Private mode pauses document-state persistence for the current session without deleting the vault. **Reset workspace** permanently deletes documents, review data, settings, Secret Workspace records, history, trash, and recovery journals after confirmation.
+- Private mode pauses document-state persistence for the current page session without deleting the vault, shows an active incognito status, and resets on reload or exit. **Reset workspace** permanently deletes documents, folders, review data, settings, Secret Workspace records, history, trash, and recovery journals after confirmation.
 - **Storage and Backup** shows the fixed vault location, opens it in the file manager, and exports or imports folder-preserving ZIP backups. Replacement binaries detect the same vault automatically.
 - Importing a backup replaces the current workspace. ZIP backups include normal documents, folder organization, review data, selected preferences, and optional encrypted Secret Workspace records; they do not include vault history, trash, or recovery journals.
 

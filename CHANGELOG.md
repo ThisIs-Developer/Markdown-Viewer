@@ -5,10 +5,19 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- **Live Share routing:** Restored production Live Share WebSocket upgrades by routing `/live-room/*` through Cloudflare Pages Functions to the Durable Object relay and added a build regression check for the WebSocket route.
-- **International search indexing:** Made every supported localized application URL independently crawlable with server-rendered self-canonical metadata, reciprocal `hreflang` declarations, localized social and structured data, and a complete generated sitemap. Consolidated English on the root URL, added Bulgarian search metadata, and replaced the SPA soft-404 fallback with redirects for legacy paths plus a real noindex 404 page.
-- **Workspace data safety:** Replaced implicit full-workspace deletion with explicit document operations, added cross-tab revision conflicts with preserved copies, stopped writes after startup read failures, made browser backup and Secret Workspace replacement transactional, recovered interrupted edits and orphaned content, and journaled desktop file moves and index writes.
-- **Trash:** Replaced the embedded recovery selector with a compact responsive Trash window. Deleting normal and encrypted files moves them directly to recoverable Trash, Restore is immediate, and confirmations are reserved for permanent deletion. Valid expired records are purged automatically after 30 days; corrupt and unrecognized records are never auto-purged.
+---
+
+## v3.10.2
+
+- **Description:** Strengthened workspace recovery, upgraded rich-content exports, and made Markdown editing and review state more dependable while improving international discovery and production Live Share routing.
+  - **Workspace Safety & Trash:** Replaced unsafe whole-workspace write paths with document-scoped, revision-aware persistence; preserved conflict copies, interrupted edits, and orphaned content; made browser backup and Secret Workspace replacement transactional; journaled desktop moves and index writes; and added a responsive, multi-select Trash for normal and encrypted documents with safe 30-day retention.
+  - **Markdown Editing & Rendering:** Replaced document-wide formatting rewrites with grammar-aware parsing for math, footnotes, headings, definition lists, code, and adjacent lists; kept maps and STL responsive; added an accessible 8×8 quick table selector plus a custom table dialog; refined toolbar icons; and preserved editor selections when opening the context menu.
+  - **Preview & Review Reliability:** Stored Preview scroll positions per document, stabilized comment highlights across complete and formatted nodes, blocked link navigation while selecting comments, and preserved linked-image and commented-image geometry.
+  - **Export Appearance & Rich Content:** Added remembered Light and Dark appearance controls for HTML, browser-print PDF, raster PDF, and PNG; corrected dark/light tables, alerts, dividers, backgrounds, and frontmatter handling; rendered every supported diagram and rich-content type before capture; and fitted Markmaps to printable bounds without changing the visible app theme.
+  - **Search, Performance & Collaboration:** Made all 15 localized URLs independently indexable with canonical, `hreflang`, social, structured-data, and sitemap coverage; added Bulgarian and Google verification metadata, real redirect/404 handling, and retained critical preloads; restored production Live Share WebSocket routing through Cloudflare Pages Functions.
+- **Date:** 2026-09-03
+- **Commits:** `9b672e36c97f3c65fef50f00ec79b1484680bb69` through `4ae33d1b235fe8b77f8e6c6a04087fcce6e28009`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.2
 
 ---
 

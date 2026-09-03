@@ -1,97 +1,82 @@
-![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.1`
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.2`
 
-# Welcome to Markdown Viewer 3.10.1
+# Welcome to Markdown Viewer 3.10.2
 
-_Released August 24, 2026_
+_Released September 3, 2026_
 
-This release makes review feel native to the document, puts everyday controls where you expect them, and gives keyboard-focused writers a much faster path through Markdown.
+This release makes local work much harder to lose, gives every visual export a dependable Light or Dark appearance, and smooths out Markdown authoring, Preview navigation, and anchored review.
 
 Everything here ships with the web, PWA, Docker, and desktop editions. **Happy coding!**
 
-[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.1) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.2) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
 
 ---
 
 ## Highlights
 
-- **Comment on the exact content that matters.** Select words or a rendered element, preview the anchor, and start a focused conversation without changing the Markdown.
-- **A calmer, more capable interface.** Document commands are consolidated, formatting tools are easier to scan, and active, disabled, dropdown, theme, and Private mode states are clearer.
-- **Keyboard-first editing.** Familiar formatting, find, navigation, import, export, view, Explorer, and fullscreen shortcuts now cover the most common writing workflows.
-- **More dependable workspaces.** Multi-file dragging behaves as one operation, expanded folders are easier drop targets, and document statistics stay accurate when content renders or reopens.
-- **A broader and better-tested release.** Bulgarian joins the interface languages, current release notes are available inside the app, and a locked local Playwright suite covers core browser behavior.
+- **Recover instead of regret.** Normal and encrypted files now move to a searchable, multi-select Trash, while conflict copies, interrupted edits, orphaned content, backups, and desktop writes receive stronger safeguards.
+- **Export the appearance you want.** HTML, Browser Print, raster PDF, and PNG remember independent Light or Dark choices; PDF and PNG wait for every supported diagram and rich-content renderer.
+- **Write tables and complex Markdown with confidence.** An accessible 8×8 table picker speeds up common layouts, and grammar-aware parsing protects math, code, footnotes, headings, lists, and definitions from crossing syntax boundaries.
+- **Keep your place and your selection.** Preview scroll state follows each document, right-click keeps editor selections intact, and anchored comments remain stable across formatted text, links, and images.
+- **Reach readers and collaborators reliably.** All 15 localized URLs are independently indexable, production Live Share WebSockets route correctly, and critical startup assets retain their preload hints.
 
 > [!TIP]
-> Open **Comments**, select text in Preview, and choose **New** to try the redesigned review flow. Press `Ctrl+Enter` or `Cmd+Enter` to submit.
+> Use the table button for an instant grid up to 8×8, or choose **Custom table** for dimensions up to 20×20. The row count includes the header.
 
-## Comments that stay with the content
+## Safer workspaces and recoverable deletion
 
-Comments now begin with a real selection instead of a generic feedback form. Select text in a heading, paragraph, list, quote, or code block, or choose a rendered image, diagram, map, model, or math expression. A temporary highlight confirms the anchor before you submit.
+Deleting a normal or encrypted file now moves its latest content directly to **Trash**. Search the dedicated responsive window, select separate items with Ctrl/Cmd or a range with Shift, restore immediately, or confirm permanent deletion. Recognized records expire after 30 days; missing, corrupt, and future-format records are kept for manual review instead of being guessed at and removed.
 
-The document and Comments panel stay synchronized: hover either side to find its match, or activate a card to bring the conversation into focus. Open, Resolved, and All filters keep completed work available without crowding current feedback.
+The persistence layer now treats each document as the unit of change. Cross-tab revision conflicts create preserved copies instead of silently replacing newer data, startup read failures stop unsafe writes, and interrupted edits or orphaned content can be recovered. Browser backups and Secret Workspace replacement are transactional, while the desktop vault journals file moves, permanent deletion, and index updates so an interrupted operation can be repaired on the next start.
 
-### Conversations and collaboration
+Private mode now has a clear active incognito status and is deliberately session-only. It pauses new document-state writes without touching existing normal or Secret Workspace data, then resets on reload or exit so normal persistence resumes next time.
 
-- Add nested replies from the active comment card.
-- Edit or delete replies and edit, resolve, reopen, or delete the original comment.
-- Keep selected text and draft focus stable while the panel changes state.
-- Use a desktop side panel, tablet drawer, or mobile bottom sheet.
-- Show each Live Share participant's current display name on comments and replies, including view-only participants.
-- Continue reading older stored comments and suggestions after the upgrade.
+## Exports that match your intent
 
-Comments remain local to normal documents unless Live Share is active. They stay out of Markdown and document exports, duplicated tabs, and Share Snapshot links.
+HTML, PDF, and PNG export dialogs now offer compact **Light** and **Dark** appearance controls. Each format remembers its own choice, and preparing a differently themed export no longer changes the visible application theme.
 
-## A clearer workspace
+One off-screen export pipeline now waits for Mermaid, ABC, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, math, fonts, and images before browser print, raster PDF, or PNG capture. Markmaps are fitted to readable printable bounds, dark tables and diagrams keep their intended colors, and solid page backgrounds prevent pale borders and transparent gaps.
 
-The header now groups document-level actions into a consistent toolbar for view modes, New, Copy, scroll sync, Comments, Share Snapshot, Live Share, and Export. The application logo remains visible, dropdowns move more smoothly, and buttons communicate selected, expanded, or unavailable states more clearly.
+Standalone HTML exports explicitly preserve their selected appearance across operating-system themes, initialize Mermaid correctly, and avoid leaving loading labels behind. Frontmatter recognition is also stricter, so documents containing ordinary `---` dividers are not accidentally parsed as YAML metadata.
 
-The formatting toolbar has matching groups for history, text style, paragraph formatting, content insertion, technical content, additional insertion, Find and Replace, and fullscreen. Heading, text-case, alignment, and direction choices use compact menus so the most frequent tools stay within reach.
+## Faster, safer Markdown authoring
 
-Theme and Private mode switches now use clearer icon and color states. Read-only shared documents and the Release Notes tab keep unavailable document commands visible but disabled, which preserves the layout while explaining what cannot be changed.
+The table control now opens an accessible 8×8 quick selector with hover, click, focus, and arrow-key navigation. A compact **Custom table** dialog supports dimensions up to 20×20. Both paths count the header as part of the requested row total, making the preview and inserted result agree.
 
-## Faster writing and reliable feedback
+Markdown rendering now respects syntax boundaries instead of applying broad document-wide rewrites. The changes cover repeated and Unicode heading IDs, case-insensitive and repeated footnotes, multi-term definition lists, inline and display math, legacy scoped color syntax, fenced and inline code, and visually distinct adjacent list blocks. GeoJSON, TopoJSON, and STL renderers also resize correctly when switching views or pane widths.
 
-Markdown Viewer now supports a wider familiar shortcut set across Windows, Linux, and macOS. Browser-reserved shortcuts remain desktop-only where intercepting them on the web would disrupt normal browser tabs.
+Toolbar icons and hover states have been refined, and opening an editor context menu no longer collapses the selection that its commands are meant to use.
 
-### New shortcut coverage
+## Stable Preview and review context
 
-- Toggle bold, italic, strikethrough, inline code, links, code blocks, blockquotes, and ordered or bulleted lists.
-- Apply paragraph or heading levels on desktop and clear formatting from the current selection or line.
-- Open quick file search, import Markdown, export Markdown, Settings, Find and Replace, or fullscreen.
-- Toggle Edit/Preview, Explorer, and synchronized scrolling.
-- Create, close, and move between documents with desktop-friendly bindings and web-safe alternatives.
+Each document now owns its Preview scroll coordinates. Switching among documents, reordering tabs, changing view modes, or reopening a document restores that document's position without leaking another document's scroll state.
 
-Word count, character count, and reading time now refresh on every render, including after switching to or reopening a document. Markdown copy feedback also waits for the clipboard operation to succeed before reporting completion.
+Comment highlights now cover complete text nodes and remain continuous across bold, italic, links, inline code, and strikethrough. Links do not navigate while Comments mode is selecting an anchor, linked images remain selectable, and obsolete review gutters no longer shift the geometry of commented images and other rendered blocks.
 
-## Explorer, language, and release updates
+## Localized discovery and connected features
 
-Dragging any file in a multi-file selection now moves the whole selection and shows the correct file count. Expanded folders accept drops across their visible contents, reducing the precision needed to organize a busy workspace.
+The root English page and every supported localized `?lang=` URL now receive server-rendered self-canonical metadata, reciprocal `hreflang` declarations, localized social cards, structured data, and a complete generated sitemap. Bulgarian metadata is included, legacy paths redirect to the canonical root, and missing paths return a real noindex 404 page.
 
-Bulgarian is now available from the language menu, bringing Markdown Viewer to 15 interface languages. The Bulgarian catalog follows the same generated-key parity and audit checks as the existing translations.
-
-Release notes now open inside Markdown Viewer as a temporary, read-only workspace tab. New users see the note beside Welcome without losing editor focus; existing users see it after an upgrade. Closing the tab marks that version as seen, and **About Markdown Viewer > Show Release Notes** brings it back whenever you want it.
-
-## Quality and compatibility
-
-Contributors now have a locked Playwright setup with a cross-platform local server, static asset and syntax checks, Chromium end-to-end coverage, and cross-browser smoke tests. The suite covers workspace, editor, review, export, sharing, rich content, responsive storage, GitHub import, and toolbar behavior without depending on live third-party services.
-
-This release also updates DOMPurify and js-yaml to patched versions, corrects integrity-checked browser asset sources, keeps desktop offline dependencies synchronized, restores WebKit support for local HTTP development, and adds an explicit application-ready lifecycle for dependable automation.
+Cloudflare Pages now routes `/live-room/*` WebSocket upgrades to the Live Share Durable Object relay in production. The build checks that route, and the optimized document head keeps critical stylesheet and script preloads available without duplicating the English search URL.
 
 ## Thank you
 
 ### Contributors
 
-- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Design, implementation, localization, testing, documentation, and release work.
-- **[crazy-explore-r](https://github.com/crazy-explore-r)** — Document statistics refresh fix and regression coverage.
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Workspace safety, Trash, Markdown rendering, tables, Preview and review fixes, export follow-up, SEO, Live Share, testing, documentation, and release work.
+- **[Itznan (@itznan)](https://github.com/itznan)** — Light/Dark appearance selection and styling improvements across HTML, PDF, and PNG exports.
 
 ### Changes included
 
-- [#234 — Improve multi-file Explorer dragging and folder drops](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/234)
-- [#235 — Add the in-app release-note experience](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/235)
-- [#238 — Add productivity keyboard shortcuts](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/238)
-- [#239 — Add Bulgarian interface support](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/239)
-- [#241 — Publish the shared local Playwright suite](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/241)
-- [#242 — Consolidate the toolbar and add selection-first comments](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/242)
-- [#243 — Refresh document statistics on every render](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/243)
+- [#248 — Prevent workspace data loss and add managed Trash](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/248)
+- [#249 — Resolve Markdown formatting parser boundaries](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/249)
+- [#250 — Add the quick table selector](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/250)
+- [#251 — Isolate Preview scroll state per document](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/251)
+- [#252 — Stabilize highlights, links, and image comments](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/252)
+- [#253 — Add export appearance selection and styling fixes](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/253)
+- [#255 — Render all diagrams in PDF and image output](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/255)
+- [Restore production Live Share WebSocket routing](https://github.com/ThisIs-Developer/Markdown-Viewer/commit/15047ce)
+- [Make localized pages independently indexable](https://github.com/ThisIs-Developer/Markdown-Viewer/commit/494c63b)
 
 Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
 

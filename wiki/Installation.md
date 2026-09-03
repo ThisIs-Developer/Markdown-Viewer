@@ -85,7 +85,14 @@ Serve at least these root files:
 - `sw.js`
 - `sample.md`
 - `manifest.json`
+- `404.html`
+- `_headers`
+- `_redirects`
+- `_routes.json`
+- `robots.txt`
+- `sitemap.xml`
 - `assets/`
+- `seo/`
 
 For Cloudflare Pages with managed media, stored Share Snapshot, and Live Share, also deploy:
 
@@ -112,6 +119,8 @@ wrangler deploy -c wrangler.live-room.toml
 ```
 
 Then deploy the Pages project with `wrangler.toml` or your Cloudflare Pages configuration. See [Live Share](Live-Share-Cloudflare.md) and [Configuration](Configuration.md).
+
+Cloudflare Pages must include `/live-room/*` in `_routes.json` so WebSocket upgrades reach the Pages Function. The same routes file sends only the application root and dynamic API paths through Functions, leaving localized `?lang=` application URLs independently crawlable through the checked-in canonical, reciprocal `hreflang`, social, structured-data, and sitemap metadata. Run `npm run check:seo` before deployment; use `npm run seo:sitemap` after changing the locale registry.
 
 ## Desktop Application
 

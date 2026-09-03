@@ -136,6 +136,6 @@ chmod +x markdown-viewer-mac_universal
 - Native file access happens through explicit open/save actions or launch arguments.
 - The app does not include analytics or telemetry.
 - Sharing/import/remote-rendering features use the same network behavior as the web app.
-- Private mode pauses new persistence without deleting saved content. **Reset workspace** permanently deletes the vault content and application preferences after confirmation.
+- Private mode pauses new persistence for the current page session without deleting saved content and resets when the page reloads or exits. **Reset workspace** permanently deletes the vault content, folders, recovery data, and application preferences after confirmation.
 
 Related pages: [Installation](Installation.md), [Configuration](Configuration.md), [Privacy and Security](Privacy-and-Security.md), and [Troubleshooting](Troubleshooting.md#the-desktop-application-does-not-start).

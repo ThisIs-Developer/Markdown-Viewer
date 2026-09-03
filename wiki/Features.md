@@ -44,12 +44,12 @@ Users can work with multiple documents at once.
 - Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.
 - New files can be created from the sidebar, tab bar, mobile menu, imports, shared snapshots, and Live Share joins. Multi-file imports show a compact bottom progress indicator.
 - The sidebar supports file open, rename, duplicate, favorite, move, Markdown download, and delete actions. Recent and Favorites are filtered references to the original files, not copies.
-- Multi-selected files can be opened or moved together. Dragging any selected file moves the complete file selection, and expanded folders accept a drop across their visible contents instead of only on the folder label. Any mixed selection of files and folders can be deleted together after a confirmation that explains which files will be deleted and which files inside removed folders will return to the workspace root.
+- Multi-selected files can be opened or moved together. Dragging any selected file moves the complete file selection, and expanded folders accept a drop across their visible contents instead of only on the folder label. Deleting selected files moves them directly to Trash; a mixed selection containing folders asks for confirmation and returns files inside removed folders to the workspace root.
 - Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
 - Hovering a tab shows its containing folder path and filename. Files stored directly at the Workspace root show only their filename.
 - The app does not impose a document-count limit. Available browser quota or filesystem capacity is the practical limit.
-- Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, scroll position, view mode, local review threads, and creation time.
+- Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, independent Editor and Preview scroll positions, view mode, local review threads, and creation time.
 - The active tab id and untitled-document counter are stored separately.
 - Temporary Share Snapshot and Live Share tabs are deliberately excluded from persistent tab storage.
 - **Reset workspace** permanently deletes normal files, review data, folders, settings, Secret Workspace ciphertext, history, and trash after confirmation.
@@ -72,7 +72,7 @@ Storage used by the current implementation includes:
 
 On the web, document data lives in IndexedDB while small preferences remain in `localStorage`. Existing monolithic `markdownViewerTabs` data is migrated once. On desktop, normal content is stored as individual Markdown files in `Documents/Markdown Viewer Vault/Workspace` by default; metadata, history, trash, journals, settings, and encrypted Secret Workspace objects live under the same durable vault.
 
-Workspace settings includes **Private mode**, which pauses document-state writes for the current private session without clearing existing documents or Secret Workspace. The private-mode preference remains so the behavior survives a reload. **Trash** has its own responsive window for restoring or permanently deleting one item and emptying all items after confirmation. Valid records expire after 30 days; missing, corrupt, or unknown record shapes are preserved instead of automatically deleted. **Storage and Backup** reports usage, separate normal and secret document counts, a logical browser storage location or fixed desktop vault path, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. Import permanently replaces the current workspace after confirmation. Backups exclude trash, desktop history, and recovery journals. Browser storage is best-effort by default and is shown as read-only status. **Reset workspace** permanently clears all local workspace data after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
+Workspace settings includes **Private mode**, which pauses document-state writes for the current page session without clearing existing documents or Secret Workspace. A visible incognito status remains while active, but the mode resets on reload or exit so a later session resumes normal persistence. **Trash** has its own searchable, responsive window with separate or contiguous multi-selection, restore, confirmed permanent deletion, and confirmed emptying. Valid records expire after 30 days; missing, corrupt, or unknown record shapes are preserved instead of automatically deleted. **Storage and Backup** reports usage, separate normal and secret document counts, a logical browser storage location or fixed desktop vault path, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. Import permanently replaces the current workspace after confirmation. Backups exclude trash, desktop history, and recovery journals. Browser storage is best-effort by default and is shown as read-only status. **Reset workspace** permanently clears all local workspace data, including folders and recovery records, after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
 
 ## Comments
 
@@ -110,7 +110,7 @@ The formatting toolbar inserts or transforms Markdown at the current selection. 
 - Title case, uppercase, and lowercase transform selected text or the current line.
 - Alignment buttons insert left, center, or right aligned HTML blocks.
 - The direction toggle switches between left-to-right and right-to-left content direction.
-- Link, image, reference, table, emoji, symbol, alert, and diagram buttons open focused modals.
+- Link, image, reference, emoji, symbol, alert, and diagram buttons open focused modals. The table action opens an accessible 8×8 quick selector with pointer and arrow-key navigation; **Custom table** accepts dimensions up to 20×20, with the selected row count including the header.
 - Date/time inserts a local timestamp.
 - Fullscreen uses the browser Fullscreen API when available.
 - Find and Replace and Fullscreen are direct formatting-toolbar actions. About Markdown Viewer opens from the header or mobile menu.
@@ -303,6 +303,7 @@ Markdown export:
 HTML export:
 
 - Creates a standalone HTML document from the current Markdown.
+- Offers remembered Light and Dark appearances independently of the visible application theme.
 - Includes GitHub-style Markdown CSS, syntax highlighting styles, alert styles, footnote styles, math/diagram support hooks, and frontmatter rendering.
 - YAML frontmatter is parsed and shown as a table before the document body.
 - HTML export uses sanitized rendered content.
@@ -311,24 +312,25 @@ HTML export:
 PDF export:
 
 - Opens a modal with two modes.
-- Browser Print is recommended. It prepares the preview with a clean light print theme, hides app chrome and open modals, rerenders Mermaid with printable light SVG colors, refreshes theme-sensitive map and STL styling, then calls `window.print()` so the browser or OS can save or print the document. When the print preview closes, the app restores the user's previous light or dark UI theme.
-- Legacy Raster PDF uses `html2canvas` and `jsPDF`. It clones the preview into an off-screen A4 sandbox, renders Mermaid and ABC to SVG/image form, typesets math, waits for images/fonts, applies page-break rules, captures the document to canvas, and saves a PDF.
+- Offers a compact, remembered Light or Dark appearance control shared by both PDF methods.
+- Browser Print is recommended. It builds an off-screen export snapshot, hides app chrome and open modals, waits for fonts, images, math, maps, models, music, and every supported diagram renderer, then calls `window.print()` so the browser or OS can save or print the document without changing the visible application theme.
+- Legacy Raster PDF uses `html2canvas` and `jsPDF`. It captures the same prepared rich-content snapshot in an A4 sandbox, applies page-break rules and the selected solid background, and saves a PDF.
 - The raster exporter shows progress and has a cancel button.
 - Raster export uses `allowTaint: false` and `useCORS: true` to avoid unsafe cross-origin canvas capture.
 
 PNG export:
 
 - Captures the rendered document into a PNG using `html2canvas`.
-- It uses a white/dark solid background based on theme and a high-resolution canvas.
-- It renders Mermaid, ABC, and MathJax in the off-screen capture before saving.
+- Offers a remembered Light or Dark appearance and uses the matching solid background on a high-resolution canvas.
+- It uses the same off-screen preparation as PDF, waiting for all supported diagrams and rich content before saving.
 
 Limitations:
 
 - Browser Print output is controlled by the browser and print settings.
-- Browser Print removes app dark-mode styling from printed output, but it does not rewrite colors that a document author explicitly placed inside SVG, HTML, image files, or diagram source. A diagram that intentionally uses a dark background can still print dark.
+- The selected export appearance does not rewrite colors that a document author explicitly placed inside SVG, HTML, image files, or diagram source.
 - Raster PDF and PNG are screenshots of rendered HTML, so very long documents can be memory-heavy.
 - Cross-origin images without CORS support may fail to appear in canvas-based PDF/PNG exports.
-- Advanced remote diagrams that have not rendered yet may need a moment before export.
+- Remote renderers and external assets still depend on their network availability while the export snapshot is prepared.
 - Some complex CSS, wide tables, and large diagrams may be moved, scaled, or split differently from the live preview.
 
 ## Share Markdown with Snapshot Links

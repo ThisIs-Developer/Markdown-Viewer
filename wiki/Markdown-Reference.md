@@ -427,8 +427,9 @@ Upstream support does not imply that Markdown Viewer exposes every upstream opti
 ## Export Notes for Markdown Authors
 
 - Browser Print is usually best for long documents.
-- Raster PDF and PNG exports are screenshots of rendered HTML and can be affected by cross-origin images, very large canvases, and late-loading remote diagrams.
-- Remote-rendered diagrams should finish rendering before export.
+- HTML, Browser Print, raster PDF, and PNG each remember a Light or Dark export appearance independently of the visible app theme.
+- Browser Print, raster PDF, and PNG prepare all supported diagrams and rich content in an off-screen snapshot before output; remote renderers still depend on network availability.
+- Raster PDF and PNG are screenshots of rendered HTML and can be affected by cross-origin images and very large canvases.
 - Wide tables, large diagrams, and huge STL models may be scaled or moved during export.
 
 Related pages: [Features](Features.md), [Usage Guide](Usage-Guide.md), and [Troubleshooting](Troubleshooting.md).
