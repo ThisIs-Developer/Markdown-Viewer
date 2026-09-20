@@ -1,8 +1,9 @@
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { handleSeoRequest } from '../../seo/server-render.mjs';
 
 const host = '127.0.0.1';
 const port = Number(process.env.MARKDOWN_VIEWER_TEST_PORT || 4173);
@@ -25,7 +26,8 @@ const contentTypes = new Map([
   ['.txt', 'text/plain; charset=utf-8'],
   ['.webmanifest', 'application/manifest+json; charset=utf-8'],
   ['.woff', 'font/woff'],
-  ['.woff2', 'font/woff2']
+  ['.woff2', 'font/woff2'],
+  ['.xml', 'application/xml; charset=utf-8']
 ]);
 
 function resolveRequestPath(requestUrl) {
@@ -41,6 +43,30 @@ const server = createServer(async (request, response) => {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { Allow: 'GET, HEAD' });
     response.end('Method not allowed');
+    return;
+  }
+
+  const url = new URL(request.url, `http://${host}:${port}`);
+  if (url.pathname === '/tips' || url.pathname === '/index.html') {
+    response.writeHead(301, { Location: '/' + url.search });
+    response.end();
+    return;
+  }
+  if (url.pathname === '/') {
+    try {
+      const result = await handleSeoRequest({
+        request: new Request(url, { method: request.method }),
+        next: async () => new Response(await readFile(path.join(rootDir, 'index.html'), 'utf8'), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+        })
+      });
+      response.writeHead(result.status, Object.fromEntries(result.headers));
+      response.end(request.method === 'HEAD' ? undefined : await result.text());
+    } catch (error) {
+      console.error(error);
+      response.writeHead(500);
+      response.end('Unable to render page');
+    }
     return;
   }
 

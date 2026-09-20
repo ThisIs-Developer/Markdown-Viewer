@@ -1,6 +1,6 @@
 # Localization and Internationalization
 
-Markdown Viewer translates its interface in the browser. Core labels live in `I18N_DICTS` in `script.js`, while broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`. User-authored Markdown and filenames are never translated.
+Markdown Viewer translates its interface in the browser. Core labels live in `I18N_DICTS` in `script.js`, while broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`. Cloudflare Pages also renders the localized public welcome content before JavaScript runs. New visitors to a language URL receive a translated starter document. User-authored Markdown and filenames are never translated.
 
 The English interface and English documentation are the source text. The approved multilingual terminology tables on this page align documentation with the current interface labels.
 
@@ -38,7 +38,9 @@ Detailed Wiki pages are maintained in English. Localized READMEs label those des
 
 ## Selection Order
 
-The app chooses a language in this order:
+On the public website, the URL determines the language: `/` is English and `/?lang=fr`, for example, is French. Saved preferences and browser language do not override a public URL. This keeps the initial HTML, rendered content, title, and canonical URL consistent. Choosing a language updates the URL without replacing any open document.
+
+The desktop app chooses a language in this order:
 
 1. URL query parameter, such as `?lang=pt`.
 2. Hash query parameter when present in a shared URL.
@@ -47,6 +49,14 @@ The app chooses a language in this order:
 5. English fallback.
 
 When a user picks a language from the dropdown, the app saves `app-lang` and updates the URL query parameter.
+
+## Public Search Content
+
+`seo/locales.mjs` defines canonical URLs, metadata, and reciprocal language alternates. `seo/welcome-content.mjs` contains the public introduction and starter text for all 15 languages. `seo/server-render.mjs` puts that introduction in the visible preview and prepares the translated starter for new visitors. `assets/seo-metadata.mjs` provides the equivalent browser fallback on static hosts and keeps metadata synchronized after a language change.
+
+The English starter retains the full feature demonstration. The translated starters explain editing, imports, preview, export, sharing, local storage, and backups, with code, math, and Mermaid examples. Changing the interface language never translates or overwrites saved documents. Translations should receive native-speaker review as terminology evolves.
+
+The development server runs the same SEO middleware as Cloudflare Pages. Run `npm run build` and `npx playwright test tests/e2e/seo.spec.js --project=chromium` to verify metadata, the initial HTML in every language, rendering without JavaScript, redirects, and document preservation.
 
 ## What Gets Translated
 

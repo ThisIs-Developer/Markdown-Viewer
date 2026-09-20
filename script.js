@@ -30726,12 +30726,15 @@ ${selector} .arrowheadPath {
 
     isApplyingUiTranslations = false;
     translateUiTree(document.body);
-    document.title = activeLang === 'en' ? initialDocumentTitle : translateUiString(initialDocumentTitle);
+    if (window.MarkdownViewerSeo) window.MarkdownViewerSeo.applyForLanguage(lang);
+    else document.title = activeLang === 'en' ? initialDocumentTitle : translateUiString(initialDocumentTitle);
   }
 
   async function detectAndInitLanguage() {
     const urlParams = new URLSearchParams(window.location.search);
-    let lang = urlParams.get('lang');
+    // Public web URLs have a stable language, including the English root.
+    // The desktop build retains saved/browser language detection below.
+    let lang = window.MarkdownViewerSeo?.languageFromUrl() || urlParams.get('lang');
 
     if (!lang) {
       const hash = window.location.hash;

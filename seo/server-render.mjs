@@ -1,4 +1,5 @@
 import { canonicalUrlForLocale, getSeoLocale, hasSeoLocale } from './locales.mjs';
+import { localizedWelcomeMarkdown, renderWelcomeHtml } from './welcome-content.mjs';
 
 function escapeHtmlAttribute(value) {
   return String(value)
@@ -65,6 +66,12 @@ export function renderLocalizedSeoHtml(sourceHtml, localeOrCode) {
   }
 
   html = replaceSeoText(html, 'document-title', locale.title);
+  html = html.replace(/<!-- welcome-preview:start -->[\s\S]*?<!-- welcome-preview:end -->/, () =>
+    `<!-- welcome-preview:start -->\n${renderWelcomeHtml(locale.code)}\n<!-- welcome-preview:end -->`);
+  if (locale.code !== 'en') {
+    html = html.replace(/(<textarea\b[^>]*\bid="default-markdown"[^>]*>)[\s\S]*?(<\/textarea>)/i,
+      (_, opening, closing) => `${opening}${escapeHtmlText(localizedWelcomeMarkdown(locale.code))}${closing}`);
+  }
   return replaceApplicationSchema(html, locale, canonicalUrl);
 }
 
@@ -99,7 +106,7 @@ export async function handleSeoRequest(context) {
 
   const response = await context.next();
   const contentType = response.headers.get('content-type') || '';
-  if (context.request.method === 'HEAD' || !response.ok || !contentType.includes('text/html')) {
+  if (!response.ok || !contentType.includes('text/html')) {
     return response;
   }
 
@@ -109,7 +116,8 @@ export async function handleSeoRequest(context) {
   headers.delete('etag');
   headers.set('Content-Language', locale.htmlLang);
 
-  return new Response(renderLocalizedSeoHtml(await response.text(), locale), {
+  const body = context.request.method === 'HEAD' ? null : renderLocalizedSeoHtml(await response.text(), locale);
+  return new Response(body, {
     status: response.status,
     statusText: response.statusText,
     headers

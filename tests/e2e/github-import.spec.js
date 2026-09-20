@@ -395,7 +395,7 @@ test('resolves slash-containing branches and shows the immutable commit beside t
 
 test('localizes the GitHub importer in every supported interface language', async ({ page }) => {
   test.setTimeout(180_000);
-  const locales = ['en', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'tr', 'tw', 'uk', 'zh'];
+  const locales = ['en', 'bg', 'de', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'tr', 'tw', 'uk', 'zh'];
   const catalogs = Object.fromEntries(locales.map(locale => [
     locale,
     locale === 'en' ? null : require(`../../assets/i18n/${locale}.json`)
@@ -440,7 +440,7 @@ test('localizes the GitHub importer in every supported interface language', asyn
 
   for (const locale of locales) {
     const translate = source => catalogs[locale]?.[source] || source;
-    const languageTag = locale === 'zh' ? 'zh-Hans' : (locale === 'tw' ? 'zh-Hant' : locale);
+    const languageTag = { zh: 'zh-Hans', tw: 'zh-Hant', pt: 'pt-BR' }[locale] || locale;
     await openApp(page, `/?lang=${locale}`);
     await expect(page.locator('html')).toHaveAttribute('lang', languageTag);
     await openGitHubImporter(page);
