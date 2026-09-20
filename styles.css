@@ -1824,6 +1824,7 @@ body.document-sidebar-collapsed .document-sidebar {
   padding: 20px;
 }
 
+/* Keep document typography independent of the selected interface language. */
 .markdown-body {
   padding: 20px;
   width: 100%;
@@ -9123,7 +9124,7 @@ button.live-share-participant-overflow {
 }
 
 /* ==========================================================================
-   Multilingual & CJK Optimization styles added by Aegis SEO agency
+   Language menu
    ========================================================================== */
 .lang-select-item {
   display: flex !important;
@@ -9144,33 +9145,6 @@ button.live-share-participant-overflow {
   background: color-mix(in srgb, var(--accent-color) 12%, var(--menu-surface)) !important;
   color: var(--accent-color) !important;
   font-weight: 500;
-}
-
-/* Adjust CJK text layout for maximum readability inside the preview pane */
-html[lang="zh"] .markdown-body,
-html[lang="ja"] .markdown-body,
-html[lang="ko"] .markdown-body {
-  line-height: 1.75 !important;
-  letter-spacing: 0.03em;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-  text-align: justify;
-}
-
-/* Specific heading spacing improvements for CJK characters */
-html[lang="zh"] .markdown-body h1,
-html[lang="zh"] .markdown-body h2,
-html[lang="zh"] .markdown-body h3,
-html[lang="ja"] .markdown-body h1,
-html[lang="ja"] .markdown-body h2,
-html[lang="ja"] .markdown-body h3,
-html[lang="ko"] .markdown-body h1,
-html[lang="ko"] .markdown-body h2,
-html[lang="ko"] .markdown-body h3 {
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  margin-top: 1.4em;
-  margin-bottom: 0.6em;
 }
 
 /* Consistent, position-safe menu motion. Popper owns transform; the individual

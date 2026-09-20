@@ -48,7 +48,7 @@ The desktop app chooses a language in this order:
 4. Browser language from `navigator.language`.
 5. English fallback.
 
-When a user picks a language from the dropdown, the app saves `app-lang` and updates the URL query parameter.
+When a user picks a language from the dropdown, the app saves `app-lang` and updates the URL query parameter. Document previews and release notes keep the same typography, spacing, and alignment across interface languages, including Japanese and Korean.
 
 ## Public Search Content
 
