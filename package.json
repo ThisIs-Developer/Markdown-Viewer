@@ -12,6 +12,7 @@
     "build": "npm run check:static && npm run check:seo",
     "check:static": "node tests/helpers/static-build-check.mjs",
     "check:seo": "node seo/generate-sitemap.mjs --check",
+    "audit:seo": "node seo/audit-live.mjs",
     "seo:sitemap": "node seo/generate-sitemap.mjs",
     "test": "npm run build && npm run test:e2e",
     "test:install": "playwright install chromium firefox webkit",

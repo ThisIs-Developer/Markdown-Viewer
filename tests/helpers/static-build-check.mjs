@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { SEO_LOCALES, canonicalUrlForLocale, hreflangEntries } from '../../seo/locales.mjs';
 import { buildSitemap } from '../../seo/generate-sitemap.mjs';
 import { handleSeoRequest, renderLocalizedSeoHtml } from '../../seo/server-render.mjs';
+import { getWelcomeCopy, localizedWelcomeMarkdown, renderWelcomeHtml } from '../../seo/welcome-content.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../..');
@@ -21,6 +22,7 @@ const requiredFiles = [
   '_routes.json',
   'assets/seo-metadata.mjs',
   'seo/locales.mjs',
+  'seo/welcome-content.mjs',
   'seo/server-render.mjs',
   'seo/generate-sitemap.mjs',
   'functions/_middleware.js',
@@ -44,6 +46,7 @@ const syntaxCheckedFiles = [
   'preview-worker.js',
   'sw.js',
   'assets/seo-metadata.mjs',
+  'seo/welcome-content.mjs',
   'desktop-app/resources/js/main.js',
   'desktop-app/resources/js/script.js',
   'desktop-app/resources/js/workspace-storage.js',
@@ -132,6 +135,16 @@ for (const locale of SEO_LOCALES) {
       throw new Error(`Server-rendered SEO for ${locale.code} is missing: ${marker}`);
     }
   }
+  const welcome = getWelcomeCopy(locale.code);
+  if (!renderedHtml.includes(renderWelcomeHtml(locale.code))) {
+    throw new Error(`The ${locale.code} response must include the visible localized welcome content.`);
+  }
+  if (locale.code !== 'en') {
+    const escapedStarter = localizedWelcomeMarkdown(locale.code).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+    if (welcome.intro === getWelcomeCopy('en').intro || !renderedHtml.includes(escapedStarter)) {
+      throw new Error(`The ${locale.code} page must provide a translated starter document, not the English demo.`);
+    }
+  }
 }
 
 async function runSeoRequest(url, method = 'GET') {
@@ -158,6 +171,11 @@ if (!traditionalChineseHtml.includes('href="https://markdownviewer.pages.dev/?la
 }
 if (traditionalChineseResponse.headers.has('Content-Length') || traditionalChineseResponse.headers.has('ETag')) {
   throw new Error('SEO middleware retained stale representation headers after rewriting HTML.');
+}
+
+const headResponse = await runSeoRequest('https://markdownviewer.pages.dev/?lang=tw', 'HEAD');
+if (headResponse.headers.get('Content-Language') !== 'zh-Hant' || (await headResponse.text()) !== '') {
+  throw new Error('HEAD must describe the localized GET response without returning a body.');
 }
 
 for (const url of [
