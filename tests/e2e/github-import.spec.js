@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { openApp, storedDocuments } = require('../helpers/app');
+const { openApp, storedDocuments, waitForAppReady } = require('../helpers/app');
 
 const TEST_COMMITS = {
   handbook: '1111111111111111111111111111111111111111',
@@ -9,6 +9,7 @@ const TEST_COMMITS = {
 };
 
 async function openGitHubImporter(page) {
+  await waitForAppReady(page);
   if (await page.locator('#importDropdown').isVisible()) {
     await page.locator('#importDropdown').click();
     await page.locator('#import-from-github').click();
