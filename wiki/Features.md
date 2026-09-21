@@ -17,6 +17,7 @@ The app opens with a header, Files sidebar, document tab bar, formatting toolbar
 - Editor mode shows only the textarea.
 - Split view shows the Editor and Preview side by side.
 - Preview mode shows only the rendered document.
+- **Document Outline** opens from the square-menu button beside Full Screen. Its right sidebar lists headings H1–H6 with indentation, updates as you edit or switch documents, and jumps to the selected section in Preview. Code blocks are excluded; documents without headings show an empty state. The outline supports keyboard navigation, adapts to small screens, and is available in read-only documents. It is generated locally, uses no separate persistent storage, and stays out of exports.
 - A file menu can open a second document beside the active document. A shared control switches both sides between Edit and Preview, and synchronized scrolling is optional.
 - On small screens, the mobile menu exposes the same core actions and the layout avoids a cramped split view.
 - A draggable divider resizes the Editor and Preview in Split view and keeps both panes above 20% width.

@@ -1168,5 +1168,10 @@
   "Release notes are available in the tab list.": "Versionshinweise sind in der Registerkartenliste verfügbar.",
   "Release Notes: 3.10.2": "Versionshinweise: 3.10.2",
   "Skip update navigation": "Update-Navigation überspringen",
-  "1 file": "1 Datei"
+  "1 file": "1 Datei",
+  "Document Outline": "Dokumentgliederung",
+  "Close Document Outline": "Dokumentgliederung schließen",
+  "Document headings": "Dokumentüberschriften",
+  "No headings in this document.": "Dieses Dokument enthält keine Überschriften.",
+  "Untitled heading": "Unbenannte Überschrift"
 }

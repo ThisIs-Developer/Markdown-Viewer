@@ -5,6 +5,8 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- Added Document Outline: a right sidebar with automatically updated, indented headings, section navigation, and a square-menu toolbar button beside Full Screen.
+
 ---
 
 ## v3.10.2

@@ -1168,5 +1168,10 @@
   "Zoom In": "Увеличаване",
   "Zoom model": "Увеличен модел",
   "Zoom out": "Намаляване",
-  "Zoom Out": "Намаляване"
+  "Zoom Out": "Намаляване",
+  "Document Outline": "Структура на документа",
+  "Close Document Outline": "Затваряне на структурата на документа",
+  "Document headings": "Заглавия в документа",
+  "No headings in this document.": "В този документ няма заглавия.",
+  "Untitled heading": "Неозаглавено заглавие"
 }

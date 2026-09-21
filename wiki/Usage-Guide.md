@@ -20,6 +20,16 @@ Use the view buttons to switch between Editor, Split, and Preview. Split view is
 
 To compare or edit two files, open a file menu and choose **Open in split view**, then select the second document. A shared control switches both sides between Edit and Preview. Preview mode supports Markdown, math, diagrams, maps, STL, and ABC rendering. Use the combined tab menu to exit this view.
 
+## Document Outline
+
+Select the **square-menu** button beside **Full Screen** at the right end of the formatting toolbar to open **Document Outline**. The right sidebar lists the current document's headings in order, with indentation for heading levels. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
+
+Select a heading to jump to that section in Preview. If you are using Editor only, selecting a heading opens Preview. The current section is highlighted as you scroll. On small screens, the outline closes after navigation so you can read the selected section. Close it with the toolbar button, the close button, or **Escape** while focus is inside the sidebar. Opening Comments closes the outline, and opening the outline closes Comments.
+
+The outline is generated locally from the current document and is not saved separately or included in exports.
+
+![Document Outline beside a Markdown preview](images/document-outline.png)
+
 ## Files, Folders, and Autosave
 
 - Select Workspace, Secret Workspace, or a folder, then use the clearly labeled **New file** or **New folder** button. The selected row shows where the item will be created; the plus menu beside an unlocked workspace or folder creates directly inside it.

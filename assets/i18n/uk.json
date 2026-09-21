@@ -1168,5 +1168,10 @@
   "Release notes are available in the tab list.": "Примітки до випуску доступні у списку вкладок.",
   "Release Notes: 3.10.2": "Примітки до випуску: 3.10.2",
   "Skip update navigation": "Пропустити оновлення навігації",
-  "1 file": "1 файл"
+  "1 file": "1 файл",
+  "Document Outline": "Структура документа",
+  "Close Document Outline": "Закрити структуру документа",
+  "Document headings": "Заголовки документа",
+  "No headings in this document.": "У цьому документі немає заголовків.",
+  "Untitled heading": "Заголовок без назви"
 }

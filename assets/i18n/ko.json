@@ -1168,5 +1168,10 @@
   "Release notes are available in the tab list.": "릴리스 노트는 탭 목록에서 확인할 수 있습니다.",
   "Release Notes: 3.10.2": "출시 노트: 3.10.2",
   "Skip update navigation": "업데이트 탐색 건너뛰기",
-  "1 file": "파일 1개"
+  "1 file": "파일 1개",
+  "Document Outline": "문서 개요",
+  "Close Document Outline": "문서 개요 닫기",
+  "Document headings": "문서 제목",
+  "No headings in this document.": "이 문서에는 제목이 없습니다.",
+  "Untitled heading": "이름 없는 제목"
 }

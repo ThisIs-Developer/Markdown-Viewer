@@ -3659,6 +3659,7 @@ body {
 
 .workspace-format-actions {
   padding-inline: 5px;
+  margin-inline-start: auto;
 }
 
 .document-actions-menu {
@@ -11177,6 +11178,111 @@ html[data-theme="dark"] .mermaid svg {
   isolation: isolate;
 }
 
+/* Document Outline shares the document surface and keeps its own scroll position. */
+.document-outline[hidden] {
+  display: none;
+}
+
+.document-outline {
+  position: absolute;
+  z-index: 85;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(280px, 88%);
+  min-height: 0;
+  overflow: hidden;
+  color: var(--text-color);
+  background: var(--header-bg);
+  border-left: 1px solid var(--border-color);
+  box-shadow: var(--menu-shadow);
+  font-size: var(--ui-font-md);
+}
+
+.document-outline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px 8px 7px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.document-outline-header h2 {
+  margin: 0;
+  font-size: var(--ui-font-lg);
+  font-weight: 600;
+}
+
+.document-outline-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+}
+
+.document-outline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.document-outline-link {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 8px;
+  padding-inline-start: calc(8px + var(--outline-depth, 0) * 14px);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  line-height: 1.4;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.document-outline-link:hover {
+  background: var(--button-hover);
+}
+
+.document-outline-link[aria-current],
+#document-outline-toggle[aria-pressed="true"] {
+  color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+}
+
+.document-outline-link:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+.document-outline-empty {
+  margin: 0;
+  padding: 16px 8px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (min-width: 1080px) {
+  .document-outline {
+    position: static;
+    flex: 0 0 260px;
+    width: 260px;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .document-outline-link {
+    min-height: 44px;
+  }
+}
+
 /* ========================================
    COMMENTS & SUGGESTIONS
    ======================================== */
@@ -13126,6 +13232,7 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
   .app-header,
   .document-sidebar,
   .document-sidebar-backdrop,
+  .document-outline,
   .tab-bar,
   .markdown-format-toolbar,
   .editor-pane,

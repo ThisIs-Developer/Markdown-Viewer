@@ -1168,5 +1168,10 @@
   "Release notes are available in the tab list.": "發行說明可在選項卡清單中找到。",
   "Release Notes: 3.10.2": "發行說明：3.10.2",
   "Skip update navigation": "跳過更新導航",
-  "1 file": "1 份文件"
+  "1 file": "1 份文件",
+  "Document Outline": "文件大綱",
+  "Close Document Outline": "關閉文件大綱",
+  "Document headings": "文件標題",
+  "No headings in this document.": "此文件沒有標題。",
+  "Untitled heading": "未命名標題"
 }

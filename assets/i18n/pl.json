@@ -1168,5 +1168,10 @@
   "Release notes are available in the tab list.": "Informacje o wydaniu są dostępne na liście zakładek.",
   "Release Notes: 3.10.2": "Informacje o wydaniu: 3.10.2",
   "Skip update navigation": "Pomiń nawigację po aktualizacji",
-  "1 file": "1 plik"
+  "1 file": "1 plik",
+  "Document Outline": "Konspekt dokumentu",
+  "Close Document Outline": "Zamknij konspekt dokumentu",
+  "Document headings": "Nagłówki dokumentu",
+  "No headings in this document.": "Ten dokument nie zawiera nagłówków.",
+  "Untitled heading": "Nagłówek bez tytułu"
 }

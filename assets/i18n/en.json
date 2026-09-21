@@ -1168,5 +1168,10 @@
   "Zoom In": "Zoom In",
   "Zoom model": "Zoom model",
   "Zoom out": "Zoom out",
-  "Zoom Out": "Zoom Out"
+  "Zoom Out": "Zoom Out",
+  "Document Outline": "Document Outline",
+  "Close Document Outline": "Close Document Outline",
+  "Document headings": "Document headings",
+  "No headings in this document.": "No headings in this document.",
+  "Untitled heading": "Untitled heading"
 }

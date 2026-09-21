@@ -1168,5 +1168,10 @@
   "Release notes are available in the tab list.": "As notas de versão estão disponíveis na lista de guias.",
   "Release Notes: 3.10.2": "Notas de versão: 3.10.2",
   "Skip update navigation": "Pular navegação de atualização",
-  "1 file": "1 arquivo"
+  "1 file": "1 arquivo",
+  "Document Outline": "Estrutura do documento",
+  "Close Document Outline": "Fechar estrutura do documento",
+  "Document headings": "Títulos do documento",
+  "No headings in this document.": "Este documento não contém títulos.",
+  "Untitled heading": "Título sem nome"
 }

@@ -436,6 +436,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // View Mode Elements - Story 1.1
   const contentContainer = document.querySelector(".content-container");
+  const documentOutline = document.getElementById('document-outline');
+  const documentOutlineToggle = document.getElementById('document-outline-toggle');
+  const documentOutlineClose = document.getElementById('document-outline-close');
+  const documentOutlineList = document.getElementById('document-outline-list');
+  const documentOutlineEmpty = document.getElementById('document-outline-empty');
+  let documentOutlineEntries = [];
+  let documentOutlineScrollFrame = null;
   const viewModeButtons = document.querySelectorAll(".view-toggle-btn");
   const documentSplitPane = document.getElementById('document-split-pane');
   const documentSplitDivider = document.getElementById('document-split-divider');
@@ -8415,6 +8422,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function setReviewMode(enabled, options) {
     options = options || {};
     const nextState = Boolean(enabled);
+    if (nextState) setDocumentOutlineOpen(false);
     if (nextState && isReleaseNotesActive()) {
       announceToScreenReader('Release notes do not support comments or suggestions.');
       return;
@@ -10122,6 +10130,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function setReviewMode(enabled, options) {
     options = options || {};
     const nextState = Boolean(enabled);
+    if (nextState) setDocumentOutlineOpen(false);
     if (nextState && isReleaseNotesActive()) {
       announceToScreenReader('Release notes do not support comments.');
       return;
@@ -11208,6 +11217,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (contentContainer) contentContainer.classList.toggle('no-active-document', showEmptyState);
     if (noOpenDocument) noOpenDocument.hidden = !showEmptyState;
     updateDocumentToolbarAvailability(hasActiveDocument);
+    if (!hasActiveDocument && documentOutline && !documentOutline.hidden) setDocumentOutlineOpen(false);
     if (showEmptyState) {
       markdownEditor.value = '';
       updateDocumentStats();
@@ -14623,6 +14633,7 @@ ${selector} .arrowheadPath {
     });
 
     enhanceReleaseNotesPreview();
+    refreshDocumentOutline();
 
     queryPreviewRoots(roots, 'input[type="checkbox"]').forEach(function(input) {
       if (!input.hasAttribute('aria-label')) {
@@ -14724,6 +14735,7 @@ ${selector} .arrowheadPath {
       _lastRenderedContent === rawVal &&
       !previewContainsSkeleton();
 
+    if (previewLastRenderedTabId !== previewDocumentId) clearDocumentOutline();
     if (hasCurrentPreview && !force) return;
 
     clearPendingPreviewWork();
@@ -22101,6 +22113,123 @@ ${selector} .arrowheadPath {
     }
   }
 
+  function clearDocumentOutline() {
+    documentOutlineEntries = [];
+    if (documentOutlineList) documentOutlineList.replaceChildren();
+    if (documentOutlineEmpty) documentOutlineEmpty.hidden = false;
+  }
+
+  function setDocumentOutlineOpen(open, options) {
+    if (!documentOutline || !documentOutlineToggle) return;
+    const enabled = Boolean(open && hasActiveOpenDocument());
+    if (enabled && reviewModeActive) setReviewMode(false);
+    documentOutline.hidden = !enabled;
+    documentOutlineToggle.setAttribute('aria-expanded', String(enabled));
+    documentOutlineToggle.setAttribute('aria-pressed', String(enabled));
+    if (enabled) {
+      refreshDocumentOutline();
+      documentOutlineClose.focus({ preventScroll: true });
+    } else {
+      clearDocumentOutline();
+      if (options && options.restoreFocus) documentOutlineToggle.focus({ preventScroll: true });
+    }
+    refreshEditorWidth();
+    scheduleLineNumberUpdate({ force: true });
+  }
+
+  function refreshDocumentOutline() {
+    if (!documentOutline || documentOutline.hidden) return;
+    if (!hasActiveOpenDocument() || !previewHasCommittedRender ||
+        previewLastRenderedTabId !== getActivePreviewDocumentId() ||
+        _lastRenderedContent !== markdownEditor.value || previewContainsSkeleton()) {
+      clearDocumentOutline();
+      return;
+    }
+
+    const headings = Array.from(markdownPreview.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      .filter(function(heading) { return !heading.closest('pre, .diagram-viewer, .frontmatter-container'); });
+    const baseLevel = headings.reduce(function(level, heading) {
+      return Math.min(level, Number(heading.tagName.slice(1)));
+    }, 6);
+    const fragment = document.createDocumentFragment();
+    const focusedIndex = documentOutlineEntries.findIndex(function(entry) { return entry.button === document.activeElement; });
+    documentOutlineEntries = headings.map(function(heading) {
+      const label = heading.cloneNode(true);
+      label.querySelectorAll('button, .review-target-actions, .review-pins-layer').forEach(function(node) { node.remove(); });
+      label.querySelectorAll('img').forEach(function(image) { image.replaceWith(document.createTextNode(image.alt)); });
+      const title = label.textContent.replace(/\s+/g, ' ').trim() || translateUiString('Untitled heading');
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'document-outline-link';
+      button.textContent = title;
+      button.title = title;
+      button.style.setProperty('--outline-depth', Number(heading.tagName.slice(1)) - baseLevel);
+      button.addEventListener('click', function() {
+        if (!heading.isConnected) return;
+        if (currentViewMode === 'editor') {
+          setViewMode('preview');
+          saveCurrentTabState();
+        }
+        if (window.matchMedia('(max-width: 1079px)').matches) {
+          setDocumentOutlineOpen(false, { restoreFocus: true });
+        }
+        previewPane.scrollTop += heading.getBoundingClientRect().top - previewPane.getBoundingClientRect().top - 16;
+        updateDocumentOutlineActiveHeading();
+      });
+      item.appendChild(button);
+      fragment.appendChild(item);
+      return { heading, button };
+    });
+    documentOutlineList.replaceChildren(fragment);
+    documentOutlineEmpty.hidden = headings.length > 0;
+    if (focusedIndex >= 0) {
+      const entry = documentOutlineEntries[Math.min(focusedIndex, documentOutlineEntries.length - 1)];
+      (entry ? entry.button : documentOutlineClose).focus({ preventScroll: true });
+    }
+    updateDocumentOutlineActiveHeading();
+  }
+
+  function updateDocumentOutlineActiveHeading() {
+    if (!documentOutline || documentOutline.hidden || !documentOutlineEntries.length) return;
+    const activationLine = previewPane.getBoundingClientRect().top + 48;
+    let activeEntry = null;
+    if (currentViewMode !== 'editor') {
+      activeEntry = documentOutlineEntries[0];
+      documentOutlineEntries.forEach(function(entry) {
+        if (entry.heading.getBoundingClientRect().top <= activationLine) activeEntry = entry;
+      });
+      if (previewPane.scrollTop > 0 && previewPane.scrollTop + previewPane.clientHeight >= previewPane.scrollHeight - 2) {
+        activeEntry = documentOutlineEntries[documentOutlineEntries.length - 1];
+      }
+    }
+    documentOutlineEntries.forEach(function(entry) {
+      if (entry === activeEntry) entry.button.setAttribute('aria-current', 'location');
+      else entry.button.removeAttribute('aria-current');
+    });
+  }
+
+  function initDocumentOutline() {
+    if (!documentOutline) return;
+    documentOutlineClose.addEventListener('click', function() {
+      setDocumentOutlineOpen(false, { restoreFocus: true });
+    });
+    documentOutline.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setDocumentOutlineOpen(false, { restoreFocus: true });
+      }
+    });
+    previewPane.addEventListener('scroll', function() {
+      if (documentOutline.hidden || documentOutlineScrollFrame !== null) return;
+      documentOutlineScrollFrame = requestAnimationFrame(function() {
+        documentOutlineScrollFrame = null;
+        updateDocumentOutlineActiveHeading();
+      });
+    }, { passive: true });
+  }
+
   function runMarkdownTool(action, button) {
     if (!canMutateEditor() && isLiveMutatingAction(action)) {
       announceToScreenReader(getEditorReadOnlyMessage());
@@ -22160,7 +22289,8 @@ ${selector} .arrowheadPath {
     else if (action === 'fullscreen') {
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
       else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } else if (action === 'clear-formatting') openClearFormattingModal();
+    } else if (action === 'outline') setDocumentOutlineOpen(documentOutline.hidden);
+    else if (action === 'clear-formatting') openClearFormattingModal();
     else if (action === 'find') openFindReplaceModal();
     else if (action === 'help') openHelpModal();
     else if (action === 'info') openAboutModal(button);
@@ -23163,6 +23293,7 @@ ${selector} .arrowheadPath {
   });
 
   initMarkdownFormatToolbar();
+  initDocumentOutline();
   initToolbarDropdownPortals();
   initDropdownMenuMotion();
   initFindReplaceModal();
@@ -25934,7 +26065,7 @@ ${selector} .arrowheadPath {
   const LIVE_SHARE_JOIN_TIMEOUT_MS = 8000;
   const LIVE_SHARE_ACCESS_EDIT = 'edit';
   const LIVE_SHARE_ACCESS_VIEW = 'view';
-  const LIVE_SHARE_NON_MUTATING_ACTIONS = ['fullscreen', 'find', 'help', 'info'];
+  const LIVE_SHARE_NON_MUTATING_ACTIONS = ['fullscreen', 'outline', 'find', 'help', 'info'];
   const LIVE_SHARE_ADJECTIVES = [
     'Acidic',
     'Awesome',
