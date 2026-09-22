@@ -1173,5 +1173,6 @@
   "Close Document Outline": "Cerrar esquema del documento",
   "Document headings": "Encabezados del documento",
   "No headings in this document.": "Este documento no tiene encabezados.",
-  "Untitled heading": "Encabezado sin título"
+  "Untitled heading": "Encabezado sin título",
+  "Expand": "Expandir"
 }

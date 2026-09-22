@@ -1173,5 +1173,6 @@
   "Close Document Outline": "Закрыть структуру документа",
   "Document headings": "Заголовки документа",
   "No headings in this document.": "В этом документе нет заголовков.",
-  "Untitled heading": "Заголовок без названия"
+  "Untitled heading": "Заголовок без названия",
+  "Expand": "Развернуть"
 }

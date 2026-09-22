@@ -58,7 +58,7 @@ test('Share Snapshot creates a view-only hash link that opens without permanent 
 
   await sharedPage.getByRole('button', { name: 'Document Outline', exact: true }).click();
   await expect(sharedPage.locator('#document-outline')).toBeVisible();
-  await expect(sharedPage.locator('#document-outline-list button').first()).toHaveText('Share Snapshot Fixture');
+  await expect(sharedPage.locator('#document-outline-list .document-outline-link').first()).toHaveText('Share Snapshot Fixture');
 
   const storedTabs = JSON.stringify(await storedDocuments(sharedPage));
   expect(storedTabs).not.toContain('This text should survive a snapshot round trip.');

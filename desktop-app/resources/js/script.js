@@ -444,6 +444,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentOutlineEntries = [];
   let documentOutlineScrollFrame = null;
   let documentOutlineScrollTarget = null;
+  let documentOutlineDocumentId = null;
+  const documentOutlineCollapsed = new Set();
   const viewModeButtons = document.querySelectorAll(".view-toggle-btn");
   const documentSplitPane = document.getElementById('document-split-pane');
   const documentSplitDivider = document.getElementById('document-split-divider');
@@ -16853,7 +16855,9 @@ ${selector} .arrowheadPath {
   }
 
   function syncEditorToPreview() {
-    if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling) return;
+    // During an outline jump, the preview owns the position until the next user
+    // interaction. Delayed editor scroll events must not undo a layout correction.
+    if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling || documentOutlineScrollTarget) return;
     const sourceDocumentId = activeTabId;
     if (!sourceDocumentId || previewLastRenderedTabId !== sourceDocumentId) return;
     isEditorScrolling = true;
@@ -16967,6 +16971,7 @@ ${selector} .arrowheadPath {
 
     const previousMode = currentViewMode;
     currentViewMode = mode;
+    documentOutlineScrollTarget = null;
 
     // Update content container class
     contentContainer.classList.remove('view-editor-only', 'view-preview-only', 'view-split');
@@ -17020,6 +17025,7 @@ ${selector} .arrowheadPath {
       scheduleEditorOverlayScrollSync();
     }
     if (secondarySplitTabId) renderDocumentSplitView();
+    requestAnimationFrame(updateDocumentOutlineActiveHeading);
   }
 
   function resolveViewToggleMode(mode) {
@@ -22126,8 +22132,8 @@ ${selector} .arrowheadPath {
     const enabled = Boolean(open && hasActiveOpenDocument());
     if (enabled && reviewModeActive) setReviewMode(false);
     documentOutline.hidden = !enabled;
+    contentContainer.classList.toggle('has-document-outline', enabled);
     documentOutlineToggle.setAttribute('aria-expanded', String(enabled));
-    documentOutlineToggle.setAttribute('aria-pressed', String(enabled));
     if (enabled) {
       refreshDocumentOutline();
       documentOutlineClose.focus({ preventScroll: true });
@@ -22139,8 +22145,74 @@ ${selector} .arrowheadPath {
     scheduleLineNumberUpdate({ force: true });
   }
 
+  function getDocumentOutlineSourceHeadings() {
+    const source = markdownEditor.value;
+    const body = parseFrontmatter(source).body;
+    const headings = [];
+    // Walk block tokens, keeping their source bounds so code examples and repeated
+    // heading text cannot capture the caret intended for a later real heading.
+    function visit(tokens, start, limit) {
+      let cursor = start;
+      tokens.forEach(function(token) {
+        const raw = token.raw || '';
+        if (!raw) return;
+        let offset = source.indexOf(raw, cursor);
+        let end = offset + raw.length;
+        if (offset < 0 || end > limit) {
+          // Blockquotes and list items remove their prefixes from nested tokens.
+          const lines = raw.split('\n');
+          const firstLine = lines[0].trimStart();
+          if (!firstLine) return;
+          offset = source.indexOf(firstLine, cursor);
+          if (offset < 0 || offset >= limit) return;
+          end = offset;
+          for (let line = 0; line < lines.length; line += 1) {
+            if (line === lines.length - 1 && raw.endsWith('\n')) break;
+            const newline = source.indexOf('\n', end);
+            end = newline < 0 ? limit : Math.min(limit, newline + 1);
+          }
+        }
+        cursor = end;
+        if (token.type === 'heading') headings.push({ level: token.depth, start: offset });
+        else if (token.type === 'list') visit(token.items, offset, end);
+        else if (token.type === 'blockquote' || token.type === 'list_item') visit(token.tokens || [], offset, end);
+        else if (token.type === 'html') {
+          const template = document.createElement('template');
+          template.innerHTML = sanitizePreviewHtml(raw);
+          let htmlCursor = offset;
+          template.content.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(function(heading) {
+            const match = new RegExp('<' + heading.tagName + '\\b', 'i').exec(source.slice(htmlCursor, end));
+            if (!match) return;
+            htmlCursor += match.index;
+            if (!heading.closest('pre, .diagram-viewer, .frontmatter-container')) {
+              headings.push({ level: Number(heading.tagName.slice(1)), start: htmlCursor });
+            }
+            htmlCursor += heading.tagName.length + 1;
+          });
+        }
+      });
+    }
+    visit(marked.lexer(body), source.length - body.length, source.length);
+    return headings;
+  }
+
+  function setDocumentOutlineExpanded(entry, expanded) {
+    entry.children.hidden = !expanded;
+    entry.toggle.setAttribute('aria-expanded', String(expanded));
+    const action = translateUiString(expanded ? 'Collapse' : 'Expand');
+    entry.toggle.setAttribute('aria-label', action + ': ' + entry.title);
+    entry.toggle.title = action;
+    if (expanded) documentOutlineCollapsed.delete(entry.key);
+    else documentOutlineCollapsed.add(entry.key);
+  }
+
   function refreshDocumentOutline() {
     if (!documentOutline || documentOutline.hidden) return;
+    const documentId = getActivePreviewDocumentId();
+    if (documentOutlineDocumentId !== documentId) {
+      documentOutlineDocumentId = documentId;
+      documentOutlineCollapsed.clear();
+    }
     if (!hasActiveOpenDocument() || !previewHasCommittedRender ||
         previewLastRenderedTabId !== getActivePreviewDocumentId() ||
         _lastRenderedContent !== markdownEditor.value || previewContainsSkeleton()) {
@@ -22150,71 +22222,136 @@ ${selector} .arrowheadPath {
 
     const headings = Array.from(markdownPreview.querySelectorAll('h1, h2, h3, h4, h5, h6'))
       .filter(function(heading) { return !heading.closest('pre, .diagram-viewer, .frontmatter-container'); });
-    const baseLevel = headings.reduce(function(level, heading) {
-      return Math.min(level, Number(heading.tagName.slice(1)));
-    }, 6);
+    const sourceHeadings = getDocumentOutlineSourceHeadings();
     const fragment = document.createDocumentFragment();
-    const focusedIndex = documentOutlineEntries.findIndex(function(entry) { return entry.button === document.activeElement; });
-    documentOutlineEntries = headings.map(function(heading) {
+    const focusedEntry = documentOutlineEntries.find(function(entry) { return entry.button === document.activeElement || entry.toggle === document.activeElement; });
+    const focusToggle = focusedEntry && focusedEntry.toggle === document.activeElement;
+    const stack = [];
+    const occurrences = new Map();
+    let sourceIndex = 0;
+    documentOutlineEntries = headings.map(function(heading, index) {
       const label = heading.cloneNode(true);
       label.querySelectorAll('button, .review-target-actions, .review-pins-layer').forEach(function(node) { node.remove(); });
       label.querySelectorAll('img').forEach(function(image) { image.replaceWith(document.createTextNode(image.alt)); });
       const title = label.textContent.replace(/\s+/g, ' ').trim() || translateUiString('Untitled heading');
+      const level = Number(heading.tagName.slice(1));
+      const identity = level + ':' + title;
+      const occurrence = (occurrences.get(identity) || 0) + 1;
+      occurrences.set(identity, occurrence);
+      const key = identity + ':' + occurrence;
       const item = document.createElement('li');
+      const row = document.createElement('div');
+      row.className = 'document-outline-row';
+      const spacer = document.createElement('span');
+      spacer.className = 'document-outline-spacer';
+      spacer.setAttribute('aria-hidden', 'true');
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'document-outline-link';
       button.textContent = title;
       button.title = title;
-      button.style.setProperty('--outline-depth', Number(heading.tagName.slice(1)) - baseLevel);
+      const children = document.createElement('ol');
+      children.className = 'document-outline-list document-outline-children';
+      children.id = 'document-outline-children-' + index;
+      while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+      const parent = stack[stack.length - 1] || null;
+      while (sourceIndex < sourceHeadings.length && sourceHeadings[sourceIndex].level !== level) sourceIndex += 1;
+      const sourceHeading = sourceHeadings[sourceIndex++];
+      const entry = { heading, title, key, level, button, row, spacer, children, parent, sourceStart: sourceHeading ? sourceHeading.start : 0 };
       button.addEventListener('click', function() {
         if (!heading.isConnected) return;
-        if (currentViewMode === 'editor') {
-          setViewMode('preview');
-          saveCurrentTabState();
-        }
         if (window.matchMedia('(max-width: 1079px)').matches) {
           setDocumentOutlineOpen(false, { restoreFocus: true });
         }
-        documentOutlineScrollTarget = heading;
-        scrollToDocumentOutlineTarget();
+        if (currentViewMode === 'editor') {
+          cancelPendingMainScrollSync();
+          markdownEditor.focus({ preventScroll: true });
+          markdownEditor.setSelectionRange(entry.sourceStart, entry.sourceStart);
+          markdownEditor.scrollTop = clampEditorScrollTop(estimateEditorOffsetForIndex(entry.sourceStart) - 16);
+          syncEditorScrollOverlays();
+          updateDocumentOutlineActiveHeading();
+        } else {
+          documentOutlineScrollTarget = heading;
+          scrollToDocumentOutlineTarget();
+        }
       });
-      item.appendChild(button);
-      fragment.appendChild(item);
-      return { heading, button };
+      row.append(spacer, button);
+      item.append(row, children);
+      if (parent) {
+        item.style.setProperty('--outline-level-gap', String(level - parent.level));
+        parent.children.appendChild(item);
+      } else fragment.appendChild(item);
+      stack.push(entry);
+      return entry;
     });
+    documentOutlineEntries.forEach(function(entry) {
+      if (!entry.children.childElementCount) {
+        entry.children.remove();
+        return;
+      }
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'panel-icon-btn document-outline-chevron';
+      toggle.setAttribute('aria-controls', entry.children.id);
+      toggle.innerHTML = '<i class="lucide lucide-chevron-right" aria-hidden="true"></i>';
+      entry.toggle = toggle;
+      entry.spacer.replaceWith(toggle);
+      setDocumentOutlineExpanded(entry, !documentOutlineCollapsed.has(entry.key));
+      toggle.addEventListener('click', function() {
+        setDocumentOutlineExpanded(entry, entry.children.hidden);
+        updateDocumentOutlineActiveHeading();
+      });
+    });
+    const keys = new Set(documentOutlineEntries.map(function(entry) { return entry.key; }));
+    documentOutlineCollapsed.forEach(function(key) { if (!keys.has(key)) documentOutlineCollapsed.delete(key); });
     documentOutlineList.replaceChildren(fragment);
     documentOutlineEmpty.hidden = headings.length > 0;
-    if (focusedIndex >= 0) {
-      const entry = documentOutlineEntries[Math.min(focusedIndex, documentOutlineEntries.length - 1)];
-      (entry ? entry.button : documentOutlineClose).focus({ preventScroll: true });
+    if (focusedEntry) {
+      const entry = documentOutlineEntries.find(function(item) { return item.key === focusedEntry.key; });
+      (entry ? (focusToggle && entry.toggle || entry.button) : documentOutlineClose).focus({ preventScroll: true });
     }
     updateDocumentOutlineActiveHeading();
   }
 
   function scrollToDocumentOutlineTarget() {
     const heading = documentOutlineScrollTarget;
-    if (!heading || !heading.isConnected) return;
+    if (!heading || !heading.isConnected || currentViewMode === 'editor') return;
     // Reveal skipped preview blocks before measuring the heading's position.
     cancelPendingMainScrollSync();
     heading.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
     const headingTop = heading.getBoundingClientRect().top - previewPane.getBoundingClientRect().top;
-    if (headingTop < 16) previewPane.scrollTop = Math.max(0, previewPane.scrollTop - (16 - headingTop));
+    // Native scrolling can use a cached offset while a lazy block changes size.
+    // Correct in either direction using the heading's newly measured position.
+    previewPane.scrollTop = Math.max(0, previewPane.scrollTop + headingTop - 16);
     updateDocumentOutlineActiveHeading();
   }
 
   function updateDocumentOutlineActiveHeading() {
     if (!documentOutline || documentOutline.hidden || !documentOutlineEntries.length) return;
     const activationLine = previewPane.getBoundingClientRect().top + 48;
-    let activeEntry = null;
-    if (currentViewMode !== 'editor') {
-      activeEntry = documentOutlineEntries[0];
+    let activeEntry = documentOutlineEntries[0];
+    if (currentViewMode === 'editor') {
+      let low = 0;
+      let high = documentOutlineEntries.length - 1;
+      while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+        const entry = documentOutlineEntries[middle];
+        if (estimateEditorOffsetForIndex(entry.sourceStart) <= markdownEditor.scrollTop + 48) {
+          activeEntry = entry;
+          low = middle + 1;
+        } else high = middle - 1;
+      }
+    } else {
       documentOutlineEntries.forEach(function(entry) {
         if (entry.heading.getBoundingClientRect().top <= activationLine) activeEntry = entry;
       });
-      if (previewPane.scrollTop > 0 && previewPane.scrollTop + previewPane.clientHeight >= previewPane.scrollHeight - 2) {
-        activeEntry = documentOutlineEntries[documentOutlineEntries.length - 1];
-      }
+    }
+    const scrollPane = currentViewMode === 'editor' ? markdownEditor : previewPane;
+    if (scrollPane.scrollTop > 0 && scrollPane.scrollTop + scrollPane.clientHeight >= scrollPane.scrollHeight - 2) {
+      activeEntry = documentOutlineEntries[documentOutlineEntries.length - 1];
+    }
+    for (let parent = activeEntry.parent; parent; parent = parent.parent) {
+      if (parent.children.hidden) activeEntry = parent;
     }
     documentOutlineEntries.forEach(function(entry) {
       if (entry === activeEntry) entry.button.setAttribute('aria-current', 'location');
@@ -22245,13 +22382,15 @@ ${selector} .arrowheadPath {
         setDocumentOutlineOpen(false, { restoreFocus: true });
       }
     });
-    previewPane.addEventListener('scroll', function() {
+    function scheduleOutlineHighlight() {
       if (documentOutline.hidden || documentOutlineScrollFrame !== null) return;
       documentOutlineScrollFrame = requestAnimationFrame(function() {
         documentOutlineScrollFrame = null;
         updateDocumentOutlineActiveHeading();
       });
-    }, { passive: true });
+    }
+    previewPane.addEventListener('scroll', scheduleOutlineHighlight, { passive: true });
+    markdownEditor.addEventListener('scroll', scheduleOutlineHighlight, { passive: true });
   }
 
   function runMarkdownTool(action, button) {
@@ -22695,7 +22834,7 @@ ${selector} .arrowheadPath {
     if (!isResizing) return;
 
     const containerRect = contentContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
+    const containerWidth = editorPaneElement.getBoundingClientRect().width + previewPaneElement.getBoundingClientRect().width + resizeDivider.offsetWidth;
     const mouseX = e.clientX - containerRect.left;
 
     // Calculate percentage
@@ -22712,7 +22851,7 @@ ${selector} .arrowheadPath {
     if (!isResizing || !e.touches[0]) return;
 
     const containerRect = contentContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
+    const containerWidth = editorPaneElement.getBoundingClientRect().width + previewPaneElement.getBoundingClientRect().width + resizeDivider.offsetWidth;
     const touchX = e.touches[0].clientX - containerRect.left;
 
     let newEditorPercent = (touchX / containerWidth) * 100;
@@ -22737,8 +22876,8 @@ ${selector} .arrowheadPath {
     if (currentViewMode !== 'split') return;
 
     const previewPercent = 100 - editorWidthPercent;
-    editorPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px)) * ${editorWidthPercent / 100} - 4px)`;
-    previewPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px)) * ${previewPercent / 100} - 4px)`;
+    editorPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px) - var(--outline-width, 0px)) * ${editorWidthPercent / 100} - 4px)`;
+    previewPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px) - var(--outline-width, 0px)) * ${previewPercent / 100} - 4px)`;
     refreshEditorWidth();
     scheduleLineNumberUpdate();
   }

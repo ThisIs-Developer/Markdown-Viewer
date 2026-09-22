@@ -3657,11 +3657,6 @@ body {
   flex-shrink: 0;
 }
 
-.workspace-format-actions {
-  padding-inline: 5px;
-  margin-inline-start: auto;
-}
-
 .document-actions-menu {
   width: 280px;
   min-width: 280px;
@@ -9243,11 +9238,15 @@ button.live-share-participant-overflow {
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   transition: opacity 0.2s ease, transform 0.2s ease;
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.find-replace-panel,
+.document-outline {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .find-replace-panel.docked {
@@ -11184,6 +11183,8 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .document-outline {
+  --outline-indent: 14px;
+  --outline-control-size: 24px;
   position: absolute;
   z-index: 85;
   top: 0;
@@ -11195,33 +11196,33 @@ html[data-theme="dark"] .mermaid svg {
   min-height: 0;
   overflow: hidden;
   color: var(--text-color);
-  background: var(--header-bg);
-  border-left: 1px solid var(--border-color);
+  background: var(--fr-bg);
+  border-left: 1px solid var(--fr-border);
   box-shadow: var(--menu-shadow);
   font-size: var(--ui-font-md);
 }
 
 .document-outline-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 44px;
-  padding: 7px 8px 7px 12px;
-  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  cursor: default;
+  border-radius: 0;
 }
 
-.document-outline-header h2 {
-  margin: 0;
-  font-size: var(--ui-font-lg);
-  font-weight: 600;
+.document-outline-header .find-replace-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.document-outline-header .panel-icon-btn {
+  min-width: var(--outline-control-size);
+  min-height: var(--outline-control-size);
 }
 
 .document-outline-body {
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 8px;
 }
 
 .document-outline-list {
@@ -11230,12 +11231,52 @@ html[data-theme="dark"] .mermaid svg {
   list-style: none;
 }
 
+.document-outline-children {
+  margin-inline-start: calc(var(--outline-control-size) / 2);
+  padding-inline-start: calc(var(--outline-indent) - var(--outline-control-size) / 2 - 1px);
+  border-inline-start: 1px solid var(--border-color);
+}
+
+.document-outline-children > li {
+  margin-inline-start: calc((var(--outline-level-gap, 1) - 1) * var(--outline-indent));
+}
+
+.document-outline-row {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  border-radius: 4px;
+}
+
+.document-outline-row:hover {
+  background: var(--button-hover);
+}
+
+.document-outline-chevron,
+.document-outline-spacer {
+  flex: 0 0 var(--outline-control-size);
+  width: var(--outline-control-size);
+  min-height: 30px;
+}
+
+.document-outline-chevron .lucide {
+  font-size: var(--ui-icon-size-xs);
+}
+
+.document-outline-chevron[aria-expanded="true"] .lucide {
+  transform: rotate(90deg);
+}
+
+[dir="rtl"] .document-outline-chevron[aria-expanded="false"] .lucide {
+  transform: rotate(180deg);
+}
+
 .document-outline-link {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 30px;
-  padding: 6px 8px;
-  padding-inline-start: calc(8px + var(--outline-depth, 0) * 14px);
+  padding: 6px 4px;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -11246,17 +11287,17 @@ html[data-theme="dark"] .mermaid svg {
   overflow-wrap: anywhere;
 }
 
-.document-outline-link:hover {
-  background: var(--button-hover);
-}
-
-.document-outline-link[aria-current],
-#document-outline-toggle[aria-pressed="true"] {
+.document-outline-row:has(> .document-outline-link[aria-current]) {
   color: var(--accent-color);
   background: color-mix(in srgb, var(--accent-color) 12%, transparent);
 }
 
-.document-outline-link:focus-visible {
+.document-outline-link[aria-current] {
+  color: var(--accent-color);
+}
+
+.document-outline-link:focus-visible,
+.document-outline .panel-icon-btn:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: -2px;
 }
@@ -11269,16 +11310,28 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 @media (min-width: 1080px) {
+  .content-container.has-document-outline {
+    --outline-width: 260px;
+  }
+
   .document-outline {
     position: static;
     flex: 0 0 260px;
     width: 260px;
     box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 
 @media (max-width: 767px) {
-  .document-outline-link {
+  .document-outline {
+    --outline-indent: 18px;
+    --outline-control-size: 32px;
+  }
+
+  .document-outline-link,
+  .document-outline .panel-icon-btn {
     min-height: 44px;
   }
 }

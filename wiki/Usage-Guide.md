@@ -22,9 +22,11 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 
 ## Document Outline
 
-Select the **square-menu** button beside **Full Screen** at the right end of the formatting toolbar to open **Document Outline**. The right sidebar lists the current document's headings in order, with indentation for heading levels. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
+Select the **square-menu** button beside **Find & Replace** and **Full Screen** at the left end of the formatting toolbar to open **Document Outline**. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
 
-Select a heading to jump to that section in Preview. If you are using Editor only, selecting a heading opens Preview. The current section is highlighted as you scroll. On small screens, the outline closes after navigation so you can read the selected section. Close it with the toolbar button, the close button, or **Escape** while focus is inside the sidebar. Opening Comments closes the outline, and opening the outline closes Comments.
+Use a heading's chevron to collapse or expand its children. Headings without children have no chevron. Collapsed branches stay collapsed as you edit; collapsing a parent preserves the states of its nested branches.
+
+Select a heading to jump to that section while staying in your selected mode: Editor moves the caret and scrolls the source, while Preview and Split scroll the rendered document. The current section is highlighted as you scroll; if it is inside a collapsed branch, the visible parent is highlighted. On small screens, the outline closes after navigation so you can read the selected section. Close it with the toolbar button, the close button, or **Escape** while focus is inside the sidebar. Opening Comments closes the outline, and opening the outline closes Comments.
 
 The outline is generated locally from the current document and is not saved separately or included in exports.
 

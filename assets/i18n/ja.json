@@ -1173,5 +1173,6 @@
   "Close Document Outline": "ドキュメントのアウトラインを閉じる",
   "Document headings": "ドキュメントの見出し",
   "No headings in this document.": "このドキュメントには見出しがありません。",
-  "Untitled heading": "無題の見出し"
+  "Untitled heading": "無題の見出し",
+  "Expand": "展開"
 }

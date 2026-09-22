@@ -5,7 +5,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- Added Document Outline: a right sidebar with automatically updated, indented headings, section navigation, and a square-menu toolbar button beside Full Screen.
+- Added Document Outline: a right sidebar with automatically updated H1–H6 heading trees, collapsible branches, hierarchy guides, and section navigation in Editor, Preview, and Split modes. Find & Replace, Full Screen, and the square-menu outline button are grouped on the left of the toolbar.
 
 ---
 

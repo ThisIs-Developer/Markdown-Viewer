@@ -1173,5 +1173,6 @@
   "Close Document Outline": "Fechar estrutura do documento",
   "Document headings": "Títulos do documento",
   "No headings in this document.": "Este documento não contém títulos.",
-  "Untitled heading": "Título sem nome"
+  "Untitled heading": "Título sem nome",
+  "Expand": "Expandir"
 }
