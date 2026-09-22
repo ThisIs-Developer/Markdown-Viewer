@@ -95,6 +95,7 @@ test('navigates repeated headings and follows the current preview section', asyn
     heading.getBoundingClientRect().top - document.querySelector('.preview-pane').getBoundingClientRect().top);
   expect(sectionOffset).toBeGreaterThanOrEqual(0);
   expect(sectionOffset).toBeLessThan(50);
+  await page.locator('.preview-pane').click();
   await page.locator('.preview-pane').evaluate(pane => { pane.scrollTop = 0; });
   await expect(items.first()).toHaveAttribute('aria-current', 'location');
 
@@ -113,6 +114,21 @@ test('works with large documents rendered by the preview worker', async ({ page 
   await page.locator('#document-outline-list button').last().click();
   await expect(page.locator('#markdown-preview h2')).toBeInViewport();
   await expect(page.locator('#document-outline-list button').last()).toHaveAttribute('aria-current', 'location');
+
+  // A lazy block can change height after the browser has completed the jump.
+  await page.locator('#markdown-preview h2').evaluate(heading => {
+    heading.closest('.preview-render-block').previousElementSibling.style.minHeight = '1800px';
+  });
+  await expect(page.locator('#markdown-preview h2')).toBeInViewport();
+
+  // Subsequent user scrolling must take precedence over the outline's target.
+  await page.locator('.preview-pane').click();
+  await page.locator('.preview-pane').evaluate(pane => { pane.scrollTop = 0; });
+  await expect(page.locator('#markdown-preview h1')).toBeInViewport();
+  await page.locator('#markdown-preview h2').evaluate(heading => {
+    heading.closest('.preview-render-block').previousElementSibling.style.minHeight = '2000px';
+  });
+  await expect(page.locator('#markdown-preview h1')).toBeInViewport();
 });
 
 test('shares the right side with Comments and stays out of print', async ({ page }) => {

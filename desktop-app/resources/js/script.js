@@ -443,6 +443,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const documentOutlineEmpty = document.getElementById('document-outline-empty');
   let documentOutlineEntries = [];
   let documentOutlineScrollFrame = null;
+  let documentOutlineScrollTarget = null;
   const viewModeButtons = document.querySelectorAll(".view-toggle-btn");
   const documentSplitPane = document.getElementById('document-split-pane');
   const documentSplitDivider = document.getElementById('document-split-divider');
@@ -22115,6 +22116,7 @@ ${selector} .arrowheadPath {
 
   function clearDocumentOutline() {
     documentOutlineEntries = [];
+    documentOutlineScrollTarget = null;
     if (documentOutlineList) documentOutlineList.replaceChildren();
     if (documentOutlineEmpty) documentOutlineEmpty.hidden = false;
   }
@@ -22174,8 +22176,8 @@ ${selector} .arrowheadPath {
         if (window.matchMedia('(max-width: 1079px)').matches) {
           setDocumentOutlineOpen(false, { restoreFocus: true });
         }
-        previewPane.scrollTop += heading.getBoundingClientRect().top - previewPane.getBoundingClientRect().top - 16;
-        updateDocumentOutlineActiveHeading();
+        documentOutlineScrollTarget = heading;
+        scrollToDocumentOutlineTarget();
       });
       item.appendChild(button);
       fragment.appendChild(item);
@@ -22187,6 +22189,17 @@ ${selector} .arrowheadPath {
       const entry = documentOutlineEntries[Math.min(focusedIndex, documentOutlineEntries.length - 1)];
       (entry ? entry.button : documentOutlineClose).focus({ preventScroll: true });
     }
+    updateDocumentOutlineActiveHeading();
+  }
+
+  function scrollToDocumentOutlineTarget() {
+    const heading = documentOutlineScrollTarget;
+    if (!heading || !heading.isConnected) return;
+    // Reveal skipped preview blocks before measuring the heading's position.
+    cancelPendingMainScrollSync();
+    heading.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
+    const headingTop = heading.getBoundingClientRect().top - previewPane.getBoundingClientRect().top;
+    if (headingTop < 16) previewPane.scrollTop = Math.max(0, previewPane.scrollTop - (16 - headingTop));
     updateDocumentOutlineActiveHeading();
   }
 
@@ -22211,6 +22224,17 @@ ${selector} .arrowheadPath {
 
   function initDocumentOutline() {
     if (!documentOutline) return;
+    // Keep a jump in place as lazy preview blocks acquire their actual height.
+    // The next user interaction takes control of scrolling again.
+    ['pointerdown', 'wheel', 'keydown'].forEach(function(type) {
+      document.addEventListener(type, function() { documentOutlineScrollTarget = null; }, { capture: true, passive: true });
+    });
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(function() {
+        if (documentOutlineScrollTarget) requestAnimationFrame(scrollToDocumentOutlineTarget);
+      });
+      resizeObserver.observe(markdownPreview);
+    }
     documentOutlineClose.addEventListener('click', function() {
       setDocumentOutlineOpen(false, { restoreFocus: true });
     });
