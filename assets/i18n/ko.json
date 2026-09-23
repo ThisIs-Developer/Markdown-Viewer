@@ -1174,5 +1174,9 @@
   "Document headings": "문서 제목",
   "No headings in this document.": "이 문서에는 제목이 없습니다.",
   "Untitled heading": "이름 없는 제목",
-  "Expand": "펼치기"
+  "Expand": "펼치기",
+  "Collapse all headings": "모든 제목 접기",
+  "Expand all headings": "모든 제목 펼치기",
+  "All headings collapsed.": "모든 제목을 접었습니다.",
+  "All headings expanded.": "모든 제목을 펼쳤습니다."
 }

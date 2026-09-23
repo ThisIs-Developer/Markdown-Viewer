@@ -22,9 +22,11 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 
 ## Document Outline
 
-Select the **square-menu** button beside **Find & Replace** and **Full Screen** at the left end of the formatting toolbar to open **Document Outline**. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
+Select the **square-menu** button to open **Document Outline**. The formatting toolbar places these controls in order: **Emoji | Find & Replace | Full Screen | Document Outline**. On narrow screens, scroll the toolbar horizontally to reach them. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
 
 Use a heading's chevron to collapse or expand its children. Headings without children have no chevron. Collapsed branches stay collapsed as you edit; collapsing a parent preserves the states of its nested branches.
+
+The header's **Collapse all headings / Expand all headings** button controls every branch, using the same folding icons as the File Sidebar. It collapses all groups when any group is expanded, then changes to Expand All when all groups are collapsed. It keeps the outline panel open and is disabled when there are no parent headings.
 
 Select a heading to jump to that section while staying in your selected mode: Editor moves the caret and scrolls the source, while Preview and Split scroll the rendered document. The current section is highlighted as you scroll; if it is inside a collapsed branch, the visible parent is highlighted. On small screens, the outline closes after navigation so you can read the selected section. Close it with the toolbar button, the close button, or **Escape** while focus is inside the sidebar. Opening Comments closes the outline, and opening the outline closes Comments.
 

@@ -1174,5 +1174,9 @@
   "Document headings": "文档标题",
   "No headings in this document.": "此文档没有标题。",
   "Untitled heading": "未命名标题",
-  "Expand": "展开"
+  "Expand": "展开",
+  "Collapse all headings": "折叠所有标题",
+  "Expand all headings": "展开所有标题",
+  "All headings collapsed.": "已折叠所有标题。",
+  "All headings expanded.": "已展开所有标题。"
 }

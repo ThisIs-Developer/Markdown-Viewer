@@ -136,13 +136,13 @@ test('header orders document actions and formatting toolbar follows the recommen
     }))
   );
   expect(toolbarGroups).toEqual([
-    { label: 'Workspace actions', actions: ['find', 'fullscreen', 'outline'] },
     { label: 'History', actions: ['undo', 'redo'] },
     { label: 'Text formatting', actions: ['heading', 'bold', 'italic', 'strike', 'inline-code', 'case'] },
     { label: 'Paragraph formatting', actions: ['quote', 'unordered-list', 'ordered-list', 'alignment'] },
     { label: 'Content insertion', actions: ['link', 'image', 'table', 'reference'] },
     { label: 'Technical content', actions: ['code-block', 'terminal-block', 'diagram'] },
-    { label: 'Additional insertion', actions: ['horizontal-rule', 'alert', 'date-time', 'symbols', 'emoji'] }
+    { label: 'Additional insertion', actions: ['horizontal-rule', 'alert', 'date-time', 'symbols', 'emoji'] },
+    { label: 'Workspace actions', actions: ['find', 'fullscreen', 'outline'] }
   ]);
   await expect(toolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
 

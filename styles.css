@@ -300,7 +300,8 @@ body {
   color: var(--text-color);
 }
 
-.document-sidebar-icon-btn:disabled {
+.document-sidebar-icon-btn:disabled,
+.panel-icon-btn:disabled {
   background: transparent;
   color: var(--text-secondary);
   cursor: not-allowed;
@@ -9240,11 +9241,11 @@ button.live-share-participant-overflow {
   flex-direction: column;
   transition: opacity 0.2s ease, transform 0.2s ease;
   user-select: none;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
 .find-replace-panel,
 .document-outline {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -9272,6 +9273,7 @@ button.live-share-participant-overflow {
 
 .find-replace-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
@@ -9282,13 +9284,16 @@ button.live-share-participant-overflow {
   border-top-right-radius: 11px;
 }
 
-.find-replace-panel.docked .find-replace-header {
+.find-replace-panel.docked .find-replace-header,
+.document-outline-header {
   cursor: default;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
 
 .find-replace-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-color);
@@ -9296,6 +9301,7 @@ button.live-share-participant-overflow {
 
 .find-replace-header-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 4px;
 }
 
@@ -9313,7 +9319,7 @@ button.live-share-participant-overflow {
   transition: background-color 0.15s ease;
 }
 
-.panel-icon-btn:hover {
+.panel-icon-btn:hover:not(:disabled) {
   background-color: var(--button-hover);
 }
 
@@ -11202,22 +11208,6 @@ html[data-theme="dark"] .mermaid svg {
   font-size: var(--ui-font-md);
 }
 
-.document-outline-header {
-  flex-shrink: 0;
-  cursor: default;
-  border-radius: 0;
-}
-
-.document-outline-header .find-replace-title {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.document-outline-header .panel-icon-btn {
-  min-width: var(--outline-control-size);
-  min-height: var(--outline-control-size);
-}
-
 .document-outline-body {
   min-height: 0;
   min-width: 0;
@@ -11297,7 +11287,7 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 .document-outline-link:focus-visible,
-.document-outline .panel-icon-btn:focus-visible {
+.document-outline-chevron:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: -2px;
 }
@@ -11331,7 +11321,7 @@ html[data-theme="dark"] .mermaid svg {
   }
 
   .document-outline-link,
-  .document-outline .panel-icon-btn {
+  .document-outline-chevron {
     min-height: 44px;
   }
 }

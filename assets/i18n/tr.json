@@ -1174,5 +1174,9 @@
   "Document headings": "Belge başlıkları",
   "No headings in this document.": "Bu belgede başlık yok.",
   "Untitled heading": "Adsız başlık",
-  "Expand": "Genişlet"
+  "Expand": "Genişlet",
+  "Collapse all headings": "Tüm başlıkları daralt",
+  "Expand all headings": "Tüm başlıkları genişlet",
+  "All headings collapsed.": "Tüm başlıklar daraltıldı.",
+  "All headings expanded.": "Tüm başlıklar genişletildi."
 }

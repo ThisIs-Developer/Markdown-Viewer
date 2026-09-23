@@ -1174,5 +1174,9 @@
   "Document headings": "Заголовки документа",
   "No headings in this document.": "У цьому документі немає заголовків.",
   "Untitled heading": "Заголовок без назви",
-  "Expand": "Розгорнути"
+  "Expand": "Розгорнути",
+  "Collapse all headings": "Згорнути всі заголовки",
+  "Expand all headings": "Розгорнути всі заголовки",
+  "All headings collapsed.": "Усі заголовки згорнуто.",
+  "All headings expanded.": "Усі заголовки розгорнуто."
 }

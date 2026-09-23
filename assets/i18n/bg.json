@@ -1174,5 +1174,9 @@
   "Document headings": "Заглавия в документа",
   "No headings in this document.": "В този документ няма заглавия.",
   "Untitled heading": "Неозаглавено заглавие",
-  "Expand": "Разгъване"
+  "Expand": "Разгъване",
+  "Collapse all headings": "Свиване на всички заглавия",
+  "Expand all headings": "Разгъване на всички заглавия",
+  "All headings collapsed.": "Всички заглавия са свити.",
+  "All headings expanded.": "Всички заглавия са разгънати."
 }

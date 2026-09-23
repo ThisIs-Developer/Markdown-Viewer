@@ -409,11 +409,6 @@
 
         <!-- Markdown Formatting Toolbar -->
         <div class="markdown-format-toolbar" id="markdown-format-toolbar" role="toolbar" aria-label="Markdown formatting toolbar for plain-text editing">
-          <div class="markdown-toolbar-group workspace-format-actions" role="group" aria-label="Workspace actions">
-            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find and replace (Ctrl/Cmd+F)" aria-label="Find and replace" aria-keyshortcuts="Control+F Meta+F"><i class="lucide lucide-search" aria-hidden="true"></i></button>
-            <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen (F11 / Cmd+Option+F)" aria-label="Enter fullscreen" aria-keyshortcuts="F11 Meta+Alt+F"><i class="lucide lucide-maximize" aria-hidden="true"></i></button>
-            <button id="document-outline-toggle" type="button" class="markdown-tool-btn" data-md-action="outline" title="Document Outline" aria-label="Document Outline" aria-controls="document-outline" aria-expanded="false"><i class="lucide lucide-square-menu" aria-hidden="true"></i></button>
-          </div>
           <div class="markdown-toolbar-group" role="group" aria-label="History">
             <button type="button" class="markdown-tool-btn" data-md-action="undo" title="Undo (Ctrl/Cmd+Z)" aria-label="Undo" aria-keyshortcuts="Control+Z Meta+Z"><i class="lucide lucide-undo-2"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="redo" title="Redo (Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y)" aria-label="Redo" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y Meta+Y"><i class="lucide lucide-redo-2"></i></button>
@@ -485,6 +480,11 @@
             <button type="button" class="markdown-tool-btn" data-md-action="date-time" title="Date and time" aria-label="Insert date and time"><i class="lucide lucide-clock-3" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="symbols" title="Symbols and entities" aria-label="Insert symbols and entities"><i class="lucide lucide-braces" aria-hidden="true"></i></button>
             <button type="button" class="markdown-tool-btn" data-md-action="emoji" title="Emoji shortcode" aria-label="Insert emoji shortcode"><i class="lucide lucide-smile" aria-hidden="true"></i></button>
+          </div>
+          <div class="markdown-toolbar-group workspace-format-actions" role="group" aria-label="Workspace actions">
+            <button type="button" class="markdown-tool-btn" data-md-action="find" title="Find and replace (Ctrl/Cmd+F)" aria-label="Find and replace" aria-keyshortcuts="Control+F Meta+F"><i class="lucide lucide-search" aria-hidden="true"></i></button>
+            <button type="button" class="markdown-tool-btn" data-md-action="fullscreen" title="Fullscreen (F11 / Cmd+Option+F)" aria-label="Enter fullscreen" aria-keyshortcuts="F11 Meta+Alt+F"><i class="lucide lucide-maximize" aria-hidden="true"></i></button>
+            <button id="document-outline-toggle" type="button" class="markdown-tool-btn" data-md-action="outline" title="Document Outline" aria-label="Document Outline" aria-controls="document-outline" aria-expanded="false"><i class="lucide lucide-square-menu" aria-hidden="true"></i></button>
           </div>
         </div>
 
@@ -1660,8 +1660,11 @@
             </section>
             <aside id="document-outline" class="document-outline" aria-labelledby="document-outline-title" hidden>
                 <div class="find-replace-header document-outline-header">
-                    <span class="find-replace-title" id="document-outline-title">Document Outline</span>
+                    <span class="find-replace-title" id="document-outline-title"><i class="lucide lucide-square-menu me-1" aria-hidden="true"></i> Document Outline</span>
                     <div class="find-replace-header-actions">
+                        <button id="document-outline-collapse-all" class="panel-icon-btn" type="button" aria-label="Collapse all headings" title="Collapse all headings" aria-controls="document-outline-list">
+                            <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>
+                        </button>
                         <button id="document-outline-close" class="panel-icon-btn" type="button" aria-label="Close Document Outline" title="Close Document Outline">
                             <i class="lucide lucide-x" aria-hidden="true"></i>
                         </button>

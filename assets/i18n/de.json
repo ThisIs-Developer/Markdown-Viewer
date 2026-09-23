@@ -1174,5 +1174,9 @@
   "Document headings": "Dokumentüberschriften",
   "No headings in this document.": "Dieses Dokument enthält keine Überschriften.",
   "Untitled heading": "Unbenannte Überschrift",
-  "Expand": "Aufklappen"
+  "Expand": "Aufklappen",
+  "Collapse all headings": "Alle Überschriften einklappen",
+  "Expand all headings": "Alle Überschriften aufklappen",
+  "All headings collapsed.": "Alle Überschriften eingeklappt.",
+  "All headings expanded.": "Alle Überschriften aufgeklappt."
 }

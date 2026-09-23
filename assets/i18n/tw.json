@@ -1174,5 +1174,9 @@
   "Document headings": "文件標題",
   "No headings in this document.": "此文件沒有標題。",
   "Untitled heading": "未命名標題",
-  "Expand": "展開"
+  "Expand": "展開",
+  "Collapse all headings": "摺疊所有標題",
+  "Expand all headings": "展開所有標題",
+  "All headings collapsed.": "已摺疊所有標題。",
+  "All headings expanded.": "已展開所有標題。"
 }

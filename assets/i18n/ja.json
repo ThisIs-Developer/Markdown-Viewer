@@ -1174,5 +1174,9 @@
   "Document headings": "ドキュメントの見出し",
   "No headings in this document.": "このドキュメントには見出しがありません。",
   "Untitled heading": "無題の見出し",
-  "Expand": "展開"
+  "Expand": "展開",
+  "Collapse all headings": "すべての見出しを折りたたむ",
+  "Expand all headings": "すべての見出しを展開",
+  "All headings collapsed.": "すべての見出しを折りたたみました。",
+  "All headings expanded.": "すべての見出しを展開しました。"
 }

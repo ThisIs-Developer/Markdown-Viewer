@@ -1174,5 +1174,9 @@
   "Document headings": "Encabezados del documento",
   "No headings in this document.": "Este documento no tiene encabezados.",
   "Untitled heading": "Encabezado sin título",
-  "Expand": "Expandir"
+  "Expand": "Expandir",
+  "Collapse all headings": "Contraer todos los encabezados",
+  "Expand all headings": "Expandir todos los encabezados",
+  "All headings collapsed.": "Todos los encabezados contraídos.",
+  "All headings expanded.": "Todos los encabezados expandidos."
 }

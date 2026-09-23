@@ -16,7 +16,8 @@ test('toolbar toggles a keyboard-accessible outline beside fullscreen', async ({
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle.locator('.lucide-square-menu')).toBeVisible();
   expect(await toggle.evaluate(button => button.previousElementSibling.dataset.mdAction)).toBe('fullscreen');
-  await expect(page.locator('#markdown-format-toolbar > .markdown-toolbar-group').first()).toHaveAttribute('aria-label', 'Workspace actions');
+  expect(await page.locator('#markdown-format-toolbar > .markdown-toolbar-group > button').evaluateAll(buttons =>
+    buttons.slice(-4).map(button => button.dataset.mdAction))).toEqual(['emoji', 'find', 'fullscreen', 'outline']);
 
   await toggle.focus();
   await toggle.press('Enter');
@@ -33,6 +34,7 @@ test('toolbar toggles a keyboard-accessible outline beside fullscreen', async ({
 });
 
 test('uses Find and Replace button and panel styles without a selected toolbar state', async ({ page }) => {
+  await setEditorContent(page, '# Parent\n\n## Child');
   await openOutline(page);
   const find = page.locator('[data-md-action="find"]');
   const outline = page.locator('#document-outline-toggle');
@@ -63,10 +65,91 @@ test('uses Find and Replace button and panel styles without a selected toolbar s
   expect(await page.locator('.document-outline-header').evaluate(panelSpacing)).toEqual(await page.locator('#find-replace-drag-handle').evaluate(panelSpacing));
   await page.locator('#find-replace-dock').click();
   await expect(page.locator('#find-replace-modal')).toHaveClass(/docked/);
+  const headerAppearance = element => {
+    const style = getComputedStyle(element);
+    return ['height', 'padding', 'gap', 'display', 'alignItems', 'justifyContent', 'borderBottom', 'borderRadius', 'backgroundColor', 'fontFamily'].map(name => style[name]);
+  };
+  expect(await page.locator('.document-outline-header').evaluate(headerAppearance)).toEqual(await page.locator('#find-replace-drag-handle').evaluate(headerAppearance));
+  const titleAppearance = element => {
+    const style = getComputedStyle(element);
+    return ['fontSize', 'fontFamily', 'fontWeight', 'lineHeight', 'color'].map(name => style[name]);
+  };
+  expect(await page.locator('#document-outline-title').evaluate(titleAppearance)).toEqual(await page.locator('#find-replace-modal .find-replace-title').evaluate(titleAppearance));
+  expect(await page.locator('#document-outline-close').evaluate(appearance)).toEqual(await page.locator('#find-replace-close-icon').evaluate(appearance));
+  const bulk = page.locator('#document-outline-collapse-all');
+  const dock = page.locator('#find-replace-dock');
+  await bulk.hover();
+  await finishTransitions(bulk);
+  const bulkHover = await bulk.evaluate(appearance);
+  await dock.hover();
+  await finishTransitions(dock);
+  expect(bulkHover).toEqual(await dock.evaluate(appearance));
   const panes = await page.locator('.editor-pane, .preview-pane, #document-outline, #find-replace-modal').evaluateAll(elements => elements.map(element => ({ left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right })));
   for (let index = 1; index < panes.length; index += 1) expect(panes[index].left).toBeGreaterThanOrEqual(panes[index - 1].right - 1);
   await page.locator('#find-replace-close-icon').click();
   await expect(page.locator('#document-outline')).toBeVisible();
+});
+
+test('header follows Find and Replace sizing on tablet and small screens', async ({ page }) => {
+  await setEditorContent(page, '# Parent\n\n## Child');
+  await openOutline(page);
+  await page.locator('[data-md-action="find"]').click();
+  const sizing = element => {
+    const style = getComputedStyle(element);
+    return ['height', 'padding', 'display', 'gap', 'alignItems', 'justifyContent', 'borderBottom', 'fontFamily'].map(name => style[name]);
+  };
+  for (const width of [820, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.locator('.document-outline-header').evaluate(sizing)).toEqual(await page.locator('#find-replace-drag-handle').evaluate(sizing));
+    expect(await page.locator('#document-outline-close').evaluate(sizing)).toEqual(await page.locator('#find-replace-close-icon').evaluate(sizing));
+    expect(await page.locator('.document-outline-header').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    for (const id of ['document-outline-collapse-all', 'document-outline-close']) {
+      const bounds = await page.locator('#' + id).boundingBox();
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    }
+  }
+});
+
+test('header collapses and expands every heading group with the File Sidebar interaction pattern', async ({ page }) => {
+  const markdown = '# Architecture\n\n## Core\n\n### Engine\n\n#### Storage\n\n##### Cache\n\n###### Details\n\n## Data flow\n\n# Features\n\n## Reading';
+  await setEditorContent(page, markdown);
+  await openOutline(page);
+  const outline = page.locator('#document-outline');
+  const bulk = page.locator('#document-outline-collapse-all');
+  const branches = outline.locator('.document-outline-chevron');
+  const visibleHeadings = outline.locator('.document-outline-link:visible');
+  await expect(bulk).toHaveAttribute('title', 'Collapse all headings');
+  await expect(bulk.locator('i')).toHaveClass(/lucide-fold-vertical/);
+  await expect(bulk).not.toHaveAttribute('aria-pressed');
+  await outline.getByRole('button', { name: 'Collapse: Core', exact: true }).click();
+  await expect(bulk).toHaveAttribute('aria-label', 'Collapse all headings');
+  const before = await page.locator('.preview-pane').evaluate(pane => pane.scrollTop);
+  await bulk.click();
+  await expect(outline).toBeVisible();
+  await expect(visibleHeadings).toHaveText(['Architecture', 'Features']);
+  expect(await branches.evaluateAll(buttons => buttons.every(button => button.getAttribute('aria-expanded') === 'false'))).toBe(true);
+  expect(await page.locator('.preview-pane').evaluate(pane => pane.scrollTop)).toBe(before);
+  await expect(bulk).toHaveAttribute('aria-label', 'Expand all headings');
+  await expect(bulk.locator('i')).toHaveClass(/lucide-unfold-vertical/);
+  await setEditorContent(page, markdown + '\n\n# Standalone');
+  await expect(visibleHeadings).toHaveText(['Architecture', 'Features', 'Standalone']);
+  await expect(bulk).toHaveAttribute('title', 'Expand all headings');
+  await bulk.press('Enter');
+  await expect(bulk).toBeFocused();
+  await expect(visibleHeadings).toHaveCount(10);
+  expect(await branches.evaluateAll(buttons => buttons.every(button => button.getAttribute('aria-expanded') === 'true'))).toBe(true);
+  await expect(bulk).toHaveAttribute('aria-label', 'Collapse all headings');
+  // Individual chevrons also update the aggregate action, including nested groups.
+  for (const branch of (await branches.all()).reverse()) await branch.click();
+  await expect(bulk).toHaveAttribute('aria-label', 'Expand all headings');
+  await outline.getByRole('button', { name: 'Expand: Architecture', exact: true }).click();
+  await expect(bulk).toHaveAttribute('aria-label', 'Collapse all headings');
+  await setEditorContent(page, '# One\n\n# Two');
+  await expect(bulk).toBeDisabled();
+  await setEditorContent(page, 'No headings.');
+  await expect(page.locator('#document-outline-empty')).toBeVisible();
+  await expect(bulk).toBeDisabled();
 });
 
 test('collapses only a parent branch and preserves nested collapse state while editing', async ({ page }) => {
@@ -199,6 +282,12 @@ for (const viewport of [
       await openOutline(page);
       const links = page.locator('#document-outline-list .document-outline-link');
       await expect(links).toHaveCount(6);
+      const bulk = page.locator('#document-outline-collapse-all');
+      await bulk.click();
+      await expect(page.locator('#document-outline-list .document-outline-link:visible')).toHaveCount(1);
+      await expect(bulk).toHaveAttribute('aria-label', 'Expand all headings');
+      await bulk.press('Enter');
+      await expect(page.locator('#document-outline-list .document-outline-link:visible')).toHaveCount(6);
       const bounds = await page.locator('#document-outline').boundingBox();
       expect(bounds.x).toBeGreaterThanOrEqual(0);
       expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width + 1);
@@ -225,6 +314,7 @@ for (const viewport of [
       await openOutline(page);
       await expect(links).toHaveCount(0);
       await expect(page.locator('#document-outline-empty')).toBeVisible();
+      await expect(bulk).toBeDisabled();
       await page.locator('#document-outline-close').click();
     }
   });

@@ -1174,5 +1174,9 @@
   "Document headings": "Nagłówki dokumentu",
   "No headings in this document.": "Ten dokument nie zawiera nagłówków.",
   "Untitled heading": "Nagłówek bez tytułu",
-  "Expand": "Rozwiń"
+  "Expand": "Rozwiń",
+  "Collapse all headings": "Zwiń wszystkie nagłówki",
+  "Expand all headings": "Rozwiń wszystkie nagłówki",
+  "All headings collapsed.": "Wszystkie nagłówki zwinięte.",
+  "All headings expanded.": "Wszystkie nagłówki rozwinięte."
 }

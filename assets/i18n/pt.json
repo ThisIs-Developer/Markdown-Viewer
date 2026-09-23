@@ -1174,5 +1174,9 @@
   "Document headings": "Títulos do documento",
   "No headings in this document.": "Este documento não contém títulos.",
   "Untitled heading": "Título sem nome",
-  "Expand": "Expandir"
+  "Expand": "Expandir",
+  "Collapse all headings": "Recolher todos os títulos",
+  "Expand all headings": "Expandir todos os títulos",
+  "All headings collapsed.": "Todos os títulos recolhidos.",
+  "All headings expanded.": "Todos os títulos expandidos."
 }

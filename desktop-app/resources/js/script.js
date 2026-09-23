@@ -438,6 +438,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const contentContainer = document.querySelector(".content-container");
   const documentOutline = document.getElementById('document-outline');
   const documentOutlineToggle = document.getElementById('document-outline-toggle');
+  const documentOutlineCollapseAll = document.getElementById('document-outline-collapse-all');
   const documentOutlineClose = document.getElementById('document-outline-close');
   const documentOutlineList = document.getElementById('document-outline-list');
   const documentOutlineEmpty = document.getElementById('document-outline-empty');
@@ -6982,11 +6983,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       const expandedItems = getExpandableDocumentTreeItems().filter(function(item) { return item.expanded !== false; });
       const willExpand = expandedItems.length === 0;
       const actionLabel = willExpand ? 'Expand all folders' : 'Collapse all folders';
-      collapseAllButton.disabled = !canToggleAll;
-      collapseAllButton.title = canToggleAll ? actionLabel : 'Expand or collapse all is available in All files';
-      collapseAllButton.setAttribute('aria-label', collapseAllButton.title);
-      const collapseIcon = collapseAllButton.querySelector('i');
-      if (collapseIcon) collapseIcon.className = 'lucide ' + (willExpand ? 'lucide-unfold-vertical' : 'lucide-fold-vertical');
+      updateTreeExpansionButton(collapseAllButton, willExpand,
+        canToggleAll ? actionLabel : 'Expand or collapse all is available in All files', canToggleAll);
     }
     const firstRow = tree.querySelector('.document-tree-row');
     if (firstRow && !tree.querySelector('.document-tree-row[tabindex="0"]')) firstRow.setAttribute('tabindex', '0');
@@ -7076,6 +7074,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     }).concat(documentOrganization.folders.filter(function(folder) {
       return unlockedWorkspaceIds.has(folder.workspaceId);
     }));
+  }
+
+  function updateTreeExpansionButton(button, willExpand, label, enabled) {
+    if (!button) return;
+    button.disabled = !enabled;
+    button.title = label;
+    button.setAttribute('aria-label', button.title);
+    const icon = button.querySelector('i');
+    if (icon) icon.className = 'lucide ' + (willExpand ? 'lucide-unfold-vertical' : 'lucide-fold-vertical');
   }
 
   function toggleDocumentTreeExpansion() {
@@ -22122,6 +22129,7 @@ ${selector} .arrowheadPath {
 
   function clearDocumentOutline() {
     documentOutlineEntries = [];
+    updateDocumentOutlineExpansionButton();
     documentOutlineScrollTarget = null;
     if (documentOutlineList) documentOutlineList.replaceChildren();
     if (documentOutlineEmpty) documentOutlineEmpty.hidden = false;
@@ -22204,6 +22212,26 @@ ${selector} .arrowheadPath {
     entry.toggle.title = action;
     if (expanded) documentOutlineCollapsed.delete(entry.key);
     else documentOutlineCollapsed.add(entry.key);
+  }
+
+  function getExpandableDocumentOutlineEntries() {
+    return documentOutlineEntries.filter(function(entry) { return entry.toggle; });
+  }
+
+  function updateDocumentOutlineExpansionButton() {
+    const entries = getExpandableDocumentOutlineEntries();
+    const willExpand = !entries.some(function(entry) { return !entry.children.hidden; });
+    updateTreeExpansionButton(documentOutlineCollapseAll, willExpand,
+      willExpand ? 'Expand all headings' : 'Collapse all headings', entries.length > 0);
+  }
+
+  function toggleDocumentOutlineExpansion() {
+    const entries = getExpandableDocumentOutlineEntries();
+    const shouldExpand = !entries.some(function(entry) { return !entry.children.hidden; });
+    entries.forEach(function(entry) { setDocumentOutlineExpanded(entry, shouldExpand); });
+    updateDocumentOutlineExpansionButton();
+    updateDocumentOutlineActiveHeading();
+    announceToScreenReader(translateUiString(shouldExpand ? 'All headings expanded.' : 'All headings collapsed.'));
   }
 
   function refreshDocumentOutline() {
@@ -22299,6 +22327,7 @@ ${selector} .arrowheadPath {
       setDocumentOutlineExpanded(entry, !documentOutlineCollapsed.has(entry.key));
       toggle.addEventListener('click', function() {
         setDocumentOutlineExpanded(entry, entry.children.hidden);
+        updateDocumentOutlineExpansionButton();
         updateDocumentOutlineActiveHeading();
       });
     });
@@ -22306,6 +22335,7 @@ ${selector} .arrowheadPath {
     documentOutlineCollapsed.forEach(function(key) { if (!keys.has(key)) documentOutlineCollapsed.delete(key); });
     documentOutlineList.replaceChildren(fragment);
     documentOutlineEmpty.hidden = headings.length > 0;
+    updateDocumentOutlineExpansionButton();
     if (focusedEntry) {
       const entry = documentOutlineEntries.find(function(item) { return item.key === focusedEntry.key; });
       (entry ? (focusToggle && entry.toggle || entry.button) : documentOutlineClose).focus({ preventScroll: true });
@@ -22361,6 +22391,7 @@ ${selector} .arrowheadPath {
 
   function initDocumentOutline() {
     if (!documentOutline) return;
+    documentOutlineCollapseAll.addEventListener('click', toggleDocumentOutlineExpansion);
     // Keep a jump in place as lazy preview blocks acquire their actual height.
     // The next user interaction takes control of scrolling again.
     ['pointerdown', 'wheel', 'keydown'].forEach(function(type) {

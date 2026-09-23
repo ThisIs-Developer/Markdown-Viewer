@@ -1174,5 +1174,9 @@
   "Document headings": "Titoli del documento",
   "No headings in this document.": "Questo documento non contiene titoli.",
   "Untitled heading": "Titolo senza nome",
-  "Expand": "Espandi"
+  "Expand": "Espandi",
+  "Collapse all headings": "Comprimi tutte le intestazioni",
+  "Expand all headings": "Espandi tutte le intestazioni",
+  "All headings collapsed.": "Tutte le intestazioni sono compresse.",
+  "All headings expanded.": "Tutte le intestazioni sono espanse."
 }

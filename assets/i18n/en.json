@@ -1174,5 +1174,9 @@
   "Document headings": "Document headings",
   "No headings in this document.": "No headings in this document.",
   "Untitled heading": "Untitled heading",
-  "Expand": "Expand"
+  "Expand": "Expand",
+  "Collapse all headings": "Collapse all headings",
+  "Expand all headings": "Expand all headings",
+  "All headings collapsed.": "All headings collapsed.",
+  "All headings expanded.": "All headings expanded."
 }
