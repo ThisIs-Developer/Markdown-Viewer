@@ -173,6 +173,7 @@ const CURATED_OVERRIDES = {
 const EXTRA_STRINGS = [
   'Document Outline', 'Close Document Outline', 'Document headings', 'No headings in this document.', 'Untitled heading', 'Expand',
   'Collapse all headings', 'Expand all headings', 'All headings collapsed.', 'All headings expanded.',
+  'Resize Document Outline', 'Resize Find and Replace',
   'All changes saved', 'Saving...', 'Saved', 'Copied!', 'Copy failed',
   'Import complete', 'Import completed with errors', 'Import failed', 'Preparing import…',
   'No data is stored', 'Data is stored locally', 'Use light mode', 'Use dark mode',

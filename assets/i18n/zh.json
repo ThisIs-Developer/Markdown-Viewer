@@ -1178,5 +1178,7 @@
   "Collapse all headings": "折叠所有标题",
   "Expand all headings": "展开所有标题",
   "All headings collapsed.": "已折叠所有标题。",
-  "All headings expanded.": "已展开所有标题。"
+  "All headings expanded.": "已展开所有标题。",
+  "Resize Document Outline": "调整文档大纲宽度",
+  "Resize Find and Replace": "调整查找和替换宽度"
 }

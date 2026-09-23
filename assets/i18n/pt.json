@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Recolher todos os títulos",
   "Expand all headings": "Expandir todos os títulos",
   "All headings collapsed.": "Todos os títulos recolhidos.",
-  "All headings expanded.": "Todos os títulos expandidos."
+  "All headings expanded.": "Todos os títulos expandidos.",
+  "Resize Document Outline": "Redimensionar a estrutura do documento",
+  "Resize Find and Replace": "Redimensionar Localizar e substituir"
 }

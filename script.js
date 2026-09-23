@@ -4241,7 +4241,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentSidebarRenderLimit = 250;
   let documentSidebarRenderBudget = null;
   let documentSidebarInitialized = false;
-  let isDocumentSidebarResizing = false;
   let draggedSidebarDocumentIds = [];
   let activeDocumentDragPreview = null;
   let documentTreeDragExpandTimer = null;
@@ -7170,6 +7169,65 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function initHorizontalPanelResize(panel, resizer, options) {
+    if (!panel || !resizer) return;
+    let drag = null;
+
+    function setWidth(width) {
+      const maxWidth = options.getMaxWidth ? options.getMaxWidth() : SIDEBAR_MAX_WIDTH;
+      const nextWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(maxWidth, Math.round(width)));
+      options.setWidth(nextWidth);
+      resizer.setAttribute('aria-valuenow', String(Math.round(options.getWidth())));
+    }
+
+    function finishResize(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      drag = null;
+      panel.classList.remove('is-resizing');
+      document.body.classList.remove('resizing');
+      if (resizer.hasPointerCapture(event.pointerId)) resizer.releasePointerCapture(event.pointerId);
+      if (options.onResizeEnd) options.onResizeEnd();
+    }
+
+    resizer.addEventListener('pointerdown', function(event) {
+      if (isDocumentSidebarMobile() || event.button !== 0 || drag) return;
+      drag = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        width: panel.getBoundingClientRect().width,
+        direction: options.getEdge() === 'left' ? -1 : 1
+      };
+      panel.classList.add('is-resizing');
+      document.body.classList.add('resizing');
+      resizer.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    resizer.addEventListener('pointermove', function(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      setWidth(drag.width + (event.clientX - drag.clientX) * drag.direction);
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(type) {
+      resizer.addEventListener(type, finishResize);
+    });
+    resizer.addEventListener('keydown', function(event) {
+      if (isDocumentSidebarMobile() || !['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === 'Home') {
+        setWidth(options.defaultWidth);
+      } else {
+        const direction = (event.key === 'ArrowRight' ? 1 : -1) * (options.getEdge() === 'left' ? -1 : 1);
+        setWidth(options.getWidth() + direction * (event.shiftKey ? 25 : 10));
+      }
+      if (options.onResizeEnd) options.onResizeEnd();
+    });
+    resizer.addEventListener('dblclick', function() {
+      if (isDocumentSidebarMobile()) return;
+      setWidth(options.defaultWidth);
+      if (options.onResizeEnd) options.onResizeEnd();
+    });
+    resizer.setAttribute('aria-valuenow', String(Math.round(options.getWidth())));
+  }
+
   function initDocumentSidebar() {
     if (documentSidebarInitialized) return;
     documentSidebarInitialized = true;
@@ -7253,58 +7311,16 @@ document.addEventListener("DOMContentLoaded", async function () {
       openDocumentTreeBackgroundContextMenu(event);
     });
 
-    if (resizer && sidebar) {
-      function applyResize(clientX) {
-        const rect = sidebar.getBoundingClientRect();
-        const isRtl = getComputedStyle(sidebar).direction === 'rtl';
-        const nextWidth = isRtl ? rect.right - clientX : clientX - rect.left;
-        documentOrganization.ui.width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, Math.round(nextWidth)));
-        sidebar.style.setProperty('--document-sidebar-width', documentOrganization.ui.width + 'px');
-        resizer.setAttribute('aria-valuenow', String(documentOrganization.ui.width));
-      }
-      resizer.addEventListener('pointerdown', function(event) {
-        if (isDocumentSidebarMobile()) return;
-        isDocumentSidebarResizing = true;
-        sidebar.classList.add('is-resizing');
-        resizer.setPointerCapture(event.pointerId);
-        event.preventDefault();
-      });
-      resizer.addEventListener('pointermove', function(event) {
-        if (!isDocumentSidebarResizing) return;
-        applyResize(event.clientX);
-      });
-      resizer.addEventListener('pointerup', function(event) {
-        if (!isDocumentSidebarResizing) return;
-        isDocumentSidebarResizing = false;
-        sidebar.classList.remove('is-resizing');
-        if (resizer.hasPointerCapture(event.pointerId)) resizer.releasePointerCapture(event.pointerId);
-        saveDocumentOrganization();
-      });
-      resizer.addEventListener('keydown', function(event) {
-        if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
-        event.preventDefault();
-        if (event.key === 'Home') {
-          documentOrganization.ui.width = 288;
-          sidebar.style.setProperty('--document-sidebar-width', '288px');
-          resizer.setAttribute('aria-valuenow', '288');
-          saveDocumentOrganization();
-          return;
-        }
-        const direction = event.key === 'ArrowRight' ? 1 : -1;
-        const step = event.shiftKey ? 25 : 10;
-        documentOrganization.ui.width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, documentOrganization.ui.width + direction * step));
-        sidebar.style.setProperty('--document-sidebar-width', documentOrganization.ui.width + 'px');
-        resizer.setAttribute('aria-valuenow', String(documentOrganization.ui.width));
-        saveDocumentOrganization();
-      });
-      resizer.addEventListener('dblclick', function() {
-        documentOrganization.ui.width = 288;
-        sidebar.style.setProperty('--document-sidebar-width', '288px');
-        resizer.setAttribute('aria-valuenow', '288');
-        saveDocumentOrganization();
-      });
-      resizer.setAttribute('aria-valuenow', String(documentOrganization.ui.width));
-    }
+    initHorizontalPanelResize(sidebar, resizer, {
+      defaultWidth: 288,
+      getWidth: function() { return documentOrganization.ui.width; },
+      getEdge: function() { return getComputedStyle(sidebar).direction === 'rtl' ? 'left' : 'right'; },
+      setWidth: function(width) {
+        documentOrganization.ui.width = width;
+        sidebar.style.setProperty('--document-sidebar-width', width + 'px');
+      },
+      onResizeEnd: saveDocumentOrganization
+    });
 
     document.addEventListener('click', function(event) {
       if (!event.target.closest('.document-menu-btn, .document-menu-dropdown')) closeDocumentSidebarMenus();
@@ -21426,6 +21442,93 @@ ${selector} .arrowheadPath {
   let lastFloatingTop = null;
   let lastFloatingRight = null;
 
+  const DOCUMENT_PANEL_DEFAULT_WIDTH = 340;
+  const documentPanels = [findReplaceModal, documentOutline].filter(Boolean).map(function(panel) {
+    return { panel: panel, width: DOCUMENT_PANEL_DEFAULT_WIDTH };
+  });
+
+  function isDocumentPanelDocked(panel) {
+    if (!panel || window.innerWidth < 1080) return false;
+    return panel === documentOutline ? !documentOutline.hidden : isFrDocked && isFindModalOpen;
+  }
+
+  function getDocumentPanelMaxWidth(panel) {
+    let availableWidth;
+    if (isDocumentPanelDocked(panel)) {
+      const otherPanelWidth = documentPanels.reduce(function(total, entry) {
+        return total + (entry.panel !== panel && isDocumentPanelDocked(entry.panel)
+          ? entry.panel.getBoundingClientRect().width : 0);
+      }, 0);
+      availableWidth = contentContainer.clientWidth - SIDEBAR_MIN_WIDTH - otherPanelWidth;
+    } else {
+      availableWidth = panel === documentOutline ? contentContainer.clientWidth - 24
+        : panel.getBoundingClientRect().right || window.innerWidth - 24;
+    }
+    return Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, Math.floor(availableWidth)));
+  }
+
+  function updateDocumentPanelWidths() {
+    const dockedPanels = documentPanels.filter(function(entry) { return isDocumentPanelDocked(entry.panel); });
+    const totalWidth = dockedPanels.reduce(function(total, entry) { return total + entry.width; }, 0);
+    // Keep document space available when both panels and the File Sidebar are open.
+    const availableWidth = Math.max(0, contentContainer.clientWidth - SIDEBAR_MIN_WIDTH);
+    const shrinkableWidth = totalWidth - dockedPanels.length * SIDEBAR_MIN_WIDTH;
+    const overflow = Math.min(Math.max(0, totalWidth - availableWidth), shrinkableWidth);
+    const widths = new Map();
+    documentPanels.forEach(function(entry) {
+      const reduction = dockedPanels.includes(entry) && shrinkableWidth > 0
+        ? overflow * (entry.width - SIDEBAR_MIN_WIDTH) / shrinkableWidth : 0;
+      const width = Math.floor(entry.width - reduction);
+      widths.set(entry.panel, width);
+      entry.panel.style.setProperty('--document-panel-width', width + 'px');
+    });
+    contentContainer.style.setProperty('--outline-width', (isDocumentPanelDocked(documentOutline) ? widths.get(documentOutline) : 0) + 'px');
+    contentContainer.style.setProperty('--dock-width', (isDocumentPanelDocked(findReplaceModal) ? widths.get(findReplaceModal) : 0) + 'px');
+    documentPanels.forEach(function(entry) {
+      const resizer = entry.panel.querySelector('.document-panel-resizer');
+      if (!resizer) return;
+      resizer.setAttribute('aria-valuenow', String(Math.round(entry.panel.getBoundingClientRect().width || entry.width)));
+      resizer.setAttribute('aria-valuemax', String(getDocumentPanelMaxWidth(entry.panel)));
+    });
+    applyPaneWidths();
+    refreshEditorWidth();
+    scheduleLineNumberUpdate({ force: true });
+  }
+
+  function initDocumentPanelResizers() {
+    documentPanels.forEach(function(entry) {
+      const panel = entry.panel;
+      initHorizontalPanelResize(panel, panel.querySelector('.document-panel-resizer'), {
+        defaultWidth: DOCUMENT_PANEL_DEFAULT_WIDTH,
+        getWidth: function() { return panel.getBoundingClientRect().width || entry.width; },
+        getMaxWidth: function() { return getDocumentPanelMaxWidth(panel); },
+        getEdge: function() {
+          return isDocumentPanelDocked(panel) && getComputedStyle(panel).direction === 'rtl' ? 'right' : 'left';
+        },
+        setWidth: function(width) {
+          const floatingRight = panel === findReplaceModal && !isFrDocked
+            ? panel.getBoundingClientRect().right : null;
+          entry.width = width;
+          // A dragged floating panel uses a left anchor; keep its right edge still while resizing.
+          if (floatingRight !== null && panel.style.left && panel.style.left !== 'auto') {
+            panel.style.left = Math.max(0, floatingRight - width) + 'px';
+            lastFloatingLeft = panel.style.left;
+          }
+          updateDocumentPanelWidths();
+        }
+      });
+    });
+    updateDocumentPanelWidths();
+    let lastContainerWidth = contentContainer.clientWidth;
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(function() {
+        if (contentContainer.clientWidth === lastContainerWidth) return;
+        lastContainerWidth = contentContainer.clientWidth;
+        updateDocumentPanelWidths();
+      }).observe(contentContainer);
+    }
+  }
+
   function initFindReplacePanelDrag() {
     const handle = document.getElementById('find-replace-drag-handle');
     const panel = document.getElementById('find-replace-modal');
@@ -21539,7 +21642,8 @@ ${selector} .arrowheadPath {
       dockBtn.title = "Toggle Dock Mode";
       
       panel.style.display = 'flex';
-      applyPaneWidths();
+      updateDocumentPanelWidths();
+      constrainFloatingPanelPosition();
       
       // Restore focus and selection
       if (activeId) {
@@ -21569,7 +21673,6 @@ ${selector} .arrowheadPath {
       // Append panel to dock container (.content-container)
       contentCont.appendChild(panel);
       contentCont.classList.add('fr-docked');
-      contentCont.style.setProperty('--dock-width', '340px');
 
       dockBtn.innerHTML = '<i class="lucide lucide-panels-top-left"></i>';
       dockBtn.title = "Toggle Floating Mode";
@@ -21591,7 +21694,8 @@ ${selector} .arrowheadPath {
     
     // Ensure display is flex and recalculate split panes
     panel.style.display = 'flex';
-    applyPaneWidths();
+    updateDocumentPanelWidths();
+    constrainFloatingPanelPosition();
 
     // Restore focus and selection after layout change
     if (activeId) {
@@ -21770,7 +21874,7 @@ ${selector} .arrowheadPath {
         if (contentCont) {
           contentCont.classList.remove('fr-docked');
           contentCont.style.setProperty('--dock-width', '0px');
-          applyPaneWidths();
+          updateDocumentPanelWidths();
         }
       }
     }
@@ -22142,6 +22246,7 @@ ${selector} .arrowheadPath {
     documentOutline.hidden = !enabled;
     contentContainer.classList.toggle('has-document-outline', enabled);
     documentOutlineToggle.setAttribute('aria-expanded', String(enabled));
+    updateDocumentPanelWidths();
     if (enabled) {
       refreshDocumentOutline();
       documentOutlineClose.focus({ preventScroll: true });
@@ -22149,8 +22254,6 @@ ${selector} .arrowheadPath {
       clearDocumentOutline();
       if (options && options.restoreFocus) documentOutlineToggle.focus({ preventScroll: true });
     }
-    refreshEditorWidth();
-    scheduleLineNumberUpdate({ force: true });
   }
 
   function getDocumentOutlineSourceHeadings() {
@@ -23383,6 +23486,7 @@ ${selector} .arrowheadPath {
       if (window.innerWidth < 1080 && isFrDocked && isFindModalOpen) {
         toggleFrDockMode(true);
       }
+      updateDocumentPanelWidths();
       constrainFloatingPanelPosition();
     }, 100);
   });
@@ -23488,6 +23592,7 @@ ${selector} .arrowheadPath {
 
   initMarkdownFormatToolbar();
   initDocumentOutline();
+  initDocumentPanelResizers();
   initToolbarDropdownPortals();
   initDropdownMenuMotion();
   initFindReplaceModal();

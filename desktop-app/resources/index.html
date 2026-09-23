@@ -826,8 +826,11 @@
 
         <!-- Find & Replace Floating Panel -->
         <div id="find-replace-modal" class="find-replace-panel" role="region" aria-label="Find and Replace" style="display:none;">
+          <div id="find-replace-resizer" class="document-sidebar-resizer document-panel-resizer" role="separator" aria-orientation="vertical" aria-label="Resize Find and Replace" aria-controls="find-replace-modal" aria-valuemin="220" aria-valuemax="420" tabindex="0">
+            <div class="resize-divider-handle" aria-hidden="true"></div>
+          </div>
           <div class="find-replace-header" id="find-replace-drag-handle">
-            <span class="find-replace-title"><i class="lucide lucide-search me-1"></i> Find &amp; Replace</span>
+            <span class="find-replace-title">Find &amp; Replace</span>
             <div class="find-replace-header-actions">
               <button type="button" class="panel-icon-btn" id="find-replace-reset" title="Reset Position" aria-label="Reset Position"><i class="lucide lucide-undo-2"></i></button>
               <button type="button" class="panel-icon-btn" id="find-replace-dock" title="Toggle Dock Mode" aria-label="Toggle Dock Mode"><i class="lucide lucide-panel-right"></i></button>
@@ -1659,8 +1662,11 @@
                 <div id="document-split-preview" class="markdown-body document-split-preview" aria-label="Secondary Markdown preview" hidden></div>
             </section>
             <aside id="document-outline" class="document-outline" aria-labelledby="document-outline-title" hidden>
+                <div id="document-outline-resizer" class="document-sidebar-resizer document-panel-resizer" role="separator" aria-orientation="vertical" aria-label="Resize Document Outline" aria-controls="document-outline" aria-valuemin="220" aria-valuemax="420" tabindex="0">
+                    <div class="resize-divider-handle" aria-hidden="true"></div>
+                </div>
                 <div class="find-replace-header document-outline-header">
-                    <span class="find-replace-title" id="document-outline-title"><i class="lucide lucide-square-menu me-1" aria-hidden="true"></i> Document Outline</span>
+                    <span class="find-replace-title" id="document-outline-title">Document Outline</span>
                     <div class="find-replace-header-actions">
                         <button id="document-outline-collapse-all" class="panel-icon-btn" type="button" aria-label="Collapse all headings" title="Collapse all headings" aria-controls="document-outline-list">
                             <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>

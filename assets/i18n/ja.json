@@ -1178,5 +1178,7 @@
   "Collapse all headings": "すべての見出しを折りたたむ",
   "Expand all headings": "すべての見出しを展開",
   "All headings collapsed.": "すべての見出しを折りたたみました。",
-  "All headings expanded.": "すべての見出しを展開しました。"
+  "All headings expanded.": "すべての見出しを展開しました。",
+  "Resize Document Outline": "ドキュメントのアウトラインの幅を変更",
+  "Resize Find and Replace": "検索と置換の幅を変更"
 }

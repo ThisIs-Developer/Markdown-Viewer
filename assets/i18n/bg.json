@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Свиване на всички заглавия",
   "Expand all headings": "Разгъване на всички заглавия",
   "All headings collapsed.": "Всички заглавия са свити.",
-  "All headings expanded.": "Всички заглавия са разгънати."
+  "All headings expanded.": "Всички заглавия са разгънати.",
+  "Resize Document Outline": "Промяна на ширината на структурата на документа",
+  "Resize Find and Replace": "Промяна на ширината на търсене и замяна"
 }

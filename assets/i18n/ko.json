@@ -1178,5 +1178,7 @@
   "Collapse all headings": "모든 제목 접기",
   "Expand all headings": "모든 제목 펼치기",
   "All headings collapsed.": "모든 제목을 접었습니다.",
-  "All headings expanded.": "모든 제목을 펼쳤습니다."
+  "All headings expanded.": "모든 제목을 펼쳤습니다.",
+  "Resize Document Outline": "문서 개요 너비 조절",
+  "Resize Find and Replace": "찾기 및 바꾸기 너비 조절"
 }

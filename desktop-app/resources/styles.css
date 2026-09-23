@@ -865,15 +865,32 @@ body {
   outline: none;
 }
 
-.document-sidebar.is-resizing .document-sidebar-resizer {
+.is-resizing > .document-sidebar-resizer {
   background-color: var(--accent-color);
 }
 
 .document-sidebar-resizer:hover .resize-divider-handle,
 .document-sidebar-resizer:focus-visible .resize-divider-handle,
-.document-sidebar.is-resizing .document-sidebar-resizer .resize-divider-handle {
+.is-resizing > .document-sidebar-resizer .resize-divider-handle {
   width: 3px;
   background-color: var(--accent-color);
+}
+
+.document-panel-resizer {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+
+.find-replace-panel:not(.docked) > .document-panel-resizer {
+  left: 0;
+  right: auto;
+}
+
+@media (max-width: 1079px) {
+  .document-outline > .document-panel-resizer {
+    left: 0;
+    right: auto;
+  }
 }
 
 .document-sidebar-backdrop {
@@ -9231,7 +9248,6 @@ button.live-share-participant-overflow {
   position: fixed;
   top: 100px;
   right: 20px;
-  width: 340px;
   background-color: var(--fr-bg);
   border: 1px solid var(--fr-border);
   border-radius: 12px;
@@ -9245,6 +9261,8 @@ button.live-share-participant-overflow {
 
 .find-replace-panel,
 .document-outline {
+  width: var(--document-panel-width, 340px);
+  max-width: calc(100% - 24px);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -9255,6 +9273,7 @@ button.live-share-participant-overflow {
   top: 0 !important;
   right: 0 !important;
   height: 100%;
+  max-width: none;
   border-radius: 0;
   border-top: none;
   border-bottom: none;
@@ -9355,6 +9374,7 @@ button.live-share-participant-overflow {
 
 .find-input-field {
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   color: var(--text-color);
@@ -9522,6 +9542,7 @@ button.live-share-participant-overflow {
 
 .find-replace-actions-footer {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 8px 12px 12px 12px;
   border-top: 1px solid var(--fr-border);
@@ -9652,7 +9673,7 @@ button.live-share-participant-overflow {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 
   /* Prevent full screen expansion of floating panel on small mobile viewports */
   .find-replace-panel {
@@ -11198,7 +11219,6 @@ html[data-theme="dark"] .mermaid svg {
   bottom: 0;
   display: flex;
   flex-direction: column;
-  width: min(280px, 88%);
   min-height: 0;
   overflow: hidden;
   color: var(--text-color);
@@ -11300,14 +11320,10 @@ html[data-theme="dark"] .mermaid svg {
 }
 
 @media (min-width: 1080px) {
-  .content-container.has-document-outline {
-    --outline-width: 260px;
-  }
-
   .document-outline {
-    position: static;
-    flex: 0 0 260px;
-    width: 260px;
+    position: relative;
+    flex: 0 0 var(--document-panel-width, 340px);
+    max-width: none;
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -11318,6 +11334,7 @@ html[data-theme="dark"] .mermaid svg {
   .document-outline {
     --outline-indent: 18px;
     --outline-control-size: 32px;
+    width: calc(100% - 24px);
   }
 
   .document-outline-link,

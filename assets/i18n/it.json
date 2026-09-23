@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Comprimi tutte le intestazioni",
   "Expand all headings": "Espandi tutte le intestazioni",
   "All headings collapsed.": "Tutte le intestazioni sono compresse.",
-  "All headings expanded.": "Tutte le intestazioni sono espanse."
+  "All headings expanded.": "Tutte le intestazioni sono espanse.",
+  "Resize Document Outline": "Ridimensiona la struttura del documento",
+  "Resize Find and Replace": "Ridimensiona Trova e sostituisci"
 }

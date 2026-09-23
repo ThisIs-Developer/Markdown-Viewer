@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Collapse all headings",
   "Expand all headings": "Expand all headings",
   "All headings collapsed.": "All headings collapsed.",
-  "All headings expanded.": "All headings expanded."
+  "All headings expanded.": "All headings expanded.",
+  "Resize Document Outline": "Resize Document Outline",
+  "Resize Find and Replace": "Resize Find and Replace"
 }

@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Tüm başlıkları daralt",
   "Expand all headings": "Tüm başlıkları genişlet",
   "All headings collapsed.": "Tüm başlıklar daraltıldı.",
-  "All headings expanded.": "Tüm başlıklar genişletildi."
+  "All headings expanded.": "Tüm başlıklar genişletildi.",
+  "Resize Document Outline": "Belge ana hattının genişliğini değiştir",
+  "Resize Find and Replace": "Bul ve Değiştir genişliğini değiştir"
 }

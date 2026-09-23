@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Contraer todos los encabezados",
   "Expand all headings": "Expandir todos los encabezados",
   "All headings collapsed.": "Todos los encabezados contraídos.",
-  "All headings expanded.": "Todos los encabezados expandidos."
+  "All headings expanded.": "Todos los encabezados expandidos.",
+  "Resize Document Outline": "Cambiar el ancho del esquema del documento",
+  "Resize Find and Replace": "Cambiar el ancho de Buscar y reemplazar"
 }

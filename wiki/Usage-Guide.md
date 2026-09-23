@@ -28,11 +28,11 @@ Use a heading's chevron to collapse or expand its children. Headings without chi
 
 The header's **Collapse all headings / Expand all headings** button controls every branch, using the same folding icons as the File Sidebar. It collapses all groups when any group is expanded, then changes to Expand All when all groups are collapsed. It keeps the outline panel open and is disabled when there are no parent headings.
 
+Document Outline and Find & Replace use text-only header titles and the same default width of 340px. On desktop and tablet, drag either panel's inner edge to resize it, using the same handle as the File Sidebar. With the handle focused, use **Left/Right Arrow** to move the edge by 10px, or **Shift+Arrow** for 25px. **Home** or a double-click restores the default width, subject to the available document space. Widths stay between 220px and 420px, and docked panels leave room for the document. On mobile, both panels fit the screen and the resize handles are hidden.
+
 Select a heading to jump to that section while staying in your selected mode: Editor moves the caret and scrolls the source, while Preview and Split scroll the rendered document. The current section is highlighted as you scroll; if it is inside a collapsed branch, the visible parent is highlighted. On small screens, the outline closes after navigation so you can read the selected section. Close it with the toolbar button, the close button, or **Escape** while focus is inside the sidebar. Opening Comments closes the outline, and opening the outline closes Comments.
 
 The outline is generated locally from the current document and is not saved separately or included in exports.
-
-![Document Outline beside a Markdown preview](images/document-outline.png)
 
 ## Files, Folders, and Autosave
 

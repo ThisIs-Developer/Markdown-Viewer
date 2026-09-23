@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Alle Überschriften einklappen",
   "Expand all headings": "Alle Überschriften aufklappen",
   "All headings collapsed.": "Alle Überschriften eingeklappt.",
-  "All headings expanded.": "Alle Überschriften aufgeklappt."
+  "All headings expanded.": "Alle Überschriften aufgeklappt.",
+  "Resize Document Outline": "Breite der Dokumentgliederung ändern",
+  "Resize Find and Replace": "Breite von Suchen und Ersetzen ändern"
 }

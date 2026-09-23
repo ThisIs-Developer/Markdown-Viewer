@@ -1178,5 +1178,7 @@
   "Collapse all headings": "Згорнути всі заголовки",
   "Expand all headings": "Розгорнути всі заголовки",
   "All headings collapsed.": "Усі заголовки згорнуто.",
-  "All headings expanded.": "Усі заголовки розгорнуто."
+  "All headings expanded.": "Усі заголовки розгорнуто.",
+  "Resize Document Outline": "Змінити ширину структури документа",
+  "Resize Find and Replace": "Змінити ширину панелі пошуку й заміни"
 }
