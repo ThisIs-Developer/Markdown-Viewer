@@ -11228,6 +11228,15 @@ html[data-theme="dark"] .mermaid svg {
   font-size: var(--ui-font-md);
 }
 
+#document-outline-toggle:focus-visible,
+.document-outline-header .panel-icon-btn:focus-visible {
+  outline: none;
+}
+
+.document-outline-header .panel-icon-btn:focus-visible {
+  background-color: var(--button-hover);
+}
+
 .document-outline-body {
   min-height: 0;
   min-width: 0;
