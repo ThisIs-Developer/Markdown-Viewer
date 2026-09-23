@@ -1168,5 +1168,17 @@
   "Release notes are available in the tab list.": "Le note sulla versione sono disponibili nell'elenco delle schede.",
   "Release Notes: 3.10.2": "Note sulla versione: 3.10.2",
   "Skip update navigation": "Salta la navigazione degli aggiornamenti",
-  "1 file": "1 file"
+  "1 file": "1 file",
+  "Document Outline": "Struttura del documento",
+  "Close Document Outline": "Chiudi struttura del documento",
+  "Document headings": "Titoli del documento",
+  "No headings in this document.": "Questo documento non contiene titoli.",
+  "Untitled heading": "Titolo senza nome",
+  "Expand": "Espandi",
+  "Collapse all headings": "Comprimi tutte le intestazioni",
+  "Expand all headings": "Espandi tutte le intestazioni",
+  "All headings collapsed.": "Tutte le intestazioni sono compresse.",
+  "All headings expanded.": "Tutte le intestazioni sono espanse.",
+  "Resize Document Outline": "Ridimensiona la struttura del documento",
+  "Resize Find and Replace": "Ridimensiona Trova e sostituisci"
 }

@@ -1168,5 +1168,17 @@
   "Release notes are available in the tab list.": "Les notes de version sont disponibles dans la liste des onglets.",
   "Release Notes: 3.10.2": "Notes de version : 3.10.2",
   "Skip update navigation": "Ignorer la navigation de mise à jour",
-  "1 file": "1 fichier"
+  "1 file": "1 fichier",
+  "Document Outline": "Plan du document",
+  "Close Document Outline": "Fermer le plan du document",
+  "Document headings": "Titres du document",
+  "No headings in this document.": "Ce document ne contient aucun titre.",
+  "Untitled heading": "Titre sans nom",
+  "Expand": "Développer",
+  "Collapse all headings": "Réduire tous les titres",
+  "Expand all headings": "Développer tous les titres",
+  "All headings collapsed.": "Tous les titres sont réduits.",
+  "All headings expanded.": "Tous les titres sont développés.",
+  "Resize Document Outline": "Redimensionner le plan du document",
+  "Resize Find and Replace": "Redimensionner Rechercher et remplacer"
 }

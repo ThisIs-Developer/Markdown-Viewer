@@ -60,6 +60,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 - **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash and desktop history stay outside the backup.
 - **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, per-document Preview positions, selection-anchored comments, and threaded replies.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
+- **Document Outline:** use the book-text button after Emoji, Find & Replace, and Full Screen to open a resizable right sidebar with collapsible heading branches, a Collapse/Expand All control, and section navigation in Editor, Preview, and Split modes; the outline follows the current document as you edit or switch tabs and shares Find & Replace's default width and header styling.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
 
 <p align="center">

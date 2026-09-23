@@ -436,6 +436,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // View Mode Elements - Story 1.1
   const contentContainer = document.querySelector(".content-container");
+  const documentOutline = document.getElementById('document-outline');
+  const documentOutlineToggle = document.getElementById('document-outline-toggle');
+  const documentOutlineCollapseAll = document.getElementById('document-outline-collapse-all');
+  const documentOutlineClose = document.getElementById('document-outline-close');
+  const documentOutlineList = document.getElementById('document-outline-list');
+  const documentOutlineEmpty = document.getElementById('document-outline-empty');
+  let documentOutlineEntries = [];
+  let documentOutlineScrollFrame = null;
+  let documentOutlineScrollTarget = null;
+  let documentOutlineDocumentId = null;
+  const documentOutlineCollapsed = new Set();
   const viewModeButtons = document.querySelectorAll(".view-toggle-btn");
   const documentSplitPane = document.getElementById('document-split-pane');
   const documentSplitDivider = document.getElementById('document-split-divider');
@@ -4230,7 +4241,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentSidebarRenderLimit = 250;
   let documentSidebarRenderBudget = null;
   let documentSidebarInitialized = false;
-  let isDocumentSidebarResizing = false;
   let draggedSidebarDocumentIds = [];
   let activeDocumentDragPreview = null;
   let documentTreeDragExpandTimer = null;
@@ -6972,11 +6982,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       const expandedItems = getExpandableDocumentTreeItems().filter(function(item) { return item.expanded !== false; });
       const willExpand = expandedItems.length === 0;
       const actionLabel = willExpand ? 'Expand all folders' : 'Collapse all folders';
-      collapseAllButton.disabled = !canToggleAll;
-      collapseAllButton.title = canToggleAll ? actionLabel : 'Expand or collapse all is available in All files';
-      collapseAllButton.setAttribute('aria-label', collapseAllButton.title);
-      const collapseIcon = collapseAllButton.querySelector('i');
-      if (collapseIcon) collapseIcon.className = 'lucide ' + (willExpand ? 'lucide-unfold-vertical' : 'lucide-fold-vertical');
+      updateTreeExpansionButton(collapseAllButton, willExpand,
+        canToggleAll ? actionLabel : 'Expand or collapse all is available in All files', canToggleAll);
     }
     const firstRow = tree.querySelector('.document-tree-row');
     if (firstRow && !tree.querySelector('.document-tree-row[tabindex="0"]')) firstRow.setAttribute('tabindex', '0');
@@ -7068,6 +7075,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     }));
   }
 
+  function updateTreeExpansionButton(button, willExpand, label, enabled) {
+    if (!button) return;
+    button.disabled = !enabled;
+    button.title = label;
+    button.setAttribute('aria-label', button.title);
+    const icon = button.querySelector('i');
+    if (icon) icon.className = 'lucide ' + (willExpand ? 'lucide-unfold-vertical' : 'lucide-fold-vertical');
+  }
+
   function toggleDocumentTreeExpansion() {
     if (!documentOrganization) return;
     const expandableItems = getExpandableDocumentTreeItems();
@@ -7153,6 +7169,65 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function initHorizontalPanelResize(panel, resizer, options) {
+    if (!panel || !resizer) return;
+    let drag = null;
+
+    function setWidth(width) {
+      const maxWidth = options.getMaxWidth ? options.getMaxWidth() : SIDEBAR_MAX_WIDTH;
+      const nextWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(maxWidth, Math.round(width)));
+      options.setWidth(nextWidth);
+      resizer.setAttribute('aria-valuenow', String(Math.round(options.getWidth())));
+    }
+
+    function finishResize(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      drag = null;
+      panel.classList.remove('is-resizing');
+      document.body.classList.remove('resizing');
+      if (resizer.hasPointerCapture(event.pointerId)) resizer.releasePointerCapture(event.pointerId);
+      if (options.onResizeEnd) options.onResizeEnd();
+    }
+
+    resizer.addEventListener('pointerdown', function(event) {
+      if (isDocumentSidebarMobile() || event.button !== 0 || drag) return;
+      drag = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        width: panel.getBoundingClientRect().width,
+        direction: options.getEdge() === 'left' ? -1 : 1
+      };
+      panel.classList.add('is-resizing');
+      document.body.classList.add('resizing');
+      resizer.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    resizer.addEventListener('pointermove', function(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      setWidth(drag.width + (event.clientX - drag.clientX) * drag.direction);
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(type) {
+      resizer.addEventListener(type, finishResize);
+    });
+    resizer.addEventListener('keydown', function(event) {
+      if (isDocumentSidebarMobile() || !['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === 'Home') {
+        setWidth(options.defaultWidth);
+      } else {
+        const direction = (event.key === 'ArrowRight' ? 1 : -1) * (options.getEdge() === 'left' ? -1 : 1);
+        setWidth(options.getWidth() + direction * (event.shiftKey ? 25 : 10));
+      }
+      if (options.onResizeEnd) options.onResizeEnd();
+    });
+    resizer.addEventListener('dblclick', function() {
+      if (isDocumentSidebarMobile()) return;
+      setWidth(options.defaultWidth);
+      if (options.onResizeEnd) options.onResizeEnd();
+    });
+    resizer.setAttribute('aria-valuenow', String(Math.round(options.getWidth())));
+  }
+
   function initDocumentSidebar() {
     if (documentSidebarInitialized) return;
     documentSidebarInitialized = true;
@@ -7236,58 +7311,16 @@ document.addEventListener("DOMContentLoaded", async function () {
       openDocumentTreeBackgroundContextMenu(event);
     });
 
-    if (resizer && sidebar) {
-      function applyResize(clientX) {
-        const rect = sidebar.getBoundingClientRect();
-        const isRtl = getComputedStyle(sidebar).direction === 'rtl';
-        const nextWidth = isRtl ? rect.right - clientX : clientX - rect.left;
-        documentOrganization.ui.width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, Math.round(nextWidth)));
-        sidebar.style.setProperty('--document-sidebar-width', documentOrganization.ui.width + 'px');
-        resizer.setAttribute('aria-valuenow', String(documentOrganization.ui.width));
-      }
-      resizer.addEventListener('pointerdown', function(event) {
-        if (isDocumentSidebarMobile()) return;
-        isDocumentSidebarResizing = true;
-        sidebar.classList.add('is-resizing');
-        resizer.setPointerCapture(event.pointerId);
-        event.preventDefault();
-      });
-      resizer.addEventListener('pointermove', function(event) {
-        if (!isDocumentSidebarResizing) return;
-        applyResize(event.clientX);
-      });
-      resizer.addEventListener('pointerup', function(event) {
-        if (!isDocumentSidebarResizing) return;
-        isDocumentSidebarResizing = false;
-        sidebar.classList.remove('is-resizing');
-        if (resizer.hasPointerCapture(event.pointerId)) resizer.releasePointerCapture(event.pointerId);
-        saveDocumentOrganization();
-      });
-      resizer.addEventListener('keydown', function(event) {
-        if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
-        event.preventDefault();
-        if (event.key === 'Home') {
-          documentOrganization.ui.width = 288;
-          sidebar.style.setProperty('--document-sidebar-width', '288px');
-          resizer.setAttribute('aria-valuenow', '288');
-          saveDocumentOrganization();
-          return;
-        }
-        const direction = event.key === 'ArrowRight' ? 1 : -1;
-        const step = event.shiftKey ? 25 : 10;
-        documentOrganization.ui.width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, documentOrganization.ui.width + direction * step));
-        sidebar.style.setProperty('--document-sidebar-width', documentOrganization.ui.width + 'px');
-        resizer.setAttribute('aria-valuenow', String(documentOrganization.ui.width));
-        saveDocumentOrganization();
-      });
-      resizer.addEventListener('dblclick', function() {
-        documentOrganization.ui.width = 288;
-        sidebar.style.setProperty('--document-sidebar-width', '288px');
-        resizer.setAttribute('aria-valuenow', '288');
-        saveDocumentOrganization();
-      });
-      resizer.setAttribute('aria-valuenow', String(documentOrganization.ui.width));
-    }
+    initHorizontalPanelResize(sidebar, resizer, {
+      defaultWidth: 288,
+      getWidth: function() { return documentOrganization.ui.width; },
+      getEdge: function() { return getComputedStyle(sidebar).direction === 'rtl' ? 'left' : 'right'; },
+      setWidth: function(width) {
+        documentOrganization.ui.width = width;
+        sidebar.style.setProperty('--document-sidebar-width', width + 'px');
+      },
+      onResizeEnd: saveDocumentOrganization
+    });
 
     document.addEventListener('click', function(event) {
       if (!event.target.closest('.document-menu-btn, .document-menu-dropdown')) closeDocumentSidebarMenus();
@@ -8415,6 +8448,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function setReviewMode(enabled, options) {
     options = options || {};
     const nextState = Boolean(enabled);
+    if (nextState) setDocumentOutlineOpen(false);
     if (nextState && isReleaseNotesActive()) {
       announceToScreenReader('Release notes do not support comments or suggestions.');
       return;
@@ -10122,6 +10156,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function setReviewMode(enabled, options) {
     options = options || {};
     const nextState = Boolean(enabled);
+    if (nextState) setDocumentOutlineOpen(false);
     if (nextState && isReleaseNotesActive()) {
       announceToScreenReader('Release notes do not support comments.');
       return;
@@ -11208,6 +11243,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (contentContainer) contentContainer.classList.toggle('no-active-document', showEmptyState);
     if (noOpenDocument) noOpenDocument.hidden = !showEmptyState;
     updateDocumentToolbarAvailability(hasActiveDocument);
+    if (!hasActiveDocument && documentOutline && !documentOutline.hidden) setDocumentOutlineOpen(false);
     if (showEmptyState) {
       markdownEditor.value = '';
       updateDocumentStats();
@@ -14623,6 +14659,7 @@ ${selector} .arrowheadPath {
     });
 
     enhanceReleaseNotesPreview();
+    refreshDocumentOutline();
 
     queryPreviewRoots(roots, 'input[type="checkbox"]').forEach(function(input) {
       if (!input.hasAttribute('aria-label')) {
@@ -14724,6 +14761,7 @@ ${selector} .arrowheadPath {
       _lastRenderedContent === rawVal &&
       !previewContainsSkeleton();
 
+    if (previewLastRenderedTabId !== previewDocumentId) clearDocumentOutline();
     if (hasCurrentPreview && !force) return;
 
     clearPendingPreviewWork();
@@ -16840,7 +16878,9 @@ ${selector} .arrowheadPath {
   }
 
   function syncEditorToPreview() {
-    if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling) return;
+    // During an outline jump, the preview owns the position until the next user
+    // interaction. Delayed editor scroll events must not undo a layout correction.
+    if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling || documentOutlineScrollTarget) return;
     const sourceDocumentId = activeTabId;
     if (!sourceDocumentId || previewLastRenderedTabId !== sourceDocumentId) return;
     isEditorScrolling = true;
@@ -16954,6 +16994,7 @@ ${selector} .arrowheadPath {
 
     const previousMode = currentViewMode;
     currentViewMode = mode;
+    documentOutlineScrollTarget = null;
 
     // Update content container class
     contentContainer.classList.remove('view-editor-only', 'view-preview-only', 'view-split');
@@ -17007,6 +17048,7 @@ ${selector} .arrowheadPath {
       scheduleEditorOverlayScrollSync();
     }
     if (secondarySplitTabId) renderDocumentSplitView();
+    requestAnimationFrame(updateDocumentOutlineActiveHeading);
   }
 
   function resolveViewToggleMode(mode) {
@@ -21400,6 +21442,93 @@ ${selector} .arrowheadPath {
   let lastFloatingTop = null;
   let lastFloatingRight = null;
 
+  const DOCUMENT_PANEL_DEFAULT_WIDTH = 340;
+  const documentPanels = [findReplaceModal, documentOutline].filter(Boolean).map(function(panel) {
+    return { panel: panel, width: DOCUMENT_PANEL_DEFAULT_WIDTH };
+  });
+
+  function isDocumentPanelDocked(panel) {
+    if (!panel || window.innerWidth < 1080) return false;
+    return panel === documentOutline ? !documentOutline.hidden : isFrDocked && isFindModalOpen;
+  }
+
+  function getDocumentPanelMaxWidth(panel) {
+    let availableWidth;
+    if (isDocumentPanelDocked(panel)) {
+      const otherPanelWidth = documentPanels.reduce(function(total, entry) {
+        return total + (entry.panel !== panel && isDocumentPanelDocked(entry.panel)
+          ? entry.panel.getBoundingClientRect().width : 0);
+      }, 0);
+      availableWidth = contentContainer.clientWidth - SIDEBAR_MIN_WIDTH - otherPanelWidth;
+    } else {
+      availableWidth = panel === documentOutline ? contentContainer.clientWidth - 24
+        : panel.getBoundingClientRect().right || window.innerWidth - 24;
+    }
+    return Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, Math.floor(availableWidth)));
+  }
+
+  function updateDocumentPanelWidths() {
+    const dockedPanels = documentPanels.filter(function(entry) { return isDocumentPanelDocked(entry.panel); });
+    const totalWidth = dockedPanels.reduce(function(total, entry) { return total + entry.width; }, 0);
+    // Keep document space available when both panels and the File Sidebar are open.
+    const availableWidth = Math.max(0, contentContainer.clientWidth - SIDEBAR_MIN_WIDTH);
+    const shrinkableWidth = totalWidth - dockedPanels.length * SIDEBAR_MIN_WIDTH;
+    const overflow = Math.min(Math.max(0, totalWidth - availableWidth), shrinkableWidth);
+    const widths = new Map();
+    documentPanels.forEach(function(entry) {
+      const reduction = dockedPanels.includes(entry) && shrinkableWidth > 0
+        ? overflow * (entry.width - SIDEBAR_MIN_WIDTH) / shrinkableWidth : 0;
+      const width = Math.floor(entry.width - reduction);
+      widths.set(entry.panel, width);
+      entry.panel.style.setProperty('--document-panel-width', width + 'px');
+    });
+    contentContainer.style.setProperty('--outline-width', (isDocumentPanelDocked(documentOutline) ? widths.get(documentOutline) : 0) + 'px');
+    contentContainer.style.setProperty('--dock-width', (isDocumentPanelDocked(findReplaceModal) ? widths.get(findReplaceModal) : 0) + 'px');
+    documentPanels.forEach(function(entry) {
+      const resizer = entry.panel.querySelector('.document-panel-resizer');
+      if (!resizer) return;
+      resizer.setAttribute('aria-valuenow', String(Math.round(entry.panel.getBoundingClientRect().width || entry.width)));
+      resizer.setAttribute('aria-valuemax', String(getDocumentPanelMaxWidth(entry.panel)));
+    });
+    applyPaneWidths();
+    refreshEditorWidth();
+    scheduleLineNumberUpdate({ force: true });
+  }
+
+  function initDocumentPanelResizers() {
+    documentPanels.forEach(function(entry) {
+      const panel = entry.panel;
+      initHorizontalPanelResize(panel, panel.querySelector('.document-panel-resizer'), {
+        defaultWidth: DOCUMENT_PANEL_DEFAULT_WIDTH,
+        getWidth: function() { return panel.getBoundingClientRect().width || entry.width; },
+        getMaxWidth: function() { return getDocumentPanelMaxWidth(panel); },
+        getEdge: function() {
+          return isDocumentPanelDocked(panel) && getComputedStyle(panel).direction === 'rtl' ? 'right' : 'left';
+        },
+        setWidth: function(width) {
+          const floatingRight = panel === findReplaceModal && !isFrDocked
+            ? panel.getBoundingClientRect().right : null;
+          entry.width = width;
+          // A dragged floating panel uses a left anchor; keep its right edge still while resizing.
+          if (floatingRight !== null && panel.style.left && panel.style.left !== 'auto') {
+            panel.style.left = Math.max(0, floatingRight - width) + 'px';
+            lastFloatingLeft = panel.style.left;
+          }
+          updateDocumentPanelWidths();
+        }
+      });
+    });
+    updateDocumentPanelWidths();
+    let lastContainerWidth = contentContainer.clientWidth;
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(function() {
+        if (contentContainer.clientWidth === lastContainerWidth) return;
+        lastContainerWidth = contentContainer.clientWidth;
+        updateDocumentPanelWidths();
+      }).observe(contentContainer);
+    }
+  }
+
   function initFindReplacePanelDrag() {
     const handle = document.getElementById('find-replace-drag-handle');
     const panel = document.getElementById('find-replace-modal');
@@ -21513,7 +21642,8 @@ ${selector} .arrowheadPath {
       dockBtn.title = "Toggle Dock Mode";
       
       panel.style.display = 'flex';
-      applyPaneWidths();
+      updateDocumentPanelWidths();
+      constrainFloatingPanelPosition();
       
       // Restore focus and selection
       if (activeId) {
@@ -21543,7 +21673,6 @@ ${selector} .arrowheadPath {
       // Append panel to dock container (.content-container)
       contentCont.appendChild(panel);
       contentCont.classList.add('fr-docked');
-      contentCont.style.setProperty('--dock-width', '340px');
 
       dockBtn.innerHTML = '<i class="lucide lucide-panels-top-left"></i>';
       dockBtn.title = "Toggle Floating Mode";
@@ -21565,7 +21694,8 @@ ${selector} .arrowheadPath {
     
     // Ensure display is flex and recalculate split panes
     panel.style.display = 'flex';
-    applyPaneWidths();
+    updateDocumentPanelWidths();
+    constrainFloatingPanelPosition();
 
     // Restore focus and selection after layout change
     if (activeId) {
@@ -21744,7 +21874,7 @@ ${selector} .arrowheadPath {
         if (contentCont) {
           contentCont.classList.remove('fr-docked');
           contentCont.style.setProperty('--dock-width', '0px');
-          applyPaneWidths();
+          updateDocumentPanelWidths();
         }
       }
     }
@@ -22101,6 +22231,302 @@ ${selector} .arrowheadPath {
     }
   }
 
+  function clearDocumentOutline() {
+    documentOutlineEntries = [];
+    updateDocumentOutlineExpansionButton();
+    documentOutlineScrollTarget = null;
+    if (documentOutlineList) documentOutlineList.replaceChildren();
+    if (documentOutlineEmpty) documentOutlineEmpty.hidden = false;
+  }
+
+  function setDocumentOutlineOpen(open, options) {
+    if (!documentOutline || !documentOutlineToggle) return;
+    const enabled = Boolean(open && hasActiveOpenDocument());
+    if (enabled && reviewModeActive) setReviewMode(false);
+    documentOutline.hidden = !enabled;
+    contentContainer.classList.toggle('has-document-outline', enabled);
+    documentOutlineToggle.setAttribute('aria-expanded', String(enabled));
+    updateDocumentPanelWidths();
+    if (enabled) {
+      refreshDocumentOutline();
+      documentOutlineClose.focus({ preventScroll: true });
+    } else {
+      clearDocumentOutline();
+      if (options && options.restoreFocus) documentOutlineToggle.focus({ preventScroll: true });
+    }
+  }
+
+  function getDocumentOutlineSourceHeadings() {
+    const source = markdownEditor.value;
+    const body = parseFrontmatter(source).body;
+    const headings = [];
+    // Walk block tokens, keeping their source bounds so code examples and repeated
+    // heading text cannot capture the caret intended for a later real heading.
+    function visit(tokens, start, limit) {
+      let cursor = start;
+      tokens.forEach(function(token) {
+        const raw = token.raw || '';
+        if (!raw) return;
+        let offset = source.indexOf(raw, cursor);
+        let end = offset + raw.length;
+        if (offset < 0 || end > limit) {
+          // Blockquotes and list items remove their prefixes from nested tokens.
+          const lines = raw.split('\n');
+          const firstLine = lines[0].trimStart();
+          if (!firstLine) return;
+          offset = source.indexOf(firstLine, cursor);
+          if (offset < 0 || offset >= limit) return;
+          end = offset;
+          for (let line = 0; line < lines.length; line += 1) {
+            if (line === lines.length - 1 && raw.endsWith('\n')) break;
+            const newline = source.indexOf('\n', end);
+            end = newline < 0 ? limit : Math.min(limit, newline + 1);
+          }
+        }
+        cursor = end;
+        if (token.type === 'heading') headings.push({ level: token.depth, start: offset });
+        else if (token.type === 'list') visit(token.items, offset, end);
+        else if (token.type === 'blockquote' || token.type === 'list_item') visit(token.tokens || [], offset, end);
+        else if (token.type === 'html') {
+          const template = document.createElement('template');
+          template.innerHTML = sanitizePreviewHtml(raw);
+          let htmlCursor = offset;
+          template.content.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(function(heading) {
+            const match = new RegExp('<' + heading.tagName + '\\b', 'i').exec(source.slice(htmlCursor, end));
+            if (!match) return;
+            htmlCursor += match.index;
+            if (!heading.closest('pre, .diagram-viewer, .frontmatter-container')) {
+              headings.push({ level: Number(heading.tagName.slice(1)), start: htmlCursor });
+            }
+            htmlCursor += heading.tagName.length + 1;
+          });
+        }
+      });
+    }
+    visit(marked.lexer(body), source.length - body.length, source.length);
+    return headings;
+  }
+
+  function setDocumentOutlineExpanded(entry, expanded) {
+    entry.children.hidden = !expanded;
+    entry.toggle.setAttribute('aria-expanded', String(expanded));
+    const action = translateUiString(expanded ? 'Collapse' : 'Expand');
+    entry.toggle.setAttribute('aria-label', action + ': ' + entry.title);
+    entry.toggle.title = action;
+    if (expanded) documentOutlineCollapsed.delete(entry.key);
+    else documentOutlineCollapsed.add(entry.key);
+  }
+
+  function getExpandableDocumentOutlineEntries() {
+    return documentOutlineEntries.filter(function(entry) { return entry.toggle; });
+  }
+
+  function updateDocumentOutlineExpansionButton() {
+    const entries = getExpandableDocumentOutlineEntries();
+    const willExpand = !entries.some(function(entry) { return !entry.children.hidden; });
+    updateTreeExpansionButton(documentOutlineCollapseAll, willExpand,
+      willExpand ? 'Expand all headings' : 'Collapse all headings', entries.length > 0);
+  }
+
+  function toggleDocumentOutlineExpansion() {
+    const entries = getExpandableDocumentOutlineEntries();
+    const shouldExpand = !entries.some(function(entry) { return !entry.children.hidden; });
+    entries.forEach(function(entry) { setDocumentOutlineExpanded(entry, shouldExpand); });
+    updateDocumentOutlineExpansionButton();
+    updateDocumentOutlineActiveHeading();
+    announceToScreenReader(translateUiString(shouldExpand ? 'All headings expanded.' : 'All headings collapsed.'));
+  }
+
+  function refreshDocumentOutline() {
+    if (!documentOutline || documentOutline.hidden) return;
+    const documentId = getActivePreviewDocumentId();
+    if (documentOutlineDocumentId !== documentId) {
+      documentOutlineDocumentId = documentId;
+      documentOutlineCollapsed.clear();
+    }
+    if (!hasActiveOpenDocument() || !previewHasCommittedRender ||
+        previewLastRenderedTabId !== getActivePreviewDocumentId() ||
+        _lastRenderedContent !== markdownEditor.value || previewContainsSkeleton()) {
+      clearDocumentOutline();
+      return;
+    }
+
+    const headings = Array.from(markdownPreview.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      .filter(function(heading) { return !heading.closest('pre, .diagram-viewer, .frontmatter-container'); });
+    const sourceHeadings = getDocumentOutlineSourceHeadings();
+    const fragment = document.createDocumentFragment();
+    const focusedEntry = documentOutlineEntries.find(function(entry) { return entry.button === document.activeElement || entry.toggle === document.activeElement; });
+    const focusToggle = focusedEntry && focusedEntry.toggle === document.activeElement;
+    const stack = [];
+    const occurrences = new Map();
+    let sourceIndex = 0;
+    documentOutlineEntries = headings.map(function(heading, index) {
+      const label = heading.cloneNode(true);
+      label.querySelectorAll('button, .review-target-actions, .review-pins-layer').forEach(function(node) { node.remove(); });
+      label.querySelectorAll('img').forEach(function(image) { image.replaceWith(document.createTextNode(image.alt)); });
+      const title = label.textContent.replace(/\s+/g, ' ').trim() || translateUiString('Untitled heading');
+      const level = Number(heading.tagName.slice(1));
+      const identity = level + ':' + title;
+      const occurrence = (occurrences.get(identity) || 0) + 1;
+      occurrences.set(identity, occurrence);
+      const key = identity + ':' + occurrence;
+      const item = document.createElement('li');
+      const row = document.createElement('div');
+      row.className = 'document-outline-row';
+      const spacer = document.createElement('span');
+      spacer.className = 'document-outline-spacer';
+      spacer.setAttribute('aria-hidden', 'true');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'document-outline-link';
+      button.textContent = title;
+      button.title = title;
+      const children = document.createElement('ol');
+      children.className = 'document-outline-list document-outline-children';
+      children.id = 'document-outline-children-' + index;
+      while (stack.length && stack[stack.length - 1].level >= level) stack.pop();
+      const parent = stack[stack.length - 1] || null;
+      while (sourceIndex < sourceHeadings.length && sourceHeadings[sourceIndex].level !== level) sourceIndex += 1;
+      const sourceHeading = sourceHeadings[sourceIndex++];
+      const entry = { heading, title, key, level, button, row, spacer, children, parent, sourceStart: sourceHeading ? sourceHeading.start : 0 };
+      button.addEventListener('click', function() {
+        if (!heading.isConnected) return;
+        if (window.matchMedia('(max-width: 1079px)').matches) {
+          setDocumentOutlineOpen(false, { restoreFocus: true });
+        }
+        if (currentViewMode === 'editor') {
+          cancelPendingMainScrollSync();
+          markdownEditor.focus({ preventScroll: true });
+          markdownEditor.setSelectionRange(entry.sourceStart, entry.sourceStart);
+          markdownEditor.scrollTop = clampEditorScrollTop(estimateEditorOffsetForIndex(entry.sourceStart) - 16);
+          syncEditorScrollOverlays();
+          updateDocumentOutlineActiveHeading();
+        } else {
+          documentOutlineScrollTarget = heading;
+          scrollToDocumentOutlineTarget();
+        }
+      });
+      row.append(spacer, button);
+      item.append(row, children);
+      if (parent) {
+        item.style.setProperty('--outline-level-gap', String(level - parent.level));
+        parent.children.appendChild(item);
+      } else fragment.appendChild(item);
+      stack.push(entry);
+      return entry;
+    });
+    documentOutlineEntries.forEach(function(entry) {
+      if (!entry.children.childElementCount) {
+        entry.children.remove();
+        return;
+      }
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'panel-icon-btn document-outline-chevron';
+      toggle.setAttribute('aria-controls', entry.children.id);
+      toggle.innerHTML = '<i class="lucide lucide-chevron-right" aria-hidden="true"></i>';
+      entry.toggle = toggle;
+      entry.spacer.replaceWith(toggle);
+      setDocumentOutlineExpanded(entry, !documentOutlineCollapsed.has(entry.key));
+      toggle.addEventListener('click', function() {
+        setDocumentOutlineExpanded(entry, entry.children.hidden);
+        updateDocumentOutlineExpansionButton();
+        updateDocumentOutlineActiveHeading();
+      });
+    });
+    const keys = new Set(documentOutlineEntries.map(function(entry) { return entry.key; }));
+    documentOutlineCollapsed.forEach(function(key) { if (!keys.has(key)) documentOutlineCollapsed.delete(key); });
+    documentOutlineList.replaceChildren(fragment);
+    documentOutlineEmpty.hidden = headings.length > 0;
+    updateDocumentOutlineExpansionButton();
+    if (focusedEntry) {
+      const entry = documentOutlineEntries.find(function(item) { return item.key === focusedEntry.key; });
+      (entry ? (focusToggle && entry.toggle || entry.button) : documentOutlineClose).focus({ preventScroll: true });
+    }
+    updateDocumentOutlineActiveHeading();
+  }
+
+  function scrollToDocumentOutlineTarget() {
+    const heading = documentOutlineScrollTarget;
+    if (!heading || !heading.isConnected || currentViewMode === 'editor') return;
+    // Reveal skipped preview blocks before measuring the heading's position.
+    cancelPendingMainScrollSync();
+    heading.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
+    const headingTop = heading.getBoundingClientRect().top - previewPane.getBoundingClientRect().top;
+    // Native scrolling can use a cached offset while a lazy block changes size.
+    // Correct in either direction using the heading's newly measured position.
+    previewPane.scrollTop = Math.max(0, previewPane.scrollTop + headingTop - 16);
+    updateDocumentOutlineActiveHeading();
+  }
+
+  function updateDocumentOutlineActiveHeading() {
+    if (!documentOutline || documentOutline.hidden || !documentOutlineEntries.length) return;
+    const activationLine = previewPane.getBoundingClientRect().top + 48;
+    let activeEntry = documentOutlineEntries[0];
+    if (currentViewMode === 'editor') {
+      let low = 0;
+      let high = documentOutlineEntries.length - 1;
+      while (low <= high) {
+        const middle = Math.floor((low + high) / 2);
+        const entry = documentOutlineEntries[middle];
+        if (estimateEditorOffsetForIndex(entry.sourceStart) <= markdownEditor.scrollTop + 48) {
+          activeEntry = entry;
+          low = middle + 1;
+        } else high = middle - 1;
+      }
+    } else {
+      documentOutlineEntries.forEach(function(entry) {
+        if (entry.heading.getBoundingClientRect().top <= activationLine) activeEntry = entry;
+      });
+    }
+    const scrollPane = currentViewMode === 'editor' ? markdownEditor : previewPane;
+    if (scrollPane.scrollTop > 0 && scrollPane.scrollTop + scrollPane.clientHeight >= scrollPane.scrollHeight - 2) {
+      activeEntry = documentOutlineEntries[documentOutlineEntries.length - 1];
+    }
+    for (let parent = activeEntry.parent; parent; parent = parent.parent) {
+      if (parent.children.hidden) activeEntry = parent;
+    }
+    documentOutlineEntries.forEach(function(entry) {
+      if (entry === activeEntry) entry.button.setAttribute('aria-current', 'location');
+      else entry.button.removeAttribute('aria-current');
+    });
+  }
+
+  function initDocumentOutline() {
+    if (!documentOutline) return;
+    documentOutlineCollapseAll.addEventListener('click', toggleDocumentOutlineExpansion);
+    // Keep a jump in place as lazy preview blocks acquire their actual height.
+    // The next user interaction takes control of scrolling again.
+    ['pointerdown', 'wheel', 'keydown'].forEach(function(type) {
+      document.addEventListener(type, function() { documentOutlineScrollTarget = null; }, { capture: true, passive: true });
+    });
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(function() {
+        if (documentOutlineScrollTarget) requestAnimationFrame(scrollToDocumentOutlineTarget);
+      });
+      resizeObserver.observe(markdownPreview);
+    }
+    documentOutlineClose.addEventListener('click', function() {
+      setDocumentOutlineOpen(false, { restoreFocus: true });
+    });
+    documentOutline.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setDocumentOutlineOpen(false, { restoreFocus: true });
+      }
+    });
+    function scheduleOutlineHighlight() {
+      if (documentOutline.hidden || documentOutlineScrollFrame !== null) return;
+      documentOutlineScrollFrame = requestAnimationFrame(function() {
+        documentOutlineScrollFrame = null;
+        updateDocumentOutlineActiveHeading();
+      });
+    }
+    previewPane.addEventListener('scroll', scheduleOutlineHighlight, { passive: true });
+    markdownEditor.addEventListener('scroll', scheduleOutlineHighlight, { passive: true });
+  }
+
   function runMarkdownTool(action, button) {
     if (!canMutateEditor() && isLiveMutatingAction(action)) {
       announceToScreenReader(getEditorReadOnlyMessage());
@@ -22160,7 +22586,8 @@ ${selector} .arrowheadPath {
     else if (action === 'fullscreen') {
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
       else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } else if (action === 'clear-formatting') openClearFormattingModal();
+    } else if (action === 'outline') setDocumentOutlineOpen(documentOutline.hidden);
+    else if (action === 'clear-formatting') openClearFormattingModal();
     else if (action === 'find') openFindReplaceModal();
     else if (action === 'help') openHelpModal();
     else if (action === 'info') openAboutModal(button);
@@ -22541,7 +22968,7 @@ ${selector} .arrowheadPath {
     if (!isResizing) return;
 
     const containerRect = contentContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
+    const containerWidth = editorPaneElement.getBoundingClientRect().width + previewPaneElement.getBoundingClientRect().width + resizeDivider.offsetWidth;
     const mouseX = e.clientX - containerRect.left;
 
     // Calculate percentage
@@ -22558,7 +22985,7 @@ ${selector} .arrowheadPath {
     if (!isResizing || !e.touches[0]) return;
 
     const containerRect = contentContainer.getBoundingClientRect();
-    const containerWidth = containerRect.width;
+    const containerWidth = editorPaneElement.getBoundingClientRect().width + previewPaneElement.getBoundingClientRect().width + resizeDivider.offsetWidth;
     const touchX = e.touches[0].clientX - containerRect.left;
 
     let newEditorPercent = (touchX / containerWidth) * 100;
@@ -22583,8 +23010,8 @@ ${selector} .arrowheadPath {
     if (currentViewMode !== 'split') return;
 
     const previewPercent = 100 - editorWidthPercent;
-    editorPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px)) * ${editorWidthPercent / 100} - 4px)`;
-    previewPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px)) * ${previewPercent / 100} - 4px)`;
+    editorPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px) - var(--outline-width, 0px)) * ${editorWidthPercent / 100} - 4px)`;
+    previewPaneElement.style.flex = `0 0 calc((100% - var(--dock-width, 0px) - var(--outline-width, 0px)) * ${previewPercent / 100} - 4px)`;
     refreshEditorWidth();
     scheduleLineNumberUpdate();
   }
@@ -23059,6 +23486,7 @@ ${selector} .arrowheadPath {
       if (window.innerWidth < 1080 && isFrDocked && isFindModalOpen) {
         toggleFrDockMode(true);
       }
+      updateDocumentPanelWidths();
       constrainFloatingPanelPosition();
     }, 100);
   });
@@ -23163,6 +23591,8 @@ ${selector} .arrowheadPath {
   });
 
   initMarkdownFormatToolbar();
+  initDocumentOutline();
+  initDocumentPanelResizers();
   initToolbarDropdownPortals();
   initDropdownMenuMotion();
   initFindReplaceModal();
@@ -25934,7 +26364,7 @@ ${selector} .arrowheadPath {
   const LIVE_SHARE_JOIN_TIMEOUT_MS = 8000;
   const LIVE_SHARE_ACCESS_EDIT = 'edit';
   const LIVE_SHARE_ACCESS_VIEW = 'view';
-  const LIVE_SHARE_NON_MUTATING_ACTIONS = ['fullscreen', 'find', 'help', 'info'];
+  const LIVE_SHARE_NON_MUTATING_ACTIONS = ['fullscreen', 'outline', 'find', 'help', 'info'];
   const LIVE_SHARE_ADJECTIVES = [
     'Acidic',
     'Awesome',

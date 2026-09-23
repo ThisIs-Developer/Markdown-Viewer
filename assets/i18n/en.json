@@ -1168,5 +1168,17 @@
   "Zoom In": "Zoom In",
   "Zoom model": "Zoom model",
   "Zoom out": "Zoom out",
-  "Zoom Out": "Zoom Out"
+  "Zoom Out": "Zoom Out",
+  "Document Outline": "Document Outline",
+  "Close Document Outline": "Close Document Outline",
+  "Document headings": "Document headings",
+  "No headings in this document.": "No headings in this document.",
+  "Untitled heading": "Untitled heading",
+  "Expand": "Expand",
+  "Collapse all headings": "Collapse all headings",
+  "Expand all headings": "Expand all headings",
+  "All headings collapsed.": "All headings collapsed.",
+  "All headings expanded.": "All headings expanded.",
+  "Resize Document Outline": "Resize Document Outline",
+  "Resize Find and Replace": "Resize Find and Replace"
 }

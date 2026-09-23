@@ -1168,5 +1168,17 @@
   "Release notes are available in the tab list.": "Sürüm notları sekme listesinde mevcuttur.",
   "Release Notes: 3.10.2": "Sürüm Notları: 3.10.2",
   "Skip update navigation": "Güncelleme gezinmesini atla",
-  "1 file": "1 dosya"
+  "1 file": "1 dosya",
+  "Document Outline": "Belge ana hattı",
+  "Close Document Outline": "Belge ana hattını kapat",
+  "Document headings": "Belge başlıkları",
+  "No headings in this document.": "Bu belgede başlık yok.",
+  "Untitled heading": "Adsız başlık",
+  "Expand": "Genişlet",
+  "Collapse all headings": "Tüm başlıkları daralt",
+  "Expand all headings": "Tüm başlıkları genişlet",
+  "All headings collapsed.": "Tüm başlıklar daraltıldı.",
+  "All headings expanded.": "Tüm başlıklar genişletildi.",
+  "Resize Document Outline": "Belge ana hattının genişliğini değiştir",
+  "Resize Find and Replace": "Bul ve Değiştir genişliğini değiştir"
 }

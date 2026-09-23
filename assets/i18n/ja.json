@@ -1168,5 +1168,17 @@
   "Release notes are available in the tab list.": "リリースノートはタブ一覧からご覧いただけます。",
   "Release Notes: 3.10.2": "リリースノート: 3.10.2",
   "Skip update navigation": "アップデートナビゲーションをスキップ",
-  "1 file": "1ファイル"
+  "1 file": "1ファイル",
+  "Document Outline": "ドキュメントのアウトライン",
+  "Close Document Outline": "ドキュメントのアウトラインを閉じる",
+  "Document headings": "ドキュメントの見出し",
+  "No headings in this document.": "このドキュメントには見出しがありません。",
+  "Untitled heading": "無題の見出し",
+  "Expand": "展開",
+  "Collapse all headings": "すべての見出しを折りたたむ",
+  "Expand all headings": "すべての見出しを展開",
+  "All headings collapsed.": "すべての見出しを折りたたみました。",
+  "All headings expanded.": "すべての見出しを展開しました。",
+  "Resize Document Outline": "ドキュメントのアウトラインの幅を変更",
+  "Resize Find and Replace": "検索と置換の幅を変更"
 }

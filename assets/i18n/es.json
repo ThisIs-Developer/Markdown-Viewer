@@ -1168,5 +1168,17 @@
   "Release notes are available in the tab list.": "Las notas de la versión están disponibles en la lista de pestañas.",
   "Release Notes: 3.10.2": "Notas de la versión: 3.10.2",
   "Skip update navigation": "Saltar navegación de actualización",
-  "1 file": "1 archivo"
+  "1 file": "1 archivo",
+  "Document Outline": "Esquema del documento",
+  "Close Document Outline": "Cerrar esquema del documento",
+  "Document headings": "Encabezados del documento",
+  "No headings in this document.": "Este documento no tiene encabezados.",
+  "Untitled heading": "Encabezado sin título",
+  "Expand": "Expandir",
+  "Collapse all headings": "Contraer todos los encabezados",
+  "Expand all headings": "Expandir todos los encabezados",
+  "All headings collapsed.": "Todos los encabezados contraídos.",
+  "All headings expanded.": "Todos los encabezados expandidos.",
+  "Resize Document Outline": "Cambiar el ancho del esquema del documento",
+  "Resize Find and Replace": "Cambiar el ancho de Buscar y reemplazar"
 }

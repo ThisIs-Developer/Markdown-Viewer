@@ -20,6 +20,20 @@ Use the view buttons to switch between Editor, Split, and Preview. Split view is
 
 To compare or edit two files, open a file menu and choose **Open in split view**, then select the second document. A shared control switches both sides between Edit and Preview. Preview mode supports Markdown, math, diagrams, maps, STL, and ABC rendering. Use the combined tab menu to exit this view.
 
+## Document Outline
+
+Select the **book-text** button to open **Document Outline**. The formatting toolbar places these controls in order: **Emoji | Find & Replace | Full Screen | Document Outline**. On narrow screens, scroll the toolbar horizontally to reach them. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
+
+Use a heading's chevron to collapse or expand its children. Headings without children have no chevron. Collapsed branches stay collapsed as you edit; collapsing a parent preserves the states of its nested branches.
+
+The header's **Collapse all headings / Expand all headings** button controls every branch, using the same folding icons as the File Sidebar. It collapses all groups when any group is expanded, then changes to Expand All when all groups are collapsed. It keeps the outline panel open and is disabled when there are no parent headings.
+
+Document Outline and Find & Replace use text-only header titles and the same default width of 340px. On desktop and tablet, drag either panel's inner edge to resize it, using the same handle as the File Sidebar. With the handle focused, use **Left/Right Arrow** to move the edge by 10px, or **Shift+Arrow** for 25px. **Home** or a double-click restores the default width, subject to the available document space. Widths stay between 220px and 420px, and docked panels leave room for the document. On mobile, both panels fit the screen and the resize handles are hidden.
+
+Select a heading to jump to that section while staying in your selected mode: Editor moves the caret and scrolls the source, while Preview and Split scroll the rendered document. The current section is highlighted as you scroll; if it is inside a collapsed branch, the visible parent is highlighted. On small screens, the outline closes after navigation so you can read the selected section. Close it with the toolbar button, the close button, or **Escape** while focus is inside the sidebar. Opening Comments closes the outline, and opening the outline closes Comments.
+
+The outline is generated locally from the current document and is not saved separately or included in exports.
+
 ## Files, Folders, and Autosave
 
 - Select Workspace, Secret Workspace, or a folder, then use the clearly labeled **New file** or **New folder** button. The selected row shows where the item will be created; the plus menu beside an unlocked workspace or folder creates directly inside it.
