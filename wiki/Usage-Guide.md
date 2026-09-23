@@ -22,7 +22,7 @@ To compare or edit two files, open a file menu and choose **Open in split view**
 
 ## Document Outline
 
-Select the **square-menu** button to open **Document Outline**. The formatting toolbar places these controls in order: **Emoji | Find & Replace | Full Screen | Document Outline**. On narrow screens, scroll the toolbar horizontally to reach them. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
+Select the **file-text** button to open **Document Outline**. The formatting toolbar places these controls in order: **Emoji | Find & Replace | Full Screen | Document Outline**. On narrow screens, scroll the toolbar horizontally to reach them. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.
 
 Use a heading's chevron to collapse or expand its children. Headings without children have no chevron. Collapsed branches stay collapsed as you edit; collapsing a parent preserves the states of its nested branches.
 
