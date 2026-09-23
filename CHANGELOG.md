@@ -5,7 +5,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- Added Document Outline: a right sidebar with automatically updated H1–H6 heading trees, collapsible branches, hierarchy guides, and section navigation in Editor, Preview, and Split modes. Find & Replace, Full Screen, and the file-text outline button appear immediately after Emoji. The outline reuses the Find & Replace header and includes a Collapse/Expand All control.
+- Added Document Outline: a right sidebar with automatically updated H1–H6 heading trees, collapsible branches, hierarchy guides, and section navigation in Editor, Preview, and Split modes. Find & Replace, Full Screen, and the scroll-text outline button appear immediately after Emoji. The outline reuses the Find & Replace header and includes a Collapse/Expand All control.
 - Matched Document Outline and Find & Replace at a default width of 340px, removed their header title icons, and shared the File Sidebar's horizontal resize handles, keyboard controls, and width reset behavior.
 
 ---
