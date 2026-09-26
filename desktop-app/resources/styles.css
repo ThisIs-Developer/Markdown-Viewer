@@ -11233,7 +11233,7 @@ html[data-theme="dark"] .mermaid svg {
   outline: none;
 }
 
-.document-outline-header .panel-icon-btn:focus-visible {
+.document-outline-header .panel-icon-btn:active:not(:disabled) {
   background-color: var(--button-hover);
 }
 

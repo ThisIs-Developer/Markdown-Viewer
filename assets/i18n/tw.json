@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "已摺疊所有標題。",
   "All headings expanded.": "已展開所有標題。",
   "Resize Document Outline": "調整文件大綱寬度",
-  "Resize Find and Replace": "調整尋找與取代寬度"
+  "Resize Find and Replace": "調整尋找與取代寬度",
+  "Copy Markdown table of contents": "複製 Markdown 目錄",
+  "Table of contents copied.": "已複製目錄。",
+  "Failed to copy table of contents.": "無法複製目錄。"
 }

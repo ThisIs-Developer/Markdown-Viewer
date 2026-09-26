@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "Alle Überschriften eingeklappt.",
   "All headings expanded.": "Alle Überschriften aufgeklappt.",
   "Resize Document Outline": "Breite der Dokumentgliederung ändern",
-  "Resize Find and Replace": "Breite von Suchen und Ersetzen ändern"
+  "Resize Find and Replace": "Breite von Suchen und Ersetzen ändern",
+  "Copy Markdown table of contents": "Inhaltsverzeichnis als Markdown kopieren",
+  "Table of contents copied.": "Inhaltsverzeichnis kopiert.",
+  "Failed to copy table of contents.": "Inhaltsverzeichnis konnte nicht kopiert werden."
 }

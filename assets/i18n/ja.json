@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "すべての見出しを折りたたみました。",
   "All headings expanded.": "すべての見出しを展開しました。",
   "Resize Document Outline": "ドキュメントのアウトラインの幅を変更",
-  "Resize Find and Replace": "検索と置換の幅を変更"
+  "Resize Find and Replace": "検索と置換の幅を変更",
+  "Copy Markdown table of contents": "Markdownの目次をコピー",
+  "Table of contents copied.": "目次をコピーしました。",
+  "Failed to copy table of contents.": "目次をコピーできませんでした。"
 }

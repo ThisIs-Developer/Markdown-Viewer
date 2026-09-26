@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "Wszystkie nagłówki zwinięte.",
   "All headings expanded.": "Wszystkie nagłówki rozwinięte.",
   "Resize Document Outline": "Zmień szerokość konspektu dokumentu",
-  "Resize Find and Replace": "Zmień szerokość panelu Znajdź i zamień"
+  "Resize Find and Replace": "Zmień szerokość panelu Znajdź i zamień",
+  "Copy Markdown table of contents": "Kopiuj spis treści w Markdown",
+  "Table of contents copied.": "Spis treści skopiowany.",
+  "Failed to copy table of contents.": "Nie udało się skopiować spisu treści."
 }

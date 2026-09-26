@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "Все заголовки свёрнуты.",
   "All headings expanded.": "Все заголовки развёрнуты.",
   "Resize Document Outline": "Изменить ширину структуры документа",
-  "Resize Find and Replace": "Изменить ширину панели поиска и замены"
+  "Resize Find and Replace": "Изменить ширину панели поиска и замены",
+  "Copy Markdown table of contents": "Копировать оглавление в Markdown",
+  "Table of contents copied.": "Оглавление скопировано.",
+  "Failed to copy table of contents.": "Не удалось скопировать оглавление."
 }

@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "All headings collapsed.",
   "All headings expanded.": "All headings expanded.",
   "Resize Document Outline": "Resize Document Outline",
-  "Resize Find and Replace": "Resize Find and Replace"
+  "Resize Find and Replace": "Resize Find and Replace",
+  "Copy Markdown table of contents": "Copy Markdown table of contents",
+  "Table of contents copied.": "Table of contents copied.",
+  "Failed to copy table of contents.": "Failed to copy table of contents."
 }

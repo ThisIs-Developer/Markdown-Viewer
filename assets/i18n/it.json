@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "Tutte le intestazioni sono compresse.",
   "All headings expanded.": "Tutte le intestazioni sono espanse.",
   "Resize Document Outline": "Ridimensiona la struttura del documento",
-  "Resize Find and Replace": "Ridimensiona Trova e sostituisci"
+  "Resize Find and Replace": "Ridimensiona Trova e sostituisci",
+  "Copy Markdown table of contents": "Copia il sommario in Markdown",
+  "Table of contents copied.": "Sommario copiato.",
+  "Failed to copy table of contents.": "Impossibile copiare il sommario."
 }

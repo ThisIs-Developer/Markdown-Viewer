@@ -438,6 +438,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const contentContainer = document.querySelector(".content-container");
   const documentOutline = document.getElementById('document-outline');
   const documentOutlineToggle = document.getElementById('document-outline-toggle');
+  const documentOutlineCopy = document.getElementById('document-outline-copy');
   const documentOutlineCollapseAll = document.getElementById('document-outline-collapse-all');
   const documentOutlineClose = document.getElementById('document-outline-close');
   const documentOutlineList = document.getElementById('document-outline-list');
@@ -446,6 +447,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let documentOutlineScrollFrame = null;
   let documentOutlineScrollTarget = null;
   let documentOutlineDocumentId = null;
+  let documentOutlineCopyPending = false;
   const documentOutlineCollapsed = new Set();
   const viewModeButtons = document.querySelectorAll(".view-toggle-btn");
   const documentSplitPane = document.getElementById('document-split-pane');
@@ -22233,6 +22235,12 @@ ${selector} .arrowheadPath {
 
   function clearDocumentOutline() {
     documentOutlineEntries = [];
+    if (documentOutlineCopy) {
+      documentOutlineCopy.disabled = true;
+      const icon = documentOutlineCopy.querySelector('i');
+      if (icon) icon.className = 'lucide lucide-copy';
+    }
+    clearTimeout(copyDocumentOutline._timeoutId);
     updateDocumentOutlineExpansionButton();
     documentOutlineScrollTarget = null;
     if (documentOutlineList) documentOutlineList.replaceChildren();
@@ -22319,6 +22327,50 @@ ${selector} .arrowheadPath {
 
   function getExpandableDocumentOutlineEntries() {
     return documentOutlineEntries.filter(function(entry) { return entry.toggle; });
+  }
+
+  function buildDocumentOutlineMarkdown() {
+    return documentOutlineEntries.map(function(entry) {
+      let depth = 0;
+      for (let parent = entry.parent; parent; parent = parent.parent) depth += 1;
+      const label = entry.title.replace(/([\\`*_[\]<>~&])/g, '\\$1');
+      // Use rendered IDs so duplicate titles and non-Latin headings link to the right section.
+      const id = entry.heading.id;
+      const fragment = id ? encodeURIComponent(id).replace(/\(/g, '%28').replace(/\)/g, '%29') : '';
+      const item = fragment ? '[' + label + '](#' + fragment + ')' : label;
+      return '  '.repeat(depth) + '- ' + item;
+    }).join('\n');
+  }
+
+  async function copyDocumentOutline() {
+    if (documentOutline.hidden || documentOutlineCopyPending) return;
+    refreshDocumentOutline();
+    if (!documentOutlineEntries.length) return;
+    const documentId = documentOutlineDocumentId;
+    const focusedElement = document.activeElement;
+    documentOutlineCopyPending = true;
+    documentOutlineCopy.disabled = true;
+    try {
+      await copyTextToClipboard(buildDocumentOutlineMarkdown());
+      announceToScreenReader(translateUiString('Table of contents copied.'));
+      if (!documentOutline.hidden && documentOutlineDocumentId === documentId) {
+        const icon = documentOutlineCopy.querySelector('i');
+        if (icon) icon.className = 'lucide lucide-check';
+        clearTimeout(copyDocumentOutline._timeoutId);
+        copyDocumentOutline._timeoutId = setTimeout(function() {
+          if (icon) icon.className = 'lucide lucide-copy';
+        }, 1400);
+      }
+    } catch (error) {
+      console.error('Table of contents copy failed:', error);
+      alert('Failed to copy table of contents.');
+    } finally {
+      documentOutlineCopyPending = false;
+      documentOutlineCopy.disabled = !documentOutlineEntries.length;
+      if (!documentOutline.hidden && focusedElement && focusedElement.isConnected && document.activeElement === document.body) {
+        focusedElement.focus({ preventScroll: true });
+      }
+    }
   }
 
   function updateDocumentOutlineExpansionButton() {
@@ -22438,6 +22490,7 @@ ${selector} .arrowheadPath {
     documentOutlineCollapsed.forEach(function(key) { if (!keys.has(key)) documentOutlineCollapsed.delete(key); });
     documentOutlineList.replaceChildren(fragment);
     documentOutlineEmpty.hidden = headings.length > 0;
+    documentOutlineCopy.disabled = !headings.length || documentOutlineCopyPending;
     updateDocumentOutlineExpansionButton();
     if (focusedEntry) {
       const entry = documentOutlineEntries.find(function(item) { return item.key === focusedEntry.key; });
@@ -22494,6 +22547,7 @@ ${selector} .arrowheadPath {
 
   function initDocumentOutline() {
     if (!documentOutline) return;
+    documentOutlineCopy.addEventListener('click', copyDocumentOutline);
     documentOutlineCollapseAll.addEventListener('click', toggleDocumentOutlineExpansion);
     // Keep a jump in place as lazy preview blocks acquire their actual height.
     // The next user interaction takes control of scrolling again.

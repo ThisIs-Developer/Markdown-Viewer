@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "Todos os títulos recolhidos.",
   "All headings expanded.": "Todos os títulos expandidos.",
   "Resize Document Outline": "Redimensionar a estrutura do documento",
-  "Resize Find and Replace": "Redimensionar Localizar e substituir"
+  "Resize Find and Replace": "Redimensionar Localizar e substituir",
+  "Copy Markdown table of contents": "Copiar sumário em Markdown",
+  "Table of contents copied.": "Sumário copiado.",
+  "Failed to copy table of contents.": "Não foi possível copiar o sumário."
 }

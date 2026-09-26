@@ -1180,5 +1180,8 @@
   "All headings collapsed.": "Todos los encabezados contraídos.",
   "All headings expanded.": "Todos los encabezados expandidos.",
   "Resize Document Outline": "Cambiar el ancho del esquema del documento",
-  "Resize Find and Replace": "Cambiar el ancho de Buscar y reemplazar"
+  "Resize Find and Replace": "Cambiar el ancho de Buscar y reemplazar",
+  "Copy Markdown table of contents": "Copiar índice en Markdown",
+  "Table of contents copied.": "Índice copiado.",
+  "Failed to copy table of contents.": "No se pudo copiar el índice."
 }
