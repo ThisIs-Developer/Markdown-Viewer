@@ -2700,15 +2700,6 @@ body {
 .markdown-body ul,
 .markdown-body ol {
   padding-left: 2em;
-  margin: 0.4em 0;
-}
-
-.markdown-body ul ul,
-.markdown-body ul ol,
-.markdown-body ol ul,
-.markdown-body ol ol {
-  margin-top: 0.2em;
-  margin-bottom: 0.2em;
 }
 
 /* CommonMark starts a new list when the bullet character or ordered-list
@@ -8008,6 +7999,14 @@ a:focus {
 [dir="rtl"] .markdown-body {
   direction: rtl;
   text-align: right;
+}
+
+.markdown-body[dir="rtl"] ul,
+.markdown-body[dir="rtl"] ol,
+.markdown-body[dir="rtl"] ul.contains-task-list,
+.markdown-body[dir="rtl"] ul:has(> li > input[type="checkbox"]) {
+  padding-right: 2em;
+  padding-left: 0;
 }
 
 [dir="rtl"] .markdown-body pre,
