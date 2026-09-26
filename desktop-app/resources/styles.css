@@ -8001,8 +8001,8 @@ a:focus {
   text-align: right;
 }
 
-[dir="rtl"] .markdown-body ul,
-[dir="rtl"] .markdown-body ol {
+.markdown-body[dir="rtl"] ul,
+.markdown-body[dir="rtl"] ol {
   padding-right: 2em;
   padding-left: 0;
 }
