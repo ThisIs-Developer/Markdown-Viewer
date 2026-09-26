@@ -8002,7 +8002,9 @@ a:focus {
 }
 
 .markdown-body[dir="rtl"] ul,
-.markdown-body[dir="rtl"] ol {
+.markdown-body[dir="rtl"] ol,
+.markdown-body[dir="rtl"] ul.contains-task-list,
+.markdown-body[dir="rtl"] ul:has(> li > input[type="checkbox"]) {
   padding-right: 2em;
   padding-left: 0;
 }
