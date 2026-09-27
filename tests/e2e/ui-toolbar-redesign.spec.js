@@ -142,7 +142,7 @@ test('header orders document actions and formatting toolbar follows the recommen
     { label: 'Content insertion', actions: ['link', 'image', 'table', 'reference'] },
     { label: 'Technical content', actions: ['code-block', 'terminal-block', 'diagram'] },
     { label: 'Additional insertion', actions: ['horizontal-rule', 'alert', 'date-time', 'symbols', 'emoji'] },
-    { label: 'Workspace actions', actions: ['find', 'fullscreen'] }
+    { label: 'Workspace actions', actions: ['find', 'fullscreen', 'outline'] }
   ]);
   await expect(toolbar.locator('.markdown-tool-select--insert, [data-toolbar-menu="insert"]')).toHaveCount(0);
 

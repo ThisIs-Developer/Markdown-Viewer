@@ -5,6 +5,10 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- Added Copy TOC and settings to Document Outline, with AST-based extraction, default H2–H4 depth, configurable H1–H6 limits, bulleted/numbered/plain output, optional level normalization, and a collapsible wrapper. GitHub-compatible anchors handle Unicode, emoji, and duplicate headings consistently in copied TOCs and the preview. Outline header buttons highlight only on hover or while pressed, so opening the panel no longer highlights Close.
+- Added Document Outline: a right sidebar with automatically updated H1–H6 heading trees, collapsible branches, hierarchy guides, and section navigation in Editor, Preview, and Split modes. Find & Replace, Full Screen, and the book-text outline button appear immediately after Emoji. The outline reuses the Find & Replace header and includes a Collapse/Expand All control.
+- Matched Document Outline and Find & Replace at a default width of 340px, removed their header title icons, and shared the File Sidebar's horizontal resize handles, keyboard controls, and width reset behavior.
+
 ---
 
 ## v3.10.2

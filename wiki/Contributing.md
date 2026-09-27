@@ -144,12 +144,15 @@ Choose checks that match the change:
 
 ```bash
 npm run build
+npm run test:unit
 npm run test:e2e
 npm run test:e2e:smoke
 npm run test:e2e:cross-browser
 ```
 
-`npm run build` validates required assets, JSON, HTML references and IDs, and JavaScript syntax. `npm run test:e2e` runs the complete Chromium Playwright suite, `npm run test:e2e:cross-browser` runs smoke coverage in Chromium, Firefox, and WebKit, and `npm test` runs static validation plus the complete Chromium suite. Use a focused Playwright spec while iterating, then run `npm test` and the cross-browser smoke suite before a pull request.
+`npm run build` regenerates the TOC browser bundle and validates required assets, JSON, HTML references and IDs, and JavaScript syntax. `npm run test:unit` runs the pure TOC generator tests with Node's test runner. `npm run test:e2e` runs the complete Chromium Playwright suite, `npm run test:e2e:cross-browser` runs smoke coverage in Chromium, Firefox, and WebKit, and `npm test` runs static validation, unit tests, and the complete Chromium suite. Use a focused Playwright spec while iterating, then run `npm test` and the cross-browser smoke suite before a pull request.
+
+TOC logic lives in `src/document-toc.mjs`. `generateTableOfContents(tokens, options)` accepts a Marked block AST; alternatively, pass Markdown with `{ lexer: marked.lexer, ...options }` to strip front matter before lexing. Options include `minLevel`, `maxLevel`, `format` (`bulleted`, `numbered`, `plain`), `normalizeLevels`, `collapsible`, and `slugStrategy`. The default strategy is `github`; a custom strategy function maps plain heading text to a base slug, with duplicate suffixes still assigned per document. The preview and worker share the same heading renderer extension. After editing this module, run `npm run build:toc` and `node desktop-app/prepare.js`; commit the generated `assets/document-toc.js` and license file alongside the source. Static hosting uses the committed bundle without a build step.
 
 Tests start their own Node static server and must not depend on Python, machine-specific paths, developer credentials, or live third-party APIs. The suite is intentionally local-only: contributors must run the relevant checks before requesting review or merging a change. Playwright stores failure diagnostics in the ignored `test-results/` directory and writes its local HTML report to `playwright-report/`.
 
@@ -214,6 +217,8 @@ Include the affected version/commit, required preconditions, impact, minimal rep
 | `workspace-storage.js` | Browser IndexedDB and desktop vault storage, migration, backup, history, trash, and recovery operations. |
 | `script.js` | Main application logic. |
 | `preview-worker.js` | Worker Markdown rendering path. |
+| `src/document-toc.mjs` | Pure AST heading extraction, TOC output, and shared preview anchors. |
+| `assets/document-toc.js` | Generated browser/worker bundle; rebuild with `npm run build:toc`. |
 | `styles.css` | Layout, themes, renderer styles, modals, responsive UI. |
 | `sw.js` | PWA/service-worker cache behavior. |
 | `RELEASE_NOTES` | Single canonical extensionless release note bundled with web/PWA and desktop builds. |

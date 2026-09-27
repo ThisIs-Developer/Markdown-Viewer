@@ -13,6 +13,7 @@ const CRITICAL_ASSETS = [
   './seo/locales.mjs',
   './seo/welcome-content.mjs',
   './assets/lucide-icons.css',
+  './assets/document-toc.js',
   './RELEASE_NOTES',
   './sample.md',
   './assets/icon.jpg',
@@ -37,6 +38,7 @@ const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/seo/locales.mjs',
   '/seo/welcome-content.mjs',
   '/assets/lucide-icons.css',
+  '/assets/document-toc.js',
   '/sw.js'
 ]);
 
