@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "调整查找和替换宽度",
   "Copy Markdown table of contents": "复制 Markdown 目录",
   "Table of contents copied.": "已复制目录。",
-  "Failed to copy table of contents.": "无法复制目录。"
+  "Failed to copy table of contents.": "无法复制目录。",
+  "Copy table of contents": "复制目录",
+  "Table of contents settings": "目录设置",
+  "Min heading level": "最小标题级别",
+  "Max heading level": "最大标题级别",
+  "TOC format": "目录格式",
+  "Bulleted links": "项目符号链接",
+  "Numbered links": "编号链接",
+  "Plain text": "纯文本",
+  "Normalize heading levels": "规范化标题级别",
+  "Collapsible TOC wrapper": "可折叠目录",
+  "No headings in the selected range.": "所选范围内没有标题。"
 }

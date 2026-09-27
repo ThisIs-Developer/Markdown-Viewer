@@ -11244,6 +11244,24 @@ html[data-theme="dark"] .mermaid svg {
   overscroll-behavior: contain;
 }
 
+.document-outline-settings[hidden] {
+  display: none;
+}
+
+.document-outline-settings {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0 0 12px;
+  border-top: 0;
+  border-bottom: 1px solid var(--fr-border);
+}
+
+.document-outline-levels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .document-outline-list {
   margin: 0;
   padding: 0;

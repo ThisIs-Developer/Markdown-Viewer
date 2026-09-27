@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "찾기 및 바꾸기 너비 조절",
   "Copy Markdown table of contents": "Markdown 목차 복사",
   "Table of contents copied.": "목차를 복사했습니다.",
-  "Failed to copy table of contents.": "목차를 복사하지 못했습니다."
+  "Failed to copy table of contents.": "목차를 복사하지 못했습니다.",
+  "Copy table of contents": "목차 복사",
+  "Table of contents settings": "목차 설정",
+  "Min heading level": "최소 제목 수준",
+  "Max heading level": "최대 제목 수준",
+  "TOC format": "목차 형식",
+  "Bulleted links": "글머리 기호 링크",
+  "Numbered links": "번호가 있는 링크",
+  "Plain text": "일반 텍스트",
+  "Normalize heading levels": "제목 수준 정규화",
+  "Collapsible TOC wrapper": "접을 수 있는 목차",
+  "No headings in the selected range.": "선택한 범위에 제목이 없습니다."
 }

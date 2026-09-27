@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Redimensionner Rechercher et remplacer",
   "Copy Markdown table of contents": "Copier la table des matières en Markdown",
   "Table of contents copied.": "Table des matières copiée.",
-  "Failed to copy table of contents.": "Impossible de copier la table des matières."
+  "Failed to copy table of contents.": "Impossible de copier la table des matières.",
+  "Copy table of contents": "Copier la table des matières",
+  "Table of contents settings": "Paramètres de la table des matières",
+  "Min heading level": "Niveau minimal des titres",
+  "Max heading level": "Niveau maximal des titres",
+  "TOC format": "Format de la table des matières",
+  "Bulleted links": "Liens à puces",
+  "Numbered links": "Liens numérotés",
+  "Plain text": "Texte brut",
+  "Normalize heading levels": "Normaliser les niveaux des titres",
+  "Collapsible TOC wrapper": "Table des matières repliable",
+  "No headings in the selected range.": "Aucun titre dans la plage sélectionnée."
 }

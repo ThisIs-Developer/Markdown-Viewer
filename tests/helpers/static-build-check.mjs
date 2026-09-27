@@ -21,6 +21,8 @@ const requiredFiles = [
   'manifest.json',
   '_routes.json',
   'assets/seo-metadata.mjs',
+  'assets/document-toc.js',
+  'assets/document-toc.LICENSE.txt',
   'seo/locales.mjs',
   'seo/welcome-content.mjs',
   'seo/server-render.mjs',
@@ -41,6 +43,8 @@ for (const relativePath of requiredFiles) {
 }
 
 const syntaxCheckedFiles = [
+  'src/document-toc.mjs',
+  'assets/document-toc.js',
   'script.js',
   'workspace-storage.js',
   'preview-worker.js',

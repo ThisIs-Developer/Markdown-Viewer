@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Промяна на ширината на търсене и замяна",
   "Copy Markdown table of contents": "Копиране на съдържанието като Markdown",
   "Table of contents copied.": "Съдържанието е копирано.",
-  "Failed to copy table of contents.": "Неуспешно копиране на съдържанието."
+  "Failed to copy table of contents.": "Неуспешно копиране на съдържанието.",
+  "Copy table of contents": "Копиране на съдържанието",
+  "Table of contents settings": "Настройки на съдържанието",
+  "Min heading level": "Минимално ниво на заглавията",
+  "Max heading level": "Максимално ниво на заглавията",
+  "TOC format": "Формат на съдържанието",
+  "Bulleted links": "Връзки с водещи символи",
+  "Numbered links": "Номерирани връзки",
+  "Plain text": "Обикновен текст",
+  "Normalize heading levels": "Нормализиране на нивата на заглавията",
+  "Collapsible TOC wrapper": "Сгъваем блок за съдържанието",
+  "No headings in the selected range.": "Няма заглавия в избрания диапазон."
 }

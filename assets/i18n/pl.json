@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Zmień szerokość panelu Znajdź i zamień",
   "Copy Markdown table of contents": "Kopiuj spis treści w Markdown",
   "Table of contents copied.": "Spis treści skopiowany.",
-  "Failed to copy table of contents.": "Nie udało się skopiować spisu treści."
+  "Failed to copy table of contents.": "Nie udało się skopiować spisu treści.",
+  "Copy table of contents": "Kopiuj spis treści",
+  "Table of contents settings": "Ustawienia spisu treści",
+  "Min heading level": "Minimalny poziom nagłówków",
+  "Max heading level": "Maksymalny poziom nagłówków",
+  "TOC format": "Format spisu treści",
+  "Bulleted links": "Linki wypunktowane",
+  "Numbered links": "Linki numerowane",
+  "Plain text": "Zwykły tekst",
+  "Normalize heading levels": "Normalizuj poziomy nagłówków",
+  "Collapsible TOC wrapper": "Zwijany spis treści",
+  "No headings in the selected range.": "Brak nagłówków w wybranym zakresie."
 }

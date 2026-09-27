@@ -1765,8 +1765,11 @@
                 <div class="find-replace-header document-outline-header">
                     <span class="find-replace-title" id="document-outline-title">Document Outline</span>
                     <div class="find-replace-header-actions">
-                        <button id="document-outline-copy" class="panel-icon-btn" type="button" aria-label="Copy Markdown table of contents" title="Copy Markdown table of contents" disabled>
+                        <button id="document-outline-copy" class="panel-icon-btn" type="button" aria-label="Copy table of contents" title="Copy table of contents" disabled>
                             <i class="lucide lucide-copy" aria-hidden="true"></i>
+                        </button>
+                        <button id="document-outline-settings-toggle" class="panel-icon-btn" type="button" aria-label="Table of contents settings" title="Table of contents settings" aria-expanded="false" aria-controls="document-outline-settings">
+                            <i class="lucide lucide-settings" aria-hidden="true"></i>
                         </button>
                         <button id="document-outline-collapse-all" class="panel-icon-btn" type="button" aria-label="Collapse all headings" title="Collapse all headings" aria-controls="document-outline-list">
                             <i class="lucide lucide-fold-vertical" aria-hidden="true"></i>
@@ -1777,6 +1780,39 @@
                     </div>
                 </div>
                 <nav class="find-replace-body document-outline-body" aria-label="Document headings">
+                    <div id="document-outline-settings" class="find-replace-drawer-content document-outline-settings" role="group" aria-label="Table of contents settings" hidden>
+                        <div class="document-outline-levels">
+                            <div class="drawer-field">
+                                <label class="drawer-label" for="document-outline-min-level">Min heading level</label>
+                                <select id="document-outline-min-level" class="drawer-select" data-i18n-skip>
+                                    <option value="1">H1</option><option value="2" selected>H2</option><option value="3">H3</option><option value="4">H4</option><option value="5">H5</option><option value="6">H6</option>
+                                </select>
+                            </div>
+                            <div class="drawer-field">
+                                <label class="drawer-label" for="document-outline-max-level">Max heading level</label>
+                                <select id="document-outline-max-level" class="drawer-select" data-i18n-skip>
+                                    <option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option value="4" selected>H4</option><option value="5">H5</option><option value="6">H6</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="drawer-field">
+                            <label class="drawer-label" for="document-outline-format">TOC format</label>
+                            <select id="document-outline-format" class="drawer-select">
+                                <option value="bulleted">Bulleted links</option>
+                                <option value="numbered">Numbered links</option>
+                                <option value="plain">Plain text</option>
+                            </select>
+                        </div>
+                        <div class="drawer-field check-field">
+                            <input id="document-outline-normalize" class="drawer-checkbox" type="checkbox">
+                            <label class="drawer-label-checkbox" for="document-outline-normalize">Normalize heading levels</label>
+                        </div>
+                        <div class="drawer-field check-field">
+                            <input id="document-outline-collapsible" class="drawer-checkbox" type="checkbox">
+                            <label class="drawer-label-checkbox" for="document-outline-collapsible">Collapsible TOC wrapper</label>
+                        </div>
+                        <p id="document-outline-copy-empty" class="document-outline-empty" role="status" hidden>No headings in the selected range.</p>
+                    </div>
                     <ol id="document-outline-list" class="document-outline-list" data-i18n-skip></ol>
                     <p id="document-outline-empty" class="document-outline-empty">No headings in this document.</p>
                 </nav>
@@ -2243,6 +2279,7 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
 </textarea>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
+    <script src="assets/document-toc.js" defer></script>
     <script src="workspace-storage.js" defer></script>
     <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->

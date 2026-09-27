@@ -1,4 +1,4 @@
-/* global importScripts, marked, hljs */
+/* global importScripts, marked, hljs, MarkdownDocumentToc */
 
 let librariesLoaded = false;
 let markedConfigured = false;
@@ -42,7 +42,7 @@ const footnoteOrder = [];
 const footnoteRefCounts = new Map();
 const footnoteSlugs = new Map();
 const usedFootnoteSlugs = new Set();
-const usedHeadingIds = new Set();
+let headingSlugger;
 
 function escapeHtml(str) {
   return String(str)
@@ -67,7 +67,7 @@ function resetExtendedMarkdownState() {
   footnoteRefCounts.clear();
   footnoteSlugs.clear();
   usedFootnoteSlugs.clear();
-  usedHeadingIds.clear();
+  headingSlugger.reset();
 }
 
 function normalizeFootnoteLabel(id) {
@@ -249,25 +249,6 @@ function normalizeLegacyMathSyntax(source) {
   }
 
   return normalized;
-}
-
-function createUniqueHeadingId(raw) {
-  const baseId = String(raw || "")
-    .toLowerCase()
-    .trim()
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^\p{L}\p{N}\p{M}_-]/gu, '')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'heading';
-  let id = baseId;
-  let suffix = 0;
-  while (usedHeadingIds.has(id)) {
-    suffix += 1;
-    id = `${baseId}-${suffix}`;
-  }
-  usedHeadingIds.add(id);
-  return id;
 }
 
 function normalizeWorkerMarkmapFences(markdown) {
@@ -665,11 +646,6 @@ function configureMarked() {
     return `<pre><code class="hljs ${escapeHtmlAttribute(validLanguage)}">${highlightedCode}</code></pre>`;
   };
 
-  renderer.heading = function(text, level, raw) {
-    const id = createUniqueHeadingId(raw);
-    return `<h${level} id="${id}">${text}</h${level}>`;
-  };
-
   function normalizeMarkmapFences(markdown) {
     const lines = String(markdown || '').split(/\r?\n/);
     const output = [];
@@ -738,6 +714,7 @@ function configureMarked() {
 
   marked.use({
     extensions: [
+      MarkdownDocumentToc.createHeadingExtension(headingSlugger),
       blockMathExtension,
       footnoteDefinitionExtension,
       definitionListExtension,
@@ -766,7 +743,8 @@ function configureMarked() {
 
 function ensureLibraries(urls) {
   if (!librariesLoaded) {
-    importScripts(urls.marked, urls.highlight);
+    importScripts(urls.marked, urls.highlight, urls.documentToc);
+    headingSlugger = MarkdownDocumentToc.createHeadingSlugger();
     if (urls.powershell) {
       importScripts(urls.powershell);
     }

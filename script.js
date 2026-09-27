@@ -439,6 +439,14 @@ document.addEventListener("DOMContentLoaded", async function () {
   const documentOutline = document.getElementById('document-outline');
   const documentOutlineToggle = document.getElementById('document-outline-toggle');
   const documentOutlineCopy = document.getElementById('document-outline-copy');
+  const documentOutlineSettingsToggle = document.getElementById('document-outline-settings-toggle');
+  const documentOutlineSettings = document.getElementById('document-outline-settings');
+  const documentOutlineMinLevel = document.getElementById('document-outline-min-level');
+  const documentOutlineMaxLevel = document.getElementById('document-outline-max-level');
+  const documentOutlineFormat = document.getElementById('document-outline-format');
+  const documentOutlineNormalize = document.getElementById('document-outline-normalize');
+  const documentOutlineCollapsible = document.getElementById('document-outline-collapsible');
+  const documentOutlineCopyEmpty = document.getElementById('document-outline-copy-empty');
   const documentOutlineCollapseAll = document.getElementById('document-outline-collapse-all');
   const documentOutlineClose = document.getElementById('document-outline-close');
   const documentOutlineList = document.getElementById('document-outline-list');
@@ -2294,7 +2302,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const footnoteRefCounts = new Map();
   const footnoteSlugs = new Map();
   const usedFootnoteSlugs = new Set();
-  const usedHeadingIds = new Set();
+  const headingSlugger = MarkdownDocumentToc.createHeadingSlugger();
   let suppressFootnotePreprocess = false;
 
   function resetExtendedMarkdownState() {
@@ -2303,7 +2311,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     footnoteRefCounts.clear();
     footnoteSlugs.clear();
     usedFootnoteSlugs.clear();
-    usedHeadingIds.clear();
+    headingSlugger.reset();
   }
 
   function normalizeFootnoteLabel(id) {
@@ -2393,6 +2401,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       marked: getLoadedScriptUrl("marked", "https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"),
       highlight: getLoadedScriptUrl("highlight", "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"),
       powershell: getLoadedScriptUrl("powershell.min.js", "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"),
+      documentToc: getLoadedScriptUrl("document-toc.js", new URL("assets/document-toc.js", window.location.href).href),
     };
   }
 
@@ -2716,25 +2725,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     return normalized;
-  }
-
-  function createUniqueHeadingId(raw) {
-    const baseId = String(raw || "")
-      .toLowerCase()
-      .trim()
-      .replace(/<[^>]*>/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/[^\p{L}\p{N}\p{M}_-]/gu, '')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'heading';
-    let id = baseId;
-    let suffix = 0;
-    while (usedHeadingIds.has(id)) {
-      suffix += 1;
-      id = `${baseId}-${suffix}`;
-    }
-    usedHeadingIds.add(id);
-    return id;
   }
 
   const blockMathExtension = {
@@ -3139,11 +3129,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     return `<pre><code class="hljs ${validLanguage}">${highlightedCode}</code></pre>`;
   };
 
-  renderer.heading = function (text, level, raw) {
-    const id = createUniqueHeadingId(raw);
-    return `<h${level} id="${id}">${text}</h${level}>`;
-  };
-
   function normalizeMarkmapFences(markdown) {
     const lines = String(markdown || '').split(/\r?\n/);
     const output = [];
@@ -3212,6 +3197,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   marked.use({
     extensions: [
+      MarkdownDocumentToc.createHeadingExtension(headingSlugger),
       blockMathExtension,
       footnoteDefinitionExtension,
       definitionListExtension,
@@ -22245,6 +22231,7 @@ ${selector} .arrowheadPath {
     documentOutlineScrollTarget = null;
     if (documentOutlineList) documentOutlineList.replaceChildren();
     if (documentOutlineEmpty) documentOutlineEmpty.hidden = false;
+    updateDocumentOutlineCopyState();
   }
 
   function setDocumentOutlineOpen(open, options) {
@@ -22330,30 +22317,36 @@ ${selector} .arrowheadPath {
   }
 
   function buildDocumentOutlineMarkdown() {
-    return documentOutlineEntries.map(function(entry) {
-      let depth = 0;
-      for (let parent = entry.parent; parent; parent = parent.parent) depth += 1;
-      const label = entry.title.replace(/([\\`*_[\]<>~&])/g, '\\$1');
-      // Use rendered IDs so duplicate titles and non-Latin headings link to the right section.
-      const id = entry.heading.id;
-      const fragment = id ? encodeURIComponent(id).replace(/\(/g, '%28').replace(/\)/g, '%29') : '';
-      const item = fragment ? '[' + label + '](#' + fragment + ')' : label;
-      return '  '.repeat(depth) + '- ' + item;
-    }).join('\n');
+    if (documentOutline.hidden || !hasActiveOpenDocument()) return '';
+    const body = parseFrontmatter(markdownEditor.value).body;
+    return MarkdownDocumentToc.generateTableOfContents(marked.lexer(normalizeMarkmapFences(body)), {
+      minLevel: Number(documentOutlineMinLevel.value),
+      maxLevel: Number(documentOutlineMaxLevel.value),
+      format: documentOutlineFormat.value,
+      normalizeLevels: documentOutlineNormalize.checked,
+      collapsible: documentOutlineCollapsible.checked,
+    });
+  }
+
+  function updateDocumentOutlineCopyState() {
+    const empty = !buildDocumentOutlineMarkdown();
+    documentOutlineCopy.disabled = empty || documentOutlineCopyPending;
+    documentOutlineCopyEmpty.hidden = !empty;
+    documentOutlineCollapsible.disabled = documentOutlineFormat.value === 'plain';
   }
 
   async function copyDocumentOutline() {
     if (documentOutline.hidden || documentOutlineCopyPending) return;
-    refreshDocumentOutline();
-    if (!documentOutlineEntries.length) return;
-    const documentId = documentOutlineDocumentId;
+    const toc = buildDocumentOutlineMarkdown();
+    if (!toc) { updateDocumentOutlineCopyState(); return; }
+    const documentId = getActivePreviewDocumentId();
     const focusedElement = document.activeElement;
     documentOutlineCopyPending = true;
     documentOutlineCopy.disabled = true;
     try {
-      await copyTextToClipboard(buildDocumentOutlineMarkdown());
+      await copyTextToClipboard(toc);
       announceToScreenReader(translateUiString('Table of contents copied.'));
-      if (!documentOutline.hidden && documentOutlineDocumentId === documentId) {
+      if (!documentOutline.hidden && getActivePreviewDocumentId() === documentId) {
         const icon = documentOutlineCopy.querySelector('i');
         if (icon) icon.className = 'lucide lucide-check';
         clearTimeout(copyDocumentOutline._timeoutId);
@@ -22366,7 +22359,7 @@ ${selector} .arrowheadPath {
       alert('Failed to copy table of contents.');
     } finally {
       documentOutlineCopyPending = false;
-      documentOutlineCopy.disabled = !documentOutlineEntries.length;
+      updateDocumentOutlineCopyState();
       if (!documentOutline.hidden && focusedElement && focusedElement.isConnected && document.activeElement === document.body) {
         focusedElement.focus({ preventScroll: true });
       }
@@ -22490,7 +22483,7 @@ ${selector} .arrowheadPath {
     documentOutlineCollapsed.forEach(function(key) { if (!keys.has(key)) documentOutlineCollapsed.delete(key); });
     documentOutlineList.replaceChildren(fragment);
     documentOutlineEmpty.hidden = headings.length > 0;
-    documentOutlineCopy.disabled = !headings.length || documentOutlineCopyPending;
+    updateDocumentOutlineCopyState();
     updateDocumentOutlineExpansionButton();
     if (focusedEntry) {
       const entry = documentOutlineEntries.find(function(item) { return item.key === focusedEntry.key; });
@@ -22548,6 +22541,19 @@ ${selector} .arrowheadPath {
   function initDocumentOutline() {
     if (!documentOutline) return;
     documentOutlineCopy.addEventListener('click', copyDocumentOutline);
+    documentOutlineSettingsToggle.addEventListener('click', function() {
+      const expanded = documentOutlineSettings.hidden;
+      documentOutlineSettings.hidden = !expanded;
+      documentOutlineSettingsToggle.setAttribute('aria-expanded', String(expanded));
+      if (expanded) documentOutlineMinLevel.focus({ preventScroll: true });
+    });
+    documentOutlineSettings.addEventListener('change', function(event) {
+      if (Number(documentOutlineMinLevel.value) > Number(documentOutlineMaxLevel.value)) {
+        if (event.target === documentOutlineMinLevel) documentOutlineMaxLevel.value = documentOutlineMinLevel.value;
+        else documentOutlineMinLevel.value = documentOutlineMaxLevel.value;
+      }
+      updateDocumentOutlineCopyState();
+    });
     documentOutlineCollapseAll.addEventListener('click', toggleDocumentOutlineExpansion);
     // Keep a jump in place as lazy preview blocks acquire their actual height.
     // The next user interaction takes control of scrolling again.
@@ -22567,7 +22573,11 @@ ${selector} .arrowheadPath {
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        setDocumentOutlineOpen(false, { restoreFocus: true });
+        if (!documentOutlineSettings.hidden) {
+          documentOutlineSettings.hidden = true;
+          documentOutlineSettingsToggle.setAttribute('aria-expanded', 'false');
+          documentOutlineSettingsToggle.focus({ preventScroll: true });
+        } else setDocumentOutlineOpen(false, { restoreFocus: true });
       }
     });
     function scheduleOutlineHighlight() {

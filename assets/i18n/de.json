@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Breite von Suchen und Ersetzen ändern",
   "Copy Markdown table of contents": "Inhaltsverzeichnis als Markdown kopieren",
   "Table of contents copied.": "Inhaltsverzeichnis kopiert.",
-  "Failed to copy table of contents.": "Inhaltsverzeichnis konnte nicht kopiert werden."
+  "Failed to copy table of contents.": "Inhaltsverzeichnis konnte nicht kopiert werden.",
+  "Copy table of contents": "Inhaltsverzeichnis kopieren",
+  "Table of contents settings": "Einstellungen für das Inhaltsverzeichnis",
+  "Min heading level": "Minimale Überschriftenebene",
+  "Max heading level": "Maximale Überschriftenebene",
+  "TOC format": "Inhaltsverzeichnisformat",
+  "Bulleted links": "Links mit Aufzählungszeichen",
+  "Numbered links": "Nummerierte Links",
+  "Plain text": "Nur Text",
+  "Normalize heading levels": "Überschriftenebenen normalisieren",
+  "Collapsible TOC wrapper": "Einklappbares Inhaltsverzeichnis",
+  "No headings in the selected range.": "Keine Überschriften im ausgewählten Bereich."
 }

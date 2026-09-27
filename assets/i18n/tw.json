@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "調整尋找與取代寬度",
   "Copy Markdown table of contents": "複製 Markdown 目錄",
   "Table of contents copied.": "已複製目錄。",
-  "Failed to copy table of contents.": "無法複製目錄。"
+  "Failed to copy table of contents.": "無法複製目錄。",
+  "Copy table of contents": "複製目錄",
+  "Table of contents settings": "目錄設定",
+  "Min heading level": "最小標題層級",
+  "Max heading level": "最大標題層級",
+  "TOC format": "目錄格式",
+  "Bulleted links": "項目符號連結",
+  "Numbered links": "編號連結",
+  "Plain text": "純文字",
+  "Normalize heading levels": "正規化標題層級",
+  "Collapsible TOC wrapper": "可摺疊目錄",
+  "No headings in the selected range.": "所選範圍內沒有標題。"
 }

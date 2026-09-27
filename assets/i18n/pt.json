@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Redimensionar Localizar e substituir",
   "Copy Markdown table of contents": "Copiar sumário em Markdown",
   "Table of contents copied.": "Sumário copiado.",
-  "Failed to copy table of contents.": "Não foi possível copiar o sumário."
+  "Failed to copy table of contents.": "Não foi possível copiar o sumário.",
+  "Copy table of contents": "Copiar sumário",
+  "Table of contents settings": "Configurações do sumário",
+  "Min heading level": "Nível mínimo de título",
+  "Max heading level": "Nível máximo de título",
+  "TOC format": "Formato do sumário",
+  "Bulleted links": "Links com marcadores",
+  "Numbered links": "Links numerados",
+  "Plain text": "Texto simples",
+  "Normalize heading levels": "Normalizar níveis de títulos",
+  "Collapsible TOC wrapper": "Sumário recolhível",
+  "No headings in the selected range.": "Nenhum título no intervalo selecionado."
 }

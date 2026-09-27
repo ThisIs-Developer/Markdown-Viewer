@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Змінити ширину панелі пошуку й заміни",
   "Copy Markdown table of contents": "Копіювати зміст у Markdown",
   "Table of contents copied.": "Зміст скопійовано.",
-  "Failed to copy table of contents.": "Не вдалося скопіювати зміст."
+  "Failed to copy table of contents.": "Не вдалося скопіювати зміст.",
+  "Copy table of contents": "Копіювати зміст",
+  "Table of contents settings": "Налаштування змісту",
+  "Min heading level": "Мінімальний рівень заголовків",
+  "Max heading level": "Максимальний рівень заголовків",
+  "TOC format": "Формат змісту",
+  "Bulleted links": "Марковані посилання",
+  "Numbered links": "Нумеровані посилання",
+  "Plain text": "Звичайний текст",
+  "Normalize heading levels": "Нормалізувати рівні заголовків",
+  "Collapsible TOC wrapper": "Згортаний зміст",
+  "No headings in the selected range.": "У вибраному діапазоні немає заголовків."
 }

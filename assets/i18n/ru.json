@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Изменить ширину панели поиска и замены",
   "Copy Markdown table of contents": "Копировать оглавление в Markdown",
   "Table of contents copied.": "Оглавление скопировано.",
-  "Failed to copy table of contents.": "Не удалось скопировать оглавление."
+  "Failed to copy table of contents.": "Не удалось скопировать оглавление.",
+  "Copy table of contents": "Копировать оглавление",
+  "Table of contents settings": "Настройки оглавления",
+  "Min heading level": "Минимальный уровень заголовков",
+  "Max heading level": "Максимальный уровень заголовков",
+  "TOC format": "Формат оглавления",
+  "Bulleted links": "Маркированные ссылки",
+  "Numbered links": "Нумерованные ссылки",
+  "Plain text": "Обычный текст",
+  "Normalize heading levels": "Нормализовать уровни заголовков",
+  "Collapsible TOC wrapper": "Сворачиваемое оглавление",
+  "No headings in the selected range.": "В выбранном диапазоне нет заголовков."
 }

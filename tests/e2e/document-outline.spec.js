@@ -14,7 +14,7 @@ test('toolbar toggles a keyboard-accessible outline beside fullscreen', async ({
   const toggle = page.getByRole('button', { name: 'Document Outline', exact: true });
   await expect(page.locator('#document-outline')).toBeHidden();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(toggle.locator('.lucide-square-menu')).toBeVisible();
+  await expect(toggle.locator('.lucide-book-text')).toBeVisible();
   expect(await toggle.evaluate(button => button.previousElementSibling.dataset.mdAction)).toBe('fullscreen');
   expect(await page.locator('#markdown-format-toolbar > .markdown-toolbar-group > button').evaluateAll(buttons =>
     buttons.slice(-4).map(button => button.dataset.mdAction))).toEqual(['emoji', 'find', 'fullscreen', 'outline']);

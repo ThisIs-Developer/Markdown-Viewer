@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Bul ve Değiştir genişliğini değiştir",
   "Copy Markdown table of contents": "İçindekileri Markdown olarak kopyala",
   "Table of contents copied.": "İçindekiler kopyalandı.",
-  "Failed to copy table of contents.": "İçindekiler kopyalanamadı."
+  "Failed to copy table of contents.": "İçindekiler kopyalanamadı.",
+  "Copy table of contents": "İçindekiler tablosunu kopyala",
+  "Table of contents settings": "İçindekiler tablosu ayarları",
+  "Min heading level": "En düşük başlık düzeyi",
+  "Max heading level": "En yüksek başlık düzeyi",
+  "TOC format": "İçindekiler tablosu biçimi",
+  "Bulleted links": "Madde işaretli bağlantılar",
+  "Numbered links": "Numaralı bağlantılar",
+  "Plain text": "Düz metin",
+  "Normalize heading levels": "Başlık düzeylerini normalleştir",
+  "Collapsible TOC wrapper": "Daraltılabilir içindekiler tablosu",
+  "No headings in the selected range.": "Seçilen aralıkta başlık yok."
 }

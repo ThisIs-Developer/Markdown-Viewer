@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "Cambiar el ancho de Buscar y reemplazar",
   "Copy Markdown table of contents": "Copiar índice en Markdown",
   "Table of contents copied.": "Índice copiado.",
-  "Failed to copy table of contents.": "No se pudo copiar el índice."
+  "Failed to copy table of contents.": "No se pudo copiar el índice.",
+  "Copy table of contents": "Copiar tabla de contenido",
+  "Table of contents settings": "Configuración de la tabla de contenido",
+  "Min heading level": "Nivel mínimo de encabezado",
+  "Max heading level": "Nivel máximo de encabezado",
+  "TOC format": "Formato de la tabla de contenido",
+  "Bulleted links": "Enlaces con viñetas",
+  "Numbered links": "Enlaces numerados",
+  "Plain text": "Texto sin formato",
+  "Normalize heading levels": "Normalizar niveles de encabezado",
+  "Collapsible TOC wrapper": "Tabla de contenido plegable",
+  "No headings in the selected range.": "No hay encabezados en el rango seleccionado."
 }

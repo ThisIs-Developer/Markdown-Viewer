@@ -1183,5 +1183,16 @@
   "Resize Find and Replace": "検索と置換の幅を変更",
   "Copy Markdown table of contents": "Markdownの目次をコピー",
   "Table of contents copied.": "目次をコピーしました。",
-  "Failed to copy table of contents.": "目次をコピーできませんでした。"
+  "Failed to copy table of contents.": "目次をコピーできませんでした。",
+  "Copy table of contents": "目次をコピー",
+  "Table of contents settings": "目次の設定",
+  "Min heading level": "見出しの最小レベル",
+  "Max heading level": "見出しの最大レベル",
+  "TOC format": "目次の形式",
+  "Bulleted links": "箇条書きリンク",
+  "Numbered links": "番号付きリンク",
+  "Plain text": "プレーンテキスト",
+  "Normalize heading levels": "見出しレベルを正規化",
+  "Collapsible TOC wrapper": "折りたたみ可能な目次",
+  "No headings in the selected range.": "選択した範囲に見出しがありません。"
 }
