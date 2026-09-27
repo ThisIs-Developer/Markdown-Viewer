@@ -11361,7 +11361,7 @@ html[data-theme="dark"] .mermaid svg {
   .document-outline {
     --outline-indent: 18px;
     --outline-control-size: 32px;
-    width: calc(100% - 24px);
+    width: calc(80% - 24px);
   }
 
   .document-outline-link,
