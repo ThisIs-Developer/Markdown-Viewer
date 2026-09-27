@@ -5,9 +5,19 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- Added Copy TOC and settings to Document Outline, with AST-based extraction, default H2–H4 depth, configurable H1–H6 limits, bulleted/numbered/plain output, optional level normalization, and a collapsible wrapper. GitHub-compatible anchors handle Unicode, emoji, and duplicate headings consistently in copied TOCs and the preview. Outline header buttons highlight only on hover or while pressed, so opening the panel no longer highlights Close.
-- Added Document Outline: a right sidebar with automatically updated H1–H6 heading trees, collapsible branches, hierarchy guides, and section navigation in Editor, Preview, and Split modes. Find & Replace, Full Screen, and the book-text outline button appear immediately after Emoji. The outline reuses the Find & Replace header and includes a Collapse/Expand All control.
-- Matched Document Outline and Find & Replace at a default width of 340px, removed their header title icons, and shared the File Sidebar's horizontal resize handles, keyboard controls, and width reset behavior.
+---
+
+## v3.10.3
+
+- **Description:** Added a responsive Document Outline and configurable Copy TOC workflow, while improving localized search content and multilingual Markdown rendering fidelity.
+  - **Document Outline:** Added an automatically updated H1–H6 tree with collapsible branches, hierarchy guides, Collapse/Expand All, active-section tracking, and navigation that preserves Editor, Preview, or Split mode. The responsive right sidebar shares Find & Replace styling, a 340px default, resize handles, keyboard resizing, and width reset behavior.
+  - **Copy TOC & Heading Anchors:** Added AST-based TOC generation with default H2–H4 depth, configurable H1–H6 limits, bulleted, hierarchical numbered, or plain output, optional level normalization, and a collapsible wrapper. Preview and copied links now share GitHub-compatible Unicode, emoji, fallback, and duplicate-heading anchors.
+  - **Localized Search Content:** Served useful translated welcome content and starter documents in the initial HTML for all 15 language URLs, made the public URL authoritative for language and metadata, preserved saved documents during language changes, added production-like SEO middleware to local development, and introduced a read-only live deployment audit.
+  - **Typography & RTL Rendering:** Prevented Japanese and Korean interface selection from changing document or release-note typography, aligned right-to-left list padding and bullets without clipping, and restored GitHub-style spacing between lists and following blocks.
+  - **Build, Offline & Desktop:** Added a bundled TOC generator with dependency licenses and Node unit coverage, included the new TOC and localized welcome modules in PWA caching, expanded static validation, synchronized desktop resources, and retained full locale-catalog parity.
+- **Date:** 2026-09-28
+- **Commits:** `beedf7c3f314abe8d5a294cb0b8418b1af8b4b6a` through `598dbdc03afc740e1ced3d7a5be47e068c663704`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.3
 
 ---
 

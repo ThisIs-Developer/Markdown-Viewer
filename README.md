@@ -61,6 +61,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 - **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, per-document Preview positions, selection-anchored comments, and threaded replies.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
 - **Document Outline:** use the book-text button after Emoji, Find & Replace, and Full Screen to open a resizable right sidebar with collapsible heading branches, a Collapse/Expand All control, and section navigation in Editor, Preview, and Split modes. Copy a GitHub-compatible Markdown TOC with configurable heading depth, bulleted/numbered links or plain text, optional level normalization, and a collapsible wrapper. The outline follows the current document and shares Find & Replace's width and header styling.
+- **Localized discovery:** open any of 15 language URLs with translated initial content and a localized starter document before JavaScript runs; changing the interface language preserves user-authored Markdown and Preview typography.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
 
 <p align="center">

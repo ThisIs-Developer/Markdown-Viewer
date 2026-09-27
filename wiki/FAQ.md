@@ -112,6 +112,10 @@ Yes. Use **Open in split view** from a Document menu, then choose a second Docum
 
 Yes. It supports regular expressions, capture replacements, preserve-case replacement, selection-only matching, selected syntax scopes, and a diff Preview. Scope detection is best-effort for unusual Markdown.
 
+### How do I navigate a long Document or create a table of contents?
+
+Open **Document Outline** with the book-text toolbar button. Its resizable H1–H6 tree follows the active Document, supports branch folding and active-section navigation, and preserves Editor, Preview, or Split mode. Choose **Copy table of contents** for a local AST-generated TOC; settings control the H1–H6 range, bulleted, numbered, or plain output, skipped-level normalization, and an optional collapsible wrapper. Copying does not modify the Document. See the [Document Outline guide](Usage-Guide.md#document-outline) for heading-anchor behavior and responsive controls.
+
 ## Import and Export
 
 ### Which local files can I import?

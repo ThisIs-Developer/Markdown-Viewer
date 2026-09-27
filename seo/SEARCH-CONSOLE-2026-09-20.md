@@ -1,6 +1,6 @@
 # Search Console investigation — 20 September 2026
 
-All six CSV files in the two supplied ZIPs and both screenshots were reviewed. The exported URLs were checked against the live site, and the repository was inspected. The changes below are local project changes; they have not been deployed or submitted to Search Console.
+All six CSV files in the two supplied ZIPs and both screenshots were reviewed. The exported URLs were checked against the live site, and the repository was inspected. The corrective project changes are included in v3.10.3. Deployment verification and any Search Console indexing or validation action remain separate steps.
 
 **The fixable problem is the language pages' content. The two redirecting URLs are intentional aliases. Google decides indexing, so a code change cannot guarantee that every row will become “Passed.”**
 
@@ -70,7 +70,7 @@ Relevant implementation: [server rendering](server-render.mjs), [welcome transla
 ## Deployment and Search Console steps
 
 1. **Deploy these changes through the site's existing Cloudflare Pages process.** The public site must run the Pages Functions middleware in `functions/_middleware.js`; uploading only static HTML will leave initial translated responses dependent on JavaScript. Keep `_routes.json` routing `/` through Functions. No deployment was performed during this investigation.
-2. **Verify the deployed responses.** From the repository run `npm run audit:seo`. Before deployment the live site will fail the new translated-content check; after deployment all response checks should pass. A preview can be checked with `npm run audit:seo -- https://YOUR-PREVIEW.pages.dev`. Production canonicals intentionally remain on `markdownviewer.pages.dev`.
+2. **Verify the deployed responses.** From the repository run `npm run audit:seo`. A deployment still serving the older English-only body will fail the translated-content check; v3.10.3 or a matching preview should pass every response check. A preview can be checked with `npm run audit:seo -- https://YOUR-PREVIEW.pages.dev`. Production canonicals intentionally remain on `markdownviewer.pages.dev`.
 3. **Inspect the canonical URLs in Search Console.** Start with `/` and a few affected languages, then cover all 14. Use **Test live URL → View tested page** and inspect both HTML and screenshot. Confirm a successful fetch, indexing allowed, visible translated content, and a canonical matching the inspected language URL. In the indexed inspection results, separately check Google's selected canonical when available; the live test does not predict Google's canonical choice.
 4. **Check the submitted sitemap.** In Sitemaps, submit `https://markdownviewer.pages.dev/sitemap.xml` if missing, or verify the existing submission is successful. It already contains the 15 intended URLs. Do not add `/?lang=en` or `/tips`.
 5. **Request indexing after the substantive content change.** Use Request indexing for the changed canonical URLs within the available quota. Repeating the same request does not make Google crawl faster. Restart validation for the crawled/not-indexed group after deployment and live checks, if Search Console offers it. Inspect any failed example individually before retrying.

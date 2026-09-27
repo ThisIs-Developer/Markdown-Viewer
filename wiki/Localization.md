@@ -56,7 +56,7 @@ When a user picks a language from the dropdown, the app saves `app-lang` and upd
 
 The English starter retains the full feature demonstration. The translated starters explain editing, imports, preview, export, sharing, local storage, and backups, with code, math, and Mermaid examples. Changing the interface language never translates or overwrites saved documents. Translations should receive native-speaker review as terminology evolves.
 
-The development server runs the same SEO middleware as Cloudflare Pages. Run `npm run build` and `npx playwright test tests/e2e/seo.spec.js --project=chromium` to verify metadata, the initial HTML in every language, rendering without JavaScript, redirects, and document preservation.
+The development server runs the same SEO middleware as Cloudflare Pages. Run `npm run build` and `npx playwright test tests/e2e/seo.spec.js --project=chromium` to verify metadata, the initial HTML in every language, rendering without JavaScript, redirects, and document preservation. After deployment, `npm run audit:seo` checks all canonical language responses, expected redirects, alternates, and discovery files without changing the site or Search Console.
 
 ## What Gets Translated
 

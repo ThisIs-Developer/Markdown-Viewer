@@ -433,9 +433,9 @@ Direction behavior:
 
 Localization:
 
-- The UI includes English, Simplified Chinese, Japanese, Korean, Brazilian Portuguese, Spanish, French, German, Russian, Italian, Turkish, Polish, Traditional Chinese, and Ukrainian.
-- Language is selected in this order: URL `?lang=`, hash query `?lang=`, saved `app-lang`, browser language, then English.
-- Selecting a language updates the URL query and saves `app-lang`.
+- The UI includes English, Simplified Chinese, Japanese, Korean, Brazilian Portuguese, Spanish, French, German, Russian, Italian, Turkish, Polish, Traditional Chinese, Ukrainian, and Bulgarian.
+- On the public website, `/` is authoritative English and a supported `?lang=` URL is authoritative for that language, keeping the initial HTML, visible starter, title, canonical, and schema aligned. Saved or browser preferences do not override the public URL. Desktop selection falls back through URL/hash language, saved `app-lang`, browser language, and English.
+- Selecting a language updates the URL and saves `app-lang` without translating or replacing an open document. Document and release-note typography remains stable across interface languages.
 - Core labels are defined in `I18N_DICTS` in `script.js`. Broader static and dynamic interface strings are loaded from `assets/i18n/<language>.json`; the English catalog is generated only from interface source strings and every other catalog uses the same keys.
 - `node assets/i18n/audit-ui-locales.mjs` checks all 15 catalogs for key parity, source pollution, empty values, placeholder integrity, protected `GitHub` and `Markdown` terms, merged values, generator or encoding artifacts, and unexpected English fallbacks.
 - Some renderer output, browser messages, third-party text, filenames, and low-level errors can remain English.
@@ -497,7 +497,7 @@ Accessibility behavior:
 The web app registers `sw.js` when service workers are supported.
 
 - The service worker cache name is versioned in `sw.js` so stale caches can be retired safely.
-- Critical local assets include `/`, `index.html`, `workspace-storage.js`, `script.js`, `preview-worker.js`, `styles.css`, `assets/lucide-icons.css`, `sample.md`, `manifest.json`, and `assets/icon.jpg`.
+- Critical local assets include `/`, `index.html`, `workspace-storage.js`, `script.js`, `preview-worker.js`, `styles.css`, `assets/seo-metadata.mjs`, `seo/locales.mjs`, `seo/welcome-content.mjs`, `assets/lucide-icons.css`, `assets/document-toc.js`, `RELEASE_NOTES`, `sample.md`, `manifest.json`, and `assets/icon.jpg`.
 - Local shell assets use a network-first strategy for update-sensitive paths, falling back to cache when offline.
 - CDN assets from cdnjs and jsDelivr use cache-first behavior after first successful load.
 - The app manifest allows standalone PWA installation.

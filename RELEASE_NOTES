@@ -1,82 +1,73 @@
-![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.2`
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.3`
 
-# Welcome to Markdown Viewer 3.10.2
+# Welcome to Markdown Viewer 3.10.3
 
-_Released September 3, 2026_
+_Released September 28, 2026_
 
-This release makes local work much harder to lose, gives every visual export a dependable Light or Dark appearance, and smooths out Markdown authoring, Preview navigation, and anchored review.
+This release adds a responsive Document Outline and configurable Copy TOC workflow, gives every public language page useful translated content from the first response, and improves Markdown typography and RTL list rendering.
 
 Everything here ships with the web, PWA, Docker, and desktop editions. **Happy coding!**
 
-[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.2) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.3) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
 
 ---
 
 ## Highlights
 
-- **Recover instead of regret.** Normal and encrypted files now move to a searchable, multi-select Trash, while conflict copies, interrupted edits, orphaned content, backups, and desktop writes receive stronger safeguards.
-- **Export the appearance you want.** HTML, Browser Print, raster PDF, and PNG remember independent Light or Dark choices; PDF and PNG wait for every supported diagram and rich-content renderer.
-- **Write tables and complex Markdown with confidence.** An accessible 8×8 table picker speeds up common layouts, and grammar-aware parsing protects math, code, footnotes, headings, lists, and definitions from crossing syntax boundaries.
-- **Keep your place and your selection.** Preview scroll state follows each document, right-click keeps editor selections intact, and anchored comments remain stable across formatted text, links, and images.
-- **Reach readers and collaborators reliably.** All 15 localized URLs are independently indexable, production Live Share WebSockets route correctly, and critical startup assets retain their preload hints.
+- **See the shape of a long document.** Open a live H1–H6 tree, fold heading branches, track the current section, and jump without leaving Editor, Preview, or Split mode.
+- **Copy a TOC that matches the Preview.** Choose heading depth and output style, normalize skipped levels when useful, or wrap linked output in a collapsible section.
+- **Start every language page in its language.** All 15 public URLs now serve translated visible content and starter documents before JavaScript runs, with matching metadata and canonical identity.
+- **Keep document typography independent from the interface.** Japanese and Korean UI choices no longer restyle Markdown or release notes.
+- **Render RTL lists like readers expect.** Right-to-left bullets stay inside the content area, and list-to-paragraph spacing follows GitHub-style Markdown presentation.
 
 > [!TIP]
-> Use the table button for an instant grid up to 8×8, or choose **Custom table** for dimensions up to 20×20. The row count includes the header.
+> Open **Document Outline** with the book-text button after Full Screen. Choose **Copy table of contents** for the default H2–H4 linked list, or open its settings for H1–H6 limits, numbered links, plain text, normalization, and a collapsible wrapper.
 
-## Safer workspaces and recoverable deletion
+## Navigate with Document Outline
 
-Deleting a normal or encrypted file now moves its latest content directly to **Trash**. Search the dedicated responsive window, select separate items with Ctrl/Cmd or a range with Shift, restore immediately, or confirm permanent deletion. Recognized records expire after 30 days; missing, corrupt, and future-format records are kept for manual review instead of being guessed at and removed.
+Document Outline adds a responsive right sidebar built around the current document's H1–H6 structure. Parent headings have collapsible branches and subtle hierarchy guides, while **Collapse/Expand All** controls the full tree. The active section follows scrolling, and selecting a heading jumps to the right source or rendered position without changing Editor, Preview, or Split mode.
 
-The persistence layer now treats each document as the unit of change. Cross-tab revision conflicts create preserved copies instead of silently replacing newer data, startup read failures stop unsafe writes, and interrupted edits or orphaned content can be recovered. Browser backups and Secret Workspace replacement are transactional, while the desktop vault journals file moves, permanent deletion, and index updates so an interrupted operation can be repaired on the next start.
+The outline updates as you edit, import, or switch documents. Code-block headings are excluded, read-only documents remain navigable, and collapsed branches retain their state while content changes. On small screens the panel leaves room for the document and closes after navigation.
 
-Private mode now has a clear active incognito status and is deliberately session-only. It pauses new document-state writes without touching existing normal or Secret Workspace data, then resets on reload or exit so normal persistence resumes next time.
+Document Outline and Find & Replace now use matching text-only headers, a 340px default width, and the same resize behavior as Explorer. Drag the edge, use arrow keys for precise sizing, hold Shift for larger steps, or use Home or a double-click to restore the default.
 
-## Exports that match your intent
+## Copy a dependable Markdown TOC
 
-HTML, PDF, and PNG export dialogs now offer compact **Light** and **Dark** appearance controls. Each format remembers its own choice, and preparing a differently themed export no longer changes the visible application theme.
+**Copy table of contents** works directly from the current Markdown AST, so it does not wait for Preview, modify the document, or omit headings hidden inside collapsed outline branches. The default includes H2–H4 as nested bulleted links. Settings support any H1–H6 range, hierarchical numbered links, plain indented text, skipped-level normalization, and an optional `<details>` wrapper for linked output.
 
-One off-screen export pipeline now waits for Mermaid, ABC, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, math, fonts, and images before browser print, raster PDF, or PNG capture. Markmaps are fitted to readable printable bounds, dark tables and diagrams keep their intended colors, and solid page backgrounds prevent pale borders and transparent gaps.
+Copied links and Preview headings share the same GitHub-compatible anchors. Unicode letters and underscores remain, punctuation and emoji are removed consistently, duplicate headings receive stable `-1`, `-2`, and later suffixes, and symbol-only headings receive a documented fallback. YAML front matter and fenced code are excluded, while inline formatting is reduced to its visible heading text.
 
-Standalone HTML exports explicitly preserve their selected appearance across operating-system themes, initialize Mermaid correctly, and avoid leaving loading labels behind. Frontmatter recognition is also stricter, so documents containing ordinary `---` dividers are not accidentally parsed as YAML metadata.
+## Useful localized content from the first response
 
-## Faster, safer Markdown authoring
+Previously, localized URLs could provide translated metadata and interface labels while their initial visible body and first-run document remained English. The root English URL and all 14 translated `?lang=` URLs now serve language-matched welcome content directly in the initial HTML, plus an appropriate starter document for new visitors.
 
-The table control now opens an accessible 8×8 quick selector with hover, click, focus, and arrow-key navigation. A compact **Custom table** dialog supports dimensions up to 20×20. Both paths count the header as part of the requested row total, making the preview and inserted result agree.
+The public URL is now authoritative: `/` remains English and a supported `?lang=` selects that language without a saved or browser preference silently overriding it. Titles, canonicals, schema, response language, visible content, and the client stay aligned, while changing the interface never translates or replaces an existing document.
 
-Markdown rendering now respects syntax boundaries instead of applying broad document-wide rewrites. The changes cover repeated and Unicode heading IDs, case-insensitive and repeated footnotes, multi-term definition lists, inline and display math, legacy scoped color syntax, fenced and inline code, and visually distinct adjacent list blocks. GeoJSON, TopoJSON, and STL renderers also resize correctly when switching views or pane widths.
+Development now exercises the same SEO middleware used by Cloudflare Pages. A new read-only `npm run audit:seo` command checks deployed canonical responses, language alternates, redirects, and discovery files; it verifies technical delivery without claiming or changing Google indexing status.
 
-Toolbar icons and hover states have been refined, and opening an editor context menu no longer collapses the selection that its commands are meant to use.
+## Consistent multilingual Markdown rendering
 
-## Stable Preview and review context
+Selecting Japanese or Korean no longer applies interface-language spacing, line-height, justification, wrapping, or heading-weight changes to user-authored Markdown or release notes. Documents now retain the same typography as you switch interface languages, including mixed-language text, frontmatter, headings, and tables.
 
-Each document now owns its Preview scroll coordinates. Switching among documents, reordering tabs, changing view modes, or reopening a document restores that document's position without leaking another document's scroll state.
+RTL list rendering now uses right-side padding with left padding removed at the required specificity, keeping bullets and task-list controls inside the content boundary. Standard lists also inherit GitHub-style spacing before following paragraphs instead of the previous compressed custom margins.
 
-Comment highlights now cover complete text nodes and remain continuous across bold, italic, links, inline code, and strikethrough. Links do not navigate while Comments mode is selecting an anchor, linked images remain selectable, and obsolete review gutters no longer shift the geometry of commented images and other rendered blocks.
+## Quality, offline use, and desktop parity
 
-## Localized discovery and connected features
-
-The root English page and every supported localized `?lang=` URL now receive server-rendered self-canonical metadata, reciprocal `hreflang` declarations, localized social cards, structured data, and a complete generated sitemap. Bulgarian metadata is included, legacy paths redirect to the canonical root, and missing paths return a real noindex 404 page.
-
-Cloudflare Pages now routes `/live-room/*` WebSocket upgrades to the Live Share Durable Object relay in production. The build checks that route, and the optimized document head keeps critical stylesheet and script preloads available without duplicating the English search URL.
+The pure TOC generator has dedicated Node unit coverage and produces a committed browser/worker bundle with dependency license notices. Static validation checks the source, generated bundle, required page IDs, and desktop parity. The PWA caches the TOC bundle and localized welcome module, and the Neutralino resources include the same outline, copy, locale, typography, and RTL behavior as the web app.
 
 ## Thank you
 
 ### Contributors
 
-- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Workspace safety, Trash, Markdown rendering, tables, Preview and review fixes, export follow-up, SEO, Live Share, testing, documentation, and release work.
-- **[Itznan (@itznan)](https://github.com/itznan)** — Light/Dark appearance selection and styling improvements across HTML, PDF, and PNG exports.
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Document Outline, Copy TOC, shared heading anchors, localized search content, typography fixes, testing, documentation, and release work.
+- **[Rajat Kumar Parihar (@rajat12826)](https://github.com/rajat12826)** — RTL list alignment, task-list padding, GitHub-style list spacing, and desktop stylesheet parity.
 
 ### Changes included
 
-- [#248 — Prevent workspace data loss and add managed Trash](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/248)
-- [#249 — Resolve Markdown formatting parser boundaries](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/249)
-- [#250 — Add the quick table selector](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/250)
-- [#251 — Isolate Preview scroll state per document](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/251)
-- [#252 — Stabilize highlights, links, and image comments](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/252)
-- [#253 — Add export appearance selection and styling fixes](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/253)
-- [#255 — Render all diagrams in PDF and image output](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/255)
-- [Restore production Live Share WebSocket routing](https://github.com/ThisIs-Developer/Markdown-Viewer/commit/15047ce)
-- [Make localized pages independently indexable](https://github.com/ThisIs-Developer/Markdown-Viewer/commit/494c63b)
+- [#256 — Render translated content for language pages](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/256)
+- [#257 — Preserve Preview typography when switching languages](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/257)
+- [#258 — Add Document Outline and configurable Copy TOC](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/258)
+- [#260 — Fix RTL Markdown list rendering and spacing](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/260)
 
 Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
 

@@ -424,6 +424,12 @@ Use these upstream references for complete syntax and renderer-specific behavior
 
 Upstream support does not imply that Markdown Viewer exposes every upstream option. The verified fence behavior and limits on this page describe the application.
 
+## Heading IDs and Copied Tables of Contents
+
+Document Outline reads H1–H6 tokens from the Markdown AST, excluding fenced code and YAML front matter. **Copy table of contents** strips inline formatting while preserving visible Unicode text, and can produce bulleted links, hierarchical numbered links, or plain indented text for a configurable heading range.
+
+Preview headings and copied links share GitHub-compatible slug generation in document order. Duplicate headings receive `-1`, `-2`, and later suffixes before depth filtering; Unicode letters and underscores remain, punctuation and emoji are removed, and symbol-only headings receive a stable `heading` fallback. Raw HTML heading blocks are outside this AST workflow. See [Usage Guide: Document Outline](Usage-Guide.md#document-outline) for all copy options.
+
 ## Export Notes for Markdown Authors
 
 - Browser Print is usually best for long documents.

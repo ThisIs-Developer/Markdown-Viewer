@@ -51,12 +51,14 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 | Area | Implemented behavior |
 | :--- | :--- |
 | Workspace | No application document-count limit, nested Folders, Recent, Favorites, search, tabs, bulk actions, encrypted Secret Workspace, and 30-day recoverable Trash |
-| Editing | Editor, Split view, Preview, formatting toolbar with an 8×8 quick table selector, custom undo/redo, Find and Replace, LTR/RTL, and large-Document rendering paths |
+| Editing | Editor, Split view, Preview, formatting toolbar with an 8×8 quick table selector, custom undo/redo, Find and Replace, LTR/RTL, a resizable Document Outline, configurable Copy TOC, and large-Document rendering paths |
 | Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
 | Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown plus remembered Light/Dark HTML, Browser Print, legacy raster PDF, and PNG export, with complete rich-content preparation for PDF and PNG |
 | Sharing | URL-hash or KV-backed Share Snapshot; WebSocket Live Share with host/edit/view capabilities |
 | Delivery | Static web, PWA, Docker, Cloudflare, and seven Neutralino desktop targets |
+
+The public root and 14 translated `?lang=` URLs serve language-matched initial content, metadata, and starter documents before JavaScript runs. User-authored Markdown stays unchanged when the interface language changes.
 
 ## Privacy at a Glance
 
