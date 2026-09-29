@@ -34,6 +34,10 @@ Desktop-only files:
 - Document metadata loads at startup; Markdown content loads only when a document is opened and is kept in a bounded in-memory cache.
 - Native Markdown/HTML save and Markdown open flows use Neutralino dialogs and filesystem APIs.
 - A Markdown file passed as a launch argument is loaded into the editor.
+- Files opened from disk can remain linked to their original path. Workspace (Vault) copies are separate documents; converting a linked file to a copy leaves its source untouched.
+- Linked files keep an app-local draft, but write to the original only on Ctrl+S. Reopening the same path selects its existing document rather than making another copy.
+- **Link a Markdown folder** adds its Markdown files under Linked Locations. Files added or changed outside the app are detected while the desktop app is running; a locally edited draft is not silently overwritten by an external change.
+- Removing a link removes the app's reference, not the original file or folder. Native file drops are not covered by the linked-file flow in this build.
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
 - Private mode pauses document-state persistence for the current page session without deleting the vault, shows an active incognito status, and resets on reload or exit. **Reset workspace** permanently deletes documents, folders, review data, settings, Secret Workspace records, history, trash, and recovery journals after confirmation.
@@ -81,7 +85,7 @@ Seven self-contained executables are written to `desktop-app/dist/markdown-viewe
 | Token security | One-time |
 | Logging | Disabled |
 
-Native APIs are intentionally allowlisted: app exit, open/save dialogs, message boxes, external URL/folder open, tray setup, scoped file and folder operations, path lookup, and storage get/set/remove. Command execution is not part of the default allowlist.
+Native APIs are intentionally allowlisted: app exit, open/save/folder dialogs, message boxes, external URL/folder open, tray setup, scoped file and folder operations, filesystem watchers, path lookup, and storage get/set/remove. Command execution is not part of the default allowlist.
 
 ## Local Renderer Security
 
