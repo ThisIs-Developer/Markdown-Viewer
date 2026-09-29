@@ -12243,6 +12243,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (_) {
       return;
     }
+    closeSlashCommandMenu();
     tab.isOpen = true;
     const previousActiveTabId = activeTabId;
     const swapSplitPanes = tabId === secondarySplitTabId;
@@ -12296,6 +12297,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function newTab(content, title, location) {
+    closeSlashCommandMenu();
     if (content === undefined) content = '';
     const targetLocation = location || (documentOrganization ? getPreferredDocumentLocation() : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
     if (targetLocation.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
@@ -17912,6 +17914,7 @@ ${selector} .arrowheadPath {
   let slashCommandState = null;
   let slashCommandMenu = null;
   let slashCommandList = null;
+  const slashComposingEditors = new WeakSet();
 
   function ensureSlashCommandMenu() {
     if (slashCommandMenu) return slashCommandMenu;
@@ -17919,12 +17922,11 @@ ${selector} .arrowheadPath {
     slashCommandMenu.id = 'slash-command-menu';
     slashCommandMenu.className = 'slash-command-menu';
     slashCommandMenu.hidden = true;
-    slashCommandMenu.setAttribute('role', 'dialog');
-    slashCommandMenu.setAttribute('aria-label', 'Insert Markdown block');
     const header = document.createElement('div');
     header.className = 'slash-command-header';
     header.textContent = 'Insert block';
     slashCommandList = document.createElement('div');
+    slashCommandList.id = 'slash-command-list';
     slashCommandList.className = 'slash-command-list';
     slashCommandList.setAttribute('role', 'listbox');
     slashCommandList.setAttribute('aria-label', 'Markdown commands');
@@ -17959,7 +17961,7 @@ ${selector} .arrowheadPath {
       'boxSizing', 'width', 'fontFamily', 'fontSize', 'fontStyle', 'fontWeight',
       'letterSpacing', 'lineHeight', 'paddingTop', 'paddingRight', 'paddingBottom',
       'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth',
-      'borderLeftWidth', 'textAlign', 'textIndent', 'textTransform', 'tabSize'
+      'borderLeftWidth', 'direction', 'textAlign', 'textIndent', 'textTransform', 'tabSize'
     ].forEach(function(property) { mirror.style[property] = style[property]; });
     mirror.className = 'slash-command-caret-mirror';
     mirror.style.whiteSpace = 'pre-wrap';
@@ -17985,7 +17987,8 @@ ${selector} .arrowheadPath {
     const margin = 8;
     const width = Math.min(340, window.innerWidth - margin * 2);
     slashCommandMenu.style.width = width + 'px';
-    const left = Math.max(margin, Math.min(caret.left, window.innerWidth - width - margin));
+    const preferredLeft = window.getComputedStyle(editor).direction === 'rtl' ? caret.left - width : caret.left;
+    const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - width - margin));
     let top = caret.top + caret.lineHeight + 6;
     const menuHeight = slashCommandMenu.offsetHeight || 360;
     if (top + menuHeight > window.innerHeight - margin) top = Math.max(margin, caret.top - menuHeight - 6);
@@ -18024,6 +18027,12 @@ ${selector} .arrowheadPath {
   function executeSlashCommand(command) {
     if (!slashCommandState || !command) return;
     const state = slashCommandState;
+    const match = getSlashCommandMatch(state.editor);
+    if (document.activeElement !== state.editor || !isMarkdownEditorEditable(state.editor) ||
+        !match || match.start !== state.start || match.end !== state.end) {
+      closeSlashCommandMenu();
+      return;
+    }
     if (command.action) {
       closeSlashCommandMenu();
       replaceMarkdownEditorRange(state.editor, state.start, state.end, '', state.start, state.start);
@@ -18065,6 +18074,7 @@ ${selector} .arrowheadPath {
         item.type = 'button';
         item.id = 'slash-command-' + command.id;
         item.className = 'slash-command-item';
+        item.tabIndex = -1;
         item.setAttribute('role', 'option');
         item.setAttribute('aria-selected', 'false');
         item.innerHTML = '<span class="slash-command-icon">' + (command.textIcon
@@ -18081,7 +18091,7 @@ ${selector} .arrowheadPath {
       });
     }
     slashCommandMenu.hidden = false;
-    slashCommandState.editor.setAttribute('aria-controls', slashCommandMenu.id);
+    slashCommandState.editor.setAttribute('aria-controls', slashCommandList.id);
     slashCommandState.editor.setAttribute('aria-expanded', 'true');
     selectSlashCommand(Math.min(slashCommandState.activeIndex, Math.max(0, commands.length - 1)));
     requestAnimationFrame(function() {
@@ -18090,7 +18100,7 @@ ${selector} .arrowheadPath {
   }
 
   function updateSlashCommandMenu(editor) {
-    if (!isMarkdownEditorEditable(editor)) {
+    if (document.activeElement !== editor || slashComposingEditors.has(editor) || !isMarkdownEditorEditable(editor)) {
       closeSlashCommandMenu();
       return;
     }
@@ -18111,6 +18121,7 @@ ${selector} .arrowheadPath {
 
   function handleSlashCommandKeydown(event) {
     if (!slashCommandState || slashCommandState.editor !== event.currentTarget) return;
+    if (event.isComposing || event.keyCode === 229 || slashComposingEditors.has(event.currentTarget)) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       selectSlashCommand(slashCommandState.activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
@@ -18132,6 +18143,17 @@ ${selector} .arrowheadPath {
       editor.addEventListener('input', function() { updateSlashCommandMenu(editor); });
       editor.addEventListener('click', function() { updateSlashCommandMenu(editor); });
       editor.addEventListener('keydown', handleSlashCommandKeydown);
+      editor.addEventListener('compositionstart', function() {
+        slashComposingEditors.add(editor);
+        if (slashCommandState && slashCommandState.editor === editor) closeSlashCommandMenu();
+      });
+      editor.addEventListener('compositionend', function() {
+        slashComposingEditors.delete(editor);
+        updateSlashCommandMenu(editor);
+      });
+      editor.addEventListener('blur', function() {
+        if (slashCommandState && slashCommandState.editor === editor) closeSlashCommandMenu();
+      });
       editor.addEventListener('scroll', function() {
         if (slashCommandState && slashCommandState.editor === editor) positionSlashCommandMenu(editor);
       });

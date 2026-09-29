@@ -105,3 +105,73 @@ test('does not open after text or indentation on the current line', async ({ pag
   await setEditorContent(page, '  /hea');
   await expect(page.locator('#slash-command-menu')).toBeHidden();
 });
+
+test('closes when a keyboard shortcut creates another document', async ({ page }) => {
+  await setEditorContent(page, '/');
+  const editor = page.locator('#markdown-editor');
+  await expect(page.locator('#slash-command-menu')).toBeVisible();
+
+  await editor.press('Alt+Shift+t');
+  await expect(page.locator('#tab-list .tab-item')).toHaveCount(2);
+  await expect(page.locator('#slash-command-menu')).toBeHidden();
+  await expect(editor).toHaveAttribute('aria-expanded', 'false');
+  await expect.poll(() => editorValue(page)).toBe('');
+});
+
+test('does not execute commands during IME composition', async ({ page }) => {
+  await setEditorContent(page, '/');
+  const editor = page.locator('#markdown-editor');
+  await expect(page.locator('#slash-command-menu')).toBeVisible();
+
+  await editor.evaluate(node => {
+    node.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', isComposing: true, bubbles: true, cancelable: true
+    }));
+  });
+  await expect.poll(() => editorValue(page)).toBe('/');
+  await expect(page.locator('#slash-command-menu')).toBeVisible();
+
+  await editor.dispatchEvent('compositionstart');
+  await expect(page.locator('#slash-command-menu')).toBeHidden();
+  await editor.dispatchEvent('compositionend');
+  await expect(page.locator('#slash-command-menu')).toBeVisible();
+});
+
+test('closes when Find takes focus from the editor', async ({ page }) => {
+  await setEditorContent(page, '/');
+  const editor = page.locator('#markdown-editor');
+  await expect(page.locator('#slash-command-menu')).toBeVisible();
+
+  await editor.press('Control+f');
+  await expect(page.locator('#find-replace-input')).toBeFocused();
+  await expect(page.locator('#slash-command-menu')).toBeHidden();
+  await expect(editor).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('exposes the listbox to assistive technology and anchors it inside an RTL editor', async ({ page }) => {
+  await page.evaluate(() => { document.documentElement.dir = 'rtl'; });
+  await setEditorContent(page, '/');
+  const editor = page.locator('#markdown-editor');
+  const menu = page.locator('#slash-command-menu');
+  await expect(menu).toBeVisible();
+  await expect(editor).toHaveAttribute('aria-controls', 'slash-command-list');
+  await expect(page.locator('#slash-command-list')).toHaveAttribute('role', 'listbox');
+  const activeId = await editor.getAttribute('aria-activedescendant');
+  expect(activeId).toBeTruthy();
+  await expect(page.locator('#slash-command-list').locator('#' + activeId)).toHaveAttribute('role', 'option');
+  await expect(menu.getByRole('option').first()).toHaveAttribute('tabindex', '-1');
+
+  const position = await page.evaluate(() => {
+    const editorRect = document.getElementById('markdown-editor').getBoundingClientRect();
+    const menuRect = document.getElementById('slash-command-menu').getBoundingClientRect();
+    return { editorRight: editorRect.right, menuRight: menuRect.right, menuLeft: menuRect.left };
+  });
+  expect(position.menuRight).toBeLessThanOrEqual(position.editorRight + 8);
+  expect(position.menuLeft).toBeGreaterThanOrEqual(8);
+});
+
+test('still inserts a command selected with the mouse', async ({ page }) => {
+  await setEditorContent(page, '/heading');
+  await page.locator('#slash-command-menu').getByRole('option', { name: /Heading 2/ }).click();
+  await expect.poll(() => editorValue(page)).toBe('## ');
+});
