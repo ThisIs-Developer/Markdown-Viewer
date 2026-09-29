@@ -752,6 +752,20 @@ body {
   font-size: var(--ui-font-xs);
 }
 
+.document-tree-row.is-linked-document .document-tree-main > .lucide-link-2 {
+  color: var(--accent-color);
+}
+
+.document-tree-row.is-source-missing .document-tree-meta,
+.document-tree-row.is-source-missing .document-tree-main > i {
+  color: var(--color-danger-fg);
+}
+
+.document-tree-row.is-source-conflict .document-tree-meta {
+  color: #bf8700;
+  font-weight: 600;
+}
+
 .document-tree-main > .document-favorite-indicator {
   flex: 0 0 auto;
   color: var(--favorite-color);

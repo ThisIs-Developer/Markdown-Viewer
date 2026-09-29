@@ -278,6 +278,7 @@
 
     mergeCollection('workspaces');
     mergeCollection('folders');
+    mergeCollection('linkedLocations');
     merged.ui = mergeObjectChanges(base.ui || {}, local.ui || {}, remote.ui || {});
     return merged;
   }
