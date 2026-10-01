@@ -5536,7 +5536,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization.folders.filter(function(folder) {
         return folder.workspaceId === workspace.id;
       }).sort(function(left, right) {
-        return getFolderPath(left.id).localeCompare(getFolderPath(right.id));
+        return getFolderPath(left.id).localeCompare(getFolderPath(right.id), undefined, { numeric: true, sensitivity: 'base' });
       }).forEach(function(folder) {
         const option = document.createElement('option');
         option.value = workspace.id + '|' + folder.id;
@@ -6709,6 +6709,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     return haystack.includes(documentSidebarSearch.toLocaleLowerCase());
   }
 
+  function compareNatural(left, right) {
+    return String(left || '').localeCompare(String(right || ''), undefined, { numeric: true, sensitivity: 'base' });
+  }
+
   function renderFlatDocumentView(tree, filter) {
     let documents = tabs.filter(function(tab) {
       if (isTemporaryDocument(tab)) return false;
@@ -6718,7 +6722,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (filter === 'recent') {
       documents = documents.sort(function(left, right) { return getDocumentActivityTime(right) - getDocumentActivityTime(left); }).slice(0, 30);
     } else {
-      documents = documents.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
+      documents = documents.sort(function(left, right) { return compareNatural(left.title, right.title); });
     }
     let renderedDocuments = 0;
     documents.forEach(function(tab) {
@@ -6813,7 +6817,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       workspaceGroup.hidden = !expanded;
       attachDocumentDropTarget(workspaceGroup, { workspaceId: workspace.id, folderId: null });
 
-      const sortedFolders = folders.sort(function(left, right) { return left.createdAt - right.createdAt || left.name.localeCompare(right.name); });
+      const sortedFolders = folders.sort(function(left, right) { return left.createdAt - right.createdAt || compareNatural(left.name, right.name); });
       const foldersByParent = new Map();
       sortedFolders.forEach(function(folder) {
         const parentKey = folder.parentFolderId || null;
@@ -6867,7 +6871,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         (foldersByParent.get(folder.id) || []).forEach(function(child) {
           appendFolderBranch(child, folderGroup, depth + 1);
         });
-        folderDocuments.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); }).forEach(function(tab) {
+        folderDocuments.sort(function(left, right) { return compareNatural(left.title, right.title); }).forEach(function(tab) {
           if (appendDocumentTreeItem(folderGroup, tab, depth + 1)) renderedDocuments++;
         });
         container.appendChild(folderGroup);
@@ -6877,7 +6881,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
 
       (matchingDocumentsByFolder.get(null) || []).sort(function(left, right) {
-        return (left.title || '').localeCompare(right.title || '');
+        return compareNatural(left.title, right.title);
       }).forEach(function(tab) {
         if (appendDocumentTreeItem(workspaceGroup, tab, 1)) renderedDocuments++;
       });
