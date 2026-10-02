@@ -5536,7 +5536,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization.folders.filter(function(folder) {
         return folder.workspaceId === workspace.id;
       }).sort(function(left, right) {
-        return getFolderPath(left.id).localeCompare(getFolderPath(right.id), undefined, { numeric: true, sensitivity: 'base' });
+        return getFolderPath(left.id).localeCompare(getFolderPath(right.id), undefined, { numeric: true });
       }).forEach(function(folder) {
         const option = document.createElement('option');
         option.value = workspace.id + '|' + folder.id;
@@ -6710,7 +6710,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function compareNatural(left, right) {
-    return String(left || '').localeCompare(String(right || ''), undefined, { numeric: true, sensitivity: 'base' });
+    return String(left || '').localeCompare(String(right || ''), undefined, { numeric: true });
   }
 
   function renderFlatDocumentView(tree, filter) {
