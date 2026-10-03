@@ -1,6 +1,15 @@
 const { test, expect } = require('@playwright/test');
 const { openApp, editorValue } = require('../helpers/app');
 
+// These scenarios simulate desktop linking while retaining browser test storage.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.NL_PORT = 1;
+    window.NL_OS = 'Windows';
+    window.Neutralino = { filesystem: { readFile: async () => '', writeFile: async () => true }, os: {} };
+  });
+});
+
 test('linked sidebar rows show source paths only on hover across All, Recent and Favs', async ({ page }) => {
   await page.addInitScript(() => {
     const records = ['healthy', 'missing', 'conflict'].map((title, index) => ({
@@ -14,7 +23,6 @@ test('linked sidebar rows show source paths only on hover across All, Recent and
   });
   await openApp(page);
   await page.evaluate(async () => {
-    window.Neutralino = {};
     await window.NL_IMPORT_EXTERNAL_FILE('# healthy', 'healthy', 'C:/Original/healthy.md');
   });
   const tree = page.locator('#document-tree');
@@ -117,6 +125,7 @@ test('links a folder, discovers external additions, and converts a file to a cop
           ? window.__folderEntries.map(entry => ({ entry, type: 'FILE' })) : [],
         getJoinedPath: async (...parts) => parts.join('\\'),
         readFile: async path => window.__fileContents[path],
+        writeFile: async () => true,
         createWatcher: async () => 1,
         removeWatcher: async () => 1
       },
@@ -170,11 +179,13 @@ test('groups linked files under Workspaces and persists independent nested folde
         readDirectory: async path => directories[path.replace(/\\/g, '/')] || [],
         getJoinedPath: async (...parts) => parts.join('/'),
         readFile: async path => '# ' + path,
+        writeFile: async () => true,
         createWatcher: async () => 1,
         removeWatcher: async () => 1
       },
       events: { on: async () => ({ success: true }) },
-      storage: { setData: async () => ({ success: true }) }
+      storage: { setData: async () => ({ success: true }) },
+      os: {}
     };
     Neutralino.os = { showFolderDialog: async () => 'C:/Notes' };
     document.getElementById('sidebar-link-folder').click();
@@ -227,7 +238,6 @@ test('groups linked files under Workspaces and persists independent nested folde
   await page.reload();
   await page.waitForFunction(() => document.documentElement.dataset.appReady === 'true');
   await page.evaluate(async () => {
-    window.Neutralino = {};
     await window.NL_IMPORT_EXTERNAL_FILE('# loose', 'loose', 'C:/loose.md');
   });
   await expect(linkedRoot).toHaveAttribute('aria-expanded', 'false');

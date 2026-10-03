@@ -44,6 +44,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     );
   }
 
+  function hasDesktopFileAccess() {
+    return Boolean(typeof Neutralino !== 'undefined' && typeof NL_PORT !== 'undefined' &&
+      Neutralino.filesystem && typeof Neutralino.filesystem.readFile === 'function' &&
+      typeof Neutralino.filesystem.writeFile === 'function' && Neutralino.os);
+  }
+
+  function isLinkedDocument(tab) {
+    return Boolean(hasDesktopFileAccess() && tab && tab.sourcePath);
+  }
+
   const workspaceStorage = typeof window.MarkdownWorkspaceStorage === 'function'
     ? new window.MarkdownWorkspaceStorage()
     : null;
@@ -5895,7 +5905,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentMenuActions(tab) {
-    if (tab && tab.sourcePath && !isTemporaryDocument(tab)) {
+    if (isLinkedDocument(tab) && !isTemporaryDocument(tab)) {
       const linkedActions = [
         { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'save', icon: 'lucide-download', label: 'Save', run: function() { void nativeSaveMarkdown({ tabId: tab.id, useLinkedSource: true }); } },
@@ -5913,7 +5923,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameTab(tab.id); }
     }];
     if (!isTemporaryDocument(tab)) {
-      if (typeof Neutralino !== 'undefined' && tab.workspaceId !== SECRET_WORKSPACE_ID) {
+      if (hasDesktopFileAccess() && tab.workspaceId !== SECRET_WORKSPACE_ID) {
         actions.push({ id: 'save-as', icon: 'lucide-file-plus-2', label: 'Save As…', run: function() { void nativeSaveMarkdown({ tabId: tab.id, createLinked: true }); } });
       }
       actions.push({ id: 'duplicate', icon: 'lucide-files', label: 'Duplicate', run: function() { duplicateTab(tab.id); } });
@@ -6598,9 +6608,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function dropSidebarDocuments(tabIds, location) {
     const documents = tabIds.map(function(id) { return tabs.find(function(tab) { return tab.id === id; }); }).filter(Boolean);
-    if (documents.some(function(tab) { return tab.sourcePath; }) && location.workspaceId !== DEFAULT_WORKSPACE_ID) return;
+    if (documents.some(isLinkedDocument) && location.workspaceId !== DEFAULT_WORKSPACE_ID) return;
     for (const tab of documents) {
-      if (tab.sourcePath) await convertLinkedDocumentToVault(tab.id, location);
+      if (isLinkedDocument(tab)) await convertLinkedDocumentToVault(tab.id, location);
       else await moveDocumentToLocation(tab.id, location.workspaceId, location.folderId || null);
     }
   }
@@ -6746,9 +6756,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       id: tab.id,
       documentId: tab.id,
       label: tab.title || 'Untitled',
-      hoverTitle: tab.sourcePath || tab.title || 'Untitled',
-      ariaLabel: (tab.id === activeTabId ? 'Active document, ' : 'Document, ') + (tab.title || 'Untitled') + (tab.sourcePath ? ', linked file' : '') + (tab.favorite ? ', favorite' : ''),
-      icon: tab.sourcePath ? 'lucide-file-symlink' : 'lucide-file-text',
+      hoverTitle: isLinkedDocument(tab) ? tab.sourcePath : tab.title || 'Untitled',
+      ariaLabel: (tab.id === activeTabId ? 'Active document, ' : 'Document, ') + (tab.title || 'Untitled') + (isLinkedDocument(tab) ? ', linked file' : '') + (tab.favorite ? ', favorite' : ''),
+      icon: isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file-text',
       depth: depth,
       favorite: tab.favorite === true,
       temporary: isTemporaryDocument(tab),
@@ -6758,12 +6768,12 @@ document.addEventListener("DOMContentLoaded", async function () {
         openSidebarDocument(tab.id);
       }
     });
-    if (tab.sourcePath) {
+    if (isLinkedDocument(tab)) {
       row.classList.add('is-linked-document');
       row.title = tab.sourcePath;
     }
-    if (tab.sourceMissing) row.classList.add('is-source-missing');
-    if (tab.sourceConflict) row.classList.add('is-source-conflict');
+    if (isLinkedDocument(tab) && tab.sourceMissing) row.classList.add('is-source-missing');
+    if (isLinkedDocument(tab) && tab.sourceConflict) row.classList.add('is-source-conflict');
     container.appendChild(row);
     if (consumesRenderBudget) {
       documentSidebarRenderBudget.remaining = Math.max(0, documentSidebarRenderBudget.remaining - 1);
@@ -6772,7 +6782,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentLocationLabel(tab) {
-    if (tab && tab.sourcePath) return 'Linked · ' + tab.sourcePath;
+    if (isLinkedDocument(tab)) return 'Linked · ' + tab.sourcePath;
     const workspace = getWorkspaceById(tab.workspaceId);
     const folder = getFolderById(tab.folderId);
     if (folder && workspace) return workspace.name + ' / ' + getFolderPath(folder.id);
@@ -6781,12 +6791,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getDocumentTabHoverTitle(tab) {
     const title = tab && tab.title ? tab.title : 'Untitled';
-    if (tab && tab.sourcePath) return title + ' — Linked file: ' + tab.sourcePath;
+    if (isLinkedDocument(tab)) return title + ' — Linked file: ' + tab.sourcePath;
     const folder = tab ? getFolderById(tab.folderId) : null;
     return folder ? getFolderPath(folder.id) + ' / ' + title : title;
   }
 
-  if (isNeutralinoRuntimeAvailable()) {
+  if (hasDesktopFileAccess()) {
     document.querySelectorAll('.desktop-linked-command').forEach(function(element) {
       element.hidden = false;
     });
@@ -6815,7 +6825,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     let renderedDocuments = 0;
     documents.forEach(function(tab) {
-      const meta = tab.sourcePath ? getLinkedDocumentMeta(tab) : getDocumentLocationLabel(tab);
+      const meta = isLinkedDocument(tab) ? getLinkedDocumentMeta(tab) : getDocumentLocationLabel(tab);
       if (appendDocumentTreeItem(tree, tab, 0, meta)) renderedDocuments++;
     });
     return renderedDocuments;
@@ -6836,7 +6846,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renderLinkedLocationsTree(tree) {
-    if (typeof Neutralino === 'undefined') return 0;
+    if (!hasDesktopFileAccess()) return 0;
     const linkedTabs = tabs.filter(function(tab) {
       return !isTemporaryDocument(tab) && Boolean(tab.sourcePath);
     });
@@ -6985,7 +6995,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (isSecretWorkspace) renderedDocuments += renderLinkedLocationsTree(tree);
       const secretLocked = isSecretWorkspace && !isSecretWorkspaceUnlocked();
       const workspaceDocuments = tabs.filter(function(tab) {
-        return !isTemporaryDocument(tab) && !tab.sourcePath && tab.workspaceId === workspace.id;
+        return !isTemporaryDocument(tab) && !isLinkedDocument(tab) && tab.workspaceId === workspace.id;
       });
       const folders = documentOrganization.folders.filter(function(folder) { return folder.workspaceId === workspace.id; });
       const matchingDocuments = workspaceDocuments.filter(documentMatchesSidebarSearch);
@@ -7016,7 +7026,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           ? (secretLocked ? 'lucide-shield' : 'lucide-shield-check')
           : (expanded ? 'lucide-folder-open' : 'lucide-folder'),
         depth: 0,
-        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !tab.sourcePath && tab.workspaceId === workspace.id; }),
+        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !isLinkedDocument(tab) && tab.workspaceId === workspace.id; }),
         expanded: expanded,
         meta: secretLocked ? 'Locked' : String(workspaceDocuments.length),
         locked: secretLocked,
@@ -7301,7 +7311,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }).concat(documentOrganization.folders.filter(function(folder) {
       return unlockedWorkspaceIds.has(folder.workspaceId);
     }));
-    if (typeof Neutralino !== 'undefined') {
+    if (hasDesktopFileAccess()) {
       items.push({
         get expanded() { return documentOrganization.ui.linkedWorkspaceExpanded !== false; },
         set expanded(value) { documentOrganization.ui.linkedWorkspaceExpanded = value; }
@@ -11139,7 +11149,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (_) {
       // Startup calls this before the workspace tab state is initialized.
     }
-    const linkedSourcePath = activeDocument && activeDocument.sourcePath ? activeDocument.sourcePath : '';
+    const linkedSourcePath = isLinkedDocument(activeDocument) ? activeDocument.sourcePath : '';
     const presentation = {
       saving: { icon: 'lucide lucide-refresh-cw', text: 'Saving...' },
       saved: { icon: 'lucide lucide-check', text: linkedSourcePath ? 'Draft saved · Ctrl+S updates original' : 'All changes saved' },
@@ -11396,6 +11406,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function openLinkedMarkdownDocument(content, title, sourcePath, options) {
+    if (!hasDesktopFileAccess()) return null;
     const settings = options || {};
     const normalizedPath = String(sourcePath || '').trim();
     const incomingContent = String(content == null ? '' : content);
@@ -11514,7 +11525,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function reloadLinkedDocument(tabId, options) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
-    if (!tab || !tab.sourcePath || typeof Neutralino === 'undefined') return false;
+    if (!isLinkedDocument(tab)) return false;
     const settings = options || {};
     let diskContent;
     try {
@@ -11611,6 +11622,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function addLinkedFolderPath(folderPath, options) {
+    if (!hasDesktopFileAccess()) return null;
     const normalized = normalizeLinkedSourcePath(folderPath);
     let location = (documentOrganization.linkedLocations || []).find(function(item) {
       return normalizeLinkedSourcePath(item.path) === normalized;
@@ -11646,6 +11658,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function nativeLinkMarkdownFiles() {
+    if (!hasDesktopFileAccess()) return 0;
     try {
       const paths = await Neutralino.os.showOpenDialog('Link Markdown files', {
         filters: [{ name: 'Markdown files (*.md, *.markdown)', extensions: ['md', 'markdown'] }],
@@ -11666,6 +11679,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function nativeLinkMarkdownFolder() {
+    if (!hasDesktopFileAccess()) return;
     try {
       const folderPath = await Neutralino.os.showFolderDialog('Link Markdown folder');
       if (folderPath) await addLinkedFolderPath(folderPath);
@@ -11676,13 +11690,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function revealLinkedSource(tab) {
-    if (!tab || !tab.sourcePath) return;
+    if (!isLinkedDocument(tab)) return;
     await Neutralino.os.open(getNativeParentPath(tab.sourcePath));
   }
 
   async function convertLinkedDocumentToVault(tabId, destination) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
-    if (!tab || !tab.sourcePath) return;
+    if (!isLinkedDocument(tab)) return;
     await ensureTabContent(tab);
     const previous = Object.assign({}, tab);
     const sourcePath = tab.sourcePath;
@@ -11762,7 +11776,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function refreshLinkedSourceMonitoring() {
-    if (!linkedSourceMonitoringReady || typeof Neutralino === 'undefined' || !Neutralino.filesystem.createWatcher) return;
+    if (!linkedSourceMonitoringReady || !hasDesktopFileAccess() || !Neutralino.filesystem.createWatcher) return;
     await stopLinkedSourceMonitoring();
     const targets = [];
     (documentOrganization.linkedLocations || []).forEach(function(location) {
@@ -11814,7 +11828,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function initializeLinkedSourceMonitoring() {
-    if (linkedSourceMonitoringReady || typeof Neutralino === 'undefined') return;
+    if (linkedSourceMonitoringReady || !hasDesktopFileAccess()) return;
     linkedSourceMonitoringReady = true;
     if (Neutralino.events && typeof Neutralino.events.on === 'function') {
       await Neutralino.events.on('watchFile', function(event) {
@@ -12363,7 +12377,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         fileIcon.setAttribute('aria-hidden', 'true');
       } else {
         fileIcon = document.createElement('i');
-        fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : (tab.sourcePath ? 'lucide-file-symlink' : 'lucide-file-text')) + ' tab-file-icon';
+        fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : (isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file-text')) + ' tab-file-icon';
         fileIcon.setAttribute('aria-hidden', 'true');
       }
 
@@ -13280,7 +13294,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const content = typeof tab.content === 'string' ? tab.content : '';
     const filename = getSafeDocumentFilename(tab.title, "md", "document.md");
 
-    if (typeof Neutralino !== 'undefined') {
+    if (hasDesktopFileAccess()) {
       try {
         const result = await chooseMarkdownSavePath(tab);
         if (result) {
@@ -24793,7 +24807,7 @@ ${selector} .arrowheadPath {
   });
 
   async function writeLinkedMarkdownSource(tab, content) {
-    if (!tab || !tab.sourcePath) return false;
+    if (!isLinkedDocument(tab)) return false;
     let diskContent = null;
     try {
       diskContent = await Neutralino.filesystem.readFile(tab.sourcePath);
@@ -24835,6 +24849,7 @@ ${selector} .arrowheadPath {
   }
 
   async function chooseMarkdownSavePath(tab) {
+    if (!hasDesktopFileAccess()) return null;
     const chosen = await Neutralino.os.showSaveDialog('Save Markdown File', {
       defaultPath: getSafeDocumentFilename(tab && tab.title, 'md', 'document.md'),
       filters: [
@@ -24864,7 +24879,7 @@ ${selector} .arrowheadPath {
 
   let nativeMarkdownSaveInProgress = false;
   async function nativeSaveMarkdown(options) {
-    if (nativeMarkdownSaveInProgress) return;
+    if (!hasDesktopFileAccess() || nativeMarkdownSaveInProgress) return;
     nativeMarkdownSaveInProgress = true;
     try {
       const settings = options || {};
@@ -25143,7 +25158,7 @@ ${selector} .arrowheadPath {
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
     if (blockShareSnapshotSourceAccess()) return;
-    if (typeof Neutralino !== 'undefined') {
+    if (hasDesktopFileAccess()) {
       nativeSaveMarkdown();
       return;
     }
@@ -29932,7 +29947,7 @@ ${selector} .arrowheadPath {
   document.addEventListener("keydown", function (e) {
     if (e.defaultPrevented) return;
     const isCmdOrCtrl = e.ctrlKey || e.metaKey;
-    const isDesktop = typeof Neutralino !== 'undefined';
+    const isDesktop = hasDesktopFileAccess();
     const key = e.key.toLowerCase();
 
     if (e.key === 'F3') {
@@ -30040,7 +30055,7 @@ ${selector} .arrowheadPath {
 
     if (isCmdOrCtrl && !e.shiftKey && !e.altKey && !e.isComposing && (key === 's' || e.code === 'KeyS')) {
       e.preventDefault();
-      if (typeof Neutralino !== 'undefined') nativeSaveMarkdown({ useLinkedSource: true });
+      if (hasDesktopFileAccess()) nativeSaveMarkdown({ useLinkedSource: true });
       else exportMd.click();
     }
     if (isCmdOrCtrl && key === 'c') {
