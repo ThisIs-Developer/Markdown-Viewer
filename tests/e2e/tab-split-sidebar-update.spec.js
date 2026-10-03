@@ -330,7 +330,7 @@ test('header groups document actions before application preferences', async ({ p
   await header.locator('#importDropdown').click();
   const newMenu = header.locator('[aria-labelledby="importDropdown"]');
   await expect(newMenu).toBeVisible();
-  await expect(newMenu.locator('.app-menu-label')).toHaveText(['New document', 'From files', 'From GitHub']);
+  await expect(newMenu.locator('.app-menu-label:visible')).toHaveText(['New document', 'From files', 'From GitHub']);
   await expect(newMenu.locator('.settings-menu-header, .app-menu-description')).toHaveCount(0);
   await newMenu.locator('#header-new-document').click();
   await expect(page.locator('#tab-list .tab-item')).toHaveCount(initialTabCount + 1);

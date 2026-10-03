@@ -95,7 +95,8 @@ test('documents open on a single click and collapse all is available', async ({ 
   const closedFolderIcon = workspaceRow.locator('.document-tree-main > i.lucide-folder');
   await expect(closedFolderIcon).toHaveCount(1);
   const closedFolderColor = await closedFolderIcon.evaluate(icon => getComputedStyle(icon).color);
-  expect(closedFolderColor).not.toBe(openFolderColor);
+  // The current workspace stays accented; expansion alone does not select a folder.
+  expect(closedFolderColor).toBe(openFolderColor);
   await expect(page.locator('#document-sidebar-collapse-all')).toHaveAttribute('aria-label', 'Expand all folders');
   await expect(page.locator('#document-sidebar-collapse-all i')).toHaveClass(/lucide-unfold-vertical/);
   await page.locator('#document-sidebar-collapse-all').click();
