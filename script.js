@@ -6846,6 +6846,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.querySelectorAll('.desktop-linked-command').forEach(function(element) {
       element.hidden = false;
     });
+    const importLabel = document.querySelector('#import-from-file .app-menu-label');
+    if (importLabel) importLabel.textContent = 'Import copies';
   }
 
   function documentMatchesSidebarSearch(tab) {
