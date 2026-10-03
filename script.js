@@ -4297,6 +4297,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       linkedLocations: [],
       ui: {
         filter: 'all',
+        linkedWorkspaceExpanded: true,
         collapsed: false,
         width: 288,
         lastWorkspaceId: DEFAULT_WORKSPACE_ID,
@@ -4367,6 +4368,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         path: path,
         name: String(location.name || '').trim().slice(0, 160) || path.split(/[/\\]/).filter(Boolean).pop() || 'Linked folder',
         expanded: location.expanded !== false,
+        collapsedFolderPaths: Array.from(new Set((Array.isArray(location.collapsedFolderPaths) ? location.collapsedFolderPaths : [])
+          .map(function(item) { return String(item || '').replace(/\\/g, '/').replace(/^\/+/, ''); })
+          .filter(Boolean))),
         excludedPaths: Array.from(new Set((Array.isArray(location.excludedPaths) ? location.excludedPaths : [])
           .map(function(item) { return String(item || '').replace(/\\/g, '/').replace(/^\/+/, ''); })
           .filter(Boolean))),
@@ -4390,6 +4394,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       linkedLocations: linkedLocations,
       ui: {
         filter: allowedFilters.has(ui.filter) ? ui.filter : 'all',
+        linkedWorkspaceExpanded: ui.linkedWorkspaceExpanded !== false,
         collapsed: ui.collapsed === true,
         width: Number.isFinite(width) ? Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width)) : 288,
         lastWorkspaceId: lastWorkspaceId,
@@ -4451,6 +4456,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           path: location.path,
           name: location.name,
           expanded: location.expanded !== false,
+          collapsedFolderPaths: Array.isArray(location.collapsedFolderPaths) ? location.collapsedFolderPaths.slice() : [],
           excludedPaths: Array.isArray(location.excludedPaths) ? location.excludedPaths.slice() : [],
           createdAt: location.createdAt,
           lastScanAt: location.lastScanAt || 0,
@@ -6606,6 +6612,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (options.favorite) row.classList.add('is-favorite');
     if (options.temporary) row.classList.add('document-tree-temporary');
     if (options.locked) row.classList.add('is-secret-locked');
+    if (options.currentLocation) row.classList.add('is-current-location');
     if (typeof options.expanded === 'boolean') row.setAttribute('aria-expanded', options.expanded ? 'true' : 'false');
     row.setAttribute('aria-label', options.ariaLabel || options.label);
 
@@ -6804,7 +6811,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getLinkedDocumentMeta(tab) {
     if (tab.sourceMissing) return 'Missing source';
     if (tab.sourceConflict) return 'Conflict';
-    return 'Linked · recovery in Vault';
+    return '';
   }
 
   function getLinkedLocationMenuActions(location) {
@@ -6821,38 +6828,39 @@ document.addEventListener("DOMContentLoaded", async function () {
       return !isTemporaryDocument(tab) && Boolean(tab.sourcePath);
     });
     const locations = Array.isArray(documentOrganization.linkedLocations) ? documentOrganization.linkedLocations : [];
-    if (!linkedTabs.length && !locations.length) return 0;
-
     let renderedDocuments = 0;
-    const sectionLabel = document.createElement('p');
-    sectionLabel.className = 'document-tree-section-label';
-    sectionLabel.textContent = 'Linked Locations';
-    tree.appendChild(sectionLabel);
+    const activeDocument = tabs.find(function(tab) { return tab.id === activeTabId; });
+    const workspaceExpanded = documentSidebarSearch ? true : documentOrganization.ui.linkedWorkspaceExpanded !== false;
+    const toggleWorkspace = function() {
+      documentOrganization.ui.linkedWorkspaceExpanded = !workspaceExpanded;
+      saveDocumentOrganization();
+      renderDocumentSidebar();
+    };
+    tree.appendChild(createDocumentTreeRow({
+      type: 'linked-workspace',
+      id: 'linked-workspace',
+      label: 'Linked Workspace',
+      ariaLabel: 'Linked Workspace, original files remain on disk',
+      icon: 'lucide-link-2',
+      depth: 0,
+      expanded: workspaceExpanded,
+      currentLocation: Boolean(activeDocument && activeDocument.sourcePath),
+      meta: String(linkedTabs.length),
+      onToggle: toggleWorkspace,
+      onActivate: toggleWorkspace
+    }));
+    const workspaceGroup = document.createElement('div');
+    workspaceGroup.className = 'document-tree-group document-tree-group--workspace';
+    workspaceGroup.setAttribute('role', 'group');
+    workspaceGroup.hidden = !workspaceExpanded;
+    tree.appendChild(workspaceGroup);
 
     const individualTabs = linkedTabs.filter(function(tab) { return !tab.linkedRootId; })
       .filter(documentMatchesSidebarSearch)
       .sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
-    if (individualTabs.length) {
-      const individualRow = createDocumentTreeRow({
-        type: 'linked-location',
-        id: 'linked-files',
-        label: 'Linked files',
-        ariaLabel: 'Linked files, original files remain on disk',
-        icon: 'lucide-link-2',
-        depth: 0,
-        expanded: true,
-        meta: String(individualTabs.length),
-        onToggle: function() {}
-      });
-      tree.appendChild(individualRow);
-      const group = document.createElement('div');
-      group.className = 'document-tree-group document-tree-group--workspace';
-      group.setAttribute('role', 'group');
-      individualTabs.forEach(function(tab) {
-        if (appendDocumentTreeItem(group, tab, 1, getLinkedDocumentMeta(tab))) renderedDocuments++;
-      });
-      tree.appendChild(group);
-    }
+    individualTabs.forEach(function(tab) {
+      if (appendDocumentTreeItem(workspaceGroup, tab, 1, getLinkedDocumentMeta(tab))) renderedDocuments++;
+    });
 
     locations.slice().sort(function(left, right) {
       return (left.name || '').localeCompare(right.name || '');
@@ -6862,31 +6870,29 @@ document.addEventListener("DOMContentLoaded", async function () {
       const locationMatches = !documentSidebarSearch || (location.name + ' ' + location.path).toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase());
       if (documentSidebarSearch && !locationMatches && !matchingTabs.length) return;
       const expanded = documentSidebarSearch ? true : location.expanded !== false;
+      const toggleLocation = function() {
+        location.expanded = !expanded;
+        saveDocumentOrganization();
+        renderDocumentSidebar();
+      };
       const rootRow = createDocumentTreeRow({
         type: 'linked-location',
         id: location.id,
         label: location.name,
         ariaLabel: 'Linked folder, ' + location.path + (location.unavailable ? ', unavailable' : ''),
         icon: location.unavailable ? 'lucide-triangle-alert' : 'lucide-folder-symlink',
-        depth: 0,
+        depth: 1,
+        currentLocation: Boolean(activeDocument && activeDocument.linkedRootId === location.id),
         expanded: expanded,
         meta: location.unavailable ? 'Unavailable' : String(locationTabs.length),
         menuActions: getLinkedLocationMenuActions(location),
-        onToggle: function() {
-          location.expanded = !expanded;
-          saveDocumentOrganization();
-          renderDocumentSidebar();
-        },
-        onActivate: function() {
-          location.expanded = true;
-          saveDocumentOrganization();
-          renderDocumentSidebar();
-        }
+        onToggle: toggleLocation,
+        onActivate: toggleLocation
       });
-      tree.appendChild(rootRow);
+      workspaceGroup.appendChild(rootRow);
 
       const rootGroup = document.createElement('div');
-      rootGroup.className = 'document-tree-group document-tree-group--workspace';
+      rootGroup.className = 'document-tree-group document-tree-group--folder';
       rootGroup.setAttribute('role', 'group');
       rootGroup.hidden = !expanded;
       const rootNode = { folders: new Map(), documents: [] };
@@ -6904,20 +6910,33 @@ document.addEventListener("DOMContentLoaded", async function () {
         Array.from(node.folders.entries()).sort(function(left, right) { return left[0].localeCompare(right[0]); }).forEach(function(entry) {
           const folderName = entry[0];
           const child = entry[1];
+          const folderPath = pathParts.concat(folderName).join('/');
+          const collapsedPaths = location.collapsedFolderPaths || [];
+          const folderExpanded = documentSidebarSearch ? true : !collapsedPaths.includes(folderPath);
+          const toggleFolder = function() {
+            const nextCollapsed = new Set(location.collapsedFolderPaths || []);
+            if (folderExpanded) nextCollapsed.add(folderPath);
+            else nextCollapsed.delete(folderPath);
+            location.collapsedFolderPaths = Array.from(nextCollapsed);
+            saveDocumentOrganization();
+            renderDocumentSidebar();
+          };
           const row = createDocumentTreeRow({
             type: 'linked-virtual-folder',
-            id: location.id + ':' + pathParts.concat(folderName).join('/'),
+            id: location.id + ':' + folderPath,
             label: folderName,
             icon: 'lucide-folder-symlink',
             depth: depth,
-            expanded: true,
+            expanded: folderExpanded,
             meta: '',
-            onToggle: function() {}
+            onToggle: toggleFolder,
+            onActivate: toggleFolder
           });
           container.appendChild(row);
           const childGroup = document.createElement('div');
           childGroup.className = 'document-tree-group document-tree-group--folder';
           childGroup.setAttribute('role', 'group');
+          childGroup.hidden = !folderExpanded;
           appendVirtualNode(child, childGroup, depth + 1, pathParts.concat(folderName));
           container.appendChild(childGroup);
         });
@@ -6925,8 +6944,8 @@ document.addEventListener("DOMContentLoaded", async function () {
           if (appendDocumentTreeItem(container, tab, depth, getLinkedDocumentMeta(tab))) renderedDocuments++;
         });
       };
-      appendVirtualNode(rootNode, rootGroup, 1, []);
-      tree.appendChild(rootGroup);
+      appendVirtualNode(rootNode, rootGroup, 2, []);
+      workspaceGroup.appendChild(rootGroup);
     });
     return renderedDocuments;
   }
@@ -6948,10 +6967,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     }
 
-    renderedDocuments += renderLinkedLocationsTree(tree);
-
     documentOrganization.workspaces.forEach(function(workspace) {
       const isSecretWorkspace = workspace.id === SECRET_WORKSPACE_ID;
+      if (isSecretWorkspace) renderedDocuments += renderLinkedLocationsTree(tree);
       const secretLocked = isSecretWorkspace && !isSecretWorkspaceUnlocked();
       const workspaceDocuments = tabs.filter(function(tab) {
         return !isTemporaryDocument(tab) && !tab.sourcePath && tab.workspaceId === workspace.id;
@@ -6985,6 +7003,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           ? (secretLocked ? 'lucide-shield' : 'lucide-shield-check')
           : (expanded ? 'lucide-folder-open' : 'lucide-folder'),
         depth: 0,
+        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !tab.sourcePath && tab.workspaceId === workspace.id; }),
         expanded: expanded,
         meta: secretLocked ? 'Locked' : String(workspaceDocuments.length),
         locked: secretLocked,
@@ -7264,11 +7283,38 @@ document.addEventListener("DOMContentLoaded", async function () {
     const unlockedWorkspaceIds = new Set(documentOrganization.workspaces.filter(function(workspace) {
       return workspace.id !== SECRET_WORKSPACE_ID || isSecretWorkspaceUnlocked();
     }).map(function(workspace) { return workspace.id; }));
-    return documentOrganization.workspaces.filter(function(workspace) {
+    const items = documentOrganization.workspaces.filter(function(workspace) {
       return unlockedWorkspaceIds.has(workspace.id);
     }).concat(documentOrganization.folders.filter(function(folder) {
       return unlockedWorkspaceIds.has(folder.workspaceId);
     }));
+    if (typeof Neutralino !== 'undefined') {
+      items.push({
+        get expanded() { return documentOrganization.ui.linkedWorkspaceExpanded !== false; },
+        set expanded(value) { documentOrganization.ui.linkedWorkspaceExpanded = value; }
+      });
+      (documentOrganization.linkedLocations || []).forEach(function(location) {
+        items.push(location);
+        const folderPaths = new Set(location.collapsedFolderPaths || []);
+        tabs.filter(function(tab) { return tab.sourcePath && tab.linkedRootId === location.id; }).forEach(function(tab) {
+          const parts = normalizeLinkedRelativePath(tab.sourceRelativePath).split('/').filter(Boolean);
+          parts.pop();
+          parts.forEach(function(_, index) { folderPaths.add(parts.slice(0, index + 1).join('/')); });
+        });
+        folderPaths.forEach(function(folderPath) {
+          items.push({
+            get expanded() { return !(location.collapsedFolderPaths || []).includes(folderPath); },
+            set expanded(value) {
+              const collapsed = new Set(location.collapsedFolderPaths || []);
+              if (value) collapsed.delete(folderPath);
+              else collapsed.add(folderPath);
+              location.collapsedFolderPaths = Array.from(collapsed);
+            }
+          });
+        });
+      });
+    }
+    return items;
   }
 
   function updateTreeExpansionButton(button, willExpand, label, enabled) {
