@@ -5771,6 +5771,30 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.querySelectorAll('.document-menu-dropdown').forEach(function(menu) { menu.remove(); });
   }
 
+  let linkedBackgroundUIRefreshPending = false;
+
+  function linkedSidebarState() {
+    return JSON.stringify([
+      tabs.filter(function(tab) { return tab.sourcePath; }).map(function(tab) {
+        return [tab.id, tab.title, tab.sourcePath, Boolean(tab.sourceMissing), Boolean(tab.sourceConflict),
+          tab.workspaceId, tab.folderId, tab.linkedRootId, tab.sourceRelativePath, tab.isOpen, tab.favorite];
+      }),
+      (documentOrganization.linkedLocations || []).map(function(location) {
+        return [location.id, location.name, location.path, Boolean(location.unavailable)];
+      })
+    ]);
+  }
+
+  function requestLinkedBackgroundUIRefresh() {
+    if (document.querySelector('.document-menu-dropdown.open, .tab-menu-dropdown.open, [data-tab-context-menu="true"]')) {
+      linkedBackgroundUIRefreshPending = true;
+      return;
+    }
+    linkedBackgroundUIRefreshPending = false;
+    renderTabBar(tabs, activeTabId);
+    renderDocumentSidebar();
+  }
+
   function closeDocumentSidebarMenus() {
     document.querySelectorAll('.document-menu-btn.open').forEach(function(button) {
       button.classList.remove('open');
@@ -5778,6 +5802,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
     document.querySelectorAll('.document-menu-dropdown.open').forEach(function(menu) { menu.classList.remove('open'); });
     document.querySelectorAll('.document-menu-context').forEach(function(menu) { menu.remove(); });
+    if (linkedBackgroundUIRefreshPending) queueMicrotask(requestLinkedBackgroundUIRefresh);
   }
 
   function openDocumentMenu(button, menu, position, returnFocus, options) {
@@ -11421,7 +11446,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       await ensureTabContent(tab);
       const draftHash = await hashLinkedSourceContent(tab.content);
       const hasLocalDraft = Boolean(tab.sourceContentHash && draftHash && draftHash !== tab.sourceContentHash);
-      if (!hasLocalDraft) {
+      if (!hasLocalDraft && tab.content !== incomingContent) {
         tab.content = incomingContent;
         tab.contentLoaded = true;
         tab._persistedContent = undefined;
@@ -11438,7 +11463,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.sourceConflict = hasLocalDraft && Boolean(incomingHash && incomingHash !== tab.sourceContentHash);
       tab.title = title || tab.title;
       if (settings.open !== false) tab.isOpen = true;
-      tab.lastOpenedAt = Date.now();
+      if (settings.open !== false) tab.lastOpenedAt = Date.now();
     } else {
       tab = createTab(incomingContent, title || 'Untitled', 'split', { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
       tab.sourcePath = normalizedPath;
@@ -11460,8 +11485,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         markdownEditor.value = tab.content;
         renderMarkdown();
       }
-      renderTabBar(tabs, activeTabId);
-      renderDocumentSidebar();
+      if (!settings.deferUI) {
+        renderTabBar(tabs, activeTabId);
+        renderDocumentSidebar();
+      }
     } else if (settings.activate === false) {
       activeTabId = tab.id;
       saveActiveTabId(tab.id);
@@ -11527,6 +11554,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!isLinkedDocument(tab)) return false;
     const settings = options || {};
+    const previousSidebarState = linkedSidebarState();
+    function refreshUI() {
+      if (settings.background) {
+        if (previousSidebarState !== linkedSidebarState()) requestLinkedBackgroundUIRefresh();
+      } else renderDocumentSidebar();
+    }
     let diskContent;
     try {
       diskContent = await Neutralino.filesystem.readFile(tab.sourcePath);
@@ -11534,7 +11567,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.sourceMissing = true;
       tab.sourceConflict = false;
       saveTabsToStorage(tabs, [tab.id]);
-      renderDocumentSidebar();
+      refreshUI();
       return false;
     }
     await ensureTabContent(tab);
@@ -11546,7 +11579,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.sourceConflict = true;
       tab.sourceMissing = false;
       saveTabsToStorage(tabs, [tab.id]);
-      renderDocumentSidebar();
+      refreshUI();
       showAppToast('The original changed on disk while a local draft exists. The draft was kept.', { tone: 'info', title: 'Linked file conflict' });
       return false;
     }
@@ -11567,8 +11600,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       markdownEditor.value = tab.content;
       renderMarkdown();
     }
-    renderTabBar(tabs, activeTabId);
-    renderDocumentSidebar();
+    if (!settings.background) renderTabBar(tabs, activeTabId);
+    refreshUI();
     return true;
   }
 
@@ -11576,6 +11609,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     const location = getLinkedLocation(locationId);
     if (!location) return 0;
     const settings = options || {};
+    const previousSidebarState = linkedSidebarState();
+    function refreshUI() {
+      if (settings.background) {
+        if (previousSidebarState !== linkedSidebarState()) requestLinkedBackgroundUIRefresh();
+      } else {
+        renderTabBar(tabs, activeTabId);
+        renderDocumentSidebar();
+      }
+    }
     let files;
     try {
       files = await collectMarkdownFilesFromFolder(location.path);
@@ -11583,7 +11625,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (error) {
       location.unavailable = true;
       saveDocumentOrganization();
-      renderDocumentSidebar();
+      refreshUI();
       if (settings.notify) showAppToast('The linked folder is unavailable: ' + location.path, { tone: 'error', title: 'Folder scan failed' });
       return 0;
     }
@@ -11602,6 +11644,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         await openLinkedMarkdownDocument(content, getNativePathName(file.path).replace(/\.(md|markdown)$/i, ''), file.path, {
           activate: false,
           open: false,
+          deferUI: true,
           linkedRootId: location.id,
           sourceRelativePath: file.relativePath
         });
@@ -11616,7 +11659,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     location.lastScanAt = Date.now();
     saveDocumentOrganization();
     saveTabsToStorage(tabs);
-    renderDocumentSidebar();
+    refreshUI();
     if (settings.notify) showAppToast('Linked folder scanned. ' + added + ' new Markdown file' + (added === 1 ? '' : 's') + ' found.', { tone: 'success', title: location.name });
     return added;
   }
@@ -11816,12 +11859,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     linkedSourceRefreshTimers.set(key, setTimeout(async function() {
       linkedSourceRefreshTimers.delete(key);
       if (watcher.locationId) {
-        await reconcileLinkedLocation(watcher.locationId);
+        await reconcileLinkedLocation(watcher.locationId, { background: true });
         await refreshLinkedSourceMonitoring();
       }
       else {
         for (const tab of tabs.filter(function(item) { return item.sourcePath && !item.linkedRootId && normalizeLinkedSourcePath(getNativeParentPath(item.sourcePath)) === normalizeLinkedSourcePath(watcher.path); })) {
-          await reloadLinkedDocument(tab.id);
+          await reloadLinkedDocument(tab.id, { background: true });
         }
       }
     }, 350));
