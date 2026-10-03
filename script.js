@@ -5576,7 +5576,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization.folders.filter(function(folder) {
         return folder.workspaceId === workspace.id;
       }).sort(function(left, right) {
-        return getFolderPath(left.id).localeCompare(getFolderPath(right.id));
+        return getFolderPath(left.id).localeCompare(getFolderPath(right.id), undefined, { numeric: true });
       }).forEach(function(folder) {
         const option = document.createElement('option');
         option.value = workspace.id + '|' + folder.id;
@@ -6779,6 +6779,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     return haystack.includes(documentSidebarSearch.toLocaleLowerCase());
   }
 
+  function compareNatural(left, right) {
+    return String(left || '').localeCompare(String(right || ''), undefined, { numeric: true });
+  }
+
   function renderFlatDocumentView(tree, filter) {
     let documents = tabs.filter(function(tab) {
       if (isTemporaryDocument(tab)) return false;
@@ -6788,7 +6792,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (filter === 'recent') {
       documents = documents.sort(function(left, right) { return getDocumentActivityTime(right) - getDocumentActivityTime(left); }).slice(0, 30);
     } else {
-      documents = documents.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
+      documents = documents.sort(function(left, right) { return compareNatural(left.title, right.title); });
     }
     let renderedDocuments = 0;
     documents.forEach(function(tab) {
@@ -7015,7 +7019,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       workspaceGroup.hidden = !expanded;
       attachDocumentDropTarget(workspaceGroup, { workspaceId: workspace.id, folderId: null });
 
-      const sortedFolders = folders.sort(function(left, right) { return left.createdAt - right.createdAt || left.name.localeCompare(right.name); });
+      const sortedFolders = folders.sort(function(left, right) { return left.createdAt - right.createdAt || compareNatural(left.name, right.name); });
       const foldersByParent = new Map();
       sortedFolders.forEach(function(folder) {
         const parentKey = folder.parentFolderId || null;
@@ -7069,7 +7073,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         (foldersByParent.get(folder.id) || []).forEach(function(child) {
           appendFolderBranch(child, folderGroup, depth + 1);
         });
-        folderDocuments.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); }).forEach(function(tab) {
+        folderDocuments.sort(function(left, right) { return compareNatural(left.title, right.title); }).forEach(function(tab) {
           if (appendDocumentTreeItem(folderGroup, tab, depth + 1)) renderedDocuments++;
         });
         container.appendChild(folderGroup);
@@ -7079,7 +7083,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
 
       (matchingDocumentsByFolder.get(null) || []).sort(function(left, right) {
-        return (left.title || '').localeCompare(right.title || '');
+        return compareNatural(left.title, right.title);
       }).forEach(function(tab) {
         if (appendDocumentTreeItem(workspaceGroup, tab, 1)) renderedDocuments++;
       });
@@ -12904,6 +12908,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (_) {
       return;
     }
+    closeSlashCommandMenu();
     tab.isOpen = true;
     const previousActiveTabId = activeTabId;
     const swapSplitPanes = tabId === secondarySplitTabId;
@@ -12957,6 +12962,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function newTab(content, title, location) {
+    closeSlashCommandMenu();
     if (content === undefined) content = '';
     const targetLocation = location || (documentOrganization ? getPreferredDocumentLocation() : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
     if (targetLocation.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
@@ -18543,6 +18549,285 @@ ${selector} .arrowheadPath {
     return true;
   }
 
+  const SLASH_COMMANDS = Object.freeze([
+    { id: 'paragraph', label: 'Paragraph', description: 'Continue with plain text', icon: 'lucide-pilcrow', keywords: 'text normal body', insert: '' },
+    { id: 'heading-1', label: 'Heading 1', description: 'Large section heading', textIcon: 'H1', keywords: 'title h1', insert: '# ' },
+    { id: 'heading-2', label: 'Heading 2', description: 'Medium section heading', textIcon: 'H2', keywords: 'subtitle h2', insert: '## ' },
+    { id: 'heading-3', label: 'Heading 3', description: 'Small section heading', textIcon: 'H3', keywords: 'subtitle h3', insert: '### ' },
+    { id: 'heading-4', label: 'Heading 4', description: 'Fourth-level heading', textIcon: 'H4', keywords: 'subtitle h4', insert: '#### ' },
+    { id: 'heading-5', label: 'Heading 5', description: 'Fifth-level heading', textIcon: 'H5', keywords: 'subtitle h5', insert: '##### ' },
+    { id: 'heading-6', label: 'Heading 6', description: 'Sixth-level heading', textIcon: 'H6', keywords: 'subtitle h6', insert: '###### ' },
+    { id: 'bulleted-list', label: 'Bulleted list', description: 'Create an unordered list', icon: 'lucide-list', keywords: 'unordered bullet', insert: '- ' },
+    { id: 'numbered-list', label: 'Numbered list', description: 'Create an ordered list', icon: 'lucide-list-ordered', keywords: 'ordered number', insert: '1. ' },
+    { id: 'task-list', label: 'Task list', description: 'Create a checklist item', icon: 'lucide-check-check', keywords: 'todo checkbox checklist', insert: '- [ ] ' },
+    { id: 'blockquote', label: 'Blockquote', description: 'Insert a quoted paragraph', icon: 'lucide-quote', keywords: 'quote citation', insert: '> ' },
+    { id: 'code-block', label: 'Code block', description: 'Insert a fenced code block', icon: 'lucide-square-code', keywords: 'fence programming', insert: '```\ncode\n```\n', select: [4, 8] },
+    { id: 'horizontal-rule', label: 'Horizontal rule', description: 'Separate sections', icon: 'lucide-minus', keywords: 'divider separator', insert: '---\n' },
+    { id: 'link', label: 'Link', description: 'Insert a Markdown link', icon: 'lucide-link-2', keywords: 'url hyperlink', insert: '[text](https://example.com)', select: [1, 5] },
+    { id: 'image', label: 'Image or video', description: 'Upload media or use a URL', icon: 'lucide-image', keywords: 'photo picture media upload url', action: 'image' },
+    { id: 'table', label: 'Table', description: 'Choose columns and rows', icon: 'lucide-grid-2x2', keywords: 'columns rows grid', action: 'table' },
+    { id: 'alert', label: 'Alert', description: 'Choose Note, Tip, Important, Warning, or Caution', icon: 'lucide-badge-alert', keywords: 'callout note tip important warning caution', action: 'alert' },
+    { id: 'math', label: 'Math block', description: 'Insert display math', icon: 'lucide-braces', keywords: 'latex equation', insert: '$$\nformula\n$$\n', select: [3, 10] },
+    { id: 'diagram', label: 'Diagram', description: 'Choose a diagram or visualization', icon: 'lucide-workflow', keywords: 'mermaid plantuml graphviz d2 markmap vega wavedrom map chart', action: 'diagram' },
+    { id: 'terminal-block', label: 'Terminal block', description: 'Insert a shell command block', icon: 'lucide-square-terminal', keywords: 'bash shell command console', insert: '```bash\nnpm run dev\n```\n', select: [8, 19] },
+    { id: 'date', label: 'Date and time', description: 'Insert the current date and time', icon: 'lucide-clock-3', keywords: 'today timestamp time', build: function() { return new Date().toLocaleString(); } }
+  ]);
+  let slashCommandState = null;
+  let slashCommandMenu = null;
+  let slashCommandList = null;
+  const slashComposingEditors = new WeakSet();
+
+  function ensureSlashCommandMenu() {
+    if (slashCommandMenu) return slashCommandMenu;
+    slashCommandMenu = document.createElement('div');
+    slashCommandMenu.id = 'slash-command-menu';
+    slashCommandMenu.className = 'slash-command-menu';
+    slashCommandMenu.hidden = true;
+    const header = document.createElement('div');
+    header.className = 'slash-command-header';
+    header.textContent = 'Insert block';
+    slashCommandList = document.createElement('div');
+    slashCommandList.id = 'slash-command-list';
+    slashCommandList.className = 'slash-command-list';
+    slashCommandList.setAttribute('role', 'listbox');
+    slashCommandList.setAttribute('aria-label', 'Markdown commands');
+    slashCommandMenu.append(header, slashCommandList);
+    slashCommandMenu.addEventListener('mousedown', function(event) { event.preventDefault(); });
+    document.body.appendChild(slashCommandMenu);
+    return slashCommandMenu;
+  }
+
+  function getSlashCommandMatch(editor) {
+    if (!editor || editor.readOnly || editor.selectionStart !== editor.selectionEnd) return null;
+    const caret = editor.selectionStart;
+    const beforeCaret = editor.value.slice(0, caret);
+    const currentLine = beforeCaret.slice(beforeCaret.lastIndexOf('\n') + 1);
+    const match = currentLine.match(/^\/([^\s\/]*)$/);
+    if (!match) return null;
+    return { start: caret - match[1].length - 1, end: caret, query: match[1].trim().toLowerCase() };
+  }
+
+  function getSlashCommandMatches(query) {
+    const terms = String(query || '').split(/\s+/).filter(Boolean);
+    return SLASH_COMMANDS.filter(function(command) {
+      const haystack = (command.label + ' ' + command.keywords).toLowerCase();
+      return terms.every(function(term) { return haystack.includes(term); });
+    });
+  }
+
+  function getSlashMenuCaretPosition(editor) {
+    const style = window.getComputedStyle(editor);
+    const mirror = document.createElement('div');
+    [
+      'boxSizing', 'width', 'fontFamily', 'fontSize', 'fontStyle', 'fontWeight',
+      'letterSpacing', 'lineHeight', 'paddingTop', 'paddingRight', 'paddingBottom',
+      'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth',
+      'borderLeftWidth', 'direction', 'textAlign', 'textIndent', 'textTransform', 'tabSize'
+    ].forEach(function(property) { mirror.style[property] = style[property]; });
+    mirror.className = 'slash-command-caret-mirror';
+    mirror.style.whiteSpace = 'pre-wrap';
+    mirror.style.overflowWrap = 'break-word';
+    mirror.textContent = editor.value.slice(0, editor.selectionStart);
+    const marker = document.createElement('span');
+    marker.textContent = '\u200b';
+    mirror.appendChild(marker);
+    document.body.appendChild(mirror);
+    const editorRect = editor.getBoundingClientRect();
+    const position = {
+      left: editorRect.left + marker.offsetLeft - editor.scrollLeft,
+      top: editorRect.top + marker.offsetTop - editor.scrollTop,
+      lineHeight: parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.4 || 20
+    };
+    mirror.remove();
+    return position;
+  }
+
+  function positionSlashCommandMenu(editor) {
+    if (!editor || !slashCommandMenu || slashCommandMenu.hidden) return;
+    const caret = getSlashMenuCaretPosition(editor);
+    const margin = 8;
+    const width = Math.min(340, window.innerWidth - margin * 2);
+    slashCommandMenu.style.width = width + 'px';
+    const preferredLeft = window.getComputedStyle(editor).direction === 'rtl' ? caret.left - width : caret.left;
+    const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - width - margin));
+    let top = caret.top + caret.lineHeight + 6;
+    const menuHeight = slashCommandMenu.offsetHeight || 360;
+    if (top + menuHeight > window.innerHeight - margin) top = Math.max(margin, caret.top - menuHeight - 6);
+    slashCommandMenu.style.left = left + 'px';
+    slashCommandMenu.style.top = top + 'px';
+  }
+
+  function closeSlashCommandMenu(options) {
+    if (!slashCommandState) return;
+    const editor = slashCommandState.editor;
+    slashCommandState = null;
+    if (slashCommandMenu) slashCommandMenu.hidden = true;
+    if (editor) {
+      editor.removeAttribute('aria-controls');
+      editor.removeAttribute('aria-activedescendant');
+      editor.setAttribute('aria-expanded', 'false');
+      if (options && options.focus) editor.focus();
+    }
+  }
+
+  function selectSlashCommand(index) {
+    if (!slashCommandState || !slashCommandState.commands.length) return;
+    const count = slashCommandState.commands.length;
+    slashCommandState.activeIndex = (index + count) % count;
+    Array.from(slashCommandList.querySelectorAll('.slash-command-item')).forEach(function(item, itemIndex) {
+      const selected = itemIndex === slashCommandState.activeIndex;
+      item.classList.toggle('is-active', selected);
+      item.setAttribute('aria-selected', String(selected));
+      if (selected) {
+        slashCommandState.editor.setAttribute('aria-activedescendant', item.id);
+        item.scrollIntoView({ block: 'nearest' });
+      }
+    });
+  }
+
+  function executeSlashCommand(command) {
+    if (!slashCommandState || !command) return;
+    const state = slashCommandState;
+    const match = getSlashCommandMatch(state.editor);
+    if (document.activeElement !== state.editor || !isMarkdownEditorEditable(state.editor) ||
+        !match || match.start !== state.start || match.end !== state.end) {
+      closeSlashCommandMenu();
+      return;
+    }
+    if (command.action) {
+      closeSlashCommandMenu();
+      replaceMarkdownEditorRange(state.editor, state.start, state.end, '', state.start, state.start);
+      requestAnimationFrame(function() {
+        if (command.action === 'table') openTableModal(state.editor);
+        else if (command.action === 'alert') openAlertModal(state.editor);
+        else if (command.action === 'diagram') void openDiagramModal(null, state.editor);
+        else if (command.action === 'image') insertMarkdownImage(state.editor);
+      });
+      return;
+    }
+    const replacement = typeof command.build === 'function' ? command.build() : command.insert;
+    const selection = command.select || [String(replacement).length, String(replacement).length];
+    closeSlashCommandMenu();
+    replaceMarkdownEditorRange(
+      state.editor,
+      state.start,
+      state.end,
+      replacement,
+      state.start + selection[0],
+      state.start + selection[1]
+    );
+  }
+
+  function renderSlashCommandMenu() {
+    if (!slashCommandState) return;
+    ensureSlashCommandMenu();
+    const commands = slashCommandState.commands;
+    slashCommandList.textContent = '';
+    if (!commands.length) {
+      slashCommandState.editor.removeAttribute('aria-activedescendant');
+      const empty = document.createElement('div');
+      empty.className = 'slash-command-empty';
+      empty.textContent = 'No matching commands';
+      slashCommandList.appendChild(empty);
+    } else {
+      commands.forEach(function(command, index) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.id = 'slash-command-' + command.id;
+        item.className = 'slash-command-item';
+        item.tabIndex = -1;
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', 'false');
+        item.innerHTML = '<span class="slash-command-icon">' + (command.textIcon
+          ? '<span class="slash-command-text-icon" aria-hidden="true"></span>'
+          : '<i class="lucide ' + command.icon + '" aria-hidden="true"></i>') + '</span>' +
+          '<span class="slash-command-copy"><strong></strong><small></small></span>';
+        const textIcon = item.querySelector('.slash-command-text-icon');
+        if (textIcon) textIcon.textContent = command.textIcon;
+        item.querySelector('strong').textContent = command.label;
+        item.querySelector('small').textContent = command.description;
+        item.addEventListener('mouseenter', function() { selectSlashCommand(index); });
+        item.addEventListener('click', function() { executeSlashCommand(command); });
+        slashCommandList.appendChild(item);
+      });
+    }
+    slashCommandMenu.hidden = false;
+    slashCommandState.editor.setAttribute('aria-controls', slashCommandList.id);
+    slashCommandState.editor.setAttribute('aria-expanded', 'true');
+    selectSlashCommand(Math.min(slashCommandState.activeIndex, Math.max(0, commands.length - 1)));
+    requestAnimationFrame(function() {
+      if (slashCommandState) positionSlashCommandMenu(slashCommandState.editor);
+    });
+  }
+
+  function updateSlashCommandMenu(editor) {
+    if (document.activeElement !== editor || slashComposingEditors.has(editor) || !isMarkdownEditorEditable(editor)) {
+      closeSlashCommandMenu();
+      return;
+    }
+    const match = getSlashCommandMatch(editor);
+    if (!match) {
+      if (slashCommandState && slashCommandState.editor === editor) closeSlashCommandMenu();
+      return;
+    }
+    slashCommandState = {
+      editor: editor,
+      start: match.start,
+      end: match.end,
+      commands: getSlashCommandMatches(match.query),
+      activeIndex: slashCommandState && slashCommandState.editor === editor ? slashCommandState.activeIndex : 0
+    };
+    renderSlashCommandMenu();
+  }
+
+  function handleSlashCommandKeydown(event) {
+    if (!slashCommandState || slashCommandState.editor !== event.currentTarget) return;
+    if (event.isComposing || event.keyCode === 229 || slashComposingEditors.has(event.currentTarget)) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      selectSlashCommand(slashCommandState.activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Enter' && slashCommandState.commands.length) {
+      event.preventDefault();
+      executeSlashCommand(slashCommandState.commands[slashCommandState.activeIndex]);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSlashCommandMenu({ focus: true });
+    }
+  }
+
+  function initSlashCommandMenu() {
+    ensureSlashCommandMenu();
+    [markdownEditor, documentSplitEditor].forEach(function(editor) {
+      if (!editor) return;
+      editor.setAttribute('aria-haspopup', 'listbox');
+      editor.setAttribute('aria-expanded', 'false');
+      editor.addEventListener('input', function() { updateSlashCommandMenu(editor); });
+      editor.addEventListener('click', function() { updateSlashCommandMenu(editor); });
+      editor.addEventListener('keydown', handleSlashCommandKeydown);
+      editor.addEventListener('compositionstart', function() {
+        slashComposingEditors.add(editor);
+        if (slashCommandState && slashCommandState.editor === editor) closeSlashCommandMenu();
+      });
+      editor.addEventListener('compositionend', function() {
+        slashComposingEditors.delete(editor);
+        updateSlashCommandMenu(editor);
+      });
+      editor.addEventListener('blur', function() {
+        if (slashCommandState && slashCommandState.editor === editor) closeSlashCommandMenu();
+      });
+      editor.addEventListener('scroll', function() {
+        if (slashCommandState && slashCommandState.editor === editor) positionSlashCommandMenu(editor);
+      });
+    });
+    document.addEventListener('pointerdown', function(event) {
+      if (!slashCommandState || slashCommandMenu.contains(event.target) || event.target === slashCommandState.editor) return;
+      closeSlashCommandMenu();
+    });
+    window.addEventListener('resize', function() {
+      if (slashCommandState) positionSlashCommandMenu(slashCommandState.editor);
+    });
+  }
+
   function transformSelectionOrCurrentLine(transformer) {
     let start = markdownEditor.selectionStart;
     let end = markdownEditor.selectionEnd;
@@ -19120,15 +19405,16 @@ ${selector} .arrowheadPath {
     }, 1200);
   }
 
-  function openTableModal() {
+  function openTableModal(editorOverride) {
+    const editor = editorOverride || markdownEditor;
     const modal = document.getElementById('table-modal');
     const columnInput = document.getElementById('table-modal-columns');
     const rowInput = document.getElementById('table-modal-rows');
     const confirmBtn = document.getElementById('table-modal-insert');
     const cancelBtn = document.getElementById('table-modal-cancel');
     if (!modal || !columnInput || !rowInput || !confirmBtn || !cancelBtn) return;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
     columnInput.value = '3';
     rowInput.value = '3';
     modal.style.display = 'flex';
@@ -19141,7 +19427,7 @@ ${selector} .arrowheadPath {
       modal.style.display = 'none';
       modal.setAttribute('aria-hidden', 'true');
       cleanup();
-      insertMarkdownBlock(table, start, end);
+      insertMarkdownBlock(table, start, end, editor);
     }
 
     function closeModal() {
@@ -19502,15 +19788,16 @@ ${selector} .arrowheadPath {
     requestAnimationFrame(() => searchInput.focus());
   }
 
-  function openAlertModal() {
+  function openAlertModal(editorOverride) {
+    const editor = editorOverride || markdownEditor;
     const modal = document.getElementById('alert-modal');
     const grid = document.getElementById('alert-modal-grid');
     const confirmBtn = document.getElementById('alert-modal-insert');
     const cancelBtn = document.getElementById('alert-modal-cancel');
     const closeBtn = document.getElementById('alert-modal-close');
     if (!modal || !grid || !confirmBtn || !cancelBtn || !closeBtn) return;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
     // PERF-007: Clear elements using textContent
     grid.textContent = '';
 
@@ -19548,7 +19835,7 @@ ${selector} .arrowheadPath {
       const block = `> [!${type}]\n> ${body}\n`;
       cleanup();
       closeAppModal(modal);
-      insertMarkdownBlock(block, start, end);
+      insertMarkdownBlock(block, start, end, editor);
     }
 
     function closeModal() {
@@ -19747,7 +20034,8 @@ ${selector} .arrowheadPath {
     }
   }
 
-  async function openDiagramModal(opener) {
+  async function openDiagramModal(opener, editorOverride) {
+    const editor = editorOverride || markdownEditor;
     const modal = document.getElementById('diagram-modal');
     const sidebar = modal.querySelector('.diagram-modal-sidebar');
     const grid = document.getElementById('diagram-modal-grid');
@@ -19769,8 +20057,8 @@ ${selector} .arrowheadPath {
       }
     }
     
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
 
     // Clear and reset state
     searchInput.value = '';
@@ -20925,7 +21213,7 @@ ${selector} .arrowheadPath {
       if (!selectedTemplate) return;
       cleanup();
       closeAppModal(modal);
-      insertMarkdownBlock(selectedTemplate.code, start, end);
+      insertMarkdownBlock(selectedTemplate.code, start, end, editor);
     }
     
     function closeModal() {
@@ -21003,7 +21291,8 @@ ${selector} .arrowheadPath {
     });
   }
 
-  function insertMarkdownImage() {
+  function insertMarkdownImage(editorOverride) {
+    const editor = editorOverride || markdownEditor;
     const modal = document.getElementById('image-modal');
     const uploadOption = document.getElementById('image-source-upload');
     const urlOption = document.getElementById('image-source-url');
@@ -21015,9 +21304,9 @@ ${selector} .arrowheadPath {
     const confirmBtn = document.getElementById('image-modal-insert');
     const cancelBtn = document.getElementById('image-modal-cancel');
     if (!modal || !uploadOption || !urlOption || !uploadFields || !urlFields || !fileInput || !urlInput || !altInput || !confirmBtn || !cancelBtn) return;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
-    const selected = markdownEditor.value.slice(start, end);
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const selected = editor.value.slice(start, end);
     urlInput.value = 'https://';
     altInput.value = selected || '';
     fileInput.value = '';
@@ -21044,7 +21333,7 @@ ${selector} .arrowheadPath {
       const replacement = buildMediaMarkdown(safeUrl);
       modal.style.display = 'none';
       cleanup();
-      replaceEditorRange(start, end, replacement, start + replacement.length, start + replacement.length);
+      replaceMarkdownEditorRange(editor, start, end, replacement, start + replacement.length, start + replacement.length);
     }
 
     function setProcessing(processing, stage) {
@@ -24339,6 +24628,7 @@ ${selector} .arrowheadPath {
   // Editor key handlers for list continuation and indentation
   markdownEditor.addEventListener('keydown', handleMarkdownEditorStructureKeydown);
   if (documentSplitEditor) documentSplitEditor.addEventListener('keydown', handleMarkdownEditorStructureKeydown);
+  initSlashCommandMenu();
   
   markdownEditor.addEventListener("scroll", function() {
     cachedScrollTop = this.scrollTop;
