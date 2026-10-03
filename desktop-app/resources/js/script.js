@@ -5898,6 +5898,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (tab && tab.sourcePath && !isTemporaryDocument(tab)) {
       const linkedActions = [
         { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'save', icon: 'lucide-download', label: 'Save', run: function() { void nativeSaveMarkdown({ tabId: tab.id, useLinkedSource: true }); } },
+        { id: 'save-as', icon: 'lucide-file-plus-2', label: 'Save As…', run: function() { void nativeSaveMarkdown({ tabId: tab.id, createLinked: true }); } },
         { id: 'reload-source', icon: 'lucide-refresh-cw', label: 'Reload from disk', run: function() { void reloadLinkedDocument(tab.id, { force: true }); } },
         { id: 'reveal-source', icon: 'lucide-folder-symlink', label: 'Open containing folder', run: function() { void revealLinkedSource(tab); } },
         { separator: true },
@@ -5911,6 +5913,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameTab(tab.id); }
     }];
     if (!isTemporaryDocument(tab)) {
+      if (typeof Neutralino !== 'undefined' && tab.workspaceId !== SECRET_WORKSPACE_ID) {
+        actions.push({ id: 'save-as', icon: 'lucide-file-plus-2', label: 'Save As…', run: function() { void nativeSaveMarkdown({ tabId: tab.id, createLinked: true }); } });
+      }
       actions.push({ id: 'duplicate', icon: 'lucide-files', label: 'Duplicate', run: function() { duplicateTab(tab.id); } });
       actions.push({
         id: 'favorite',
@@ -11424,7 +11429,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (settings.open !== false) tab.isOpen = true;
       tab.lastOpenedAt = Date.now();
     } else {
-      tab = createTab(incomingContent, title || 'Untitled');
+      tab = createTab(incomingContent, title || 'Untitled', 'split', { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
       tab.sourcePath = normalizedPath;
       tab.sourceContentHash = incomingHash;
       tab.sourceMissing = false;
@@ -11460,7 +11465,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       } else {
         await switchTab(tab.id);
       }
-      showAppToast('Linked to ' + tab.sourcePath + '. Press Ctrl+S to save changes to the original file.', {
+      if (settings.notify !== false) showAppToast('Linked to ' + tab.sourcePath + '. Press Ctrl+S to save changes to the original file.', {
         tone: 'info',
         title: 'Linked Markdown file'
       });
@@ -13277,12 +13282,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     if (typeof Neutralino !== 'undefined') {
       try {
-        const result = await Neutralino.os.showSaveDialog("Save Markdown File", {
-          filters: [
-            { name: "Markdown files (*.md)", extensions: ["md", "markdown"] },
-            { name: "All files (*.*)", extensions: ["*"] }
-          ]
-        });
+        const result = await chooseMarkdownSavePath(tab);
         if (result) {
           await Neutralino.filesystem.writeFile(result, content);
         }
@@ -24834,51 +24834,81 @@ ${selector} .arrowheadPath {
     return true;
   }
 
+  async function chooseMarkdownSavePath(tab) {
+    const chosen = await Neutralino.os.showSaveDialog('Save Markdown File', {
+      defaultPath: getSafeDocumentFilename(tab && tab.title, 'md', 'document.md'),
+      filters: [
+        { name: 'Markdown files (*.md)', extensions: ['md', 'markdown'] },
+        { name: 'All files (*.*)', extensions: ['*'] }
+      ]
+    });
+    if (!chosen) return null;
+    const name = getNativePathName(chosen);
+    const result = name.lastIndexOf('.') > 0 && !name.endsWith('.') ? chosen : chosen.replace(/\.+$/, '') + '.md';
+    // The native picker confirmed only the path it returned. If adding .md
+    // changes that path, explicitly protect the actual destination as well.
+    if (result !== chosen) {
+      let exists = false;
+      try {
+        await Neutralino.filesystem.getStats(result);
+        exists = true;
+      } catch (error) {
+        if (error.code !== 'NE_FS_NOPATHE') throw error;
+      }
+      if (exists && !(await showAppToastConfirmation('Replace the existing file at ' + result + '?', {
+        title: 'Replace Markdown file?', confirmLabel: 'Replace', dedupeKey: 'save-overwrite:' + result
+      }))) return null;
+    }
+    return result;
+  }
+
+  let nativeMarkdownSaveInProgress = false;
   async function nativeSaveMarkdown(options) {
+    if (nativeMarkdownSaveInProgress) return;
+    nativeMarkdownSaveInProgress = true;
     try {
       const settings = options || {};
-      const content = markdownEditor.value;
       saveCurrentTabState();
-      const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
-      if (settings.useLinkedSource && activeTab && activeTab.sourcePath) {
-        await writeLinkedMarkdownSource(activeTab, content);
+      const tab = tabs.find(function(t) { return t.id === (settings.tabId || activeTabId); });
+      if (!tab || isTemporaryDocument(tab)) return;
+      await ensureTabContent(tab);
+      const content = typeof tab.content === 'string' ? tab.content : '';
+      if (settings.useLinkedSource && tab.sourcePath) {
+        await writeLinkedMarkdownSource(tab, content);
         return;
       }
-      const result = await Neutralino.os.showSaveDialog("Save Markdown File", {
-        filters: [
-          { name: "Markdown files (*.md)", extensions: ["md", "markdown"] },
-          { name: "All files (*.*)", extensions: ["*"] }
-        ]
-      });
+      const result = await chooseMarkdownSavePath(tab);
       if (result) {
-        await Neutralino.filesystem.writeFile(result, content);
-        const fileName = result.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, "");
-        if (activeTab) {
-          activeTab.title = fileName;
-          activeTab.content = content;
-          if (settings.useLinkedSource) {
-            activeTab.sourcePath = result;
-            activeTab.sourceContentHash = await hashLinkedSourceContent(content);
-            activeTab.sourceKind = 'linked';
-            activeTab.sourceMissing = false;
-            activeTab.sourceConflict = false;
-            delete activeTab.linkedRootId;
-            delete activeTab.sourceRelativePath;
-          }
-          saveTabsToStorage(tabs, [activeTab.id]);
-          renderTabBar(tabs, activeTabId);
-          renderDocumentSidebar();
-          if (settings.useLinkedSource) {
-            showAppToast('Linked to ' + result + '. Future Ctrl+S saves will update this file.', {
-              tone: 'success',
-              title: 'Linked Markdown file'
-            });
+        const createLinked = tab.workspaceId !== SECRET_WORKSPACE_ID && (settings.createLinked || settings.useLinkedSource);
+        if (createLinked && tab.sourcePath && normalizeLinkedSourcePath(result) === normalizeLinkedSourcePath(tab.sourcePath)) {
+          showAppToast('Choose a different path to create a new linked file. Use Save to update the current original.', { tone: 'warning', title: 'Choose a new file' });
+          return;
+        }
+        const existing = createLinked && findTabBySourcePath(result);
+        if (existing) {
+          await ensureTabContent(existing);
+          if (existing.sourceContentHash && await hashLinkedSourceContent(existing.content) !== existing.sourceContentHash) {
+            showAppToast('This destination already has a linked document with local changes. Choose another file to preserve that draft.', { tone: 'warning', title: 'Unsaved linked draft' });
+            return;
           }
         }
+        await Neutralino.filesystem.writeFile(result, content);
+        if (await Neutralino.filesystem.readFile(result) !== content) throw new Error('The saved file could not be verified.');
+        const fileName = result.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, "");
+        if (createLinked) {
+          const linked = await openLinkedMarkdownDocument(content, fileName, result, { notify: false });
+          if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id, linked.id] }))) {
+            throw new Error('The external file was saved, but its workspace link could not be persisted.');
+          }
+          markdownEditor.focus();
+        }
+        showAppToast('Saved to ' + result + (createLinked ? '. Future Ctrl+S saves update this linked file.' : ''), { tone: 'success', title: 'Markdown file saved' });
       }
     } catch (e) {
       console.error("Native save failed:", e);
-      alert("Native save failed: " + e.message);
+      showAppToast(e.message, { tone: 'error', title: 'Save failed' });
+    } finally {
+      nativeMarkdownSaveInProgress = false;
     }
   }
 
@@ -30008,7 +30038,7 @@ ${selector} .arrowheadPath {
       }
     }
 
-    if (isCmdOrCtrl && !e.shiftKey && key === 's') {
+    if (isCmdOrCtrl && !e.shiftKey && !e.altKey && !e.isComposing && (key === 's' || e.code === 'KeyS')) {
       e.preventDefault();
       if (typeof Neutralino !== 'undefined') nativeSaveMarkdown({ useLinkedSource: true });
       else exportMd.click();

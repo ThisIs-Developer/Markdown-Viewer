@@ -89,7 +89,7 @@ test('linked context menus use the normal danger style and omit Copy source path
   await page.keyboard.press('Escape');
   await tree.locator('[data-tree-type="document"]').filter({ hasText: 'loose' })
     .dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
-  await expect(menu.getByRole('menuitem')).toHaveText(['Open', 'Reload from disk', 'Open containing folder', 'Convert to Workspace copy', 'Remove linked file']);
+  await expect(menu.getByRole('menuitem')).toHaveText(['Open', 'Save', 'Save As…', 'Reload from disk', 'Open containing folder', 'Convert to Workspace copy', 'Remove linked file']);
   const removeFile = menu.getByRole('menuitem', { name: 'Remove linked file' });
   await expect(removeFile).toHaveClass(/tab-menu-item-danger/);
   expect(await removeFile.evaluate(item => getComputedStyle(item).color)).toBe(deleteColor);
