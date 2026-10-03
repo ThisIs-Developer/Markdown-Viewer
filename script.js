@@ -5900,10 +5900,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'reload-source', icon: 'lucide-refresh-cw', label: 'Reload from disk', run: function() { void reloadLinkedDocument(tab.id, { force: true }); } },
         { id: 'reveal-source', icon: 'lucide-folder-symlink', label: 'Open containing folder', run: function() { void revealLinkedSource(tab); } },
-        { id: 'copy-source-path', icon: 'lucide-copy', label: 'Copy source path', run: function() { void copyTextToClipboard(tab.sourcePath); } },
         { separator: true },
         { id: 'convert-vault', icon: 'lucide-files', label: 'Convert to Workspace copy', run: function() { void convertLinkedDocumentToVault(tab.id); } },
-        { id: 'remove-link', icon: 'lucide-x', label: 'Remove link from Workspace', run: function() { void removeLinkedDocument(tab.id); } }
+        { id: 'remove-link', icon: 'lucide-x', label: 'Remove linked file', danger: true, run: function() { void removeLinkedDocument(tab.id); } }
       ];
       return linkedActions;
     }
@@ -6818,7 +6817,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return [
       { id: 'rescan', icon: 'lucide-refresh-cw', label: 'Rescan folder', run: function() { void reconcileLinkedLocation(location.id, { notify: true }); } },
       { id: 'reveal', icon: 'lucide-folder-symlink', label: 'Open folder', run: function() { void Neutralino.os.open(location.path); } },
-      { id: 'unlink', icon: 'lucide-x', label: 'Remove linked folder', run: function() { void removeLinkedLocation(location.id); } }
+      { id: 'unlink', icon: 'lucide-x', label: 'Remove linked folder', danger: true, run: function() { void removeLinkedLocation(location.id); } }
     ];
   }
 
