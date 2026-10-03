@@ -353,6 +353,7 @@
       if (this.desktop) await this._initDesktop();
       else await this._initBrowser();
       await this._migrateLegacyNormalDocuments();
+      if (this.desktop) await this._migrateLinkedRecoveryDocuments();
       this.ready = true;
       try {
         await this.purgeExpiredTrash();
@@ -522,6 +523,7 @@
       const journalPath = await this._pathJoin(internalPath, 'journal');
       await this._ensureDirectory(vaultPath);
       await this._ensureDirectory(workspacePath);
+      await this._ensureDirectory(await this._pathJoin(vaultPath, 'Linked Workspace'));
       await this._ensureDirectory(await this._pathJoin(vaultPath, 'Secret Workspace'));
       await this._ensureDirectory(secretPath);
       await this._ensureDirectory(internalPath);
@@ -577,6 +579,25 @@
       }
     }
 
+    async _migrateLinkedRecoveryDocuments() {
+      const drafts = this.vaultIndex.documents.filter(function(item) {
+        return item.sourcePath && !String(item.vaultRelativePath || '').startsWith('Linked Workspace/');
+      }).map(function(item) {
+        return Object.assign({}, item, {
+          contentLoaded: false,
+          _storageRevision: normalizedStorageRevision(item.storageRevision)
+        });
+      });
+      // Validate all existing bodies before moving any file. Missing recovery
+      // content must stop migration rather than creating an empty replacement.
+      for (const draft of drafts) await this.loadDocumentContent(draft.id);
+      if (drafts.length) {
+        await this.saveDocuments(drafts, this.vaultOrganization, {
+          changedIds: drafts.map(function(item) { return item.id; })
+        });
+      }
+    }
+
     async _rebuildDesktopIndex(workspacePath) {
       const organization = this.vaultOrganization && typeof this.vaultOrganization === 'object'
         ? cloneJson(this.vaultOrganization, null)
@@ -606,7 +627,7 @@
         return folder;
       };
 
-      const walk = async (currentPath, relativeSegments, parentFolderId) => {
+      const walk = async (currentPath, relativeSegments, parentFolderId, storageRoot) => {
         let entries = [];
         try {
           entries = await Neutralino.filesystem.readDirectory(currentPath);
@@ -620,8 +641,8 @@
           if (!entry || !entry.entry) continue;
           const entryPath = await this._pathJoin(currentPath, entry.entry);
           if (entry.type === 'DIRECTORY') {
-            const folder = findOrCreateFolder(entry.entry, parentFolderId);
-            await walk(entryPath, relativeSegments.concat(entry.entry), folder.id);
+            const folder = storageRoot === 'Workspace' ? findOrCreateFolder(entry.entry, parentFolderId) : null;
+            await walk(entryPath, relativeSegments.concat(entry.entry), folder ? folder.id : null, storageRoot);
             continue;
           }
           if (entry.type !== 'FILE' || !/\.md$/i.test(entry.entry)) continue;
@@ -646,13 +667,17 @@
             lastOpenedAt: timestamp,
             lastEditedAt: timestamp,
             contentSize: Number(stats && stats.size) || 0,
-            vaultRelativePath: normalizePathSeparators(['Workspace'].concat(relativeSegments, entry.entry).join('/')),
+            vaultRelativePath: normalizePathSeparators([storageRoot].concat(relativeSegments, entry.entry).join('/')),
+            // A lost index cannot safely tell us the original source path.
+            // Preserve these bodies as recovery documents, not invented links.
+            kind: storageRoot === 'Linked Workspace' ? 'linked-recovery' : undefined,
             contentLoaded: false
           });
         }
       };
 
-      await walk(workspacePath, [], null);
+      await walk(workspacePath, [], null, 'Workspace');
+      await walk(await this._pathJoin(this.vaultPath, 'Linked Workspace'), [], null, 'Linked Workspace');
       if (documents.length) documents[0].isOpen = true;
       this.vaultOrganization = organization;
       return {
@@ -1096,7 +1121,8 @@
     }
 
     async _desktopDocumentRelativePath(tab, organization) {
-      const segments = ['Workspace'].concat(await this._desktopFolderSegments(tab, organization));
+      const linked = Boolean(tab.sourcePath) || tab.kind === 'linked-recovery';
+      const segments = linked ? ['Linked Workspace'] : ['Workspace'].concat(await this._desktopFolderSegments(tab, organization));
       requireDocumentId(tab && tab.id);
       const suffix = await stableDocumentIdSuffix(tab.id);
       segments.push(sanitizePathSegment(tab.title, 'Untitled') + '--' + suffix + '.md');
@@ -1104,10 +1130,10 @@
     }
 
     async _backupDocumentRelativePath(tab, organization) {
-      const storedPath = normalizePathSeparators(tab && (tab.vaultRelativePath || tab._vaultRelativePath));
+      const storedPath = normalizePathSeparators(tab && (tab._vaultRelativePath || tab.vaultRelativePath));
       if (
         storedPath &&
-        storedPath.startsWith('Workspace/') &&
+        (storedPath.startsWith('Workspace/') || storedPath.startsWith('Linked Workspace/')) &&
         !storedPath.split('/').some(function(segment) { return segment === '.' || segment === '..'; })
       ) {
         return storedPath;
@@ -1291,7 +1317,8 @@
       metadata.contentSize = typeof tab.content === 'string'
         ? new TextEncoder().encode(tab.content).byteLength
         : Number(existing && existing.contentSize) || 0;
-      if (existing) Object.assign(existing, metadata);
+      // Conversion removes source fields: merging would retain them on restart.
+      if (existing) this.vaultIndex.documents[this.vaultIndex.documents.indexOf(existing)] = metadata;
       else this.vaultIndex.documents.push(metadata);
       tab._vaultRelativePath = relativePath;
       tab._pendingStorageRevision = metadata.storageRevision;
@@ -2842,6 +2869,7 @@
         }
         const ownedPaths = [
           await this._pathJoin(this.vaultPath, 'Workspace'),
+          await this._pathJoin(this.vaultPath, 'Linked Workspace'),
           await this._pathJoin(this.vaultPath, 'Secret Workspace'),
           await this._pathJoin(this.vaultPath, INTERNAL_DIR)
         ];
