@@ -17,7 +17,8 @@ for (const action of ['rescan', 're-add']) {
         if (path === 'C:/Original') window.__folderReads++;
         return readDirectory(path);
       };
-      await window.NL_HANDLE_NATIVE_DROP(['C:/Original']);
+      Neutralino.os.showFolderDialog = async () => 'C:/Original';
+      document.getElementById('sidebar-link-folder').click();
       await window.NL_START_LINKED_MONITORING();
     });
     const rows = page.locator('#document-tree [data-tree-type="document"]').filter({ hasText: 'notes' });
@@ -37,7 +38,7 @@ for (const action of ['rescan', 're-add']) {
         await location.dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
         await page.getByRole('menuitem', { name: 'Rescan folder' }).click();
       } else {
-        await page.evaluate(() => window.NL_HANDLE_NATIVE_DROP(['C:/Original']));
+        await page.locator('#sidebar-link-folder').click();
       }
       await expect(rows).toHaveCount(2);
       await expect(location).toHaveCount(1);
@@ -78,7 +79,8 @@ test('linked context menus use the normal danger style and omit Copy source path
   await page.evaluate(async () => {
     await Neutralino.filesystem.createDirectory('C:/Original');
     window.__desktopFiles.set('C:/Original/notes.md', '# original');
-    await window.NL_HANDLE_NATIVE_DROP(['C:/Original']);
+    Neutralino.os.showFolderDialog = async () => 'C:/Original';
+    document.getElementById('sidebar-link-folder').click();
     await window.NL_IMPORT_EXTERNAL_FILE('# loose', 'loose', 'C:/loose.md');
   });
   const menu = page.locator('.document-menu-context.open');

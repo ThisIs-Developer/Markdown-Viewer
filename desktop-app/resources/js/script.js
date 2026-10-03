@@ -4297,7 +4297,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       workspaces: [
         {
           id: DEFAULT_WORKSPACE_ID,
-          name: isNeutralinoRuntimeAvailable() ? 'Workspace (Vault)' : 'Workspace',
+          name: hasDesktopFileAccess() ? 'Workspace (Vault)' : 'Workspace',
           expanded: true,
           createdAt: 0
         },

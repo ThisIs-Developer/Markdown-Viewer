@@ -16,7 +16,8 @@ for (const change of ['none', 'added', 'content']) {
     await page.evaluate(async () => {
       await Neutralino.filesystem.createDirectory('C:/Notes');
       window.__desktopFiles.set('C:/Notes/one.md', '# original');
-      await window.NL_HANDLE_NATIVE_DROP(['C:/Notes']);
+      Neutralino.os.showFolderDialog = async () => 'C:/Notes';
+      document.getElementById('sidebar-link-folder').click();
       await window.NL_START_LINKED_MONITORING();
     });
     const row = page.locator('#document-tree [data-tree-type="document"]').filter({hasText:'one'});

@@ -263,6 +263,7 @@ test('removing an individual link leaves the source on disk', async ({ page }) =
     window.Neutralino = {
       filesystem: {
         readFile: async () => window.__original,
+        writeFile: async () => true,
         createWatcher: async () => 1,
         removeWatcher: async () => 1
       },
@@ -277,7 +278,7 @@ test('removing an individual link leaves the source on disk', async ({ page }) =
   });
   await page.locator('#document-sidebar-open').click();
   const linkedRow = page.locator('.document-tree-row[data-tree-type="document"]').filter({ hasText: 'original' });
-  await expect(linkedRow).toContainText('Linked');
+  await expect(linkedRow).toHaveClass(/is-linked-document/);
   await page.evaluate(() => {
     window.confirm = () => { throw new Error('browser confirm must not be used'); };
   });
@@ -290,11 +291,11 @@ test('removing an individual link leaves the source on disk', async ({ page }) =
   await expect(page.locator('.app-toast').filter({ hasText: 'original file remains on disk' })).toBeVisible();
 });
 
-test('browser Workspace stays distinct and desktop link commands have separate icons', async ({ page }) => {
+test('desktop link commands have separate available icons', async ({ page }) => {
   await openApp(page);
   await page.locator('#document-sidebar-open').click();
   await expect(page.locator('#document-tree')).toContainText('Workspace');
-  await expect(page.locator('#document-tree')).not.toContainText('Workspace (Vault)');
+  await expect(page.locator('#document-tree')).toContainText('Workspace (Vault)');
   await expect(page.locator('#sidebar-new-folder i')).toHaveClass(/lucide-folder-plus/);
   await expect(page.locator('#sidebar-link-folder i')).toHaveClass(/lucide-folder-symlink/);
   await expect(page.locator('#sidebar-link-files i')).toHaveClass(/lucide-file-symlink/);
