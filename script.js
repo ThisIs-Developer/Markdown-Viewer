@@ -13442,6 +13442,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     const hadExistingWorkspace = tabs.length > 0;
     activeTabId = loadActiveTabId();
 
+    // Seed the default Vault document before opening an initial linked file.
+    // File-association launches must not skip the Welcome on a fresh workspace.
+    if (!hadExistingWorkspace) {
+      const tab = createTab(sampleMarkdown, 'Welcome to Markdown', 'split', {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        folderId: null
+      });
+      tabs.push(tab);
+      activeTabId = tab.id;
+      saveTabsToStorage(tabs);
+      saveActiveTabId(activeTabId);
+    }
+
     // Check if Neutralino passed an initial file via command line (early load)
     if (window.NL_INITIAL_FILE_CONTENT) {
       const initialFile = window.NL_INITIAL_FILE_CONTENT;
@@ -13452,12 +13465,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         { activate: false }
       );
       delete window.NL_INITIAL_FILE_CONTENT;
-    } else if (tabs.length === 0) {
-      const tab = createTab(sampleMarkdown, 'Welcome to Markdown');
-      tabs.push(tab);
-      activeTabId = tab.id;
-      saveTabsToStorage(tabs);
-      saveActiveTabId(activeTabId);
     } else if (!tabs.find(function(t) { return t.id === activeTabId && isTabOpen(t) && !t.storageCorruption; })) {
       const firstOpenTab = getOpenTabs().find(function(tab) { return !tab.storageCorruption; });
       activeTabId = firstOpenTab ? firstOpenTab.id : null;
