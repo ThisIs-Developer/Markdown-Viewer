@@ -95,7 +95,8 @@ test('documents open on a single click and collapse all is available', async ({ 
   const closedFolderIcon = workspaceRow.locator('.document-tree-main > i.lucide-folder');
   await expect(closedFolderIcon).toHaveCount(1);
   const closedFolderColor = await closedFolderIcon.evaluate(icon => getComputedStyle(icon).color);
-  expect(closedFolderColor).not.toBe(openFolderColor);
+  // The current workspace stays accented; expansion alone does not select a folder.
+  expect(closedFolderColor).toBe(openFolderColor);
   await expect(page.locator('#document-sidebar-collapse-all')).toHaveAttribute('aria-label', 'Expand all folders');
   await expect(page.locator('#document-sidebar-collapse-all i')).toHaveClass(/lucide-unfold-vertical/);
   await page.locator('#document-sidebar-collapse-all').click();
@@ -224,7 +225,7 @@ test('Explorer opens and moves multiple selected documents', async ({ page }) =>
   await secondRow.click({ modifiers: ['Control'] });
   await secondRow.click({ button: 'right' });
   await page.locator('.document-menu-context.open').getByRole('menuitem', { name: 'Move to…' }).click();
-  await page.locator('#document-move-destination').selectOption({ label: 'Workspace / Bulk destination' });
+  await page.locator('#document-move-destination').selectOption({ label: 'Workspace (Vault) / Bulk destination' });
   await page.locator('#document-move-modal-confirm').click();
   await expect(firstRow).toHaveAttribute('data-tree-depth', '2');
   await expect(secondRow).toHaveAttribute('data-tree-depth', '2');
