@@ -6641,7 +6641,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     main.type = 'button';
     main.className = 'document-tree-main';
     main.setAttribute('tabindex', '-1');
-    main.title = options.label;
+    main.title = options.hoverTitle || options.label;
     const icon = document.createElement('i');
     icon.className = 'lucide ' + options.icon;
     icon.setAttribute('aria-hidden', 'true');
@@ -6733,6 +6733,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       id: tab.id,
       documentId: tab.id,
       label: tab.title || 'Untitled',
+      hoverTitle: tab.sourcePath || tab.title || 'Untitled',
       ariaLabel: (tab.id === activeTabId ? 'Active document, ' : 'Document, ') + (tab.title || 'Untitled') + (tab.sourcePath ? ', linked file' : '') + (tab.favorite ? ', favorite' : ''),
       icon: tab.sourcePath ? 'lucide-file-symlink' : 'lucide-file-text',
       depth: depth,
@@ -6801,7 +6802,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     let renderedDocuments = 0;
     documents.forEach(function(tab) {
-      if (appendDocumentTreeItem(tree, tab, 0, getDocumentLocationLabel(tab))) renderedDocuments++;
+      const meta = tab.sourcePath ? getLinkedDocumentMeta(tab) : getDocumentLocationLabel(tab);
+      if (appendDocumentTreeItem(tree, tab, 0, meta)) renderedDocuments++;
     });
     return renderedDocuments;
   }
