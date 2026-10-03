@@ -1121,7 +1121,7 @@
     }
 
     async _desktopDocumentRelativePath(tab, organization) {
-      const linked = Boolean(tab.sourcePath) || tab.kind === 'linked-recovery';
+      const linked = Boolean(tab.sourcePath) || tab.kind === 'linked-recovery' || tab.kind === 'linked-workspace-guide';
       const segments = linked ? ['Linked Workspace'] : ['Workspace'].concat(await this._desktopFolderSegments(tab, organization));
       requireDocumentId(tab && tab.id);
       const suffix = await stableDocumentIdSuffix(tab.id);

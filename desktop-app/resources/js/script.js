@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
   const APP_VERSION = '3.10.3';
   const RELEASE_NOTES_TAB_KIND = 'release-notes';
+  const LINKED_WORKSPACE_GUIDE_KIND = 'linked-workspace-guide';
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
   const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
   const RELEASE_NOTES_PENDING_MODE_KEY = 'markdownViewerPendingReleaseNotesMode';
@@ -52,6 +53,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function isLinkedDocument(tab) {
     return Boolean(hasDesktopFileAccess() && tab && tab.sourcePath);
+  }
+
+  function isLinkedWorkspaceDocument(tab) {
+    return hasDesktopFileAccess() && Boolean(tab && (tab.sourcePath || tab.kind === LINKED_WORKSPACE_GUIDE_KIND));
   }
 
   const workspaceStorage = typeof window.MarkdownWorkspaceStorage === 'function'
@@ -4405,6 +4410,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       ui: {
         filter: allowedFilters.has(ui.filter) ? ui.filter : 'all',
         linkedWorkspaceExpanded: ui.linkedWorkspaceExpanded !== false,
+        linkedGuideInitialized: ui.linkedGuideInitialized === true,
         collapsed: ui.collapsed === true,
         width: Number.isFinite(width) ? Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width)) : 288,
         lastWorkspaceId: lastWorkspaceId,
@@ -5930,6 +5936,14 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentMenuActions(tab) {
+    if (tab && tab.kind === LINKED_WORKSPACE_GUIDE_KIND) {
+      return [
+        { id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'favorite', icon: tab.favorite ? 'lucide-star-filled' : 'lucide-star', label: tab.favorite ? 'Remove from Favorites' : 'Add to Favorites', run: function() { toggleDocumentFavorite(tab.id); } },
+        { id: 'download', icon: 'lucide-download', label: 'Download Markdown', run: function() { downloadTabMarkdown(tab.id); } },
+        { id: 'delete', icon: 'lucide-trash-2', label: 'Delete', danger: true, run: function() { deleteTab(tab.id); } }
+      ];
+    }
     if (isLinkedDocument(tab) && !isTemporaryDocument(tab)) {
       const linkedActions = [
         { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
@@ -6155,6 +6169,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         },
         { separator: true }
       );
+      if (getSelectedDocuments().some(function(tab) { return tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) {
+        const moveIndex = actions.findIndex(function(action) { return action.id === 'move-selected'; });
+        if (moveIndex >= 0) actions.splice(moveIndex, 1);
+      }
     }
     actions.push({
       id: 'delete-selected',
@@ -6362,6 +6380,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const shouldAnnounce = !options || options.announce !== false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || isTemporaryDocument(tab)) return false;
+    if (tab.kind === LINKED_WORKSPACE_GUIDE_KIND) return false;
     if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
       withUnlockedSecretWorkspace(function() {
         moveDocumentToLocation(tabId, workspaceId, folderId, options);
@@ -6734,7 +6753,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (event.target.closest('input, select, textarea, a')) return;
       openDocumentTreeContextMenu(row, event);
     });
-    if (options.documentId && !options.temporary) {
+    if (options.documentId && !options.temporary && !options.disableDrag) {
       row.draggable = true;
       row.addEventListener('dragstart', function(event) {
         const rowSelectionKey = getDocumentTreeSelectionKey('document', options.documentId);
@@ -6780,6 +6799,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       type: 'document',
       id: tab.id,
       documentId: tab.id,
+      disableDrag: tab.kind === LINKED_WORKSPACE_GUIDE_KIND,
       label: tab.title || 'Untitled',
       hoverTitle: isLinkedDocument(tab) ? tab.sourcePath : tab.title || 'Untitled',
       ariaLabel: (tab.id === activeTabId ? 'Active document, ' : 'Document, ') + (tab.title || 'Untitled') + (isLinkedDocument(tab) ? ', linked file' : '') + (tab.favorite ? ', favorite' : ''),
@@ -6807,6 +6827,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentLocationLabel(tab) {
+    if (hasDesktopFileAccess() && tab && tab.kind === LINKED_WORKSPACE_GUIDE_KIND) return 'Linked Workspace';
     if (isLinkedDocument(tab)) return 'Linked · ' + tab.sourcePath;
     const workspace = getWorkspaceById(tab.workspaceId);
     const folder = getFolderById(tab.folderId);
@@ -6873,7 +6894,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renderLinkedLocationsTree(tree) {
     if (!hasDesktopFileAccess()) return 0;
     const linkedTabs = tabs.filter(function(tab) {
-      return !isTemporaryDocument(tab) && Boolean(tab.sourcePath);
+      return !isTemporaryDocument(tab) && isLinkedWorkspaceDocument(tab);
     });
     const locations = Array.isArray(documentOrganization.linkedLocations) ? documentOrganization.linkedLocations : [];
     let renderedDocuments = 0;
@@ -6892,7 +6913,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       icon: 'lucide-link-2',
       depth: 0,
       expanded: workspaceExpanded,
-      currentLocation: Boolean(activeDocument && activeDocument.sourcePath),
+      currentLocation: isLinkedWorkspaceDocument(activeDocument),
       meta: String(linkedTabs.length),
       onToggle: toggleWorkspace,
       onActivate: toggleWorkspace
@@ -7020,7 +7041,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (isSecretWorkspace) renderedDocuments += renderLinkedLocationsTree(tree);
       const secretLocked = isSecretWorkspace && !isSecretWorkspaceUnlocked();
       const workspaceDocuments = tabs.filter(function(tab) {
-        return !isTemporaryDocument(tab) && !isLinkedDocument(tab) && tab.workspaceId === workspace.id;
+        return !isTemporaryDocument(tab) && !isLinkedWorkspaceDocument(tab) && tab.workspaceId === workspace.id;
       });
       const folders = documentOrganization.folders.filter(function(folder) { return folder.workspaceId === workspace.id; });
       const matchingDocuments = workspaceDocuments.filter(documentMatchesSidebarSearch);
@@ -7051,7 +7072,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           ? (secretLocked ? 'lucide-shield' : 'lucide-shield-check')
           : (expanded ? 'lucide-folder-open' : 'lucide-folder'),
         depth: 0,
-        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !isLinkedDocument(tab) && tab.workspaceId === workspace.id; }),
+        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !isLinkedWorkspaceDocument(tab) && tab.workspaceId === workspace.id; }),
         expanded: expanded,
         meta: secretLocked ? 'Locked' : String(workspaceDocuments.length),
         locked: secretLocked,
@@ -13533,6 +13554,24 @@ document.addEventListener("DOMContentLoaded", async function () {
       activeTabId = tab.id;
       saveTabsToStorage(tabs);
       saveActiveTabId(activeTabId);
+    }
+
+    // Seed a real, editable internal guide once, including existing installations.
+    // It has no external source path and must never be watched or written back.
+    if (hasDesktopFileAccess() && !documentOrganization.ui.linkedGuideInitialized) {
+      if (!tabs.some(function(tab) { return tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) {
+        const response = await fetch('assets/linked-workspace-guide.md');
+        if (!response.ok) throw new Error('Unable to load the Linked Workspace guide.');
+        const guide = createTab(await response.text(), 'Welcome to Linked Workspace', 'preview', {
+          workspaceId: DEFAULT_WORKSPACE_ID, folderId: null
+        });
+        guide.kind = LINKED_WORKSPACE_GUIDE_KIND;
+        guide.isOpen = false;
+        tabs.push(guide);
+        if (!(await _flushTabsToStorage(tabs, { changedIds: [guide.id] }))) throw new Error('Unable to save the Linked Workspace guide.');
+      }
+      documentOrganization.ui.linkedGuideInitialized = true;
+      saveDocumentOrganization();
     }
 
     // Check if Neutralino passed an initial file via command line (early load)
