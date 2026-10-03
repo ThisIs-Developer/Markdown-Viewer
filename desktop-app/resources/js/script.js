@@ -5891,9 +5891,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getDocumentMenuActions(tab) {
     if (tab && tab.sourcePath && !isTemporaryDocument(tab)) {
       const linkedActions = [
-        { id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'reload-source', icon: 'lucide-refresh-cw', label: 'Reload from disk', run: function() { void reloadLinkedDocument(tab.id, { force: true }); } },
-        { id: 'reveal-source', icon: 'lucide-folder-open', label: 'Open containing folder', run: function() { void revealLinkedSource(tab); } },
+        { id: 'reveal-source', icon: 'lucide-folder-symlink', label: 'Open containing folder', run: function() { void revealLinkedSource(tab); } },
         { id: 'copy-source-path', icon: 'lucide-copy', label: 'Copy source path', run: function() { void copyTextToClipboard(tab.sourcePath); } },
         { separator: true },
         { id: 'convert-vault', icon: 'lucide-files', label: 'Convert to Workspace copy', run: function() { void convertLinkedDocumentToVault(tab.id); } },
@@ -6729,7 +6729,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentId: tab.id,
       label: tab.title || 'Untitled',
       ariaLabel: (tab.id === activeTabId ? 'Active document, ' : 'Document, ') + (tab.title || 'Untitled') + (tab.sourcePath ? ', linked file' : '') + (tab.favorite ? ', favorite' : ''),
-      icon: tab.sourcePath ? 'lucide-link-2' : 'lucide-file-text',
+      icon: tab.sourcePath ? 'lucide-file-symlink' : 'lucide-file-text',
       depth: depth,
       favorite: tab.favorite === true,
       temporary: isTemporaryDocument(tab),
@@ -6810,7 +6810,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getLinkedLocationMenuActions(location) {
     return [
       { id: 'rescan', icon: 'lucide-refresh-cw', label: 'Rescan folder', run: function() { void reconcileLinkedLocation(location.id, { notify: true }); } },
-      { id: 'reveal', icon: 'lucide-folder-open', label: 'Open folder', run: function() { void Neutralino.os.open(location.path); } },
+      { id: 'reveal', icon: 'lucide-folder-symlink', label: 'Open folder', run: function() { void Neutralino.os.open(location.path); } },
       { id: 'unlink', icon: 'lucide-x', label: 'Remove linked folder', run: function() { void removeLinkedLocation(location.id); } }
     ];
   }
@@ -6867,7 +6867,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         id: location.id,
         label: location.name,
         ariaLabel: 'Linked folder, ' + location.path + (location.unavailable ? ', unavailable' : ''),
-        icon: location.unavailable ? 'lucide-triangle-alert' : (expanded ? 'lucide-folder-open' : 'lucide-folder'),
+        icon: location.unavailable ? 'lucide-triangle-alert' : 'lucide-folder-symlink',
         depth: 0,
         expanded: expanded,
         meta: location.unavailable ? 'Unavailable' : String(locationTabs.length),
@@ -6908,7 +6908,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             type: 'linked-virtual-folder',
             id: location.id + ':' + pathParts.concat(folderName).join('/'),
             label: folderName,
-            icon: 'lucide-folder-open',
+            icon: 'lucide-folder-symlink',
             depth: depth,
             expanded: true,
             meta: '',
@@ -12289,7 +12289,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         fileIcon.setAttribute('aria-hidden', 'true');
       } else {
         fileIcon = document.createElement('i');
-        fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : (tab.sourcePath ? 'lucide-link-2' : 'lucide-file-text')) + ' tab-file-icon';
+        fileIcon.className = 'lucide ' + (splitPartner ? 'lucide-columns-2' : (tab.sourcePath ? 'lucide-file-symlink' : 'lucide-file-text')) + ' tab-file-icon';
         fileIcon.setAttribute('aria-hidden', 'true');
       }
 
