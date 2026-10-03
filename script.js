@@ -6587,9 +6587,17 @@ document.addEventListener("DOMContentLoaded", async function () {
         return;
       }
       const tabIds = getDraggedSidebarDocumentIds(event.dataTransfer);
-      if (tabIds.length > 1) moveDocumentsToLocation(tabIds, location.workspaceId, location.folderId || null);
-      else if (tabIds.length === 1) moveDocumentToLocation(tabIds[0], location.workspaceId, location.folderId || null);
+      void dropSidebarDocuments(tabIds, location);
     });
+  }
+
+  async function dropSidebarDocuments(tabIds, location) {
+    const documents = tabIds.map(function(id) { return tabs.find(function(tab) { return tab.id === id; }); }).filter(Boolean);
+    if (documents.some(function(tab) { return tab.sourcePath; }) && location.workspaceId !== DEFAULT_WORKSPACE_ID) return;
+    for (const tab of documents) {
+      if (tab.sourcePath) await convertLinkedDocumentToVault(tab.id, location);
+      else await moveDocumentToLocation(tab.id, location.workspaceId, location.folderId || null);
+    }
   }
 
   function createDocumentTreeRow(options) {
@@ -11667,12 +11675,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     await Neutralino.os.open(getNativeParentPath(tab.sourcePath));
   }
 
-  async function convertLinkedDocumentToVault(tabId) {
+  async function convertLinkedDocumentToVault(tabId, destination) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || !tab.sourcePath) return;
     await ensureTabContent(tab);
+    const previous = Object.assign({}, tab);
     const sourcePath = tab.sourcePath;
     const location = tab.linkedRootId ? getLinkedLocation(tab.linkedRootId) : null;
+    const previousExcluded = location ? (location.excludedPaths || []).slice() : null;
     if (location && tab.sourceRelativePath) {
       location.excludedPaths = Array.from(new Set((location.excludedPaths || []).concat(normalizeLinkedRelativePath(tab.sourceRelativePath))));
       saveDocumentOrganization();
@@ -11684,10 +11694,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     delete tab.sourceRelativePath;
     delete tab.sourceMissing;
     delete tab.sourceConflict;
-    tab.workspaceId = DEFAULT_WORKSPACE_ID;
-    tab.folderId = null;
+    setDocumentLocation(tab, DEFAULT_WORKSPACE_ID, destination && destination.folderId || null);
     tab.isOpen = true;
-    saveTabsToStorage(tabs, [tab.id]);
+    try {
+      if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Workspace copy could not be saved.');
+    } catch (error) {
+      Object.keys(tab).forEach(function(key) { delete tab[key]; });
+      Object.assign(tab, previous);
+      if (location) location.excludedPaths = previousExcluded;
+      saveDocumentOrganization();
+      renderDocumentSidebar();
+      showAppToast(error.message, { tone: 'error', title: 'Conversion failed' });
+      return false;
+    }
     renderTabBar(tabs, activeTabId);
     renderDocumentSidebar();
     await refreshLinkedSourceMonitoring();
@@ -11696,6 +11715,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       icon: 'lucide-check',
       title: 'Converted to Workspace copy'
     });
+    return true;
   }
 
   async function removeLinkedDocument(tabId) {
