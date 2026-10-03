@@ -6264,8 +6264,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (cut) replaceDocumentSurfaceSelection(context, '');
       showAppToast(cut ? 'Selection cut to clipboard.' : 'Selection copied to clipboard.', {
         tone: 'success',
-        title: cut ? 'Cut' : 'Copied',
-        icon: cut ? 'lucide-square-pen' : 'lucide-copy'
+        title: cut ? 'Cut' : 'Copied'
       });
     } catch (error) {
       showAppToast('Clipboard access failed: ' + error.message, { tone: 'error', title: 'Clipboard unavailable' });
@@ -11687,7 +11686,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     renderTabBar(tabs, activeTabId);
     renderDocumentSidebar();
     await refreshLinkedSourceMonitoring();
-    showAppToast('A separate Vault copy was created. The original file was left unchanged at ' + sourcePath, { tone: 'success', title: 'Converted to Workspace copy' });
+    showAppToast('A separate Vault copy was created. The original file was left unchanged at ' + sourcePath, {
+      tone: 'success',
+      icon: 'lucide-check',
+      title: 'Converted to Workspace copy'
+    });
   }
 
   async function removeLinkedDocument(tabId) {
@@ -15586,7 +15589,7 @@ ${selector} .arrowheadPath {
     icon.className = settings.iconClass || ('lucide ' + (settings.icon || ({
       error: 'lucide-circle-alert',
       warning: 'lucide-triangle-alert',
-      success: 'lucide-circle-check',
+      success: 'lucide-check',
       info: 'lucide-info'
     }[tone] || 'lucide-info')));
     iconShell.appendChild(icon);
@@ -24800,6 +24803,7 @@ ${selector} .arrowheadPath {
     renderDocumentSidebar();
     showAppToast('Saved to ' + tab.sourcePath, {
       tone: 'success',
+      icon: 'lucide-check',
       title: 'Original file updated'
     });
     return true;

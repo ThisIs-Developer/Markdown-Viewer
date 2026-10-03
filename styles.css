@@ -1335,7 +1335,8 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--accent-color);
 }
 
-.app-toast-icon-shell > .bi {
+.app-toast-icon-shell > .bi,
+.app-toast-icon-shell > .lucide {
   font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }
