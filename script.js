@@ -11390,12 +11390,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     let tab = findTabBySourcePath(normalizedPath);
     let contentRefreshed = false;
 
-    // Adopt one matching pre-link document created by the earlier launcher build.
-    if (!tab && normalizedPath) {
-      tab = tabs.find(function(candidate) {
-        return !candidate.sourcePath && candidate.title === title && candidate.content === incomingContent;
-      }) || null;
-    }
+    // Only a matching source path identifies a linked document. A Vault copy
+    // remains independent even when its title and content match the original.
 
     if (tab) {
       await ensureTabContent(tab);
