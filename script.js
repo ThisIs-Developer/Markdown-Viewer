@@ -6814,7 +6814,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getLinkedLocationMenuActions(location) {
     return [
-      { id: 'rescan', icon: 'lucide-refresh-cw', label: 'Rescan folder', run: function() { void reconcileLinkedLocation(location.id, { notify: true }); } },
+      { id: 'rescan', icon: 'lucide-refresh-cw', label: 'Rescan folder', run: function() { void reconcileLinkedLocation(location.id, { notify: true, restoreExcluded: true }); } },
       { id: 'reveal', icon: 'lucide-folder-symlink', label: 'Open folder', run: function() { void Neutralino.os.open(location.path); } },
       { id: 'unlink', icon: 'lucide-x', label: 'Remove linked folder', danger: true, run: function() { void removeLinkedLocation(location.id); } }
     ];
@@ -11561,6 +11561,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (settings.notify) showAppToast('The linked folder is unavailable: ' + location.path, { tone: 'error', title: 'Folder scan failed' });
       return 0;
     }
+    // Explicit rescans/re-linking restore removed links; background refreshes
+    // continue respecting exclusions. Only reset after a successful folder scan.
+    if (settings.restoreExcluded) location.excludedPaths = [];
     const excluded = new Set((location.excludedPaths || []).map(normalizeLinkedRelativePath));
     const discoveredPaths = new Set();
     let added = 0;
@@ -11611,7 +11614,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization.linkedLocations.push(location);
       saveDocumentOrganization();
     }
-    await reconcileLinkedLocation(location.id, { notify: !(options && options.silent) });
+    await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true });
     await refreshLinkedSourceMonitoring();
     return location;
   }
