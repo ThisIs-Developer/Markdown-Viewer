@@ -337,6 +337,25 @@ async function prepareOfflineDependencies() {
     '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/workspace-storage.js"></script>\n    <script src="/js/script.js"></script>',
   );
 
+  // Explicit desktop demo opt-in; the official runtime pin remains unchanged.
+  // Default desktop and web builds
+  // retain the upstream HTML drag-and-drop mechanism.
+  if (process.argv.includes('--experimental-neutralino-runtime')) {
+    // External same-origin scripts are allowed by the existing CSP. An inline
+    // flag would be blocked and silently disable the custom drag workaround.
+    fs.writeFileSync(path.join(RESOURCES_DIR, 'js', 'desktop-runtime-features.js'),
+      'window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES = { sidebarPointerDrag: true, nativeSingleInstance: true, nativeFileDrop: true };\n', 'utf-8');
+    html = html.replace('</head>', '<script src="/js/desktop-runtime-features.js"></script>\n</head>');
+    const demoConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'neutralino.config.json'), 'utf-8'));
+    demoConfig.singleInstance = true;
+    demoConfig.modes.window.emitDropEvents = true;
+    fs.writeFileSync(path.join(__dirname, 'neutralino.experimental.config.json'), JSON.stringify(demoConfig, null, 2));
+  } else {
+    // Do not leave custom opt-in resources behind after a standard preparation.
+    fs.rmSync(path.join(RESOURCES_DIR, 'js', 'desktop-runtime-features.js'), { force: true });
+    fs.rmSync(path.join(__dirname, 'neutralino.experimental.config.json'), { force: true });
+  }
+
   // Inject app-info element
   html = html.replace(
     '<div class="app-container">',

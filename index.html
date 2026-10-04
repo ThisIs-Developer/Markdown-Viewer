@@ -2037,6 +2037,41 @@
       </div>
     </div>
 
+    <div id="desktop-drop-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="desktop-drop-modal-title" aria-describedby="desktop-drop-modal-description" aria-hidden="true" style="display:none;">
+      <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box desktop-drop-modal-box">
+        <div class="modal-header">
+          <div>
+            <p id="desktop-drop-modal-title" class="reset-modal-message">Add dropped Markdown</p>
+            <p id="desktop-drop-modal-description" class="modal-subtext">Choose whether to keep the original file linked or store an independent copy in the Vault.</p>
+          </div>
+          <button type="button" class="modal-close-btn" id="desktop-drop-modal-close" aria-label="Cancel dropped file import"><i class="lucide lucide-x" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body desktop-drop-modal-body">
+          <p id="desktop-drop-file-summary" class="desktop-drop-file-summary"></p>
+          <div class="desktop-drop-choice-grid">
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-link">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-file-symlink" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Link original</strong>
+                <span>Edit the file in its current location. Ctrl+S writes back to the original.</span>
+                <small>The original Windows path is retained directly from the drop.</small>
+              </span>
+            </button>
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-copy">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-files" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Import to Vault</strong>
+                <span>Create an independent Workspace copy. The original file will not be changed.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="reset-modal-actions">
+          <button type="button" class="reset-modal-btn reset-modal-cancel" id="desktop-drop-modal-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Shared Diagram Viewer Modal -->
     <div id="mermaid-zoom-modal" role="dialog" aria-modal="true" aria-labelledby="diagram-viewer-modal-title" aria-hidden="true">
         <div class="mermaid-modal-content">
