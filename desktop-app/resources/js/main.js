@@ -118,13 +118,127 @@ function isNeutralinoRuntime() {
   }
 }
 
+function getNeutralinoArguments() {
+  if (typeof NL_ARGS === 'undefined') return [];
+  if (Array.isArray(NL_ARGS)) return NL_ARGS;
+  try {
+    const parsed = JSON.parse(NL_ARGS);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function focusDesktopWindow() {
+  try {
+    if (Neutralino.window && typeof Neutralino.window.isMinimized === 'function' && await Neutralino.window.isMinimized()) {
+      await Neutralino.window.unminimize();
+    }
+    if (Neutralino.window && typeof Neutralino.window.show === 'function') await Neutralino.window.show();
+    if (Neutralino.window && typeof Neutralino.window.focus === 'function') await Neutralino.window.focus();
+  } catch (error) {
+    console.warn('Could not focus the existing Markdown Viewer window:', error);
+  }
+}
+
+async function openExternalMarkdownFile(filePath, options) {
+  if (typeof filePath !== 'string' || !/\.(md|markdown)$/i.test(filePath)) return;
+  try {
+    const stats = await Neutralino.filesystem.getStats(filePath);
+    if (stats && Number(stats.size) > 10 * 1024 * 1024) {
+      console.warn('External Markdown file exceeds the 10 MB limit:', filePath);
+      return;
+    }
+    const content = await Neutralino.filesystem.readFile(filePath);
+    const fileName = filePath.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, '');
+    if (window.NL_IMPORT_EXTERNAL_FILE) {
+      await Promise.resolve(window.NL_IMPORT_EXTERNAL_FILE(content, fileName, filePath));
+    } else if (options && options.initial) {
+      window.NL_INITIAL_FILE_CONTENT = { name: fileName, content: content, sourcePath: filePath };
+    } else {
+      window.NL_PENDING_EXTERNAL_FILES = window.NL_PENDING_EXTERNAL_FILES || [];
+      window.NL_PENDING_EXTERNAL_FILES.push({ content: content, name: fileName, sourcePath: filePath });
+    }
+    await focusDesktopWindow();
+  } catch (error) {
+    console.warn('Could not open external Markdown file:', filePath, error);
+  }
+}
+
+// PR #1852 delivers launches through the app connection, not a filesystem inbox.
+// Register before init: launches can arrive before the editor is ready.
+const desktopAppReady = new Promise(function(resolve) {
+  window.addEventListener('markdown-viewer:ready', resolve, { once: true });
+});
+let secondInstanceQueue = Promise.resolve();
+
+async function resolveLaunchMarkdownPaths(args, cwd) {
+  const paths = [];
+  for (const arg of args) {
+    if (typeof arg !== 'string' || arg.startsWith('-') || !/\.(md|markdown)$/i.test(arg)) continue;
+    let filePath = arg;
+    if (!/^(?:[a-z]:[/\\]|[/\\]{2})/i.test(arg)) {
+      // Drive-relative paths (C:notes.md) require per-drive cwd state we do not have.
+      if (/^[a-z]:/i.test(arg) || !cwd) continue;
+      if (/^[/\\]/.test(arg)) {
+        const drive = /^[a-z]:/i.exec(cwd);
+        if (!drive) continue;
+        filePath = drive[0] + arg;
+      } else {
+        filePath = await Neutralino.filesystem.getJoinedPath(cwd, arg);
+      }
+    }
+    paths.push(await Neutralino.filesystem.getNormalizedPath(filePath));
+  }
+  return paths;
+}
+
+function onDesktopSecondInstance(event) {
+  const detail = event && event.detail;
+  if (!detail || !Array.isArray(detail.args) || typeof detail.cwd !== 'string') return;
+  secondInstanceQueue = secondInstanceQueue.then(async function() {
+    await desktopAppReady;
+    await initialFileLoad;
+    const paths = await resolveLaunchMarkdownPaths(detail.args, detail.cwd);
+    for (const filePath of paths) await openExternalMarkdownFile(filePath);
+    if (!paths.length) await focusDesktopWindow();
+  }).catch(function(error) {
+    console.warn('Could not process the second-instance launch:', error);
+  });
+  return secondInstanceQueue;
+}
+
+async function onDesktopFilesDropped(event) {
+  const detail = event && event.detail;
+  const droppedItems = Array.isArray(detail)
+    ? detail
+    : (detail && Array.isArray(detail.files) ? detail.files : []);
+  const paths = droppedItems.map(function(item) {
+    if (typeof item === 'string') return item;
+    if (item && typeof item.path === 'string') return item.path;
+    if (item && typeof item.filePath === 'string') return item.filePath;
+    return '';
+  }).filter(Boolean);
+  if (!paths.length || typeof window.NL_HANDLE_NATIVE_DROP !== 'function') return;
+  await window.NL_HANDLE_NATIVE_DROP(paths);
+  await focusDesktopWindow();
+}
+
 // Initialize Neutralino if in native environment
 if (isNeutralinoRuntime()) {
+  if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows' &&
+      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeSingleInstance === true) {
+    Neutralino.events.on("secondInstance", onDesktopSecondInstance);
+  }
   Neutralino.init();
 
   // Register event listeners
   Neutralino.events.on("trayMenuItemClicked", onTrayMenuItemClicked);
   Neutralino.events.on("windowClose", onWindowClose);
+  if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows' &&
+      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeFileDrop === true) {
+    Neutralino.events.on("filesDropped", onDesktopFilesDropped);
+  }
 
   // Conditional initialization: Set up system tray if not running on macOS
   if (typeof NL_OS !== 'undefined' && NL_OS != "Darwin") {
@@ -142,27 +256,18 @@ if (isNeutralinoRuntime()) {
 }
 
 // Open file passed as command-line argument (e.g. when double-clicking a .md file)
-(async function loadInitialFile() {
-  if (!isNeutralinoRuntime() || typeof NL_ARGS === 'undefined') return;
-  const args = Array.isArray(NL_ARGS) ? NL_ARGS : (() => { try { return JSON.parse(NL_ARGS); } catch(e) { return []; } })();
+const initialFileLoad = (async function loadInitialFile() {
+  if (!isNeutralinoRuntime()) return;
+  const args = getNeutralinoArguments();
+  if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows' &&
+      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeSingleInstance === true) {
+    const paths = await resolveLaunchMarkdownPaths(args, typeof NL_CWD === 'string' ? NL_CWD : '');
+    if (!paths.length) return;
+    await desktopAppReady;
+    for (const filePath of paths) await openExternalMarkdownFile(filePath);
+    return;
+  }
   const filePath = args.find(a => typeof a === 'string' && /\.(md|markdown)$/i.test(a));
   if (!filePath) return;
-
-  try {
-    const content = await Neutralino.filesystem.readFile(filePath);
-    const fileName = filePath.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, '');
-    
-    window.NL_INITIAL_FILE_CONTENT = {
-      name: fileName,
-      content: content,
-      sourcePath: filePath
-    };
-
-    // Callback hook in case script.js loaded first
-    if (window.NL_IMPORT_EXTERNAL_FILE) {
-      window.NL_IMPORT_EXTERNAL_FILE(content, fileName, filePath);
-    }
-  } catch (e) {
-    console.warn('Could not open initial file:', e);
-  }
+  await openExternalMarkdownFile(filePath, { initial: true });
 })();
