@@ -11678,6 +11678,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (tabMenu) item.appendChild(tabMenu.button);
       item.appendChild(closeButton);
 
+      // Suppress middle-button autoscroll, including over nested action buttons.
+      // Capture runs before their mousedown propagation guards.
+      item.addEventListener('mousedown', function(event) {
+        if (event.button === 1) event.preventDefault();
+      }, { capture: true });
+
       item.addEventListener('contextmenu', function(event) {
         event.preventDefault();
         event.stopPropagation();
@@ -11727,6 +11733,16 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (e.target.closest('.tab-menu-btn, .tab-close-btn')) return;
       const tabId = tabItem.getAttribute('data-tab-id');
       if (tabId) switchTab(tabId);
+    };
+
+    tabList.onauxclick = function(event) {
+      if (event.button !== 1) return;
+      const tabItem = event.target.closest('.tab-item');
+      if (!tabItem) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const tabId = tabItem.getAttribute('data-tab-id');
+      if (tabId) closeTab(tabId);
     };
 
     tabList.oncontextmenu = function(event) {
