@@ -5,6 +5,8 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- **Editor navigation:** Fixed Page Up/Down shifting the workspace sideways in Edge by removing closed dropdowns from the layout while preserving menu transitions and native editor navigation.
+
 ---
 
 ## v3.10.3

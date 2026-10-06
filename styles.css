@@ -9171,7 +9171,8 @@ button.live-share-participant-overflow {
   --app-menu-shift-x: 0px;
   --app-menu-shift-y: -4px;
   opacity: 0;
-  display: block;
+  /* Closed menus must not create scrollable overflow before Popper positions them. */
+  display: none;
   visibility: hidden;
   pointer-events: none;
   translate: var(--app-menu-shift-x) var(--app-menu-shift-y);
@@ -9202,12 +9203,23 @@ button.live-share-participant-overflow {
 }
 
 .dropdown-menu.show {
+  display: block;
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   translate: 0 0;
   scale: 1;
   transition-delay: 0s;
+}
+
+/* Keep the opening transition when the menu enters the layout. Closing menus
+   retain .show until initDropdownMenuMotion finishes their exit transition. */
+@starting-style {
+  .dropdown-menu.show {
+    opacity: 0;
+    translate: var(--app-menu-shift-x) var(--app-menu-shift-y);
+    scale: 0.985;
+  }
 }
 
 .dropdown-menu.show.is-closing {
