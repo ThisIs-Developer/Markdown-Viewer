@@ -53,11 +53,12 @@ The outline is generated locally from the current document and is not saved sepa
 - On desktop, one click selects a sidebar document and a double click opens it. On touch layouts, one tap opens it and closes the drawer.
 - The active Document is the one shown in the primary Editor/Preview, used by formatting, review, import-into-current, export, Share Snapshot, and Live Share actions. Opening a second Document in the two-Document view does not make it the active Document.
 - Each document menu supports Open, Rename, Duplicate, Favorites, Move, Open in split view, Download Markdown, and Delete. The tab strip supports quick switching, drag-to-reorder, and close commands for one or several tabs.
+- To close a document tab, point at it and **press the mouse's scroll wheel down (middle-click)**. The scroll wheel acts as the middle mouse button on a typical mouse. Pressing it is different from rotating it: rotating the wheel over the tab strip scrolls through tabs without closing them. You can also use the tab's **Close (X)** button or its context-menu close commands.
 - Ctrl/Cmd-click selects separate Explorer items; Shift-click or Shift+Arrow selects a range. When only files are selected, the context menu can **Open all** or **Move to…**. Deleting selected files moves them directly to Trash; deleting a selection that contains folders still asks for confirmation.
 - Deleting a file moves it directly to **Trash** without confirmation. Open Trash from the Explorer toolbar or Workspace settings to restore a selected item, permanently delete a selected item after confirmation, or empty all items after confirmation. Valid deleted items are permanently removed automatically after 30 days; records with missing or corrupt retention metadata are kept for manual review instead of being auto-purged.
 - Deleting a folder tree moves all files inside it to the workspace root before removing the folders.
 - Dragging or selecting several local Markdown files shows a small import-progress popup at the bottom of the screen until processing finishes.
-- Closing the last normal tab resets to a clean document.
+- Closing a normal tab keeps its saved Document and draft in Explorer. Closing all tabs leaves an empty editor; select a Document in Explorer to reopen it.
 - Normal tabs autosave as independent browser records or desktop vault files. Only the opened document content is loaded.
 - Markdown Viewer does not impose a document-count limit; available browser quota or filesystem capacity is the practical limit.
 - Temporary Share Snapshot and Live Share tabs are not saved to the recipient's workspace.

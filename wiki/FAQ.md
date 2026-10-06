@@ -36,6 +36,12 @@ Markdown Viewer does not impose a document-count limit. Browser quota or availab
 
 Closing removes the open tab but keeps the Document in the Workspace. Deleting removes the Document. Closing all tabs can leave the Workspace files available in Explorer.
 
+### What is the scroll-wheel button (middle-click)?
+
+On a typical mouse, the scroll wheel between the left and right buttons can also be pressed down like a button. That press is called a **middle-click**. Point at a document tab and press the scroll wheel down to close the tab without deleting its saved Workspace document or draft.
+
+Rotating the wheel is different: it scrolls the tab strip without closing tabs. The on-screen left/right scroll arrows also only scroll. If your mouse or touchpad has no middle-click button, use the tab's **Close (X)** button or its context-menu close commands.
+
 ### What happens when I delete a Folder?
 
 Markdown Viewer moves Documents from that Folder tree to the containing Workspace root, then removes the Folders. A multi-item delete can delete selected Documents while returning Documents from deleted Folders to the root; read the confirmation carefully.

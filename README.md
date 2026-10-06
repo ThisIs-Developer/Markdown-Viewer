@@ -83,6 +83,8 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 For verified behavior, limits, and implementation notes, read the [feature reference](wiki/Features.md).
 
+**Close a tab with the scroll-wheel button:** Point at a document tab and press the mouse's scroll wheel down (middle-click). This closes the tab without deleting its saved Workspace document. Rotating the wheel over the tab strip scrolls through tabs instead.
+
 ## Quick Start
 
 Use the hosted application at [markdownviewer.pages.dev](https://markdownviewer.pages.dev/), or run the repository through a local HTTP server:
