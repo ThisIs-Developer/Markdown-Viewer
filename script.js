@@ -22971,6 +22971,50 @@ ${selector} .arrowheadPath {
     markdownEditor.addEventListener('scroll', scheduleOutlineHighlight, { passive: true });
   }
 
+  function updateFullscreenButtonState() {
+    const fullscreenButton = markdownFormatToolbar && markdownFormatToolbar.querySelector('[data-md-action="fullscreen"]');
+    if (!fullscreenButton) return;
+    const isFullscreen = Boolean(document.fullscreenElement) || document.documentElement.classList.contains('is-fullscreen-fallback');
+    const label = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+    const icon = fullscreenButton.querySelector('i');
+    fullscreenButton.setAttribute('title', label + ' (F11 / Cmd+Option+F)');
+    fullscreenButton.setAttribute('aria-label', label);
+    fullscreenButton.setAttribute('aria-pressed', String(isFullscreen));
+    if (icon) icon.className = isFullscreen ? 'lucide lucide-minimize' : 'lucide lucide-maximize';
+  }
+
+  async function toggleFullscreenMode() {
+    const root = document.documentElement;
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) {
+        try {
+          await document.exitFullscreen();
+        } catch (error) {
+          return;
+        }
+      }
+      return;
+    }
+
+    if (root.classList.contains('is-fullscreen-fallback')) {
+      root.classList.remove('is-fullscreen-fallback');
+      updateFullscreenButtonState();
+      return;
+    }
+
+    if (typeof root.requestFullscreen === 'function') {
+      try {
+        await root.requestFullscreen();
+      } catch (error) {
+        // Some browsers expose the API but reject fullscreen for the current page.
+      }
+      if (document.fullscreenElement) return;
+    }
+
+    root.classList.add('is-fullscreen-fallback');
+    updateFullscreenButtonState();
+  }
+
   function runMarkdownTool(action, button) {
     if (!canMutateEditor() && isLiveMutatingAction(action)) {
       announceToScreenReader(getEditorReadOnlyMessage());
@@ -23027,10 +23071,8 @@ ${selector} .arrowheadPath {
     else if (action === 'alert') openAlertModal();
     else if (action === 'diagram') openDiagramModal(button);
     else if (action === 'terminal-block') insertMarkdownBlock('```bash\nnpm run dev\n```\n');
-    else if (action === 'fullscreen') {
-      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
-      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } else if (action === 'outline') setDocumentOutlineOpen(documentOutline.hidden);
+    else if (action === 'fullscreen') toggleFullscreenMode();
+    else if (action === 'outline') setDocumentOutlineOpen(documentOutline.hidden);
     else if (action === 'clear-formatting') openClearFormattingModal();
     else if (action === 'find') openFindReplaceModal();
     else if (action === 'help') openHelpModal();
@@ -24041,16 +24083,8 @@ ${selector} .arrowheadPath {
   initDropdownMenuMotion();
   initFindReplaceModal();
   initAppModals();
-  document.addEventListener('fullscreenchange', function() {
-    const fullscreenButton = markdownFormatToolbar && markdownFormatToolbar.querySelector('[data-md-action="fullscreen"]');
-    if (!fullscreenButton) return;
-    const isFullscreen = Boolean(document.fullscreenElement);
-    const label = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
-    const icon = fullscreenButton.querySelector('i');
-    fullscreenButton.setAttribute('title', label + ' (F11 / Cmd+Option+F)');
-    fullscreenButton.setAttribute('aria-label', label);
-    if (icon) icon.className = isFullscreen ? 'lucide lucide-minimize' : 'lucide lucide-maximize';
-  });
+  document.addEventListener('fullscreenchange', updateFullscreenButtonState);
+  updateFullscreenButtonState();
   const headerAboutButton = document.getElementById('header-about-button');
   if (headerAboutButton) {
     headerAboutButton.addEventListener('click', openAboutModal);

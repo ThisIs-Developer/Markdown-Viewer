@@ -115,7 +115,7 @@ The formatting toolbar inserts or transforms Markdown at the current selection. 
 - The direction toggle switches between left-to-right and right-to-left content direction.
 - Link, image, reference, emoji, symbol, alert, and diagram buttons open focused modals. The table action opens an accessible 8×8 quick selector with pointer and arrow-key navigation; **Custom table** accepts dimensions up to 20×20, with the selected row count including the header.
 - Date/time inserts a local timestamp.
-- Fullscreen uses the browser Fullscreen API when available.
+- Fullscreen uses the browser Fullscreen API when available. If the browser does not support or allow it, the app switches to a focus layout that hides the app header and expands the workspace. This in-page fallback cannot hide browser controls.
 - Find and Replace and Fullscreen are direct formatting-toolbar actions. About Markdown Viewer opens from the header or mobile menu.
 
 View-only Share Snapshot tabs and view-only Live Share participant tabs block mutating tools and announce that the editor is read-only. Non-mutating actions such as fullscreen, find, help, and info remain available.
