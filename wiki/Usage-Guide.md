@@ -84,6 +84,8 @@ The toolbar can:
 
 The editor also supports list continuation on Enter, two-space indent on Tab, outdent on Shift+Tab, and custom undo/redo. View-only shared tabs block editing actions and keep reading, find, help, and fullscreen available.
 
+With the Editor focused, **Page Up** and **Page Down** scroll smoothly without shifting the workspace sideways. Hold **Shift** while paging to extend the text selection. This also works in the secondary document Editor. The app respects your device's reduced-motion preference and keeps synchronized panes aligned during paging.
+
 ## Comments
 
 Use Comments when you want to leave anchored feedback without editing the Markdown source.

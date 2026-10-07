@@ -297,6 +297,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let isPreviewScrolling = false;
   let isProgrammaticScrolling = false;
   let scrollSyncTimeout = null;
+  let scrollSyncReleaseTimeout = null;
+  const synchronizedScrollPositions = new WeakMap();
   let documentSplitSyncFrame = null;
   let documentSplitScrollSource = null;
   let documentSplitSyncReleaseTimeout = null;
@@ -12040,6 +12042,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function syncDocumentSplitScroll(source, target) {
     if (!syncScrollingEnabled || !secondarySplitTabId || !source || !target) return;
+    if (isSynchronizedScrollEvent(source)) return;
     if (documentSplitScrollSource && documentSplitScrollSource !== source) return;
     documentSplitScrollSource = source;
     if (documentSplitSyncFrame) cancelAnimationFrame(documentSplitSyncFrame);
@@ -12050,7 +12053,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const targetRange = target.scrollHeight - target.clientHeight;
       const ratio = sourceRange > 0 ? source.scrollTop / sourceRange : 0;
       const targetPosition = targetRange * ratio;
-      if (Number.isFinite(targetPosition)) target.scrollTop = targetPosition;
+      if (Number.isFinite(targetPosition)) setSynchronizedScrollTop(target, targetPosition);
       documentSplitSyncReleaseTimeout = setTimeout(function() {
         documentSplitScrollSource = null;
       }, 48);
@@ -16887,7 +16890,21 @@ ${selector} .arrowheadPath {
     readingTimeElement.textContent = readingTimeMinutes;
   }
 
+  function isSynchronizedScrollEvent(element) {
+    if (element.scrollTop === synchronizedScrollPositions.get(element)) return true;
+    synchronizedScrollPositions.delete(element);
+    return false;
+  }
+
+  function setSynchronizedScrollTop(element, top) {
+    element.scrollTo({ top, behavior: 'instant' });
+    // Remember the browser's rounded/clamped result. A delayed target scroll
+    // event must not echo back and interrupt the source pane's animation.
+    synchronizedScrollPositions.set(element, element.scrollTop);
+  }
+
   function syncEditorToPreview() {
+    if (isSynchronizedScrollEvent(markdownEditor)) return;
     // During an outline jump, the preview owns the position until the next user
     // interaction. Delayed editor scroll events must not undo a layout correction.
     if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling || documentOutlineScrollTarget) return;
@@ -16895,6 +16912,7 @@ ${selector} .arrowheadPath {
     if (!sourceDocumentId || previewLastRenderedTabId !== sourceDocumentId) return;
     isEditorScrolling = true;
 
+    clearTimeout(scrollSyncReleaseTimeout);
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
       scrollSyncTimeout = null;
@@ -16910,21 +16928,24 @@ ${selector} .arrowheadPath {
         editorScrollRatio;
 
       if (!isNaN(previewScrollPosition) && isFinite(previewScrollPosition)) {
-        previewPane.scrollTop = previewScrollPosition;
+        setSynchronizedScrollTop(previewPane, previewScrollPosition);
       }
 
-      setTimeout(function() {
+      scrollSyncReleaseTimeout = setTimeout(function() {
+        scrollSyncReleaseTimeout = null;
         isEditorScrolling = false;
       }, 50);
     });
   }
 
   function syncPreviewToEditor() {
+    if (isSynchronizedScrollEvent(previewPane)) return;
     if (!syncScrollingEnabled || isEditorScrolling || isProgrammaticScrolling) return;
     const sourceDocumentId = previewLastRenderedTabId;
     if (!sourceDocumentId || activeTabId !== sourceDocumentId) return;
     isPreviewScrolling = true;
 
+    clearTimeout(scrollSyncReleaseTimeout);
     if (scrollSyncTimeout) cancelAnimationFrame(scrollSyncTimeout);
     scrollSyncTimeout = requestAnimationFrame(function() {
       scrollSyncTimeout = null;
@@ -16940,23 +16961,77 @@ ${selector} .arrowheadPath {
         previewScrollRatio;
 
       if (!isNaN(editorScrollPosition) && isFinite(editorScrollPosition)) {
-        markdownEditor.scrollTop = editorScrollPosition;
+        setSynchronizedScrollTop(markdownEditor, editorScrollPosition);
         syncEditorScrollOverlays();
       }
 
-      setTimeout(function() {
+      scrollSyncReleaseTimeout = setTimeout(function() {
+        scrollSyncReleaseTimeout = null;
         isPreviewScrolling = false;
       }, 50);
     });
   }
 
   function cancelPendingMainScrollSync() {
+    synchronizedScrollPositions.delete(markdownEditor);
+    synchronizedScrollPositions.delete(previewPane);
+    clearTimeout(scrollSyncReleaseTimeout);
+    scrollSyncReleaseTimeout = null;
     if (scrollSyncTimeout) {
       cancelAnimationFrame(scrollSyncTimeout);
       scrollSyncTimeout = null;
     }
     isEditorScrolling = false;
     isPreviewScrolling = false;
+  }
+
+  function initEditorPageNavigation(editor) {
+    if (!editor) return;
+    let pendingNavigation = null;
+    let navigationFrame = null;
+    let navigationTimeout = null;
+
+    function clearPendingNavigation() {
+      pendingNavigation = null;
+      if (navigationFrame) cancelAnimationFrame(navigationFrame);
+      navigationFrame = null;
+      clearTimeout(navigationTimeout);
+      navigationTimeout = null;
+    }
+
+    editor.addEventListener('keydown', function(event) {
+      clearPendingNavigation();
+      if (event.defaultPrevented || (event.key !== 'PageDown' && event.key !== 'PageUp') ||
+          event.altKey || event.ctrlKey || event.metaKey ||
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      pendingNavigation = { top: editor.scrollTop };
+      // Selection can stay within the viewport and produce no scroll event.
+      navigationTimeout = setTimeout(clearPendingNavigation, 200);
+    });
+
+    editor.addEventListener('scroll', function() {
+      if (!pendingNavigation || navigationFrame) return;
+      // Leave an existing native animation alone. Only an immediate scrollend
+      // before this frame needs the smooth-scrolling fallback below.
+      navigationFrame = requestAnimationFrame(clearPendingNavigation);
+    });
+
+    editor.addEventListener('scrollend', function() {
+      const navigation = pendingNavigation;
+      clearPendingNavigation();
+      if (!navigation || editor.scrollTop === navigation.top) return;
+      // Let the browser choose the destination and update the caret/selection,
+      // then animate that same destination before the instant jump is painted.
+      const top = editor.scrollTop;
+      const left = editor.scrollLeft;
+      editor.scrollTo({ top: navigation.top, left, behavior: 'instant' });
+      if (editor === markdownEditor) syncEditorScrollOverlays();
+      editor.scrollTo({ top, left, behavior: 'smooth' });
+    });
+    ['blur', 'pointerdown', 'wheel'].forEach(function(type) {
+      editor.addEventListener(type, clearPendingNavigation, { passive: true });
+    });
   }
 
   function toggleSyncScrolling() {
@@ -23988,6 +24063,8 @@ ${selector} .arrowheadPath {
   markdownEditor.addEventListener('keydown', handleMarkdownEditorStructureKeydown);
   if (documentSplitEditor) documentSplitEditor.addEventListener('keydown', handleMarkdownEditorStructureKeydown);
   initSlashCommandMenu();
+  initEditorPageNavigation(markdownEditor);
+  initEditorPageNavigation(documentSplitEditor);
   
   markdownEditor.addEventListener("scroll", function() {
     cachedScrollTop = this.scrollTop;
