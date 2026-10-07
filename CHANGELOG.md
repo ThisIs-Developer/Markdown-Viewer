@@ -6,6 +6,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 ## Unreleased
 
 - **Editor navigation:** Fixed Page Up/Down shifting the workspace sideways in Edge by removing closed dropdowns from the layout while preserving menu transitions and native editor navigation.
+- **Editor scrolling:** Added smooth Page Up/Down scrolling when the browser jumps instantly, including the secondary document Editor. Native caret movement, Shift selection, and reduced-motion preferences are preserved; delayed synchronized scroll events no longer interrupt an ongoing animation.
 
 ---
 
