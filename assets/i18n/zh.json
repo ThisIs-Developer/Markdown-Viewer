@@ -1,4 +1,8 @@
 {
+  "Expanded view": "展开视图",
+  "Exit expanded view": "退出展开视图",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "此处无法使用全屏。展开视图会保留浏览器的控件。",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "无法退出全屏。请重试，或使用浏览器的退出控件。",
   "— Copy/Paste": "— 复制/粘贴",
   "— Open Find & Replace": "— 打开查找和替换",
   "— Redo": "— 重做",

@@ -1,4 +1,8 @@
 {
+  "Expanded view": "Genişletilmiş görünüm",
+  "Exit expanded view": "Genişletilmiş görünümden çık",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Tam ekran burada kullanılamıyor. Genişletilmiş görünümde tarayıcı kontrolleri görünür kalır.",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "Tam ekrandan çıkılamadı. Tekrar deneyin veya tarayıcınızın çıkış kontrolünü kullanın.",
   "— Copy/Paste": "— Kopyala/Yapıştır",
   "— Open Find & Replace": "— Bul ve Değiştir'i aç",
   "— Redo": "— Yinele",

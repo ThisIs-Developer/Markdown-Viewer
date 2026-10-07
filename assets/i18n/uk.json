@@ -1,4 +1,8 @@
 {
+  "Expanded view": "Розширений вигляд",
+  "Exit expanded view": "Вийти з розширеного вигляду",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Повноекранний режим тут недоступний. У розширеному вигляді елементи керування браузера залишаються видимими.",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "Не вдалося вийти з повноекранного режиму. Спробуйте ще раз або скористайтеся кнопкою виходу браузера.",
   "— Copy/Paste": "— Копіювати/Вставити",
   "— Open Find & Replace": "— відкрити Знайти й замінити",
   "— Redo": "— Повторити",

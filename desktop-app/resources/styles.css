@@ -178,6 +178,27 @@ body {
   overflow: hidden;
 }
 
+/* Keep the expanded view out of print layout and preserve the existing overlay layers. */
+@media screen {
+  html.is-fullscreen-fallback,
+  html.is-fullscreen-fallback body {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html.is-fullscreen-fallback .app-container {
+    height: 100vh;
+    height: 100dvh;
+    height: var(--fullscreen-viewport-height, 100dvh);
+  }
+
+  html.is-fullscreen-fallback .app-header {
+    display: none;
+  }
+}
+
 /* ========================================
    DOCUMENT MANAGEMENT SIDEBAR
    ======================================== */

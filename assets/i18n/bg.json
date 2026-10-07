@@ -1,4 +1,8 @@
 {
+  "Expanded view": "Разширен изглед",
+  "Exit expanded view": "Изход от разширения изглед",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Тук целият екран не е наличен. Разширеният изглед оставя контролите на браузъра видими.",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "Неуспешен изход от целия екран. Опитайте отново или използвайте бутона за изход на браузъра.",
   "— Copy/Paste": "— Копиране/поставяне",
   "— Open Find & Replace": "— Отваряне на „Търсене и замяна“",
   "— Redo": "— Повтаряне",

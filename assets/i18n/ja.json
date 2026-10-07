@@ -1,4 +1,8 @@
 {
+  "Expanded view": "拡大表示",
+  "Exit expanded view": "拡大表示を終了",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "ここでは全画面表示を利用できません。拡大表示ではブラウザーの操作ボタンは表示されたままです。",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "全画面表示を終了できませんでした。もう一度試すか、ブラウザーの終了ボタンを使用してください。",
   "— Copy/Paste": "— コピー/ペースト",
   "— Open Find & Replace": "— 検索と置換を開く",
   "— Redo": "— やり直し",
