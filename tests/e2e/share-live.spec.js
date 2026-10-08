@@ -4,6 +4,7 @@ const {
   openApp,
   setEditorContent,
   storedDocuments,
+  stubClipboard,
   stubLiveShareRuntime
 } = require('../helpers/app');
 
@@ -48,6 +49,12 @@ test('Share Snapshot creates a view-only hash link that opens without permanent 
   await expect(sharedPage.locator('#markdown-preview')).toContainText('This text should survive a snapshot round trip.');
   await expect(sharedPage.locator('#toggle-sync')).toBeDisabled();
   await expect(sharedPage.locator('#toggle-sync')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(sharedPage.locator('#copy-markdown-button')).toBeDisabled();
+  await expect(sharedPage.locator('#mobile-copy-markdown')).toBeDisabled();
+  await stubClipboard(sharedPage);
+  sharedPage.once('dialog', dialog => dialog.dismiss());
+  await sharedPage.keyboard.press('ControlOrMeta+Shift+C');
+  expect(await sharedPage.evaluate(() => window.__copiedText)).toBe('');
 
   const formatMenuToggles = sharedPage.locator('#markdown-format-toolbar [data-toolbar-menu-toggle]');
   await expect(formatMenuToggles).toHaveCount(4);

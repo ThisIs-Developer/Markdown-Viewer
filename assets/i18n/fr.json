@@ -1198,5 +1198,7 @@
   "Plain text": "Texte brut",
   "Normalize heading levels": "Normaliser les niveaux des titres",
   "Collapsible TOC wrapper": "Table des matières repliable",
-  "No headings in the selected range.": "Aucun titre dans la plage sélectionnée."
+  "No headings in the selected range.": "Aucun titre dans la plage sélectionnée.",
+  "Copy entire document as Markdown": "Copier tout le document au format Markdown",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copier tout le document au format Markdown (Ctrl/Cmd+Shift+C)"
 }

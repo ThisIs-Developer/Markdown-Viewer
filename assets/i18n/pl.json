@@ -1198,5 +1198,7 @@
   "Plain text": "Zwykły tekst",
   "Normalize heading levels": "Normalizuj poziomy nagłówków",
   "Collapsible TOC wrapper": "Zwijany spis treści",
-  "No headings in the selected range.": "Brak nagłówków w wybranym zakresie."
+  "No headings in the selected range.": "Brak nagłówków w wybranym zakresie.",
+  "Copy entire document as Markdown": "Kopiuj cały dokument jako Markdown",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Kopiuj cały dokument jako Markdown (Ctrl/Cmd+Shift+C)"
 }

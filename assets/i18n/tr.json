@@ -1198,5 +1198,7 @@
   "Plain text": "Düz metin",
   "Normalize heading levels": "Başlık düzeylerini normalleştir",
   "Collapsible TOC wrapper": "Daraltılabilir içindekiler tablosu",
-  "No headings in the selected range.": "Seçilen aralıkta başlık yok."
+  "No headings in the selected range.": "Seçilen aralıkta başlık yok.",
+  "Copy entire document as Markdown": "Belgenin tamamını Markdown olarak kopyala",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Belgenin tamamını Markdown olarak kopyala (Ctrl/Cmd+Shift+C)"
 }

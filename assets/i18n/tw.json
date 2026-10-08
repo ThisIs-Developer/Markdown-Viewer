@@ -1198,5 +1198,7 @@
   "Plain text": "純文字",
   "Normalize heading levels": "正規化標題層級",
   "Collapsible TOC wrapper": "可摺疊目錄",
-  "No headings in the selected range.": "所選範圍內沒有標題。"
+  "No headings in the selected range.": "所選範圍內沒有標題。",
+  "Copy entire document as Markdown": "將整份文件複製為 Markdown",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "將整份文件複製為 Markdown (Ctrl/Cmd+Shift+C)"
 }

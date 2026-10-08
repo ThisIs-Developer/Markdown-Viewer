@@ -1198,5 +1198,7 @@
   "Plain text": "Texto sin formato",
   "Normalize heading levels": "Normalizar niveles de encabezado",
   "Collapsible TOC wrapper": "Tabla de contenido plegable",
-  "No headings in the selected range.": "No hay encabezados en el rango seleccionado."
+  "No headings in the selected range.": "No hay encabezados en el rango seleccionado.",
+  "Copy entire document as Markdown": "Copiar todo el documento como Markdown",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copiar todo el documento como Markdown (Ctrl/Cmd+Shift+C)"
 }

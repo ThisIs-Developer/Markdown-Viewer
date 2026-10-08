@@ -98,12 +98,16 @@ With the Editor focused, **Page Up** and **Page Down** scroll smoothly without s
 
 ### Copying a Document
 
-Right-click an Editor or Preview, or open its context menu with a long press on touch devices, and choose **Select All**. It selects the entire document in that pane, closes the menu, and returns focus to the pane. Press **Ctrl/Cmd+C**, or reopen the context menu and choose **Copy**, to copy the selection. You can also press **Ctrl/Cmd+A** while a pane has focus to select all of its content. This works in either pane of the two-Document view and in read-only documents.
+Use **Copy Markdown** in the navbar or mobile menu, or press **Ctrl/Cmd+Shift+C**, to copy the entire active document's raw source. This command ignores partial selections and works in Editor, Preview, and Split modes. With two documents side by side, first click or focus the document you want to copy; toolbar clicks retain that target.
 
-- **Editor:** Copy provides the raw Markdown, including Markdown syntax. The toolbar's **Copy Markdown** command also copies the source.
+To copy a selection, right-click an Editor or Preview, or open its context menu with a long press on touch devices, and choose **Select All**. It selects the entire document in that pane using the browser's text selection. With a mouse or keyboard, the menu closes and focus returns to the pane: press **Ctrl/Cmd+C**, or reopen the menu and choose **Copy**. With touch, the menu stays available after Select All so you can tap **Copy**, which closes it. You can also press **Ctrl/Cmd+A** while a pane has focus. This works in either pane of the two-Document view and in read-only documents.
+
+- **Editor:** Copy provides the selected raw Markdown, including Markdown syntax. Paste inserts clipboard text at the cursor or replaces the selection; rich text is not automatically converted into Markdown.
 - **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks. Partial selections and the browser's native Copy command also retain formatting. Preview toolbars and action buttons are excluded.
 
-Copying runs locally through the system clipboard. The receiving app determines which formatting it accepts; plain-text fields and **Paste without formatting** use the text alternative. Browsers without rich clipboard support fall back to plain text.
+Ordinary **Copy** or **Ctrl/Cmd+C** with no selection leaves the clipboard unchanged. Preview is read only: it supports selection and copying, but Paste, Cut, and typing do not change the document.
+
+Copying runs locally through the system clipboard. The receiving app determines which formatting it accepts; plain-text fields and **Paste without formatting** use the text alternative. For example, copying `**Hello**` from the Editor pastes those Markdown characters, while copying **Hello** from the Preview supplies bold text plus the plain-text alternative `Hello`. Browsers without rich clipboard support fall back to plain text.
 
 ## Comments
 

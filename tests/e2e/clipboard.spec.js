@@ -52,11 +52,24 @@ async function selectPreview(page, selector = '#markdown-preview', start, end) {
   }, { start, end });
 }
 
-async function openSurfaceMenu(page, selector) {
+async function openSurfaceMenu(page, selector, pointerType = 'mouse') {
+  await page.locator(selector).dispatchEvent('pointerdown', { pointerType, button: pointerType === 'touch' ? 0 : 2 });
   await page.locator(selector).dispatchEvent('contextmenu', { button: 2, clientX: 120, clientY: 220 });
   const menu = page.locator('.document-menu-context.open');
   await expect(menu).toBeVisible();
   return menu;
+}
+
+async function openSecondDocument(page, secondaryMarkdown) {
+  const primaryId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+  await page.locator('#tab-new-btn').click();
+  await setEditorContent(page, secondaryMarkdown);
+  const secondaryId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+  await page.locator(`#tab-list .tab-item[data-tab-id="${primaryId}"]`).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Open in split view' }).click();
+  await page.locator('#document-split-destination').selectOption(secondaryId);
+  await page.locator('#document-split-modal-confirm').click();
+  await expect(page.locator('#document-split-editor')).toHaveValue(secondaryMarkdown);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -272,16 +285,8 @@ test('a failed Cut leaves the document intact', async ({ page }) => {
 });
 
 test('Select All and Copy are scoped to the secondary editor and preview', async ({ page }) => {
-  const primaryId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
-  await page.locator('#tab-new-btn').click();
   const secondaryMarkdown = '# Secondary document\n\n**শিক্ষা** and second document content.';
-  await setEditorContent(page, secondaryMarkdown);
-  const secondaryId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
-  await page.locator(`#tab-list .tab-item[data-tab-id="${primaryId}"]`).click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'Open in split view' }).click();
-  await page.locator('#document-split-destination').selectOption(secondaryId);
-  await page.locator('#document-split-modal-confirm').click();
-  await expect(page.locator('#document-split-editor')).toHaveValue(secondaryMarkdown);
+  await openSecondDocument(page, secondaryMarkdown);
   let menu = await openSurfaceMenu(page, '#document-split-editor');
   await menu.getByRole('menuitem', { name: 'Select All', exact: true }).click();
   await expect(menu).toHaveCount(0);
@@ -305,6 +310,106 @@ test('Select All and Copy are scoped to the secondary editor and preview', async
   await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>শিক্ষা</strong>');
   expect(await page.evaluate(() => window.__clipboard['text/plain'])).not.toContain('Clipboard document');
+});
+
+test('Copy Markdown and its shortcut always copy the complete source in every view', async ({ page }) => {
+  await expect(page.locator('#copy-markdown-button')).toHaveAttribute('title', 'Copy entire document as Markdown (Ctrl/Cmd+Shift+C)');
+  for (const mode of ['editor', 'preview', 'split']) {
+    await page.locator(`.view-toolbar [data-view-mode="${mode}"]`).click();
+    if (mode === 'preview') {
+      await page.locator('#markdown-preview').focus();
+      await selectPreview(page, '#markdown-preview strong', 5, 11);
+    } else {
+      await page.locator('#markdown-editor').evaluate(editor => {
+        editor.focus();
+        editor.setSelectionRange(2, 11);
+      });
+    }
+    await page.evaluate(() => { window.__clipboard = null; });
+    await page.keyboard.press('ControlOrMeta+Shift+C');
+    await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
+    await page.evaluate(() => { window.__clipboard = null; });
+    await page.locator('#copy-markdown-button').click();
+    await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
+  }
+  await expect(page.locator('#copy-markdown-button')).toHaveAttribute('title', 'Copy entire document as Markdown (Ctrl/Cmd+Shift+C)');
+  await expect(page.locator('#copy-markdown-button i')).toHaveClass('lucide lucide-clipboard');
+});
+
+test('Copy Markdown remembers the last focused document across toolbar and view changes', async ({ page }) => {
+  const secondaryMarkdown = '# Secondary document\n\n**Complete secondary source**';
+  await openSecondDocument(page, secondaryMarkdown);
+  const unsavedMarkdown = secondaryMarkdown + '\n\nA new edit.';
+  await page.locator('#document-split-editor').fill(unsavedMarkdown);
+  await page.locator('#document-split-editor').evaluate(editor => editor.setSelectionRange(2, 11));
+  await page.keyboard.press('ControlOrMeta+Shift+C');
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': unsavedMarkdown });
+  await page.evaluate(() => { window.__clipboard = null; });
+  await page.locator('#copy-markdown-button').click();
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': unsavedMarkdown });
+  await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+  await page.evaluate(() => { window.__clipboard = null; });
+  await page.locator('#copy-markdown-button').click();
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': unsavedMarkdown });
+  await page.locator('#markdown-preview h1').click();
+  await page.locator('#copy-markdown-button').click();
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
+  await page.locator('#document-split-preview h1').click();
+  await page.keyboard.press('ControlOrMeta+Shift+C');
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': unsavedMarkdown });
+  await page.locator('#tab-list .tab-item.active').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Exit split view', exact: true }).click();
+  await page.locator('#copy-markdown-button').click();
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
+  await page.locator('#tab-new-btn').click();
+  await setEditorContent(page, '# New active document');
+  await page.keyboard.press('ControlOrMeta+Shift+C');
+  await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': '# New active document' });
+});
+
+test('ordinary Copy with no selection leaves the real clipboard unchanged', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Clipboard read permissions are Chromium-specific.');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(async () => {
+    navigator.clipboard.writeText = window.__writeClipboardText;
+    await navigator.clipboard.writeText('Keep this clipboard content');
+  });
+  for (const selector of ['#markdown-editor', '#markdown-preview', '#copy-markdown-button']) {
+    await page.locator(selector).focus();
+    await page.evaluate(() => {
+      window.getSelection().removeAllRanges();
+      document.getElementById('markdown-editor').setSelectionRange(0, 0);
+    });
+    await page.keyboard.press('ControlOrMeta+C');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('Keep this clipboard content');
+  }
+});
+
+test('Copy Markdown shortcut does nothing after the last document is closed', async ({ page }) => {
+  await page.locator('#tab-list .tab-item.active .tab-close-btn').click();
+  await expect(page.locator('#no-open-document')).toBeVisible();
+  await expect(page.locator('#copy-markdown-button')).toBeDisabled();
+  await page.keyboard.press('ControlOrMeta+Shift+C');
+  expect(await page.evaluate(() => window.__clipboard)).toBeNull();
+});
+
+test('native editor Copy is raw text and preview keyboard Paste cannot edit the document', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Clipboard read permissions are Chromium-specific.');
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  const editor = page.locator('#markdown-editor');
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('ControlOrMeta+C');
+  // The native Windows clipboard uses CRLF; the textarea exposes LF.
+  expect((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n')).toBe(markdown);
+  expect(await page.evaluate(async () => (await navigator.clipboard.read())[0].types)).toEqual(['text/plain']);
+  await page.locator('#markdown-preview').focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('ControlOrMeta+V');
+  await page.keyboard.press('ControlOrMeta+X');
+  await page.keyboard.type('Cannot change the preview');
+  await expect(editor).toHaveValue(markdown);
+  await expect(page.locator('#markdown-preview h1')).toHaveText('Clipboard document');
 });
 
 for (const mode of ['async clipboard', 'legacy clipboard', 'rejected async clipboard', 'native Copy shortcut']) {
@@ -353,19 +458,61 @@ for (const mode of ['async clipboard', 'legacy clipboard', 'rejected async clipb
 test.describe('Android-sized touch layout', () => {
   test.use({ viewport: { width: 412, height: 915 }, hasTouch: true });
 
-  test('Select All closes the menu and leaves a preview selection that can be copied', async ({ page }) => {
+  for (const pane of ['editor', 'preview']) {
+    test(`touch Select All keeps ${pane} Copy available until Copy is tapped`, async ({ page }) => {
+      const selector = '#markdown-' + pane;
+      const menu = await openSurfaceMenu(page, selector, 'touch');
+      await expect(menu.getByRole('menuitem', { name: 'Copy', exact: true })).toBeDisabled();
+      await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+      await expect(page.locator('#save-status')).toHaveAttribute('data-state', 'saved');
+      await expect(menu).toBeVisible();
+      await expect(page.locator(selector)).toBeFocused();
+      if (pane === 'preview') {
+        expect(await page.evaluate(() => window.getSelection().toString())).toContain('Clipboard document');
+        await expect(menu.getByRole('menuitem', { name: 'Cut', exact: true })).toBeDisabled();
+      } else {
+        expect(await page.locator(selector).evaluate(editor => editor.value.slice(editor.selectionStart, editor.selectionEnd))).toBe(markdown);
+        await expect(menu.getByRole('menuitem', { name: 'Cut', exact: true })).toBeEnabled();
+      }
+      const bounds = await menu.boundingBox();
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(412);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(915);
+      await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
+      await expect(menu).toHaveCount(0);
+      if (pane === 'preview') {
+        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+      } else {
+        await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
+      }
+    });
+  }
+
+  test('mouse Select All still closes the menu on a device with touch support', async ({ page }) => {
     const menu = await openSurfaceMenu(page, '#markdown-preview');
-    await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+    await menu.getByRole('menuitem', { name: 'Select All', exact: true }).click();
     await expect(menu).toHaveCount(0);
     await expect(page.locator('#markdown-preview')).toBeFocused();
+  });
+
+  test('touch menus remain available when contextmenu has no pointer metadata', async ({ page }) => {
+    const preview = page.locator('#markdown-preview');
+    await preview.dispatchEvent('touchstart');
+    await preview.dispatchEvent('contextmenu', { button: 2, clientX: 120, clientY: 220 });
+    const menu = page.locator('.document-menu-context.open');
+    await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+    await expect(menu).toBeVisible();
     expect(await page.evaluate(() => window.getSelection().toString())).toContain('Clipboard document');
-    await openSurfaceMenu(page, '#markdown-preview');
-    const bounds = await menu.boundingBox();
-    expect(bounds.x).toBeGreaterThanOrEqual(0);
-    expect(bounds.x + bounds.width).toBeLessThanOrEqual(412);
-    expect(bounds.y + bounds.height).toBeLessThanOrEqual(915);
     await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
     await expect(menu).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+  });
+
+  test('mobile Copy Markdown copies the entire raw document from a preview selection', async ({ page }) => {
+    await page.locator('#markdown-preview').focus();
+    await selectPreview(page, '#markdown-preview strong', 5, 11);
+    await page.locator('#mobile-menu-toggle').tap();
+    await page.locator('#mobile-copy-markdown').tap();
+    await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
   });
 });
