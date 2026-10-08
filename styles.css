@@ -554,6 +554,26 @@ body {
   outline: none;
 }
 
+.sidebar-pointer-dragging,
+.sidebar-pointer-dragging * {
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+.sidebar-pointer-dragging .document-drag-preview {
+  pointer-events: none;
+}
+
+.sidebar-pointer-dragging .document-drag-preview::after {
+  content: attr(data-drop-action);
+  display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--button-bg);
+  color: var(--text-primary);
+  font-size: var(--ui-font-xs);
+}
+
 .document-tree-load-more {
   width: calc(100% - 12px);
   min-height: 30px;
@@ -613,16 +633,18 @@ body {
   background: color-mix(in srgb, var(--accent-color) 7%, transparent);
 }
 
-.document-tree-row[data-tree-type="document"].is-selected > .document-tree-main > i:first-child,
 .document-tree-row[data-tree-type="document"].is-active > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
-.document-tree-row[draggable="true"] {
+.document-tree-row[draggable="true"],
+.document-tree-row[data-pointer-draggable="true"] {
   cursor: grab;
+  user-select: none;
 }
 
-.document-tree-row[draggable="true"].is-dragging {
+.document-tree-row[draggable="true"].is-dragging,
+.document-tree-row[data-pointer-draggable="true"].is-dragging {
   cursor: grabbing;
   opacity: 0.45;
 }
@@ -748,7 +770,7 @@ body {
   text-align: center;
 }
 
-.document-tree-main > .lucide-folder-open {
+.document-tree-row.is-current-location > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
@@ -771,6 +793,16 @@ body {
   flex: 0 0 auto;
   color: var(--text-secondary);
   font-size: var(--ui-font-xs);
+}
+
+.document-tree-row.is-source-missing .document-tree-meta,
+.document-tree-row.is-source-missing .document-tree-main > i {
+  color: var(--color-danger-fg);
+}
+
+.document-tree-row.is-source-conflict .document-tree-meta {
+  color: #bf8700;
+  font-weight: 600;
 }
 
 .document-tree-main > .document-favorite-indicator {
@@ -1347,7 +1379,8 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--accent-color);
 }
 
-.app-toast-icon-shell > .bi {
+.app-toast-icon-shell > .bi,
+.app-toast-icon-shell > .lucide {
   font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }
@@ -12398,6 +12431,108 @@ html[data-theme="dark"] .mermaid svg {
 
 .app-modal-box > .modal-header + .reset-modal-actions {
   border-top: 0;
+}
+
+.desktop-drop-modal-box {
+  width: min(94vw, 680px);
+  max-width: 680px;
+}
+
+.desktop-drop-modal-box .modal-header > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.desktop-drop-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desktop-drop-file-summary {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.desktop-drop-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.desktop-drop-choice {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 11px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.desktop-drop-choice:hover,
+.desktop-drop-choice:focus-visible {
+  border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 7%, var(--bg-color));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  outline: 0;
+}
+
+.desktop-drop-choice-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--header-bg);
+  color: var(--accent-color);
+}
+
+.desktop-drop-choice-icon .lucide {
+  width: 17px;
+  height: 17px;
+}
+
+.desktop-drop-choice-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.desktop-drop-choice-copy strong {
+  font-size: var(--ui-font-md);
+  line-height: 1.25;
+}
+
+.desktop-drop-choice-copy span,
+.desktop-drop-choice-copy small {
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.4;
+}
+
+.desktop-drop-choice-copy small {
+  margin-top: 2px;
+  font-size: var(--ui-font-xs);
+}
+
+@media (max-width: 620px) {
+  .desktop-drop-choice-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Keep the custom table form compact: it only contains two numeric values. */

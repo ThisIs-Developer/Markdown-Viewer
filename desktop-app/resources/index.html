@@ -72,7 +72,9 @@
                         </button>
                         <ul class="dropdown-menu app-command-menu header-command-menu header-new-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="header-new-document"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i><span class="app-menu-label">New document</span></a></li>
-                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-upload" aria-hidden="true"></i><span class="app-menu-label">From files</span></a></li>
+                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-files" aria-hidden="true"></i><span class="app-menu-label">From files</span></a></li>
+                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-file"><i class="lucide lucide-file-symlink" aria-hidden="true"></i><span class="app-menu-label">Link files…</span></a></li>
+                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-folder"><i class="lucide lucide-folder-symlink" aria-hidden="true"></i><span class="app-menu-label">Link folder…</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-github"><i class="bi bi-github" aria-hidden="true"></i><span class="app-menu-label">From GitHub</span></a></li>
                         </ul>
                     </div>
@@ -345,6 +347,12 @@
                 </button>
                 <button id="sidebar-new-folder" class="document-sidebar-icon-btn" type="button" aria-label="Create a folder" title="New folder">
                   <i class="lucide lucide-folder-plus" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-files" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link Markdown files" title="Link Markdown files" hidden>
+                  <i class="lucide lucide-file-symlink" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-folder" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link a Markdown folder" title="Link a Markdown folder" hidden>
+                    <i class="lucide lucide-folder-symlink" aria-hidden="true"></i>
                 </button>
                 <button id="sidebar-trash-button" class="document-sidebar-icon-btn" type="button" aria-label="Open Trash" title="Trash">
                   <i class="lucide lucide-trash-2" aria-hidden="true"></i>
@@ -1928,6 +1936,41 @@
         <div class="reset-modal-actions">
           <button type="button" class="reset-modal-btn reset-modal-cancel" id="document-confirm-modal-cancel">Cancel</button>
           <button type="button" class="reset-modal-btn reset-modal-confirm" id="document-confirm-modal-confirm">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="desktop-drop-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="desktop-drop-modal-title" aria-describedby="desktop-drop-modal-description" aria-hidden="true" style="display:none;">
+      <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box desktop-drop-modal-box">
+        <div class="modal-header">
+          <div>
+            <p id="desktop-drop-modal-title" class="reset-modal-message">Add dropped Markdown</p>
+            <p id="desktop-drop-modal-description" class="modal-subtext">Choose whether to keep the original file linked or store an independent copy in the Vault.</p>
+          </div>
+          <button type="button" class="modal-close-btn" id="desktop-drop-modal-close" aria-label="Cancel dropped file import"><i class="lucide lucide-x" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body desktop-drop-modal-body">
+          <p id="desktop-drop-file-summary" class="desktop-drop-file-summary"></p>
+          <div class="desktop-drop-choice-grid">
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-link">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-file-symlink" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Link original</strong>
+                <span>Edit the file in its current location. Ctrl+S writes back to the original.</span>
+                <small>The original Windows path is retained directly from the drop.</small>
+              </span>
+            </button>
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-copy">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-files" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Import to Vault</strong>
+                <span>Create an independent Workspace copy. The original file will not be changed.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="reset-modal-actions">
+          <button type="button" class="reset-modal-btn reset-modal-cancel" id="desktop-drop-modal-cancel">Cancel</button>
         </div>
       </div>
     </div>

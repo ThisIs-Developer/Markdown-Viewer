@@ -34,6 +34,15 @@ Desktop-only files:
 - Document metadata loads at startup; Markdown content loads only when a document is opened and is kept in a bounded in-memory cache.
 - Native Markdown/HTML save and Markdown open flows use Neutralino dialogs and filesystem APIs.
 - A Markdown file passed as a launch argument is loaded into the editor.
+- Files opened from disk can remain linked to their original path. Workspace (Vault) copies are separate documents; converting a linked file to a copy leaves its source untouched.
+- Linked files keep an app-local draft, but write to the original only on Ctrl+S. Reopening the same path selects its existing document rather than making another copy.
+- **Link a Markdown folder** adds its Markdown files under Linked Workspace, alongside Workspace (Vault) and Secret Workspace. Nested folders can be expanded independently; source paths appear on hover. Files added or changed outside the app are detected while the desktop app is running; a locally edited draft is not silently overwritten by an external change.
+- Linked recovery drafts are stored separately under `Markdown Viewer Vault/Linked Workspace`; normal copies remain under `Markdown Viewer Vault/Workspace`. Existing linked drafts migrate safely. The default Linked Workspace guide is editable and is not recreated after intentional deletion.
+- Converted Vault copies stay independent even when the original is reopened. Explicit **Rescan folder** or re-adding the folder restores removed links without replacing those copies; background scans respect removals.
+- Linked context menus offer **Save** and **Save As**. Save updates the current source; Save As creates a separate external file and link. Vault Save As (or Ctrl+S) preserves the Vault document and focuses the external linked copy. Dialogs propose the document title and add `.md` when no extension is given. Ctrl+S also works with non-Latin keyboard layouts; Ctrl+Shift+S retains scroll-sync behavior.
+- Dragging a linked document onto the Vault root or a Vault folder converts it into an independent copy there. The original is unchanged. Secret Workspace and reverse Vault-to-linked drops are not supported. Ordinary Vault moves use the existing HTML drag-and-drop behavior.
+- Native linked controls and Save/Save As actions are desktop-only. Browser/Docker users retain normal stored documents and Markdown downloads. Desktop workflows are validated on Windows; macOS/Linux have not been manually verified. No custom Neutralino runtime is required by this feature.
+- Removing a link removes the app's reference, not the original file or folder. Native file drops are not covered by the linked-file flow in this build.
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
 - Private mode pauses document-state persistence for the current page session without deleting the vault, shows an active incognito status, and resets on reload or exit. **Reset workspace** permanently deletes documents, folders, review data, settings, Secret Workspace records, history, trash, and recovery journals after confirmation.
@@ -81,7 +90,7 @@ Seven self-contained executables are written to `desktop-app/dist/markdown-viewe
 | Token security | One-time |
 | Logging | Disabled |
 
-Native APIs are intentionally allowlisted: app exit, open/save dialogs, message boxes, external URL/folder open, tray setup, scoped file and folder operations, path lookup, and storage get/set/remove. Command execution is not part of the default allowlist.
+Native APIs are intentionally allowlisted: app exit, open/save/folder dialogs, message boxes, external URL/folder open, tray setup, scoped file and folder operations, filesystem watchers, path lookup, and storage get/set/remove. Command execution is not part of the default allowlist.
 
 ## Local Renderer Security
 
