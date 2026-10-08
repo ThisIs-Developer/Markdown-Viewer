@@ -96,6 +96,15 @@ The editor also supports list continuation on Enter, two-space indent on Tab, ou
 
 With the Editor focused, **Page Up** and **Page Down** scroll smoothly without shifting the workspace sideways. Hold **Shift** while paging to extend the text selection. This also works in the secondary document Editor. The app respects your device's reduced-motion preference and keeps synchronized panes aligned during paging.
 
+### Copying a Document
+
+Right-click an Editor or Preview, or open its context menu with a long press on touch devices, and choose **Select All**. It selects the entire document in that pane and keeps the menu open. Choose **Copy** to copy the selection and close the menu. This also works in either pane of the two-Document view and in read-only documents.
+
+- **Editor:** Copy provides the raw Markdown, including Markdown syntax. The toolbar's **Copy Markdown** command also copies the source.
+- **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks. Partial selections and the browser's native Copy command also retain formatting. Preview toolbars and action buttons are excluded.
+
+Copying runs locally through the system clipboard. The receiving app determines which formatting it accepts; plain-text fields and **Paste without formatting** use the text alternative. Browsers without rich clipboard support fall back to plain text.
+
 ## Comments
 
 Use Comments when you want to leave anchored feedback without editing the Markdown source.

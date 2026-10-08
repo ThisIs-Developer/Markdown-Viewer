@@ -5714,7 +5714,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function removeDocumentSidebarMenus() {
-    document.querySelectorAll('.document-menu-dropdown').forEach(function(menu) { menu.remove(); });
+    // Autosave refreshes the Explorer while a document selection menu may be in use.
+    document.querySelectorAll('.document-menu-dropdown:not(.document-surface-menu)').forEach(function(menu) { menu.remove(); });
   }
 
   function closeDocumentSidebarMenus() {
@@ -5790,8 +5791,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       actionButton.addEventListener('click', function(event) {
         event.preventDefault();
         event.stopPropagation();
-        closeDocumentSidebarMenus();
-        if (!actionButton.disabled) action.run();
+        if (!action.keepOpen) closeDocumentSidebarMenus();
+        if (!actionButton.disabled) action.run(event);
       });
       menu.appendChild(actionButton);
     });
@@ -6157,6 +6158,45 @@ document.addEventListener("DOMContentLoaded", async function () {
     return element.contains(selection.anchorNode) && element.contains(selection.focusNode);
   }
 
+  function getPreviewSelectionClipboardContent(surface, selection) {
+    if (!selectionBelongsToElement(selection, surface) || selection.isCollapsed || !selection.rangeCount) return null;
+    const range = selection.getRangeAt(0);
+    let fragment = range.cloneContents();
+    // cloneContents omits shared ancestors, including the bold, heading, list,
+    // or table cell that gives a partial selection its formatting.
+    let ancestor = range.commonAncestorContainer;
+    if (ancestor.nodeType !== Node.ELEMENT_NODE) ancestor = ancestor.parentElement;
+    while (ancestor && ancestor !== surface) {
+      const wrapper = ancestor.cloneNode(false);
+      wrapper.appendChild(fragment);
+      fragment = wrapper;
+      ancestor = ancestor.parentElement;
+    }
+    const container = document.createElement('div');
+    container.appendChild(fragment);
+    removeExportOnlyControls(container);
+    container.querySelectorAll(
+      '.code-preview-toolbar, .review-pins-layer, button, [role="toolbar"], ' +
+      'script, style, mjx-assistive-mml'
+    ).forEach(function(element) { element.remove(); });
+    const html = DOMPurify.sanitize(container.innerHTML, {
+      ALLOW_DATA_ATTR: false,
+      FORBID_ATTR: ['id', 'class', 'contenteditable', 'tabindex'],
+      ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
+    });
+    container.innerHTML = html;
+    // innerText needs a rendered node to retain paragraph, table, and code line
+    // breaks. Keep this temporary copy out of view and the accessibility tree.
+    container.setAttribute('aria-hidden', 'true');
+    container.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;';
+    document.body.appendChild(container);
+    try {
+      return { text: container.innerText, html: html };
+    } finally {
+      container.remove();
+    }
+  }
+
   function getDocumentSurfaceContext(surface) {
     const isSecondary = surface === documentSplitEditor || surface === documentSplitPreview;
     const tabId = isSecondary ? secondarySplitTabId : activeTabId;
@@ -6164,6 +6204,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tab) return null;
     const editor = surface === markdownEditor || surface === documentSplitEditor ? surface : null;
     let selectedText = '';
+    let selectedHtml = '';
     let selectionStart = null;
     let selectionEnd = null;
     if (editor) {
@@ -6171,14 +6212,18 @@ document.addEventListener("DOMContentLoaded", async function () {
       selectionEnd = editor.selectionEnd;
       selectedText = editor.value.slice(selectionStart, selectionEnd);
     } else {
-      const selection = window.getSelection();
-      if (selectionBelongsToElement(selection, surface)) selectedText = selection.toString();
+      const content = getPreviewSelectionClipboardContent(surface, window.getSelection());
+      if (content) {
+        selectedText = content.text;
+        selectedHtml = content.html;
+      }
     }
     return {
       tab: tab,
       tabId: tabId,
       editor: editor,
       selectedText: selectedText,
+      selectedHtml: selectedHtml,
       selectionStart: selectionStart,
       selectionEnd: selectionEnd,
       editable: Boolean(editor && !editor.readOnly && (isSecondary || canMutateEditor()))
@@ -6199,9 +6244,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function copyDocumentSurfaceSelection(context, cut) {
-    if (!context || !context.selectedText) return;
+    if (!context || (!context.selectedText && !context.selectedHtml)) return;
     try {
-      await copyTextToClipboard(context.selectedText);
+      if (context.selectedHtml && !cut) {
+        await copyHtmlToClipboard(context.selectedText, context.selectedHtml);
+      } else {
+        await copyTextToClipboard(context.selectedText);
+      }
       if (cut) replaceDocumentSurfaceSelection(context, '');
       showAppToast(cut ? 'Selection cut to clipboard.' : 'Selection copied to clipboard.', {
         tone: 'success',
@@ -6227,7 +6276,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function openDocumentSurfaceContextMenu(surface, event) {
-    const context = getDocumentSurfaceContext(surface);
+    let context = getDocumentSurfaceContext(surface);
     if (!context) return;
     const preserveEditorSelection = Boolean(
       context.editor &&
@@ -6243,14 +6292,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab(); } },
       { separator: true },
       { id: 'cut', icon: 'lucide-square-pen', label: 'Cut', disabled: !context.editable || !context.selectedText, run: function() { copyDocumentSurfaceSelection(context, true); } },
-      { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText, run: function() { copyDocumentSurfaceSelection(context, false); } },
+      { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText && !context.selectedHtml, run: function() { copyDocumentSurfaceSelection(context, false); } },
       { id: 'paste', icon: 'lucide-file-plus-2', label: 'Paste', disabled: !context.editable, run: function() { pasteIntoDocumentSurface(context); } },
+      { id: 'select-all', icon: 'lucide-scan-text', label: 'Select All', keepOpen: true, run: function(event) {
+        if (context.editor) {
+          context.editor.focus({ preventScroll: true });
+          context.editor.setSelectionRange(0, context.editor.value.length);
+        } else {
+          const range = document.createRange();
+          range.selectNodeContents(surface);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        context = getDocumentSurfaceContext(surface);
+        menu.querySelector('[data-action="copy"]').disabled = !context.selectedText && !context.selectedHtml;
+        menu.querySelector('[data-action="cut"]').disabled = !context.editable || !context.selectedText;
+        if (event.detail === 0) event.currentTarget.focus({ preventScroll: true });
+      } },
       { separator: true }
     ];
     getDocumentMenuActions(context.tab).forEach(function(action) {
       if (action.id !== 'open' && action.id !== 'split' && action.id !== 'split-close') actions.push(action);
     });
     const virtualButton = createDocumentMenuButton(context.tab.title || 'Untitled', actions);
+    const menu = virtualButton._documentMenu;
+    menu.classList.add('document-surface-menu');
+    menu.addEventListener('mousedown', function(event) {
+      // Pointer actions must not collapse the document selection.
+      if (event.button === 0) event.preventDefault();
+    });
     openDocumentMenu(
       virtualButton,
       virtualButton._documentMenu,
@@ -12868,6 +12939,20 @@ document.addEventListener("DOMContentLoaded", async function () {
       surface.addEventListener('contextmenu', function(event) {
         openDocumentSurfaceContextMenu(surface, event);
       });
+    });
+    document.addEventListener('copy', function(event) {
+      if (event.defaultPrevented || !event.clipboardData) return;
+      if (event.target instanceof Element && event.target.closest('textarea, input')) return;
+      const selection = window.getSelection();
+      const surface = [markdownPreview, documentSplitPreview].find(function(preview) {
+        return selectionBelongsToElement(selection, preview);
+      });
+      if (!surface) return;
+      const content = getPreviewSelectionClipboardContent(surface, selection);
+      if (!content) return;
+      event.clipboardData.setData('text/html', content.html);
+      event.clipboardData.setData('text/plain', content.text);
+      event.preventDefault();
     });
     return hadExistingWorkspace;
   }
@@ -26525,6 +26610,57 @@ ${selector} .arrowheadPath {
       alert("Failed to copy Markdown: " + e.message);
     }
   });
+
+  async function copyHtmlToClipboard(text, html) {
+    if (window.isSecureContext && navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([text], { type: 'text/plain' })
+        })]);
+        return;
+      } catch (_) {
+        // Older browsers and embedded webviews may only support copy events.
+      }
+    }
+    const selection = window.getSelection();
+    const ranges = [];
+    for (let index = 0; selection && index < selection.rangeCount; index += 1) {
+      ranges.push(selection.getRangeAt(index).cloneRange());
+    }
+    const activeElement = document.activeElement;
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.setAttribute('aria-hidden', 'true');
+    textArea.style.cssText = 'position:fixed;left:-10000px;top:0;opacity:0;';
+    let copied = false;
+    const onCopy = function(event) {
+      if (!event.clipboardData) return;
+      event.clipboardData.setData('text/html', html);
+      event.clipboardData.setData('text/plain', text);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      copied = true;
+    };
+    document.body.appendChild(textArea);
+    document.addEventListener('copy', onCopy, true);
+    try {
+      textArea.focus({ preventScroll: true });
+      textArea.select();
+      copied = document.execCommand('copy') && copied;
+    } catch (_) {
+      copied = false;
+    } finally {
+      document.removeEventListener('copy', onCopy, true);
+      textArea.remove();
+      if (activeElement && activeElement.isConnected) activeElement.focus({ preventScroll: true });
+      if (selection) {
+        selection.removeAllRanges();
+        ranges.forEach(function(range) { selection.addRange(range); });
+      }
+    }
+    if (!copied) await copyTextToClipboard(text);
+  }
 
   async function copyTextToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
