@@ -98,7 +98,7 @@ With the Editor focused, **Page Up** and **Page Down** scroll smoothly without s
 
 ### Copying a Document
 
-Right-click an Editor or Preview, or open its context menu with a long press on touch devices, and choose **Select All**. It selects the entire document in that pane and keeps the menu open. Choose **Copy** to copy the selection and close the menu. This also works in either pane of the two-Document view and in read-only documents.
+Right-click an Editor or Preview, or open its context menu with a long press on touch devices, and choose **Select All**. It selects the entire document in that pane, closes the menu, and returns focus to the pane. Press **Ctrl/Cmd+C**, or reopen the context menu and choose **Copy**, to copy the selection. You can also press **Ctrl/Cmd+A** while a pane has focus to select all of its content. This works in either pane of the two-Document view and in read-only documents.
 
 - **Editor:** Copy provides the raw Markdown, including Markdown syntax. The toolbar's **Copy Markdown** command also copies the source.
 - **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks. Partial selections and the browser's native Copy command also retain formatting. Preview toolbars and action buttons are excluded.

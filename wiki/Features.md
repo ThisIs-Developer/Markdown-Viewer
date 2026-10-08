@@ -413,7 +413,7 @@ Privacy implications:
 ## Clipboard and Copy Behavior
 
 - Copy Markdown copies the raw Markdown from the editor.
-- The Editor and Preview context menus include **Select All** for that pane's complete document, including either side of a two-Document view. The menu stays open after selecting and closes when **Copy** is chosen. Read-only documents support selection and copying.
+- The Editor and Preview context menus include **Select All** for that pane's complete document, including either side of a two-Document view. The menu closes after selection and focus returns to the pane. **Ctrl/Cmd+A** also selects within the focused pane; copy with **Ctrl/Cmd+C** or reopen the menu and choose **Copy**. Read-only documents support selection and copying.
 - Preview Copy provides formatted HTML and plain text for pasting into apps such as Google Docs. Headings, emphasis, links, lists, tables, and code are retained where the receiving app supports them. Partial selections and native Copy use the same rich content; preview controls are excluded. Editor Copy remains raw Markdown.
 - `Ctrl+C` or `Cmd+C` respects selected text in inputs/textareas and selected page text.
 - When no text selection is active, the app can copy the full Markdown document.

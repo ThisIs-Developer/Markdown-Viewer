@@ -5791,8 +5791,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       actionButton.addEventListener('click', function(event) {
         event.preventDefault();
         event.stopPropagation();
-        if (!action.keepOpen) closeDocumentSidebarMenus();
-        if (!actionButton.disabled) action.run(event);
+        closeDocumentSidebarMenus();
+        if (!actionButton.disabled) action.run();
       });
       menu.appendChild(actionButton);
     });
@@ -6275,8 +6275,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function selectAllDocumentSurface(surface) {
+    surface.focus({ preventScroll: true });
+    if (surface === markdownEditor || surface === documentSplitEditor) {
+      surface.select();
+      return;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(surface);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
   function openDocumentSurfaceContextMenu(surface, event) {
-    let context = getDocumentSurfaceContext(surface);
+    const context = getDocumentSurfaceContext(surface);
     if (!context) return;
     const preserveEditorSelection = Boolean(
       context.editor &&
@@ -6294,22 +6307,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'cut', icon: 'lucide-square-pen', label: 'Cut', disabled: !context.editable || !context.selectedText, run: function() { copyDocumentSurfaceSelection(context, true); } },
       { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText && !context.selectedHtml, run: function() { copyDocumentSurfaceSelection(context, false); } },
       { id: 'paste', icon: 'lucide-file-plus-2', label: 'Paste', disabled: !context.editable, run: function() { pasteIntoDocumentSurface(context); } },
-      { id: 'select-all', icon: 'lucide-scan-text', label: 'Select All', keepOpen: true, run: function(event) {
-        if (context.editor) {
-          context.editor.focus({ preventScroll: true });
-          context.editor.setSelectionRange(0, context.editor.value.length);
-        } else {
-          const range = document.createRange();
-          range.selectNodeContents(surface);
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-        context = getDocumentSurfaceContext(surface);
-        menu.querySelector('[data-action="copy"]').disabled = !context.selectedText && !context.selectedHtml;
-        menu.querySelector('[data-action="cut"]').disabled = !context.editable || !context.selectedText;
-        if (event.detail === 0) event.currentTarget.focus({ preventScroll: true });
-      } },
+      { id: 'select-all', icon: 'lucide-scan-text', label: 'Select All', run: function() { selectAllDocumentSurface(surface); } },
       { separator: true }
     ];
     getDocumentMenuActions(context.tab).forEach(function(action) {
@@ -12934,6 +12932,15 @@ document.addEventListener("DOMContentLoaded", async function () {
           if (event.button === 2 && surface.selectionStart !== surface.selectionEnd) {
             event.preventDefault();
           }
+        });
+      } else {
+        surface.addEventListener('keydown', function(event) {
+          if (event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey ||
+              !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'a') return;
+          if (event.target instanceof Element &&
+              (event.target.closest('input, textarea, select') || event.target.isContentEditable)) return;
+          event.preventDefault();
+          selectAllDocumentSurface(surface);
         });
       }
       surface.addEventListener('contextmenu', function(event) {
