@@ -613,7 +613,6 @@ body {
   background: color-mix(in srgb, var(--accent-color) 7%, transparent);
 }
 
-.document-tree-row[data-tree-type="document"].is-selected > .document-tree-main > i:first-child,
 .document-tree-row[data-tree-type="document"].is-active > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
@@ -748,7 +747,7 @@ body {
   text-align: center;
 }
 
-.document-tree-main > .lucide-folder-open {
+.document-tree-row.is-current-location > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
@@ -771,6 +770,16 @@ body {
   flex: 0 0 auto;
   color: var(--text-secondary);
   font-size: var(--ui-font-xs);
+}
+
+.document-tree-row.is-source-missing .document-tree-meta,
+.document-tree-row.is-source-missing .document-tree-main > i {
+  color: var(--color-danger-fg);
+}
+
+.document-tree-row.is-source-conflict .document-tree-meta {
+  color: #bf8700;
+  font-weight: 600;
 }
 
 .document-tree-main > .document-favorite-indicator {
@@ -1347,7 +1356,8 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--accent-color);
 }
 
-.app-toast-icon-shell > .bi {
+.app-toast-icon-shell > .bi,
+.app-toast-icon-shell > .lucide {
   font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }

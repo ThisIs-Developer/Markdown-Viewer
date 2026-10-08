@@ -19,6 +19,7 @@
   "nativeAllowList": [
     "app.exit",
     "os.showOpenDialog",
+    "os.showFolderDialog",
     "os.showSaveDialog",
     "os.showMessageBox",
     "os.getPath",
@@ -35,6 +36,9 @@
     "filesystem.copy",
     "filesystem.move",
     "filesystem.remove",
+    "filesystem.createWatcher",
+    "filesystem.removeWatcher",
+    "filesystem.getWatchers",
     "storage.setData",
     "storage.getData",
     "storage.getKeys",
