@@ -20,6 +20,16 @@ Use the view buttons to switch between Editor, Split, and Preview. Split view is
 
 To compare or edit two files, open a file menu and choose **Open in split view**, then select the second document. A shared control switches both sides between Edit and Preview. Preview mode supports Markdown, math, diagrams, maps, STL, and ABC rendering. Use the combined tab menu to exit this view.
 
+## Fullscreen on Safari and Mobile
+
+Select **Fullscreen** in the formatting toolbar (scroll the toolbar horizontally on narrow screens), or use **F11** / **Cmd+Option+F** where the browser permits these shortcuts.
+
+- Desktop browsers and supported iPad Safari versions use native fullscreen. Safari versions before 16.4 use its prefixed API.
+- On browsers without page fullscreen, including iPhone Safari, the button opens **Expanded view**. This hides the app header and fits the workspace to the visible viewport as the window, orientation, or keyboard changes. Safari's address and navigation bars remain under the browser's control.
+- Select **Exit expanded view** or press **Escape** to restore the normal layout. If a dialog has focus, Escape closes it first. The exit button stays available after switching to Release Notes or closing all tabs.
+
+Native page fullscreen on iPhone depends on browser support and cannot be enabled by a website fix. WebKit tracks it in [bug 206854](https://bugs.webkit.org/show_bug.cgi?id=206854); [Safari 16.4's release announcement](https://webkit.org/blog/13966/webkit-features-in-safari-16-4/#fullscreen-api) describes support on macOS and iPadOS.
+
 ## Document Outline
 
 Select the **book-text** button to open **Document Outline**. The formatting toolbar places these controls in order: **Emoji | Find & Replace | Full Screen | Document Outline**. On narrow screens, scroll the toolbar horizontally to reach them. The right sidebar lists the current document's H1–H6 headings in a nested tree, with indentation and subtle hierarchy guides. It updates automatically as you edit, import, or switch documents. Headings inside code blocks do not appear.

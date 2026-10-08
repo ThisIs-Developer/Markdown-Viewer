@@ -1,4 +1,8 @@
 {
+  "Expanded view": "확장 보기",
+  "Exit expanded view": "확장 보기 종료",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "여기에서는 전체 화면을 사용할 수 없습니다. 확장 보기에서는 브라우저의 조작 버튼이 계속 표시됩니다.",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "전체 화면을 종료하지 못했습니다. 다시 시도하거나 브라우저의 종료 버튼을 사용하세요.",
   "— Copy/Paste": "— 복사/붙여넣기",
   "— Open Find & Replace": "— 찾기 및 바꾸기 열기",
   "— Redo": "— 다시 실행",

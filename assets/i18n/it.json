@@ -1,4 +1,8 @@
 {
+  "Expanded view": "Vista espansa",
+  "Exit expanded view": "Esci dalla vista espansa",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Lo schermo intero non è disponibile qui. La vista espansa mantiene visibili i controlli del browser.",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "Impossibile uscire dallo schermo intero. Riprova o usa il comando di uscita del browser.",
   "— Copy/Paste": "– Copia/Incolla",
   "— Open Find & Replace": "– Apri Trova e sostituisci",
   "— Redo": "— Ripeti",

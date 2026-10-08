@@ -11197,8 +11197,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   function updateDocumentToolbarAvailability(hasActiveDocument) {
     if (markdownFormatToolbar) {
       markdownFormatToolbar.classList.toggle('is-no-active-document', !hasActiveDocument);
-      markdownFormatToolbar.setAttribute('aria-disabled', hasActiveDocument ? 'false' : 'true');
-      updateMissingDocumentControlState(Array.from(markdownFormatToolbar.querySelectorAll('button')), hasActiveDocument);
+      // Fullscreen is a workspace control; its exit must survive closing the last tab.
+      updateMissingDocumentControlState(Array.from(markdownFormatToolbar.querySelectorAll('button:not([data-md-action="fullscreen"])')), hasActiveDocument);
     }
 
     updateMissingDocumentControlState([
@@ -22971,6 +22971,124 @@ ${selector} .arrowheadPath {
     markdownEditor.addEventListener('scroll', scheduleOutlineHighlight, { passive: true });
   }
 
+  let fullscreenTransitionPending = false;
+  let fullscreenFallbackScroll = null;
+
+  function getNativeFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement;
+  }
+
+  function updateFullscreenButtonState() {
+    const fullscreenButton = markdownFormatToolbar && markdownFormatToolbar.querySelector('[data-md-action="fullscreen"]');
+    if (!fullscreenButton) return;
+    const isFallback = document.documentElement.classList.contains('is-fullscreen-fallback');
+    const isFullscreen = Boolean(getNativeFullscreenElement()) || isFallback;
+    const label = isFallback ? 'Exit expanded view' : (isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+    const icon = fullscreenButton.querySelector('i');
+    fullscreenButton.setAttribute('title', label + ' (F11 / Cmd+Option+F)');
+    fullscreenButton.setAttribute('aria-label', label);
+    fullscreenButton.setAttribute('aria-pressed', String(isFullscreen));
+    if (icon) icon.className = isFullscreen ? 'lucide lucide-minimize' : 'lucide lucide-maximize';
+  }
+
+  function updateFullscreenViewport() {
+    if (!document.documentElement.classList.contains('is-fullscreen-fallback')) return;
+    const viewport = window.visualViewport;
+    // Follow the keyboard/browser bars without reflowing the page during pinch zoom.
+    if (viewport && viewport.scale !== 1) return;
+    document.documentElement.style.setProperty('--fullscreen-viewport-height', (viewport ? viewport.height : window.innerHeight) + 'px');
+  }
+
+  function setFullscreenFallback(enabled) {
+    const root = document.documentElement;
+    if (root.classList.contains('is-fullscreen-fallback') === enabled) return;
+    if (enabled) fullscreenFallbackScroll = { x: window.scrollX, y: window.scrollY };
+    root.classList.toggle('is-fullscreen-fallback', enabled);
+    if (enabled) {
+      updateFullscreenViewport();
+      window.scrollTo(0, 0);
+      showAppToast('Fullscreen is unavailable here. Expanded view keeps browser controls visible.', {
+        title: 'Expanded view', tone: 'info', dedupeKey: 'fullscreen-fallback'
+      });
+    } else {
+      root.style.removeProperty('--fullscreen-viewport-height');
+      if (fullscreenFallbackScroll) window.scrollTo(fullscreenFallbackScroll.x, fullscreenFallbackScroll.y);
+      fullscreenFallbackScroll = null;
+    }
+    updateFullscreenButtonState();
+  }
+
+  function changeNativeFullscreen(receiver, method) {
+    return new Promise(function(resolve, reject) {
+      let settled = false;
+      let timeout;
+      function finish(error) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        ['fullscreenchange', 'webkitfullscreenchange'].forEach(name => document.removeEventListener(name, changed));
+        ['fullscreenerror', 'webkitfullscreenerror'].forEach(name => document.removeEventListener(name, failed));
+        if (error) reject(error);
+        else resolve();
+      }
+      function changed() { finish(); }
+      function failed() { finish(new Error('Fullscreen transition failed')); }
+      ['fullscreenchange', 'webkitfullscreenchange'].forEach(name => document.addEventListener(name, changed));
+      ['fullscreenerror', 'webkitfullscreenerror'].forEach(name => document.addEventListener(name, failed));
+      try {
+        // Call synchronously so Safari retains the click's user activation.
+        const result = method.call(receiver);
+        if (result && typeof result.then === 'function') result.then(changed, failed);
+        // Older Safari returns void; wait for its change/error event, not an immediate await.
+        else if (!settled) timeout = setTimeout(failed, 4000);
+      } catch (error) {
+        finish(error);
+      }
+    });
+  }
+
+  async function toggleFullscreenMode() {
+    if (fullscreenTransitionPending) return;
+    const root = document.documentElement;
+    if (getNativeFullscreenElement()) {
+      fullscreenTransitionPending = true;
+      try {
+        const exit = document.fullscreenElement ? document.exitFullscreen : document.webkitExitFullscreen;
+        await changeNativeFullscreen(document, exit);
+      } catch (error) {
+        showAppToast('Could not exit fullscreen. Try again or use your browser\'s exit control.', { title: 'Fullscreen', tone: 'error' });
+      } finally {
+        fullscreenTransitionPending = false;
+        updateFullscreenButtonState();
+      }
+      return;
+    }
+
+    if (root.classList.contains('is-fullscreen-fallback')) {
+      setFullscreenFallback(false);
+      return;
+    }
+
+    // Prefer the standard API. Use the prefix only on Safari versions without it.
+    const useStandardApi = typeof root.requestFullscreen === 'function';
+    const request = useStandardApi ? root.requestFullscreen : root.webkitRequestFullscreen;
+    const allowed = useStandardApi ? document.fullscreenEnabled : document.webkitFullscreenEnabled;
+    fullscreenTransitionPending = true;
+    try {
+      if (typeof request === 'function' && allowed !== false) {
+        try {
+          await changeNativeFullscreen(root, request);
+        } catch (error) {
+          // A rejected request needs the same fallback as a missing API (e.g. iPhone).
+        }
+      }
+      if (!getNativeFullscreenElement()) setFullscreenFallback(true);
+    } finally {
+      fullscreenTransitionPending = false;
+      updateFullscreenButtonState();
+    }
+  }
+
   function runMarkdownTool(action, button) {
     if (!canMutateEditor() && isLiveMutatingAction(action)) {
       announceToScreenReader(getEditorReadOnlyMessage());
@@ -23027,10 +23145,8 @@ ${selector} .arrowheadPath {
     else if (action === 'alert') openAlertModal();
     else if (action === 'diagram') openDiagramModal(button);
     else if (action === 'terminal-block') insertMarkdownBlock('```bash\nnpm run dev\n```\n');
-    else if (action === 'fullscreen') {
-      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
-      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    } else if (action === 'outline') setDocumentOutlineOpen(documentOutline.hidden);
+    else if (action === 'fullscreen') toggleFullscreenMode();
+    else if (action === 'outline') setDocumentOutlineOpen(documentOutline.hidden);
     else if (action === 'clear-formatting') openClearFormattingModal();
     else if (action === 'find') openFindReplaceModal();
     else if (action === 'help') openHelpModal();
@@ -24041,16 +24157,22 @@ ${selector} .arrowheadPath {
   initDropdownMenuMotion();
   initFindReplaceModal();
   initAppModals();
-  document.addEventListener('fullscreenchange', function() {
-    const fullscreenButton = markdownFormatToolbar && markdownFormatToolbar.querySelector('[data-md-action="fullscreen"]');
-    if (!fullscreenButton) return;
-    const isFullscreen = Boolean(document.fullscreenElement);
-    const label = isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
-    const icon = fullscreenButton.querySelector('i');
-    fullscreenButton.setAttribute('title', label + ' (F11 / Cmd+Option+F)');
-    fullscreenButton.setAttribute('aria-label', label);
-    if (icon) icon.className = isFullscreen ? 'lucide lucide-minimize' : 'lucide lucide-maximize';
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(function(name) {
+    document.addEventListener(name, function() {
+      if (getNativeFullscreenElement()) setFullscreenFallback(false);
+      updateFullscreenButtonState();
+    });
   });
+  window.addEventListener('resize', updateFullscreenViewport);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', updateFullscreenViewport);
+  // Run after dialog/menu handlers so their Escape action takes precedence.
+  window.addEventListener('keydown', function(event) {
+    if (event.key !== 'Escape' || event.defaultPrevented || activeModal || isFindModalOpen) return;
+    if (!document.documentElement.classList.contains('is-fullscreen-fallback')) return;
+    event.preventDefault();
+    setFullscreenFallback(false);
+  });
+  updateFullscreenButtonState();
   const headerAboutButton = document.getElementById('header-about-button');
   if (headerAboutButton) {
     headerAboutButton.addEventListener('click', openAboutModal);
@@ -27075,9 +27197,8 @@ ${selector} .arrowheadPath {
     viewModeButtons.forEach(function(action) { actions.push(action); });
     mobileViewModeButtons.forEach(function(action) { actions.push(action); });
     if (markdownFormatToolbar) {
-      markdownFormatToolbar.querySelectorAll('button').forEach(function(action) { actions.push(action); });
+      markdownFormatToolbar.querySelectorAll('button:not([data-md-action="fullscreen"])').forEach(function(action) { actions.push(action); });
       markdownFormatToolbar.classList.toggle('is-release-notes-disabled', releaseNotesActive);
-      markdownFormatToolbar.setAttribute('aria-disabled', releaseNotesActive ? 'true' : 'false');
     }
 
     actions.forEach(function(action) {

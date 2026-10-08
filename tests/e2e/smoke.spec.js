@@ -65,7 +65,8 @@ test('release notes behave as an application surface instead of a document', asy
   await expect(page.locator('#review-toggle')).toBeVisible();
   await expect(page.locator('#review-toggle')).toBeDisabled();
   await expect(page.locator('#markdown-format-toolbar')).toBeVisible();
-  await expect(page.locator('#markdown-format-toolbar button:not(:disabled)')).toHaveCount(0);
+  await expect(page.locator('#markdown-format-toolbar button:not([data-md-action="fullscreen"]):not(:disabled)')).toHaveCount(0);
+  await expect(page.locator('[data-md-action="fullscreen"]')).toBeEnabled();
   await expect(page.locator('.app-status-bar')).toBeVisible();
 
   await expect(page.locator('#importDropdown')).toBeVisible();

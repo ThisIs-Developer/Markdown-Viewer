@@ -1,4 +1,8 @@
 {
+  "Expanded view": "展開檢視",
+  "Exit expanded view": "結束展開檢視",
+  "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "此處無法使用全螢幕。展開檢視會保留瀏覽器的控制項。",
+  "Could not exit fullscreen. Try again or use your browser's exit control.": "無法結束全螢幕。請再試一次，或使用瀏覽器的退出控制項。",
   "— Copy/Paste": "— 複製/貼上",
   "— Open Find & Replace": "— 開啟尋找與替換",
   "— Redo": "— 重做",
