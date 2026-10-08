@@ -40,7 +40,7 @@ Release-note tabs are temporary and excluded from document storage. Document-onl
 
 Users can work with multiple documents at once.
 
-- Every existing saved document is migrated into **Workspace**. The two workspace roots are fixed, but users can create nested folders inside either root.
+- Every existing saved document is migrated into **Workspace**, identified by the briefcase icon. The two workspace roots are fixed, but users can create nested folders inside either root.
 - Secret Workspace encrypts its files and folder names locally with a password-derived AES-GCM key. It remains locked after reload, the key stays in memory only while unlocked, and a forgotten password cannot be recovered. Resetting Secret Workspace permanently deletes its encrypted payload.
 - The sidebar has explicit **New file** and **New folder** actions for the selected location. Files can be dragged onto another folder or workspace; the Move dialog remains available for keyboard and touch workflows.
 - Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.

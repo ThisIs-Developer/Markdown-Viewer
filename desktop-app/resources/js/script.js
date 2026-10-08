@@ -6463,7 +6463,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (toggleIcon) toggleIcon.className = 'lucide lucide-chevron-down';
     }
     const folderIcon = row.querySelector('.document-tree-main > i:first-child');
-    if (folderIcon && location.workspaceId !== SECRET_WORKSPACE_ID) folderIcon.className = 'lucide lucide-folder-open';
+    if (folderIcon && location.folderId && location.workspaceId !== SECRET_WORKSPACE_ID) folderIcon.className = 'lucide lucide-folder-open';
     const group = row.nextElementSibling;
     if (group && group.classList.contains('document-tree-group')) group.hidden = false;
     announceToScreenReader((item.name || 'Folder') + ' expanded.');
@@ -6852,7 +6852,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         ariaLabel: workspace.name + (secretLocked ? ', locked' : ', file location'),
         icon: isSecretWorkspace
           ? (secretLocked ? 'lucide-shield' : 'lucide-shield-check')
-          : (expanded ? 'lucide-folder-open' : 'lucide-folder'),
+          : 'lucide-briefcase-business',
         depth: 0,
         expanded: expanded,
         meta: secretLocked ? 'Locked' : String(workspaceDocuments.length),

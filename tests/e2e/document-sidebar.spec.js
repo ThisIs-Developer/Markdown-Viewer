@@ -87,15 +87,15 @@ test('documents open on a single click and collapse all is available', async ({ 
 
   const workspaceRow = page.locator('.document-tree-row[data-tree-id="workspace_default"]');
   await expect(workspaceRow).toHaveAttribute('aria-expanded', 'true');
-  const openFolderIcon = workspaceRow.locator('.document-tree-main > i.lucide-folder-open');
-  await expect(openFolderIcon).toHaveCount(1);
-  const openFolderColor = await openFolderIcon.evaluate(icon => getComputedStyle(icon).color);
+  const workspaceIcon = workspaceRow.locator('.document-tree-main > i.lucide-briefcase-business');
+  await expect(workspaceIcon).toHaveCount(1);
+  const expandedColor = await workspaceIcon.evaluate(icon => getComputedStyle(icon).color);
+  expect(await workspaceIcon.evaluate(icon => getComputedStyle(icon).maskImage)).not.toBe('none');
   await page.locator('#document-sidebar-collapse-all').click();
   await expect(workspaceRow).toHaveAttribute('aria-expanded', 'false');
-  const closedFolderIcon = workspaceRow.locator('.document-tree-main > i.lucide-folder');
-  await expect(closedFolderIcon).toHaveCount(1);
-  const closedFolderColor = await closedFolderIcon.evaluate(icon => getComputedStyle(icon).color);
-  expect(closedFolderColor).not.toBe(openFolderColor);
+  await expect(workspaceIcon).toHaveCount(1);
+  const collapsedColor = await workspaceIcon.evaluate(icon => getComputedStyle(icon).color);
+  expect(collapsedColor).not.toBe(expandedColor);
   await expect(page.locator('#document-sidebar-collapse-all')).toHaveAttribute('aria-label', 'Expand all folders');
   await expect(page.locator('#document-sidebar-collapse-all i')).toHaveClass(/lucide-unfold-vertical/);
   await page.locator('#document-sidebar-collapse-all').click();
