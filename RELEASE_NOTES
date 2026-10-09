@@ -1,73 +1,81 @@
-![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.3`
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.4`
 
-# Welcome to Markdown Viewer 3.10.3
+# Welcome to Markdown Viewer 3.10.4
 
-_Released September 28, 2026_
+_Released October 9, 2026_
 
-This release adds a responsive Document Outline and configurable Copy TOC workflow, gives every public language page useful translated content from the first response, and improves Markdown typography and RTL list rendering.
+This release makes Markdown authoring faster from the keyboard, preserves the right content and formatting when you copy, and strengthens navigation and fullscreen behavior across desktop and mobile browsers.
 
 Everything here ships with the web, PWA, Docker, and desktop editions. **Happy coding!**
 
-[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.3) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.4) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
 
 ---
 
 ## Highlights
 
-- **See the shape of a long document.** Open a live H1–H6 tree, fold heading branches, track the current section, and jump without leaving Editor, Preview, or Split mode.
-- **Copy a TOC that matches the Preview.** Choose heading depth and output style, normalize skipped levels when useful, or wrap linked output in a collapsible section.
-- **Start every language page in its language.** All 15 public URLs now serve translated visible content and starter documents before JavaScript runs, with matching metadata and canonical identity.
-- **Keep document typography independent from the interface.** Japanese and Korean UI choices no longer restyle Markdown or release notes.
-- **Render RTL lists like readers expect.** Right-to-left bullets stay inside the content area, and list-to-paragraph spacing follows GitHub-style Markdown presentation.
+- **Insert blocks without leaving the Editor.** Type `/` at the start of a line, search common Markdown commands, and run one with the keyboard or pointer.
+- **Copy the format you intend.** Copy Markdown always returns the full raw document, while Preview Copy supplies sanitized rich HTML plus a readable plain-text alternative.
+- **Select confidently on desktop and touch.** Select All stays inside the focused Editor or Preview, works in either document pane, and keeps touch selections available when menus close or reopen.
+- **Navigate without layout jumps.** Page Up/Down no longer shifts the workspace sideways and keeps native caret movement, Shift selection, smooth paging, reduced motion, and synchronized panes aligned.
+- **Use fullscreen where the browser allows it.** Older Safari APIs are supported, while browsers without page fullscreen receive a clearly named Expanded view with a dependable exit path.
 
 > [!TIP]
-> Open **Document Outline** with the book-text button after Full Screen. Choose **Copy table of contents** for the default H2–H4 linked list, or open its settings for H1–H6 limits, numbered links, plain text, normalization, and a collapsible wrapper.
+> Place the cursor at the beginning of an empty or existing Editor line and type `/`. Filter for a heading, list, quote, code block, table, alert, diagram, image, or another block, then press **Enter**.
 
-## Navigate with Document Outline
+## Write faster with slash commands
 
-Document Outline adds a responsive right sidebar built around the current document's H1–H6 structure. Parent headings have collapsible branches and subtle hierarchy guides, while **Collapse/Expand All** controls the full tree. The active section follows scrolling, and selecting a heading jumps to the right source or rendered position without changing Editor, Preview, or Split mode.
+The new **Insert block** menu opens for a literal `/` at column zero. Keep typing to filter commands, move with the arrow keys, press **Enter** to run the current command, or press **Escape** to close. Mouse and touch selection work too.
 
-The outline updates as you edit, import, or switch documents. Code-block headings are excluded, read-only documents remain navigable, and collapsed branches retain their state while content changes. On small screens the panel leaves room for the document and closes after navigation.
+The menu includes headings, paragraphs, bulleted and numbered lists, task lists, quotes, horizontal rules, fenced code, terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Commands that need more detail open the same focused chooser used by the formatting toolbar.
 
-Document Outline and Find & Replace now use matching text-only headers, a 340px default width, and the same resize behavior as Explorer. Drag the edge, use arrow keys for precise sizing, hold Shift for larger steps, or use Home or a double-click to restore the default.
+Normal Markdown stays normal: slashes after indentation or existing text, inside URLs, or during IME composition do not open the menu. The menu follows the active primary or secondary Editor, closes when its document or focus context changes, positions for RTL text, and exposes accessible listbox state.
 
-## Copy a dependable Markdown TOC
+## Copy and select the right document
 
-**Copy table of contents** works directly from the current Markdown AST, so it does not wait for Preview, modify the document, or omit headings hidden inside collapsed outline branches. The default includes H2–H4 as nested bulleted links. Settings support any H1–H6 range, hierarchical numbered links, plain indented text, skipped-level normalization, and an optional `<details>` wrapper for linked output.
+**Copy Markdown** in the navbar or mobile menu, plus **Ctrl/Cmd+Shift+C**, now always copies the complete raw source of the intended document in Editor, Preview, or Split mode. In the two-Document view, the last-focused Editor or Preview remains the target even after clicking the toolbar.
 
-Copied links and Preview headings share the same GitHub-compatible anchors. Unicode letters and underscores remain, punctuation and emoji are removed consistently, duplicate headings receive stable `-1`, `-2`, and later suffixes, and symbol-only headings receive a documented fallback. YAML front matter and fenced code are excluded, while inline formatting is reduced to its visible heading text.
+Ordinary Editor Copy still returns selected raw Markdown. Preview Copy now writes sanitized HTML and plain text, retaining supported headings, emphasis, links, lists, tables, and code when pasted into rich-text applications such as Google Docs. Partial selections and native browser Copy use the same rich-content path, while Preview controls stay out of the result. Browsers without asynchronous rich clipboard support use a copy-event fallback and then plain text when necessary.
 
-## Useful localized content from the first response
+**Select All** and **Ctrl/Cmd+A** are scoped to the focused pane, including secondary and read-only documents. Mouse and keyboard menus close and return focus after selection; touch menus keep Copy available. Dismissing a touch menu preserves the selection, tapping highlighted text reopens it, swipes continue to scroll, and selected text no longer starts an unwanted native drag.
 
-Previously, localized URLs could provide translated metadata and interface labels while their initial visible body and first-run document remained English. The root English URL and all 14 translated `?lang=` URLs now serve language-matched welcome content directly in the initial HTML, plus an appropriate starter document for new visitors.
+## Dependable navigation and fullscreen
 
-The public URL is now authoritative: `/` remains English and a supported `?lang=` selects that language without a saved or browser preference silently overriding it. Titles, canonicals, schema, response language, visible content, and the client stay aligned, while changing the interface never translates or replaces an existing document.
+Closed Settings menus no longer add hidden horizontal overflow, fixing the Edge case where Page Up/Down shifted the workspace left and left a blank strip. Paging keeps the browser's caret and Shift-selection semantics. When a browser jumps instantly, Markdown Viewer animates that same destination without interrupting native smooth scrolling; reduced-motion preferences, the secondary Editor, and synchronized panes are respected.
 
-Development now exercises the same SEO middleware used by Cloudflare Pages. A new read-only `npm run audit:seo` command checks deployed canonical responses, language alternates, redirects, and discovery files; it verifies technical delivery without claiming or changing Google indexing status.
+Fullscreen uses the standard API where available and older Safari's prefixed API when required. Requests and exits wait for completion, browser-initiated exits stay synchronized with the button, overlapping requests are prevented, and failed exits remain retryable. The exit control remains usable in Release Notes and after every document tab is closed.
 
-## Consistent multilingual Markdown rendering
+When native page fullscreen is missing or denied, including on iPhone Safari, **Expanded view** hides the app header and fits the workspace to the visible viewport while explaining that browser controls remain visible. Escape closes dialogs first, then exits the expanded layout; printing and document contents are unchanged.
 
-Selecting Japanese or Korean no longer applies interface-language spacing, line-height, justification, wrapping, or heading-weight changes to user-authored Markdown or release notes. Documents now retain the same typography as you switch interface languages, including mixed-language text, frontmatter, headings, and tables.
+## Explorer, tabs, and desktop polish
 
-RTL list rendering now uses right-side padding with left padding removed at the required specificity, keeping bullets and task-list controls inside the content boundary. Standard lists also inherit GitHub-style spacing before following paragraphs instead of the previous compressed custom margins.
+Document titles, folder names, and Move-dialog paths now use natural numeric ordering, so `Untitled 2` appears before `Untitled 10`. Workspace rows use the bundled briefcase-business icon consistently across collapsed, expanded, and drag-expanded states.
 
-## Quality, offline use, and desktop parity
+Pressing a mouse's scroll-wheel button on a tab now closes that tab like a browser tab. It does not activate an inactive tab first, delete its saved Workspace document, or interfere with ordinary wheel scrolling, left-click activation, and right-click menus.
 
-The pure TOC generator has dedicated Node unit coverage and produces a committed browser/worker bundle with dependency license notices. Static validation checks the source, generated bundle, required page IDs, and desktop parity. The PWA caches the TOC bundle and localized welcome module, and the Neutralino resources include the same outline, copy, locale, typography, and RTL behavior as the web app.
+Windows executables and the Neutralino desktop window now use the Markdown Viewer artwork instead of the default runtime icon. The shared slash, sorting, tab, navigation, fullscreen, clipboard, selection, and Workspace-icon changes are synchronized in the prepared desktop resources.
+
+## Quality and compatibility
+
+Focused regression coverage now exercises slash-command lifecycle and accessibility, natural ordering, middle-click behavior, Page Up/Down and synchronized scrolling, Safari and fallback fullscreen paths, rich and plain clipboard writes, pane-scoped selection, touch-menu reopening, drag prevention, read-only documents, and two-Document targeting. All 15 locale catalogs retain matching keys and translated release-note labels.
 
 ## Thank you
 
 ### Contributors
 
-- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Document Outline, Copy TOC, shared heading anchors, localized search content, typography fixes, testing, documentation, and release work.
-- **[Rajat Kumar Parihar (@rajat12826)](https://github.com/rajat12826)** — RTL list alignment, task-list padding, GitHub-style list spacing, and desktop stylesheet parity.
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Rich copy and Select All, Page Up/Down navigation, Safari fullscreen and Expanded view, Workspace icon updates, testing, documentation, and release work.
+- **[Ioannis Kechagias (@Kechos23)](https://github.com/Kechos23)** — Slash commands, middle-click tab closing, Windows executable icon packaging, accessibility hardening, and regression coverage.
+- **[Mike Hoang (@mikah13)](https://github.com/mikah13)** — Natural numeric ordering for document titles, folders, move destinations, and synchronized desktop resources.
 
 ### Changes included
 
-- [#256 — Render translated content for language pages](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/256)
-- [#257 — Preserve Preview typography when switching languages](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/257)
-- [#258 — Add Document Outline and configurable Copy TOC](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/258)
-- [#260 — Fix RTL Markdown list rendering and spacing](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/260)
+- [#261 — Add the line-start slash command menu](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/261)
+- [#266 — Sort untitled documents in natural numeric order](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/266)
+- [#267 — Close document tabs with middle-click](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/267)
+- [#268 — Embed the project icon in Windows executables](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/268)
+- [#271 — Restore smooth Page Up/Down navigation](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/271)
+- [#272 — Support Safari fullscreen and improve the mobile fallback](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/272)
+- [#273 — Preserve rich copy, add Select All, and update the Workspace icon](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/273)
 
 Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
 

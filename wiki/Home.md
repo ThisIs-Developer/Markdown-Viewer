@@ -50,8 +50,8 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 
 | Area | Implemented behavior |
 | :--- | :--- |
-| Workspace | No application document-count limit, nested Folders, Recent, Favorites, search, tabs, bulk actions, encrypted Secret Workspace, and 30-day recoverable Trash |
-| Editing | Editor, Split view, Preview, formatting toolbar with an 8×8 quick table selector, custom undo/redo, Find and Replace, LTR/RTL, a resizable Document Outline, configurable Copy TOC, and large-Document rendering paths |
+| Workspace | No application document-count limit, naturally sorted nested Folders and Documents, Recent, Favorites, search, tabs with middle-click closing, bulk actions, encrypted Secret Workspace, and 30-day recoverable Trash |
+| Editing | Editor, Split view, Preview, line-start slash commands, formatting toolbar with an 8×8 quick table selector, custom undo/redo, pane-scoped selection and rich Preview copying, Find and Replace, LTR/RTL, a resizable Document Outline, configurable Copy TOC, and large-Document rendering paths |
 | Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
 | Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown plus remembered Light/Dark HTML, Browser Print, legacy raster PDF, and PNG export, with complete rich-content preparation for PDF and PNG |
@@ -77,7 +77,7 @@ For the complete data-flow table and limitations, see [Privacy and Security](Pri
 
 ## Languages
 
-The interface supports 14 locales. Maintained documentation entry points are available in:
+The interface supports 15 locales. Maintained documentation entry points are available in:
 
 - [English](../README.md)
 - [Japanese](../locales/README_ja.md)

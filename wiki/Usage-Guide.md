@@ -60,6 +60,7 @@ The outline is generated locally from the current document and is not saved sepa
 - When multiple files are selected, dragging any selected file moves the full selection and the drag preview shows the file count. Expanded folders accept drops across their visible contents, not only on the folder name.
 - Drag a file row onto a folder or workspace to move it. Use **Move to…** from the file menu as the keyboard and touch-friendly alternative. Dropping local Markdown files onto a folder imports them there.
 - Use **All files** for the hierarchy, **Recent** for recently opened or edited files, and **Favorites** for starred files.
+- Document titles, folder names, and Move-dialog destinations use natural numeric ordering, so names such as `Untitled 2` appear before `Untitled 10`.
 - On desktop, one click selects a sidebar document and a double click opens it. On touch layouts, one tap opens it and closes the drawer.
 - The active Document is the one shown in the primary Editor/Preview, used by formatting, review, import-into-current, export, Share Snapshot, and Live Share actions. Opening a second Document in the two-Document view does not make it the active Document.
 - Each document menu supports Open, Rename, Duplicate, Favorites, Move, Open in split view, Download Markdown, and Delete. The tab strip supports quick switching, drag-to-reorder, and close commands for one or several tabs.
@@ -95,6 +96,12 @@ The toolbar can:
 The editor also supports list continuation on Enter, two-space indent on Tab, outdent on Shift+Tab, and custom undo/redo. View-only shared tabs block editing actions and keep reading, find, help, and fullscreen available.
 
 With the Editor focused, **Page Up** and **Page Down** scroll smoothly without shifting the workspace sideways. Hold **Shift** while paging to extend the text selection. This also works in the secondary document Editor. The app respects your device's reduced-motion preference and keeps synchronized panes aligned during paging.
+
+### Slash Commands
+
+Type `/` at the very start of an Editor line to open **Insert block**. Type a command name to filter the list, use **Arrow Up/Down** to choose, press **Enter** to run it, or press **Escape** to close the menu. You can also click or tap a command.
+
+The menu includes headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Alert, table, diagram, and media commands open their existing chooser so you can finish the insertion. Typing `/` after indentation or other text, inside a URL, or while composing text with an IME does not open the menu. Slash commands work in either Editor of the two-Document view and follow RTL placement.
 
 ### Copying a Document
 

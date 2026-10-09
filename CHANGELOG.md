@@ -5,8 +5,19 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- **Editor navigation:** Fixed Page Up/Down shifting the workspace sideways in Edge by removing closed dropdowns from the layout while preserving menu transitions and native editor navigation.
-- **Editor scrolling:** Added smooth Page Up/Down scrolling when the browser jumps instantly, including the secondary document Editor. Native caret movement, Shift selection, and reduced-motion preferences are preserved; delayed synchronized scroll events no longer interrupt an ongoing animation.
+---
+
+## v3.10.4
+
+- **Description:** Added faster keyboard-first authoring and dependable rich-copy, selection, navigation, and fullscreen behavior, with practical Explorer, tab, and desktop packaging improvements.
+  - **Slash Command Authoring:** Added a searchable line-start `/` menu for headings, lists, quotes, code, math, links, alerts, tables, diagrams, media, and other blocks. It supports keyboard and pointer selection, hands off to existing choosers, avoids URLs and indented or mid-line text, and handles IME input, RTL placement, document switching, and accessible listbox state.
+  - **Clipboard & Selection:** Made Copy Markdown consistently copy the complete targeted document, kept Editor selection copies as raw source, and supplied sanitized HTML plus plain text from Preview. Added pane-scoped Select All across primary, secondary, and read-only documents, with reliable touch dismissal, reopening, scrolling, and drag prevention.
+  - **Navigation & Fullscreen:** Prevented Page Up/Down from shifting the workspace sideways, restored smooth paging without replacing native caret or Shift-selection behavior, respected reduced motion, and stabilized synchronized panes. Added older Safari fullscreen support plus an explicit Expanded view fallback when native page fullscreen is unavailable or denied.
+  - **Explorer & Tabs:** Applied natural numeric ordering to document titles, folder names, and move destinations, so numbered names remain in human order. Added browser-style middle-click tab closing without activating the tab or deleting its saved document, while preserving wheel scrolling, left-click activation, and context menus.
+  - **Desktop & Quality:** Embedded the project artwork in Windows executables and desktop windows, refreshed the Workspace icon, synchronized web and Neutralino resources, maintained all 15 locale catalogs, and expanded focused and cross-browser coverage for slash commands, tab closing, paging, fullscreen, clipboard, and touch selection.
+- **Date:** 2026-10-09
+- **Commits:** `b085836eb159f6855791a13533dbe453a97488a5` through `ff0648a1a8e8b1ae3bb6189e85a2ad7dcdcb43e9`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.4
 
 ---
 

@@ -47,6 +47,7 @@ Users can work with multiple documents at once.
 - New files can be created from the sidebar, tab bar, mobile menu, imports, shared snapshots, and Live Share joins. Multi-file imports show a compact bottom progress indicator.
 - The sidebar supports file open, rename, duplicate, favorite, move, Markdown download, and delete actions. Recent and Favorites are filtered references to the original files, not copies.
 - Multi-selected files can be opened or moved together. Dragging any selected file moves the complete file selection, and expanded folders accept a drop across their visible contents instead of only on the folder label. Deleting selected files moves them directly to Trash; a mixed selection containing folders asks for confirmation and returns files inside removed folders to the workspace root.
+- Document titles, folder names, and Move-dialog destinations use natural numeric ordering. For example, `Untitled 2` appears before `Untitled 10` instead of being sorted lexically after it.
 - Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
 - **Scroll-wheel button (middle-click):** Point at a document tab and press the mouse's scroll wheel down to close that tab. Its saved Workspace document and draft remain available in Explorer. Rotating the wheel over the tab strip scrolls through tabs instead. Pressing the wheel on a tab closes it rather than starting browser autoscroll; left-click activation and right-click menus are unchanged.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
@@ -119,6 +120,14 @@ The formatting toolbar inserts or transforms Markdown at the current selection. 
 - Find and Replace and Fullscreen are direct formatting-toolbar actions. About Markdown Viewer opens from the header or mobile menu.
 
 View-only Share Snapshot tabs and view-only Live Share participant tabs block mutating tools and announce that the editor is read-only. Non-mutating actions such as fullscreen, find, help, and info remain available.
+
+### Slash Command Menu
+
+Type `/` at the start of an Editor line to open a searchable block-command menu. Continue typing to filter, use the arrow keys to move, press **Enter** to run the selected command, or press **Escape** to close it. Pointer selection is also supported.
+
+Commands cover headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Commands that need more information open the same alert, table, diagram, or media chooser used by the toolbar.
+
+The menu opens only for a literal slash at column zero. A slash after other text or indentation, inside a URL, during IME composition, or outside an Editor remains normal text. The menu follows the active primary or secondary Editor, closes when the document or focus context changes, exposes listbox state to assistive technology, and positions correctly for RTL documents.
 
 ## Custom Undo and Redo
 
@@ -521,6 +530,7 @@ The desktop build wraps the same app in Neutralino.
 Desktop-specific behavior:
 
 - Uses a native window with minimum size 400 x 200 and default size 1280 x 720.
+- Uses the project artwork for the desktop window and packaged Windows executable icon.
 - Uses one-time token security.
 - Logging is disabled in the current config.
 - Native APIs are allowlisted instead of fully open.

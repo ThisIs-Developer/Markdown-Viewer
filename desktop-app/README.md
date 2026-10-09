@@ -27,6 +27,7 @@ Desktop-only files:
 ## Desktop Behavior
 
 - Local editing, preview, document tabs, exports, and settings stay on the local machine.
+- Slash commands, natural Explorer sorting, middle-click tab closing, pane-scoped Select All, rich Preview copying, smooth paging, and fullscreen/Expanded view behavior use the same shared application code as the web build.
 - Document Outline and Copy TOC run locally from the current Markdown AST, use the bundled TOC generator offline, and do not create separate persisted data or alter the document.
 - Selection-anchored comments and threaded replies stay with normal local tabs and are excluded from document exports and Share Snapshot links.
 - Normal documents are stored as individual `.md` files in the fixed `Documents/Markdown Viewer Vault/Workspace` path. Metadata, up to 20 recent history copies per document, trash, crash-recovery journals, and encrypted Secret Workspace objects live under the same vault.
@@ -36,6 +37,7 @@ Desktop-only files:
 - A Markdown file passed as a launch argument is loaded into the editor.
 - The app asks before closing the window.
 - Prepared desktop resources load dynamic libraries from local `/libs/...` paths after setup.
+- Packaged Windows executables and the desktop window use the project artwork from `resources/assets/icon.png`.
 - Private mode pauses document-state persistence for the current page session without deleting the vault, shows an active incognito status, and resets on reload or exit. **Reset workspace** permanently deletes documents, folders, review data, settings, Secret Workspace records, history, trash, and recovery journals after confirmation.
 - **Storage and Backup** shows the fixed vault location, opens it in the file manager, and exports or imports folder-preserving ZIP backups. Replacement binaries detect the same vault automatically.
 - Importing a backup replaces the current workspace. ZIP backups include normal documents, folder organization, review data, selected preferences, and optional encrypted Secret Workspace records; they do not include vault history, trash, or recovery journals.

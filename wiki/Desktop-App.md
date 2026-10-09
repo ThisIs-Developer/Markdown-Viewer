@@ -5,6 +5,7 @@ The desktop application wraps Markdown Viewer in Neutralinojs for users who want
 ## What Is Different from the Web Application?
 
 - Runs in a Neutralinojs desktop window.
+- Uses the Markdown Viewer artwork for the desktop window and packaged Windows executable instead of the default Neutralino icon.
 - Uses native open/save dialogs for Markdown and HTML.
 - Can read a Markdown file path passed as a launch argument.
 - Asks for confirmation before closing.
@@ -60,6 +61,8 @@ The build generates seven platform-specific executables under
 `--embed-resources`, so every download is self-contained and does not require a
 neighboring `resources.neu` file. Release publishing uploads the seven binaries
 individually rather than creating a portable application ZIP.
+
+The shared web/desktop application code includes slash commands, natural Explorer sorting, middle-click tab closing, pane-scoped Select All, rich Preview copying, smooth Page Up/Down navigation, and native fullscreen or Expanded view fallback behavior.
 
 ## Runtime Configuration
 

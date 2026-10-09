@@ -56,9 +56,9 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 ## Highlights
 
-- **Workspace and documents:** organize documents in nested folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, an encrypted Secret Workspace, and a 30-day Trash for recoverable normal and encrypted files.
+- **Workspace and documents:** organize naturally sorted documents and folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, an encrypted Secret Workspace, and a 30-day Trash for recoverable normal and encrypted files. Middle-click a tab to close it without deleting its saved document.
 - **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash and desktop history stay outside the backup.
-- **Editing and review:** switch among Editor, Split view, and Preview; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, per-document Preview positions, selection-anchored comments, and threaded replies.
+- **Editing and review:** switch among Editor, Split view, and Preview; type `/` at the start of a line for searchable block commands; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, smooth Page Up/Down navigation, pane-scoped Select All, rich Preview copying, selection-anchored comments, and threaded replies.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
 - **Document Outline:** use the book-text button after Emoji, Find & Replace, and Full Screen to open a resizable right sidebar with collapsible heading branches, a Collapse/Expand All control, and section navigation in Editor, Preview, and Split modes. Copy a GitHub-compatible Markdown TOC with configurable heading depth, bulleted/numbered links or plain text, optional level normalization, and a collapsible wrapper. The outline follows the current document and shares Find & Replace's width and header styling.
 - **Localized discovery:** open any of 15 language URLs with translated initial content and a localized starter document before JavaScript runs; changing the interface language preserves user-authored Markdown and Preview typography.
@@ -82,8 +82,6 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 - **Multiple delivery options:** use the hosted web app, install the PWA, self-host static files, run Docker, deploy on Cloudflare, or build the Neutralino desktop application.
 
 For verified behavior, limits, and implementation notes, read the [feature reference](wiki/Features.md).
-
-**Close a tab with the scroll-wheel button:** Point at a document tab and press the mouse's scroll wheel down (middle-click). This closes the tab without deleting its saved Workspace document. Rotating the wheel over the tab strip scrolls through tabs instead.
 
 ## Quick Start
 
