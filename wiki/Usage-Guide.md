@@ -102,6 +102,8 @@ Use **Copy Markdown** in the navbar or mobile menu, or press **Ctrl/Cmd+Shift+C*
 
 To copy a selection, right-click an Editor or Preview, or open its context menu with a long press on touch devices, and choose **Select All**. It selects the entire document in that pane using the browser's text selection. With a mouse or keyboard, the menu closes and focus returns to the pane: press **Ctrl/Cmd+C**, or reopen the menu and choose **Copy**. With touch, the menu stays available after Select All so you can tap **Copy**, which closes it. You can also press **Ctrl/Cmd+A** while a pane has focus. This works in either pane of the two-Document view and in read-only documents.
 
+On touch devices, tapping the surrounding background dismisses the menu while keeping the text selected. Tap the highlighted text to reopen the menu and choose **Copy**. This also works with partial selections. Swiping still scrolls, and tapping unselected text lets you change the selection or position the Editor cursor normally. Touch presses on selected text do not drag the document text.
+
 - **Editor:** Copy provides the selected raw Markdown, including Markdown syntax. Paste inserts clipboard text at the cursor or replaces the selection; rich text is not automatically converted into Markdown.
 - **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks. Partial selections and the browser's native Copy command also retain formatting. Preview toolbars and action buttons are excluded.
 

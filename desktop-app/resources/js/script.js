@@ -6122,8 +6122,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getContextMenuPosition(event, fallbackElement) {
-    if (event && Number.isFinite(event.clientX) && (event.clientX || event.clientY)) {
-      return { x: event.clientX, y: event.clientY };
+    const point = event && ((event.changedTouches && event.changedTouches[0]) || event);
+    if (point && Number.isFinite(point.clientX) && (point.clientX || point.clientY)) {
+      return { x: point.clientX, y: point.clientY };
     }
     const rect = fallbackElement && typeof fallbackElement.getBoundingClientRect === 'function'
       ? fallbackElement.getBoundingClientRect()
@@ -6158,6 +6159,40 @@ document.addEventListener("DOMContentLoaded", async function () {
   function selectionBelongsToElement(selection, element) {
     if (!selection || !element || !selection.anchorNode || !selection.focusNode) return false;
     return element.contains(selection.anchorNode) && element.contains(selection.focusNode);
+  }
+
+  function captureDocumentSurfaceSelection(surface) {
+    const tabId = surface === documentSplitEditor || surface === documentSplitPreview ? secondarySplitTabId : activeTabId;
+    if (!tabId) return null;
+    if (surface === markdownEditor || surface === documentSplitEditor) {
+      if (surface.selectionStart === surface.selectionEnd) return null;
+      return {
+        surface: surface, tabId: tabId, value: surface.value,
+        start: surface.selectionStart, end: surface.selectionEnd, direction: surface.selectionDirection
+      };
+    }
+    const selection = window.getSelection();
+    if (!selectionBelongsToElement(selection, surface) || selection.isCollapsed || !selection.rangeCount) return null;
+    return { surface: surface, tabId: tabId, range: selection.getRangeAt(0).cloneRange() };
+  }
+
+  function restoreDocumentSurfaceSelection(snapshot, focus) {
+    if (!snapshot) return false;
+    const surface = snapshot.surface;
+    const tabId = surface === documentSplitEditor || surface === documentSplitPreview ? secondarySplitTabId : activeTabId;
+    if (!surface.isConnected || snapshot.tabId !== tabId) return false;
+    if (snapshot.range) {
+      if (snapshot.range.collapsed || !surface.contains(snapshot.range.startContainer) || !surface.contains(snapshot.range.endContainer)) return false;
+      if (focus) surface.focus({ preventScroll: true });
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(snapshot.range);
+    } else {
+      if (snapshot.value !== surface.value) return false;
+      if (focus) surface.focus({ preventScroll: true });
+      surface.setSelectionRange(snapshot.start, snapshot.end, snapshot.direction);
+    }
+    return true;
   }
 
   function getPreviewSelectionClipboardContent(surface, selection) {
@@ -6315,6 +6350,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (keepSelectionMenuOpen) {
           // Touch selection actions stay available so the next tap can copy.
           context = getDocumentSurfaceContext(surface);
+          menu._touchSelection = captureDocumentSurfaceSelection(surface);
           menu.querySelector('[data-action="copy"]').disabled = !context || (!context.selectedText && !context.selectedHtml);
           menu.querySelector('[data-action="cut"]').disabled = !context || !context.editable || !context.selectedText;
         }
@@ -6327,6 +6363,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const virtualButton = createDocumentMenuButton(context.tab.title || 'Untitled', actions);
     const menu = virtualButton._documentMenu;
     menu.classList.add('document-surface-menu');
+    if (keepSelectionMenuOpen) menu._touchSelection = captureDocumentSurfaceSelection(surface);
     menu.addEventListener('mousedown', function(event) {
       // Pointer actions must not collapse the document selection.
       if (event.button === 0) event.preventDefault();
@@ -11988,8 +12025,31 @@ document.addEventListener("DOMContentLoaded", async function () {
     }, { passive: false });
   }
 
+  function preserveTouchMenuSelectionOnDismiss(event) {
+    const menu = document.querySelector('.document-surface-menu.open');
+    // Dismissing onto the background keeps the highlight available for another
+    // tap. Editing, following links, and interacting with other panes stay native.
+    if (menu && menu._touchSelection && !reviewModeActive &&
+        !event.target.closest('.document-menu-dropdown, button, a, input, textarea, select, label, [contenteditable], [role="button"], #markdown-preview, #document-split-preview')) {
+      // Match a native background click when touchend suppresses mouse events.
+      if (document.activeElement === menu._touchSelection.surface) menu._touchSelection.surface.blur();
+      restoreDocumentSurfaceSelection(menu._touchSelection, false);
+      return true;
+    }
+    return false;
+  }
+
+  // WebKit may emit only touch events for a tap on a non-interactive background.
+  document.addEventListener('touchend', function(event) {
+    if (!event.defaultPrevented && event.touches.length === 0 && preserveTouchMenuSelectionOnDismiss(event)) {
+      event.preventDefault();
+      closeTabMenus();
+    }
+  }, { passive: false });
+
   // Close any open tab dropdown when clicking elsewhere in the document
-  document.addEventListener('click', function() {
+  document.addEventListener('click', function(event) {
+    preserveTouchMenuSelectionOnDismiss(event);
     closeTabMenus();
   });
 
@@ -12940,6 +13000,26 @@ document.addEventListener("DOMContentLoaded", async function () {
     [markdownEditor, markdownPreview, documentSplitEditor, documentSplitPreview].forEach(function(surface) {
       if (!surface) return;
       let lastPointerType = '';
+      let touchSelection = null;
+      function beginSelectionTap(event) {
+        touchSelection = null;
+        if (reviewModeActive || (event.touches && event.touches.length !== 1)) return;
+        if (event.target !== surface && event.target.closest('button, input, textarea, select, [contenteditable], [role="button"], summary')) return;
+        const point = event.touches ? event.touches[0] : event;
+        const snapshot = captureDocumentSurfaceSelection(surface);
+        if (!snapshot) return;
+        if (snapshot.range && !Array.from(snapshot.range.getClientRects()).some(function(rect) {
+          return point.clientX >= rect.left && point.clientX <= rect.right && point.clientY >= rect.top && point.clientY <= rect.bottom;
+        })) return;
+        touchSelection = { snapshot: snapshot, x: point.clientX, y: point.clientY, time: Date.now() };
+      }
+      function cancelSelectionTap() { touchSelection = null; }
+      function moveSelectionTap(event) {
+        if (!touchSelection) return;
+        const point = event.touches ? event.touches[0] : event;
+        if (!point || (event.touches && event.touches.length !== 1) ||
+            Math.hypot(point.clientX - touchSelection.x, point.clientY - touchSelection.y) > 10) cancelSelectionTap();
+      }
       function rememberDocumentFocus() {
         lastFocusedDocumentTabId = surface === documentSplitEditor || surface === documentSplitPreview
           ? secondarySplitTabId : activeTabId;
@@ -12948,12 +13028,53 @@ document.addEventListener("DOMContentLoaded", async function () {
       surface.addEventListener('pointerdown', function(event) {
         lastPointerType = event.pointerType;
         rememberDocumentFocus();
-      });
-      surface.addEventListener('touchstart', function() {
+        if (event.pointerType === 'touch') beginSelectionTap(event);
+        else cancelSelectionTap();
+      }, { capture: true });
+      surface.addEventListener('touchstart', function(event) {
         lastPointerType = 'touch';
         rememberDocumentFocus();
-      }, { passive: true });
-      surface.addEventListener('keydown', function() { lastPointerType = ''; });
+        if (!touchSelection || event.touches.length !== 1) beginSelectionTap(event);
+      }, { passive: true, capture: true });
+      surface.addEventListener('pointermove', moveSelectionTap, { passive: true });
+      surface.addEventListener('touchmove', moveSelectionTap, { passive: true });
+      ['pointercancel', 'touchcancel', 'scroll', 'input'].forEach(function(type) {
+        surface.addEventListener(type, cancelSelectionTap, { passive: true });
+      });
+      surface.addEventListener('keydown', function() { lastPointerType = ''; cancelSelectionTap(); });
+      function finishSelectionTap(event) {
+        const gesture = touchSelection;
+        cancelSelectionTap();
+        if (!gesture || event.defaultPrevented || Date.now() - gesture.time > 1000) return;
+        const snapshot = gesture.snapshot;
+        // Textareas place the caret before click, so a tap outside a partial
+        // selection must still be able to position the editing cursor normally.
+        if (!snapshot.range && surface.selectionStart === surface.selectionEnd &&
+            (surface.selectionStart < snapshot.start || surface.selectionStart > snapshot.end)) return;
+        if (!restoreDocumentSurfaceSelection(snapshot, true)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (document.querySelector('.document-surface-menu.open')) {
+          closeDocumentSidebarMenus();
+          return;
+        }
+        openDocumentSurfaceContextMenu(surface, event, true);
+      }
+      surface.addEventListener('click', finishSelectionTap, { capture: true });
+      surface.addEventListener('touchend', function(event) {
+        // A tap on selected page text may start a drag instead of emitting click.
+        // Handle a stationary preview tap before those compatibility mouse events.
+        if (surface === markdownEditor || surface === documentSplitEditor) {
+          if (touchSelection) touchSelection.ended = true;
+        } else finishSelectionTap(event);
+      }, { passive: false });
+      surface.addEventListener('dragstart', function(event) {
+        if (lastPointerType === 'touch' && captureDocumentSurfaceSelection(surface)) {
+          // Android can turn a press on highlighted text into a native drag image.
+          event.preventDefault();
+        }
+        cancelSelectionTap();
+      });
       if (surface === markdownEditor || surface === documentSplitEditor) {
         surface.addEventListener('mousedown', function(event) {
           if (event.button === 2 && surface.selectionStart !== surface.selectionEnd) {
@@ -12971,11 +13092,20 @@ document.addEventListener("DOMContentLoaded", async function () {
         });
       }
       surface.addEventListener('contextmenu', function(event) {
+        // Chromium may emit contextmenu between a touch tap's mousedown and
+        // mouseup. Wait for click so the new menu cannot swallow that mouseup
+        // and immediately dismiss itself. A long press opens before touchend.
+        if (touchSelection && touchSelection.ended && Date.now() - touchSelection.time <= 1000) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         // Use the input source, not screen size: a tablet may also have a mouse.
-        const touchSelection = event.pointerType === 'touch' || lastPointerType === 'touch' ||
+        const isTouchSelection = event.pointerType === 'touch' || lastPointerType === 'touch' ||
           Boolean(event.sourceCapabilities && event.sourceCapabilities.firesTouchEvents);
         lastPointerType = '';
-        openDocumentSurfaceContextMenu(surface, event, touchSelection);
+        cancelSelectionTap();
+        openDocumentSurfaceContextMenu(surface, event, isTouchSelection);
       });
     });
     document.addEventListener('copy', function(event) {

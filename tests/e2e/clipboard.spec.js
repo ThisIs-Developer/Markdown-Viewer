@@ -495,6 +495,136 @@ test.describe('Android-sized touch layout', () => {
     await expect(page.locator('#markdown-preview')).toBeFocused();
   });
 
+  for (const pane of ['editor', 'preview']) {
+    test(`tapping the selected ${pane} text reopens Copy after dismissing the touch menu`, async ({ page }) => {
+      const surface = page.locator('#markdown-' + pane);
+      const menu = await openSurfaceMenu(page, '#markdown-' + pane, 'touch');
+      await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+      await page.locator('.app-header').tap({ position: { x: 10, y: 5 } });
+      await expect(menu).toHaveCount(0);
+      if (pane === 'preview') {
+        expect(await page.evaluate(() => window.getSelection().toString())).toContain('Clipboard document');
+        await surface.locator('strong').tap();
+      } else {
+        await surface.tap({ position: { x: 80, y: 24 } });
+      }
+      await expect(menu).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Copy', exact: true })).toBeEnabled();
+      await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
+      await expect(menu).toHaveCount(0);
+      if (pane === 'preview') {
+        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+        expect(await page.evaluate(() => window.__clipboard['text/plain'])).toContain('Clipboard document');
+      } else {
+        await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
+      }
+      await expect(page.locator('#markdown-editor')).toHaveValue(markdown);
+      // Copy closes the menu without clearing the native selection. Another
+      // tap must reopen it even while the selected pane still has focus.
+      if (pane === 'preview') await surface.locator('strong').tap();
+      else await surface.tap({ position: { x: 80, y: 24 } });
+      await expect(menu).toBeVisible();
+      await expect(menu.getByRole('menuitem', { name: 'Copy', exact: true })).toBeEnabled();
+    });
+  }
+
+  test('touch selection cannot start a text drag while mouse dragging remains native', async ({ page }) => {
+    const preview = page.locator('#markdown-preview');
+    const menu = await openSurfaceMenu(page, '#markdown-preview', 'touch');
+    await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+    await page.locator('.app-header').tap({ position: { x: 10, y: 5 } });
+    for (const pointerType of ['touch', 'mouse']) {
+      await preview.dispatchEvent('pointerdown', { pointerType, button: 0 });
+      const prevented = await preview.locator('strong').evaluate(element => {
+        const event = new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() });
+        element.dispatchEvent(event);
+        return event.defaultPrevented;
+      });
+      expect(prevented).toBe(pointerType === 'touch');
+    }
+    await expect(page.locator('#markdown-editor')).toHaveValue(markdown);
+  });
+
+  test('partial touch selections reopen without capturing taps on unselected text', async ({ page }) => {
+    const editor = page.locator('#markdown-editor');
+    await editor.evaluate(element => element.setSelectionRange(2, 11));
+    const menu = await openSurfaceMenu(page, '#markdown-editor', 'touch');
+    await page.locator('.app-header').tap({ position: { x: 10, y: 5 } });
+    await editor.tap({ position: { x: 200, y: 24 } });
+    await expect(menu).toHaveCount(0);
+    expect(await editor.evaluate(element => element.selectionStart === element.selectionEnd && element.selectionStart > 11)).toBe(true);
+
+    await selectPreview(page, '#markdown-preview strong', 5, 11);
+    await openSurfaceMenu(page, '#markdown-preview', 'touch');
+    await page.locator('.app-header').tap({ position: { x: 10, y: 5 } });
+    const point = await page.evaluate(() => {
+      const rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+    await page.touchscreen.tap(point.x, point.y);
+    await expect(menu).toBeVisible();
+    await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
+    await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>phrase</strong>');
+    expect(await page.evaluate(() => window.__clipboard['text/plain'])).toBe('phrase');
+    await page.locator('#markdown-preview h1').tap();
+    await expect(menu).toHaveCount(0);
+    expect(await page.evaluate(() => window.getSelection().toString())).toBe('');
+    await page.locator('#markdown-preview strong').tap();
+    await expect(menu).toHaveCount(0);
+    await expect(editor).toHaveValue(markdown);
+  });
+
+  for (const pane of ['editor', 'preview']) {
+    test(`touch Copy reopens for only the selected secondary ${pane}`, async ({ page }) => {
+      const secondary = '# Secondary document\n\n**Secondary content**';
+      await openSecondDocument(page, secondary);
+      if (pane === 'preview') await page.keyboard.press('ControlOrMeta+E');
+      const surface = page.locator('#document-split-' + pane);
+      const menu = await openSurfaceMenu(page, '#document-split-' + pane, 'touch');
+      await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+      await page.locator('.app-header').tap({ position: { x: 10, y: 5 } });
+      if (pane === 'preview') await surface.locator('strong').tap();
+      else await surface.tap({ position: { x: 80, y: 24 } });
+      await expect(menu).toBeVisible();
+      await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
+      if (pane === 'preview') {
+        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>Secondary content</strong>');
+        expect(await page.evaluate(() => window.__clipboard['text/plain'])).not.toContain('Clipboard document');
+      } else {
+        await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': secondary });
+      }
+      await expect(page.locator('#markdown-editor')).toHaveValue(markdown);
+    });
+  }
+
+  test('swiping selected preview text scrolls without reopening the menu', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Native touch swipes use the Chromium input protocol.');
+    const longMarkdown = '# Scrollable selection\n\n' + Array.from({ length: 70 }, (_, index) => `Paragraph ${index} for touch scrolling.`).join('\n\n');
+    await setEditorContent(page, longMarkdown);
+    await expect(page.locator('#markdown-preview p')).toHaveCount(70);
+    const menu = await openSurfaceMenu(page, '#markdown-preview', 'touch');
+    await menu.getByRole('menuitem', { name: 'Select All', exact: true }).tap();
+    await page.locator('.app-header').tap({ position: { x: 10, y: 5 } });
+    const scroller = page.locator('.preview-pane');
+    await scroller.evaluate(element => { element.scrollTop = 0; });
+    const bounds = await scroller.boundingBox();
+    const point = { x: bounds.x + 80, y: bounds.y + Math.min(140, bounds.height - 30) };
+    const session = await page.context().newCDPSession(page);
+    try {
+      await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+      for (const distance of [20, 50, 90]) {
+        await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: point.x, y: point.y - distance }] });
+        await page.waitForTimeout(50); // Model a moving finger, rather than an instantaneous tap.
+      }
+      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect.poll(() => scroller.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+      await expect(menu).toHaveCount(0);
+      await expect(page.locator('#markdown-editor')).toHaveValue(longMarkdown);
+    } finally {
+      await session.detach();
+    }
+  });
+
   test('touch menus remain available when contextmenu has no pointer metadata', async ({ page }) => {
     const preview = page.locator('#markdown-preview');
     await preview.dispatchEvent('touchstart');
