@@ -9794,6 +9794,30 @@ button.live-share-participant-overflow {
   display: inline-block;
 }
 
+.document-tree-skeleton {
+  padding: 4px 12px;
+}
+
+.document-tree-skeleton .skeleton-tree-folder,
+.document-tree-skeleton .skeleton-tree-file {
+  display: block;
+  max-width: calc(100% - 24px);
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.document-tree-skeleton .skeleton-tree-file {
+  margin-left: 24px;
+}
+
+.document-tree-skeleton .skeleton-tree-file:nth-child(3n) {
+  width: 120px;
+}
+
+.document-tree-skeleton .skeleton-tree-folder:not(:first-child) {
+  margin-top: 22px;
+}
+
 /* Screen reader accessibility utility */
 .visually-hidden {
   position: absolute !important;
@@ -9855,20 +9879,25 @@ button.live-share-participant-overflow {
   width: 45%;
 }
 
-/* Editor pane skeleton overlay */
-.editor-skeleton {
+/* Matching editor and preview loading overlays, including the first paint. */
+.editor-skeleton,
+.skeleton-preview-container {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 30px 24px 24px calc(24px + var(--line-number-gutter));
+  padding: 30px 24px 24px;
   z-index: 10;
   pointer-events: none;
   background: var(--editor-bg);
   box-sizing: border-box;
   overflow: hidden;
   transition: opacity 0.3s ease;
+}
+
+.editor-skeleton {
+  padding-left: calc(24px + var(--line-number-gutter));
 }
 
 .editor-pane:not(.is-loading) .editor-skeleton {
@@ -9878,16 +9907,6 @@ button.live-share-participant-overflow {
 .editor-pane.is-loading textarea {
   opacity: 0;
   /* Completely hide editor content while initial bootstrap skeleton runs */
-}
-
-/* Preview pane skeleton container */
-.skeleton-preview-container {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 4px;
-  background: transparent;
-  transition: opacity 0.3s ease;
 }
 
 /* Mermaid compilation loading states */

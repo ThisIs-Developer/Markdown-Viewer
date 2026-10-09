@@ -7014,6 +7014,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tree || !documentOrganization) return;
     removeDocumentSidebarMenus();
     tree.textContent = '';
+    tree.removeAttribute('aria-busy');
     const filter = documentOrganization.ui.filter || 'all';
     documentSidebarRenderBudget = { remaining: documentSidebarRenderLimit };
     let renderedCount = filter === 'all' ? renderWorkspaceTree(tree) : renderFlatDocumentView(tree, filter);
