@@ -1198,5 +1198,7 @@
   "Plain text": "Nur Text",
   "Normalize heading levels": "Überschriftenebenen normalisieren",
   "Collapsible TOC wrapper": "Einklappbares Inhaltsverzeichnis",
-  "No headings in the selected range.": "Keine Überschriften im ausgewählten Bereich."
+  "No headings in the selected range.": "Keine Überschriften im ausgewählten Bereich.",
+  "Copy entire document as Markdown": "Gesamtes Dokument als Markdown kopieren",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Gesamtes Dokument als Markdown kopieren (Ctrl/Cmd+Shift+C)"
 }

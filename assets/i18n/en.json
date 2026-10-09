@@ -1198,5 +1198,7 @@
   "Plain text": "Plain text",
   "Normalize heading levels": "Normalize heading levels",
   "Collapsible TOC wrapper": "Collapsible TOC wrapper",
-  "No headings in the selected range.": "No headings in the selected range."
+  "No headings in the selected range.": "No headings in the selected range.",
+  "Copy entire document as Markdown": "Copy entire document as Markdown",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)"
 }

@@ -1198,5 +1198,7 @@
   "Plain text": "일반 텍스트",
   "Normalize heading levels": "제목 수준 정규화",
   "Collapsible TOC wrapper": "접을 수 있는 목차",
-  "No headings in the selected range.": "선택한 범위에 제목이 없습니다."
+  "No headings in the selected range.": "선택한 범위에 제목이 없습니다.",
+  "Copy entire document as Markdown": "전체 문서를 Markdown으로 복사",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "전체 문서를 Markdown으로 복사 (Ctrl/Cmd+Shift+C)"
 }

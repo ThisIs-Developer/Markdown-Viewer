@@ -748,7 +748,8 @@ body {
   text-align: center;
 }
 
-.document-tree-main > .lucide-folder-open {
+.document-tree-main > .lucide-folder-open,
+.document-tree-row[aria-expanded="true"] > .document-tree-main > .lucide-briefcase-business {
   color: var(--accent-color);
 }
 

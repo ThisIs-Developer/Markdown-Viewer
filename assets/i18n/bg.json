@@ -1198,5 +1198,7 @@
   "Plain text": "Обикновен текст",
   "Normalize heading levels": "Нормализиране на нивата на заглавията",
   "Collapsible TOC wrapper": "Сгъваем блок за съдържанието",
-  "No headings in the selected range.": "Няма заглавия в избрания диапазон."
+  "No headings in the selected range.": "Няма заглавия в избрания диапазон.",
+  "Copy entire document as Markdown": "Копиране на целия документ като Markdown",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Копиране на целия документ като Markdown (Ctrl/Cmd+Shift+C)"
 }

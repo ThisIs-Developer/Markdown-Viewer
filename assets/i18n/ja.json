@@ -1198,5 +1198,7 @@
   "Plain text": "プレーンテキスト",
   "Normalize heading levels": "見出しレベルを正規化",
   "Collapsible TOC wrapper": "折りたたみ可能な目次",
-  "No headings in the selected range.": "選択した範囲に見出しがありません。"
+  "No headings in the selected range.": "選択した範囲に見出しがありません。",
+  "Copy entire document as Markdown": "ドキュメント全体をMarkdownとしてコピー",
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "ドキュメント全体をMarkdownとしてコピー (Ctrl/Cmd+Shift+C)"
 }

@@ -40,7 +40,7 @@ Release-note tabs are temporary and excluded from document storage. Document-onl
 
 Users can work with multiple documents at once.
 
-- Every existing saved document is migrated into **Workspace**. The two workspace roots are fixed, but users can create nested folders inside either root.
+- Every existing saved document is migrated into **Workspace**, identified by the briefcase icon. The two workspace roots are fixed, but users can create nested folders inside either root.
 - Secret Workspace encrypts its files and folder names locally with a password-derived AES-GCM key. It remains locked after reload, the key stays in memory only while unlocked, and a forgotten password cannot be recovered. Resetting Secret Workspace permanently deletes its encrypted payload.
 - The sidebar has explicit **New file** and **New folder** actions for the selected location. Files can be dragged onto another folder or workspace; the Move dialog remains available for keyboard and touch workflows.
 - Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.
@@ -412,11 +412,14 @@ Privacy implications:
 
 ## Clipboard and Copy Behavior
 
-- Copy Markdown copies the raw Markdown from the editor.
-- `Ctrl+C` or `Cmd+C` respects selected text in inputs/textareas and selected page text.
-- When no text selection is active, the app can copy the full Markdown document.
+- **Copy Markdown** in the navbar or mobile menu, and **Ctrl/Cmd+Shift+C**, copy the entire active document as raw Markdown in every view, even when only part of it is selected. In a two-Document view, they use the document whose Editor or Preview was last focused; clicking toolbar controls keeps that document as the target.
+- The Editor and Preview context menus include **Select All** for that pane's complete document, including either side of a two-Document view. With a mouse or keyboard, the menu closes after selection and focus returns to the pane. With touch, Select All keeps the menu available for the next tap on **Copy**; Copy closes it. **Ctrl/Cmd+A** also selects within the focused pane. Read-only documents support selection and copying.
+- On touch devices, dismissing the menu onto the surrounding background preserves the selection. Tapping highlighted text reopens the menu, including for partial selections and secondary document panes. Swiping scrolls, tapping unselected text keeps normal selection/cursor behavior, and touching selected text does not start a text drag.
+- Preview Copy provides formatted HTML and plain text for pasting into apps such as Google Docs. Headings, emphasis, links, lists, tables, and code are retained where the receiving app supports them. Partial selections and native Copy use the same rich content; preview controls are excluded. Editor Copy remains raw Markdown.
+- **Copy** and **Ctrl/Cmd+C** copy only the selection in its original context: raw source in an Editor, formatted content in a Preview, and native text in other controls. With no selection, ordinary Copy leaves the clipboard unchanged.
+- Editor **Paste** and **Ctrl/Cmd+V** insert clipboard text at the cursor or replace the selection; they do not automatically convert rich text to Markdown. Preview supports selection and copying without allowing Paste, Cut, or typing to modify the document. Existing image-paste actions in the Editor are unchanged.
 - Diagram and ABC copy actions attempt to write PNG image data to the clipboard.
-- Clipboard APIs require browser permission and a secure context. The app falls back to a temporary textarea for text copying when needed.
+- Clipboard APIs require browser permission and a secure context. Rich copying falls back to a copy event when the asynchronous HTML clipboard API is unavailable, then to plain text if needed. Copying is local to the system clipboard.
 
 ## Themes, Direction, and Localization
 
