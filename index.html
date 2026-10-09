@@ -122,6 +122,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.3.0/github-markdown.css" integrity="sha384-iACWXAClUhXj3tp/AQeas7im7qS6k8zAMbCeLrK+mfQ0YUsh41TpB+OhLRqAX5N3" crossorigin="anonymous">
     <link rel="stylesheet" href="assets/lucide-icons.css">
     <link rel="stylesheet" href="styles.css">
+    <noscript>
+        <style>
+            .editor-skeleton, .skeleton-preview-container, .document-tree-skeleton { display: none; }
+        </style>
+    </noscript>
     
     <!-- Loading order optimized - ensure libraries are loaded asynchronously using defer -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
@@ -481,7 +486,17 @@
               <span id="document-tree-heading-label">Workspaces</span>
               <span id="document-tree-heading-hint">Drag files to move</span>
             </div>
-            <div id="document-tree" class="document-tree" role="tree" aria-multiselectable="true" aria-label="Workspaces, folders, and Markdown files" tabindex="0"></div>
+            <div id="document-tree" class="document-tree" role="tree" aria-multiselectable="true" aria-label="Workspaces, folders, and Markdown files" aria-busy="true" tabindex="0">
+              <div id="document-tree-skeleton" class="document-tree-skeleton" aria-hidden="true">
+                <div class="skeleton-placeholder skeleton-tree-folder"></div>
+                <div class="skeleton-placeholder skeleton-tree-file"></div>
+                <div class="skeleton-placeholder skeleton-tree-file"></div>
+                <div class="skeleton-placeholder skeleton-tree-file"></div>
+                <div class="skeleton-placeholder skeleton-tree-folder"></div>
+                <div class="skeleton-placeholder skeleton-tree-file"></div>
+                <div class="skeleton-placeholder skeleton-tree-file"></div>
+              </div>
+            </div>
 
             <div class="document-sidebar-footer">
               <span id="document-sidebar-count">0 files</span>
@@ -1739,6 +1754,18 @@
             </div>
             <div class="preview-pane" role="region" aria-label="Rendered Markdown live preview">
                 <div id="markdown-preview" class="markdown-body" tabindex="0">
+                    <div class="skeleton-preview-container" id="markdown-preview-skeleton" aria-hidden="true">
+                        <div class="skeleton-placeholder skeleton-title"></div>
+                        <div class="skeleton-placeholder skeleton-line skeleton-w90"></div>
+                        <div class="skeleton-placeholder skeleton-line skeleton-w85"></div>
+                        <div class="skeleton-placeholder skeleton-line skeleton-w60"></div>
+
+                        <div class="skeleton-placeholder skeleton-subtitle"></div>
+                        <div class="skeleton-placeholder skeleton-line skeleton-w88"></div>
+                        <div class="skeleton-placeholder skeleton-line skeleton-w92"></div>
+                        <div class="skeleton-placeholder skeleton-line skeleton-w45"></div>
+                    </div>
+                    <noscript>
                     <!-- welcome-preview:start -->
                     <article id="welcome-preview">
                         <h2>Welcome to Markdown Viewer</h2>
@@ -1751,6 +1778,7 @@
                         <p>Ordinary editing and autosave stay on this device. Sharing, GitHub import, external images, and remote diagram rendering use network services. Keep separate backups: clearing browser storage can remove your locally saved documents.</p>
                     </article>
                     <!-- welcome-preview:end -->
+                    </noscript>
                 </div>
             </div>
             <div id="document-split-divider" class="document-split-divider" role="separator" aria-orientation="vertical" aria-label="Split document divider" hidden></div>

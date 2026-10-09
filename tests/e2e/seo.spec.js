@@ -82,6 +82,8 @@ test.describe('localized search metadata', () => {
       await expect(page.locator('#welcome-preview h2')).toHaveText('Bienvenue dans Markdown Viewer');
       await expect(page.locator('#welcome-preview')).toContainText('Rédigez et prévisualisez');
       await expect(page.locator('#welcome-preview')).not.toContainText('Write and preview Markdown');
+      await expect(page.locator('#markdown-preview-skeleton')).toBeHidden();
+      await expect(page.locator('#document-tree-skeleton')).toBeHidden();
     } finally {
       await context.close();
     }

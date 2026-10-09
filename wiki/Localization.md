@@ -52,7 +52,7 @@ When a user picks a language from the dropdown, the app saves `app-lang` and upd
 
 ## Public Search Content
 
-`seo/locales.mjs` defines canonical URLs, metadata, and reciprocal language alternates. `seo/welcome-content.mjs` contains the public introduction and starter text for all 15 languages. `seo/server-render.mjs` puts that introduction in the visible preview and prepares the translated starter for new visitors. `assets/seo-metadata.mjs` provides the equivalent browser fallback on static hosts and keeps metadata synchronized after a language change.
+`seo/locales.mjs` defines canonical URLs, metadata, and reciprocal language alternates. `seo/welcome-content.mjs` contains the public introduction and starter text for all 15 languages. `seo/server-render.mjs` puts that introduction in the preview's JavaScript-disabled fallback and prepares the translated starter for new visitors. With JavaScript enabled, the editor and preview show matching loading skeletons, and Explorer shows file placeholders until workspace data is ready. `assets/seo-metadata.mjs` prepares the translated starter on static hosts and keeps metadata synchronized after a language change.
 
 The English starter retains the full feature demonstration. The translated starters explain editing, imports, preview, export, sharing, local storage, and backups, with code, math, and Mermaid examples. Changing the interface language never translates or overwrites saved documents. Translations should receive native-speaker review as terminology evolves.
 

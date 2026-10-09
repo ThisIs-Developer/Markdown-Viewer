@@ -3,7 +3,7 @@ import {
   getSeoLocale,
   hasSeoLocale
 } from '../seo/locales.mjs';
-import { localizedWelcomeMarkdown, renderWelcomeHtml } from '../seo/welcome-content.mjs';
+import { localizedWelcomeMarkdown } from '../seo/welcome-content.mjs';
 
 function setAttribute(field, attribute, value) {
   const element = document.querySelector(`[data-seo-field="${field}"]`);
@@ -55,8 +55,6 @@ applyForLanguage(initialLanguage);
 
 // Static hosts use the same starter as Pages. Do this only before app startup:
 // switching the UI language must never replace an open or saved document.
-const preview = document.getElementById('welcome-preview');
-if (preview) preview.outerHTML = renderWelcomeHtml(initialLanguage);
 const template = document.getElementById('default-markdown');
 if (template && initialLanguage !== 'en') {
   template.textContent = localizedWelcomeMarkdown(initialLanguage);
