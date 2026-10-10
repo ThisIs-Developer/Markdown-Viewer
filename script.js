@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // PERF-002: Lazy script loader for optional heavy libraries
   const CDN_INTEGRITY = Object.freeze({
     'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js': 'sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF',
+    'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js': 'sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab',
     'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js': 'sha384-M5jmNxKC9EVnuqeMwRHvFuYUE8Hhp0TgBruj/GZRkYtiMrCRgH7yvv5KY+Owi7TW',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
@@ -188,7 +189,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // CDN URLs for lazy-loaded libraries
   const CDN = {
     mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
-    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
+    mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js',
     jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
@@ -2249,22 +2250,28 @@ document.addEventListener("DOMContentLoaded", async function () {
   applyDirectionToContent(initialDirection);
   updateDirectionToggleUI(initialDirection);
 
-  // Track last Mermaid theme to avoid redundant re-initialization (PERF-005)
+  // Track last Mermaid theme and look to avoid redundant re-initialization (PERF-005)
   let _lastMermaidTheme = null;
   let _mermaidThemeReinitTimeout = null;
   let _themeTransitionTimeout = null;
   const initMermaid = (forceReinit, themeOverride) => {
     if (typeof mermaid === 'undefined') return; // PERF-002: Not loaded yet
     const currentTheme = themeOverride || document.documentElement.getAttribute("data-theme");
-    const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
+    const config = window.visualSettingsAdapters
+      ? window.visualSettingsAdapters.getMermaidConfig(currentTheme)
+      : { theme: currentTheme === "dark" ? "dark" : "default", look: "classic" };
+    const mermaidTheme = config.theme;
+    const mermaidLook = config.look || "classic";
     
-    // Skip re-initialization if theme hasn't changed (PERF-005)
-    if (!forceReinit && _lastMermaidTheme === mermaidTheme) return;
-    _lastMermaidTheme = mermaidTheme;
+    // Skip re-initialization if theme & look haven't changed (PERF-005)
+    const configKey = `${mermaidTheme}:${mermaidLook}`;
+    if (!forceReinit && _lastMermaidTheme === configKey) return;
+    _lastMermaidTheme = configKey;
     
     mermaid.initialize({
       startOnLoad: false,
       theme: mermaidTheme,
+      look: mermaidLook,
       securityLevel: 'strict',
       flowchart: { useMaxWidth: true, htmlLabels: true },
       fontSize: 16,
@@ -4121,12 +4128,21 @@ document.addEventListener("DOMContentLoaded", async function () {
   function configureMathJax() {
     if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
     if (window.MathJax && MathJax.loader && MathJax.tex) return;
+    const initialFont = window.visualSettingsAdapters
+      ? window.visualSettingsAdapters.getCurrentMathFont()
+      : 'mathjax-modern';
     window.MathJax = {
       startup: {
         typeset: false
       },
       options: {
         a11y: { inTabOrder: false }
+      },
+      output: {
+        font: initialFont
+      },
+      chtml: {
+        font: initialFont
       },
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
@@ -15026,6 +15042,7 @@ ${selector} .arrowheadPath {
   }
 
   function renderMarkdown(options) {
+    window.renderMarkdown = renderMarkdown;
     stopActiveAbcPlayback();
     options = options || {};
     const rawVal = markdownEditor.value;
@@ -17070,7 +17087,10 @@ ${selector} .arrowheadPath {
       
       while ((match = emojiRegex.exec(text)) !== null) {
         const shortcode = match[1];
-        const emoji = joypixels.shortnameToUnicode(`:${shortcode}:`);
+        const effectiveShortcode = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.resolveEmojiShortcode === 'function')
+          ? window.visualSettingsAdapters.resolveEmojiShortcode(shortcode)
+          : shortcode;
+        const emoji = joypixels.shortnameToUnicode(`:${effectiveShortcode}:`);
         
         if (emoji !== `:${shortcode}:`) { // If conversion was successful
           hasEmoji = true;
@@ -24693,6 +24713,10 @@ ${selector} .arrowheadPath {
       } catch (e) {
         console.warn('Mermaid theme re-render failed:', e);
       }
+    }
+
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      window.visualSettingsAdapters.onAppThemeChange(theme);
     }
 
     updateMapThemes();
