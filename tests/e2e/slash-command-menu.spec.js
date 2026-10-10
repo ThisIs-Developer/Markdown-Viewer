@@ -1,6 +1,27 @@
 const { test, expect } = require('@playwright/test');
 const { openApp, setEditorContent, editorValue } = require('../helpers/app');
 
+async function slashMenuPlacement(page) {
+  return page.evaluate(() => {
+    const editor = document.getElementById('markdown-editor');
+    const style = getComputedStyle(editor);
+    const lineIndex = editor.value.slice(0, editor.selectionStart).split('\n').length - 1;
+    const lineTop = editor.getBoundingClientRect().top + parseFloat(style.borderTopWidth) +
+      parseFloat(style.paddingTop) + lineIndex * parseFloat(style.lineHeight) - editor.scrollTop;
+    const lineBottom = lineTop + parseFloat(style.lineHeight);
+    const menu = document.getElementById('slash-command-menu').getBoundingClientRect();
+    const list = document.getElementById('slash-command-list');
+    return {
+      belowLine: menu.top >= lineBottom,
+      aboveLine: menu.bottom <= lineTop,
+      withinViewport: menu.top >= 8 && menu.bottom <= window.innerHeight - 8 &&
+        menu.left >= 8 && menu.right <= window.innerWidth - 8,
+      scrollable: list.scrollHeight > list.clientHeight,
+      height: menu.height
+    };
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await openApp(page);
   await page.getByRole('button', { name: 'Edit Markdown' }).click();
@@ -36,7 +57,9 @@ test('opens the full alert chooser from the slash menu', async ({ page }) => {
 
 test('uses available icons for every slash command', async ({ page }) => {
   await setEditorContent(page, '/');
-  const missingIcons = await page.locator('#slash-command-menu .slash-command-icon i').evaluateAll(nodes => nodes
+  const icons = page.locator('#slash-command-menu .slash-command-icon.lucide');
+  await expect(icons).toHaveCount(16);
+  const missingIcons = await icons.evaluateAll(nodes => nodes
     .filter(node => getComputedStyle(node).maskImage === 'none' && getComputedStyle(node).webkitMaskImage === 'none')
     .map(node => node.className));
   expect(missingIcons).toEqual([]);
@@ -174,4 +197,66 @@ test('still inserts a command selected with the mouse', async ({ page }) => {
   await setEditorContent(page, '/heading');
   await page.locator('#slash-command-menu').getByRole('option', { name: /Heading 2/ }).click();
   await expect.poll(() => editorValue(page)).toBe('## ');
+});
+
+for (const width of [900, 375]) {
+  test(`keeps the full and filtered menu below the typing line at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 500 });
+    await setEditorContent(page, 'text\n\n');
+    const editor = page.locator('#markdown-editor');
+    const menu = page.locator('#slash-command-menu');
+    await editor.pressSequentially('/');
+    await expect(menu.getByRole('option')).toHaveCount(22);
+    await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
+      belowLine: true, withinViewport: true, scrollable: true
+    });
+
+    await editor.pressSequentially('pa');
+    await expect(menu.getByRole('option')).toHaveCount(2);
+    await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
+      belowLine: true, withinViewport: true, scrollable: false
+    });
+
+    await editor.press('Backspace');
+    await editor.press('Backspace');
+    await expect(menu.getByRole('option')).toHaveCount(22);
+    await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
+      belowLine: true, withinViewport: true, scrollable: true
+    });
+    await editor.press('ArrowUp');
+    await expect(menu.getByRole('option').last()).toHaveAttribute('aria-selected', 'true');
+    await expect.poll(() => menu.getByRole('option').last().evaluate(option => {
+      const list = option.parentElement.getBoundingClientRect();
+      const rect = option.getBoundingClientRect();
+      return rect.top >= list.top && rect.bottom <= list.bottom + 1;
+    })).toBe(true);
+    await expect(editor).toBeFocused();
+    await expect.poll(() => editorValue(page)).toBe('text\n\n/');
+  });
+}
+
+test('constrains the menu above a typing line near the bottom of the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 500 });
+  await setEditorContent(page, 'text\n'.repeat(10));
+  await page.locator('#markdown-editor').pressSequentially('/');
+  await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
+    aboveLine: true, withinViewport: true, scrollable: true
+  });
+});
+
+test('recalculates the available menu height when the viewport changes', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await setEditorContent(page, 'text\n\n/');
+  await expect.poll(() => slashMenuPlacement(page)).toMatchObject({ belowLine: true, height: 420 });
+
+  await page.setViewportSize({ width: 900, height: 500 });
+  await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
+    belowLine: true, withinViewport: true, scrollable: true
+  });
+  expect((await slashMenuPlacement(page)).height).toBeLessThan(420);
+
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
+    belowLine: true, withinViewport: true, height: 420
+  });
 });

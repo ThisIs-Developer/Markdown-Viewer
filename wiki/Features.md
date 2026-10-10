@@ -49,6 +49,7 @@ Users can work with multiple documents at once.
 - Multi-selected files can be opened or moved together. Dragging any selected file moves the complete file selection, and expanded folders accept a drop across their visible contents instead of only on the folder label. Deleting selected files moves them directly to Trash; a mixed selection containing folders asks for confirmation and returns files inside removed folders to the workspace root.
 - Document titles, folder names, and Move-dialog destinations use natural numeric ordering. For example, `Untitled 2` appears before `Untitled 10` instead of being sorted lexically after it.
 - Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
+- Both documents in a two-document split use matching Editor and Preview pane spacing. Empty Editors show the same typing, paste, and import hint.
 - **Scroll-wheel button (middle-click):** Point at a document tab and press the mouse's scroll wheel down to close that tab. Its saved Workspace document and draft remain available in Explorer. Rotating the wheel over the tab strip scrolls through tabs instead. Pressing the wheel on a tab closes it rather than starting browser autoscroll; left-click activation and right-click menus are unchanged.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
 - Hovering a tab shows its containing folder path and filename. Files stored directly at the Workspace root show only their filename.
@@ -125,7 +126,9 @@ View-only Share Snapshot tabs and view-only Live Share participant tabs block mu
 
 Type `/` at the start of an Editor line to open a searchable block-command menu. Continue typing to filter, use the arrow keys to move, press **Enter** to run the selected command, or press **Escape** to close it. Pointer selection is also supported.
 
-Commands cover headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Commands that need more information open the same alert, table, diagram, or media chooser used by the toolbar.
+The menu shares the application's compact dropdown typography, spacing, surfaces, and Lucide icons in light and dark themes. Heading symbols match the toolbar's text-style menu. Its height adapts to the space above or below the typing line, keeping your text visible while the command list scrolls.
+
+Commands cover headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Commands that need more information open the same reference, alert, table, diagram, or media chooser used by the toolbar. Date/time uses the toolbar format (date, 12-hour time, and weekday). Uploaded media is saved in the document where the command started; insertion is cancelled if that document changes during upload.
 
 The menu opens only for a literal slash at column zero. A slash after other text or indentation, inside a URL, during IME composition, or outside an Editor remains normal text. The menu follows the active primary or secondary Editor, closes when the document or focus context changes, exposes listbox state to assistive technology, and positions correctly for RTL documents.
 

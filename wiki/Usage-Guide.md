@@ -101,7 +101,7 @@ With the Editor focused, **Page Up** and **Page Down** scroll smoothly without s
 
 Type `/` at the very start of an Editor line to open **Insert block**. Type a command name to filter the list, use **Arrow Up/Down** to choose, press **Enter** to run it, or press **Escape** to close the menu. You can also click or tap a command.
 
-The menu includes headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Alert, table, diagram, and media commands open their existing chooser so you can finish the insertion. Typing `/` after indentation or other text, inside a URL, or while composing text with an IME does not open the menu. Slash commands work in either Editor of the two-Document view and follow RTL placement.
+The menu includes headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Reference, alert, table, diagram, and media commands open their existing chooser so you can finish the insertion. Typing `/` after indentation or other text, inside a URL, or while composing text with an IME does not open the menu. Slash commands work in either Editor of the two-Document view and follow RTL placement.
 
 ### Copying a Document
 

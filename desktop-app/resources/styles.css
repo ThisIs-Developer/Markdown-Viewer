@@ -1723,7 +1723,8 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .editor-pane,
-.preview-pane {
+.preview-pane,
+.document-split-pane {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
@@ -1821,10 +1822,17 @@ body.document-sidebar-collapsed .document-sidebar {
   background: var(--editor-bg);
 }
 
-#document-split-editor:focus-visible,
-#document-split-preview:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: -2px;
+.content-container.view-editor-only .document-split-pane {
+  padding-inline-end: 0;
+}
+
+.content-container.view-preview-only .document-split-pane {
+  background: var(--preview-bg);
+}
+
+#document-split-editor:focus,
+#document-split-preview:focus {
+  outline: none;
 }
 
 #document-split-editor {
@@ -3242,7 +3250,8 @@ body {
 
 .app-menu-item:hover,
 .app-menu-item:focus-visible,
-.app-menu-item:active {
+.app-menu-item:active,
+.slash-command-item.is-active {
   background: var(--button-hover);
   color: var(--text-color);
 }
@@ -3636,7 +3645,8 @@ body {
 /* Unified menu surface: header New is the reference for every command menu. */
 .dropdown-menu,
 .markdown-tool-menu,
-.tab-menu-dropdown {
+.tab-menu-dropdown,
+.slash-command-menu {
   border: 1px solid var(--menu-border);
   border-radius: var(--menu-radius);
   background-color: var(--menu-surface);
@@ -14439,80 +14449,35 @@ body.release-notes-active .mobile-stats-container {
 .slash-command-menu {
   position: fixed;
   z-index: 2200;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
   max-height: min(420px, calc(100vh - 24px));
   overflow: hidden;
-  border: 1px solid var(--menu-border);
-  border-radius: 12px;
-  background: var(--menu-surface);
   color: var(--text-color);
-  box-shadow: var(--menu-shadow);
 }
 
 .slash-command-menu[hidden] { display: none; }
 
 .slash-command-header {
-  padding: 10px 12px 7px;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  flex: 0 0 auto;
 }
 
 .slash-command-list {
-  max-height: min(372px, calc(100vh - 72px));
+  min-height: 0;
   overflow-y: auto;
-  padding: 4px 6px 7px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-.slash-command-item {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-}
-
-.slash-command-item:hover,
-.slash-command-item.is-active { background: var(--toolbar-control-hover); }
-
-.slash-command-icon {
-  display: inline-flex;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-color);
-  border-radius: 7px;
-  background: var(--editor-bg);
-}
-
-.slash-command-text-icon {
+.slash-command-empty {
+  padding: 7px 9px;
   color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: var(--ui-font-sm);
+  line-height: 1.3;
 }
-
-.slash-command-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.slash-command-copy strong { font-size: 0.86rem; font-weight: 650; }
-
-.slash-command-copy small,
-.slash-command-empty { color: var(--text-secondary); font-size: 0.75rem; }
-
-.slash-command-empty { padding: 14px 10px; }
 
 .slash-command-caret-mirror {
   position: absolute;
