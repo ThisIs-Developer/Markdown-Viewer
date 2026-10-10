@@ -1723,7 +1723,8 @@ body.document-sidebar-collapsed .document-sidebar {
 }
 
 .editor-pane,
-.preview-pane {
+.preview-pane,
+.document-split-pane {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
@@ -1819,6 +1820,14 @@ body.document-sidebar-collapsed .document-sidebar {
   flex-direction: column;
   overflow: hidden;
   background: var(--editor-bg);
+}
+
+.content-container.view-editor-only .document-split-pane {
+  padding-inline-end: 0;
+}
+
+.content-container.view-preview-only .document-split-pane {
+  background: var(--preview-bg);
 }
 
 #document-split-editor:focus-visible,
