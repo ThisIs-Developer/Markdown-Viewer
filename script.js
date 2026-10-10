@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // PERF-002: Lazy script loader for optional heavy libraries
   const CDN_INTEGRITY = Object.freeze({
     'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js': 'sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF',
+    'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js': 'sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab',
     'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js': 'sha384-M5jmNxKC9EVnuqeMwRHvFuYUE8Hhp0TgBruj/GZRkYtiMrCRgH7yvv5KY+Owi7TW',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
@@ -188,7 +189,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // CDN URLs for lazy-loaded libraries
   const CDN = {
     mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
-    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
+    mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js',
     jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
@@ -943,6 +944,18 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutVersion = document.getElementById("about-version");
   const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
+  const visualSettingsButton = document.getElementById("visual-settings-button");
+  const menuVisualSettingsButton = document.getElementById("menu-visual-settings-button");
+  const mobileVisualSettingsButton = document.getElementById("mobile-visual-settings-button");
+  const visualSettingsModal = document.getElementById("visual-settings-modal");
+  const visualSettingsCloseBtn = document.getElementById("visual-settings-close-btn");
+  const visualSettingsCloseIcon = document.getElementById("visual-settings-close-icon");
+  const visualSettingsResetBtn = document.getElementById("visual-settings-reset-btn");
+  const selectHljsTheme = document.getElementById("visual-setting-hljs-theme");
+  const selectMathFont = document.getElementById("visual-setting-math-font");
+  const selectMermaidTheme = document.getElementById("visual-setting-mermaid-theme");
+  const selectMermaidLook = document.getElementById("visual-setting-mermaid-look");
+  const selectEmojiSkinTone = document.getElementById("visual-setting-emoji-skin-tone");
   const storageSettingsButton = document.getElementById("storage-settings-button");
   const trashSettingsButton = document.getElementById("trash-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
@@ -2237,22 +2250,28 @@ document.addEventListener("DOMContentLoaded", async function () {
   applyDirectionToContent(initialDirection);
   updateDirectionToggleUI(initialDirection);
 
-  // Track last Mermaid theme to avoid redundant re-initialization (PERF-005)
+  // Track last Mermaid theme and look to avoid redundant re-initialization (PERF-005)
   let _lastMermaidTheme = null;
   let _mermaidThemeReinitTimeout = null;
   let _themeTransitionTimeout = null;
   const initMermaid = (forceReinit, themeOverride) => {
     if (typeof mermaid === 'undefined') return; // PERF-002: Not loaded yet
     const currentTheme = themeOverride || document.documentElement.getAttribute("data-theme");
-    const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
+    const config = window.visualSettingsAdapters
+      ? window.visualSettingsAdapters.getMermaidConfig(currentTheme)
+      : { theme: currentTheme === "dark" ? "dark" : "default", look: "classic" };
+    const mermaidTheme = config.theme;
+    const mermaidLook = config.look || "classic";
     
-    // Skip re-initialization if theme hasn't changed (PERF-005)
-    if (!forceReinit && _lastMermaidTheme === mermaidTheme) return;
-    _lastMermaidTheme = mermaidTheme;
+    // Skip re-initialization if theme & look haven't changed (PERF-005)
+    const configKey = `${mermaidTheme}:${mermaidLook}`;
+    if (!forceReinit && _lastMermaidTheme === configKey) return;
+    _lastMermaidTheme = configKey;
     
     mermaid.initialize({
       startOnLoad: false,
       theme: mermaidTheme,
+      look: mermaidLook,
       securityLevel: 'strict',
       flowchart: { useMaxWidth: true, htmlLabels: true },
       fontSize: 16,
@@ -4109,12 +4128,21 @@ document.addEventListener("DOMContentLoaded", async function () {
   function configureMathJax() {
     if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
     if (window.MathJax && MathJax.loader && MathJax.tex) return;
+    const initialFont = window.visualSettingsAdapters
+      ? window.visualSettingsAdapters.getCurrentMathFont()
+      : 'mathjax-modern';
     window.MathJax = {
       startup: {
         typeset: false
       },
       options: {
         a11y: { inTabOrder: false }
+      },
+      output: {
+        font: initialFont
+      },
+      chtml: {
+        font: initialFont
       },
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
@@ -15014,6 +15042,7 @@ ${selector} .arrowheadPath {
   }
 
   function renderMarkdown(options) {
+    window.renderMarkdown = renderMarkdown;
     stopActiveAbcPlayback();
     options = options || {};
     const rawVal = markdownEditor.value;
@@ -17058,7 +17087,10 @@ ${selector} .arrowheadPath {
       
       while ((match = emojiRegex.exec(text)) !== null) {
         const shortcode = match[1];
-        const emoji = joypixels.shortnameToUnicode(`:${shortcode}:`);
+        const effectiveShortcode = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.resolveEmojiShortcode === 'function')
+          ? window.visualSettingsAdapters.resolveEmojiShortcode(shortcode)
+          : shortcode;
+        const emoji = joypixels.shortnameToUnicode(`:${effectiveShortcode}:`);
         
         if (emoji !== `:${shortcode}:`) { // If conversion was successful
           hasEmoji = true;
@@ -24031,6 +24063,13 @@ ${selector} .arrowheadPath {
     });
   }
 
+  if (mobileVisualSettingsButton) {
+    mobileVisualSettingsButton.addEventListener('click', function() {
+      closeMobileMenu();
+      openVisualSettingsModal(mobileVisualSettingsButton);
+    });
+  }
+
   if (mobileStorageSettingsButton) {
     mobileStorageSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
@@ -24042,6 +24081,157 @@ ${selector} .arrowheadPath {
     mobileTrashSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
       openTrashModal(mobileTrashSettingsButton);
+    });
+  }
+
+  // Visual Library Settings (Issue #129)
+  function populateVisualSettingsOptions() {
+    const options = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.getOptions === 'function')
+      ? window.visualSettingsAdapters.getOptions()
+      : (window.visualSettingsStore ? window.visualSettingsStore.DEFAULT_OPTIONS : null);
+
+    if (!options) return;
+
+    const list = [
+      { el: selectHljsTheme, opts: options.hljsTheme },
+      { el: selectMathFont, opts: options.mathFont },
+      { el: selectMermaidTheme, opts: options.mermaidTheme },
+      { el: selectMermaidLook, opts: options.mermaidLook },
+      { el: selectEmojiSkinTone, opts: options.emojiSkinTone }
+    ];
+
+    list.forEach(function(item) {
+      if (!item.el || !item.opts) return;
+      const currentVal = item.el.value;
+      item.el.innerHTML = '';
+      item.opts.forEach(function(opt) {
+        const val = typeof opt === 'object' && opt !== null ? opt.value : opt;
+        const label = typeof opt === 'object' && opt !== null ? opt.label : opt;
+        const optEl = document.createElement('option');
+        optEl.value = val;
+        optEl.textContent = label;
+        item.el.appendChild(optEl);
+      });
+      if (currentVal) item.el.value = currentVal;
+    });
+  }
+
+  function syncVisualSettingsUI() {
+    if (!window.visualSettingsStore) return;
+    const settings = window.visualSettingsStore.getSettings();
+    if (selectHljsTheme && settings.hljsTheme) selectHljsTheme.value = settings.hljsTheme;
+    if (selectMathFont && settings.mathFont) selectMathFont.value = settings.mathFont;
+    if (selectMermaidTheme && settings.mermaidTheme) selectMermaidTheme.value = settings.mermaidTheme;
+    if (selectMermaidLook && settings.mermaidLook) selectMermaidLook.value = settings.mermaidLook;
+    if (selectEmojiSkinTone && settings.emojiSkinTone) selectEmojiSkinTone.value = settings.emojiSkinTone;
+  }
+
+  function openVisualSettingsModal(opener) {
+    if (!visualSettingsModal) return;
+    populateVisualSettingsOptions();
+    syncVisualSettingsUI();
+    openAppModal(visualSettingsModal, {
+      focusTarget: selectHljsTheme,
+      returnFocus: opener || document.activeElement,
+      onClose: closeVisualSettingsModal
+    });
+  }
+
+  function closeVisualSettingsModal() {
+    if (visualSettingsModal) closeAppModal(visualSettingsModal);
+  }
+
+  async function applyVisualSettings(settings, changedKey) {
+    if (window.visualSettingsAdapters) {
+      try {
+        if (changedKey === 'hljsTheme') {
+          await window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme);
+        } else if (changedKey === 'mathFont') {
+          await window.visualSettingsAdapters.applyMathFont(settings.mathFont);
+        } else if (changedKey === 'mermaidTheme' || changedKey === 'mermaidLook') {
+          await window.visualSettingsAdapters.applyMermaid({
+            theme: settings.mermaidTheme,
+            look: settings.mermaidLook
+          });
+        } else if (changedKey === 'emojiSkinTone') {
+          await window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone);
+        } else {
+          if (typeof window.visualSettingsAdapters.applyAll === 'function') {
+            await window.visualSettingsAdapters.applyAll(settings);
+          } else {
+            await Promise.all([
+              window.visualSettingsAdapters.applyHighlightTheme && window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme),
+              window.visualSettingsAdapters.applyMathFont && window.visualSettingsAdapters.applyMathFont(settings.mathFont),
+              window.visualSettingsAdapters.applyMermaid && window.visualSettingsAdapters.applyMermaid({ theme: settings.mermaidTheme, look: settings.mermaidLook }),
+              window.visualSettingsAdapters.applyEmojiSkinTone && window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone)
+            ]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error applying visual setting via adapter:', err);
+      }
+    }
+    renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+  }
+
+  if (visualSettingsButton) {
+    visualSettingsButton.addEventListener('click', function() {
+      openVisualSettingsModal(visualSettingsButton);
+    });
+  }
+
+  if (menuVisualSettingsButton) {
+    menuVisualSettingsButton.addEventListener('click', function() {
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
+        bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
+      }
+      openVisualSettingsModal(menuVisualSettingsButton);
+    });
+  }
+
+  if (visualSettingsCloseBtn) visualSettingsCloseBtn.addEventListener('click', closeVisualSettingsModal);
+  if (visualSettingsCloseIcon) visualSettingsCloseIcon.addEventListener('click', closeVisualSettingsModal);
+
+  if (selectHljsTheme) {
+    selectHljsTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('hljsTheme', selectHljsTheme.value);
+    });
+  }
+  if (selectMathFont) {
+    selectMathFont.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mathFont', selectMathFont.value);
+    });
+  }
+  if (selectMermaidTheme) {
+    selectMermaidTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidTheme', selectMermaidTheme.value);
+    });
+  }
+  if (selectMermaidLook) {
+    selectMermaidLook.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidLook', selectMermaidLook.value);
+    });
+  }
+  if (selectEmojiSkinTone) {
+    selectEmojiSkinTone.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('emojiSkinTone', selectEmojiSkinTone.value);
+    });
+  }
+
+  if (visualSettingsResetBtn) {
+    visualSettingsResetBtn.addEventListener('click', function() {
+      if (window.visualSettingsStore) {
+        window.visualSettingsStore.resetSettings();
+        syncVisualSettingsUI();
+      }
+    });
+  }
+
+  if (window.visualSettingsStore) {
+    window.visualSettingsStore.onSettingsChange(function(settings, changedKey) {
+      syncVisualSettingsUI();
+      applyVisualSettings(settings, changedKey);
     });
   }
 
@@ -24525,8 +24715,19 @@ ${selector} .arrowheadPath {
       }
     }
 
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      window.visualSettingsAdapters.onAppThemeChange(theme);
+    }
+
     updateMapThemes();
     updateStlThemes();
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      try {
+        window.visualSettingsAdapters.onAppThemeChange(theme);
+      } catch (err) {
+        console.warn('Error in visualSettingsAdapters.onAppThemeChange:', err);
+      }
+    }
   });
 
   async function nativeSaveMarkdown() {
@@ -32303,6 +32504,16 @@ ${selector} .arrowheadPath {
       activate: releaseNotesLaunch.activate
     });
   }
+
+  // Initialize Visual Library Settings (Issue #129)
+  window.renderMarkdown = renderMarkdown;
+  populateVisualSettingsOptions();
+  syncVisualSettingsUI();
+  if (window.visualSettingsStore) {
+    const initialVisualSettings = window.visualSettingsStore.getSettings();
+    await applyVisualSettings(initialVisualSettings, '*');
+  }
+
   document.documentElement.dataset.appReady = 'true';
   window.dispatchEvent(new Event('markdown-viewer:ready'));
 });
