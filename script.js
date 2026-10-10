@@ -18340,11 +18340,21 @@ ${selector} .arrowheadPath {
     const width = slashCommandMenu.offsetWidth;
     const preferredLeft = window.getComputedStyle(editor).direction === 'rtl' ? caret.left - width : caret.left;
     const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - width - margin));
-    let top = caret.top + caret.lineHeight + 6;
-    const menuHeight = slashCommandMenu.offsetHeight || 360;
-    if (top + menuHeight > window.innerHeight - margin) top = Math.max(margin, caret.top - menuHeight - 6);
+    const belowTop = Math.max(margin, caret.top + caret.lineHeight + 6);
+    const aboveBottom = Math.min(window.innerHeight - margin, caret.top - 6);
+    const spaceBelow = Math.max(0, window.innerHeight - margin - belowTop);
+    const spaceAbove = Math.max(0, aboveBottom - margin);
+    // Measure the natural height again after filtering or resizing the viewport.
+    slashCommandMenu.style.maxHeight = '';
+    const menuHeight = Math.ceil(slashCommandMenu.getBoundingClientRect().height);
+    const showBelow = menuHeight <= spaceBelow || spaceBelow >= spaceAbove;
+    // Constrain the list on the chosen side instead of clamping a tall menu over the caret.
+    slashCommandMenu.style.maxHeight = Math.min(menuHeight, showBelow ? spaceBelow : spaceAbove) + 'px';
+    const top = showBelow ? belowTop : aboveBottom - slashCommandMenu.getBoundingClientRect().height;
     slashCommandMenu.style.left = left + 'px';
     slashCommandMenu.style.top = top + 'px';
+    const activeItem = slashCommandList.querySelector('[aria-selected="true"]');
+    if (activeItem) activeItem.scrollIntoView({ block: 'nearest' });
   }
 
   function closeSlashCommandMenu(options) {
