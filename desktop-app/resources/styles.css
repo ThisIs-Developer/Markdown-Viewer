@@ -14522,3 +14522,158 @@ body.release-notes-active .mobile-stats-container {
   min-height: 0;
   overflow: hidden;
 }
+
+/* ==========================================================================
+   Visual Library Settings Modal (Issue #129)
+   ========================================================================== */
+
+.visual-settings-box {
+  width: min(94vw, 560px);
+  max-width: 560px;
+}
+
+.visual-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px;
+  max-height: calc(85vh - 120px);
+  overflow-y: auto;
+}
+
+.visual-setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.visual-setting-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--ui-font-md);
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 2px;
+}
+
+.visual-setting-label i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+}
+
+.visual-setting-desc {
+  font-size: var(--ui-font-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.visual-setting-select {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: var(--ui-font-md);
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  background-clip: padding-box;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.visual-setting-select:focus,
+.visual-setting-select:focus-visible {
+  outline: 0;
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.25);
+}
+
+.visual-settings-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
+.visual-settings-actions-left {
+  display: flex;
+  align-items: center;
+}
+
+.visual-settings-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Dark mode styling for visual settings */
+[data-theme="dark"] .visual-setting-select {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+
+[data-theme="dark"] .visual-setting-select:focus,
+[data-theme="dark"] .visual-setting-select:focus-visible {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.3);
+}
+
+[data-theme="dark"] .visual-setting-select option {
+  background-color: #161b22;
+  color: #c9d1d9;
+}
+
+[data-theme="dark"] .visual-settings-actions {
+  background-color: var(--bg-color);
+  border-top-color: #30363d;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .visual-settings-box {
+    width: 96vw;
+    margin: 8px auto;
+  }
+
+  .visual-settings-body {
+    padding: 14px 16px;
+    gap: 14px;
+    max-height: calc(85vh - 140px);
+  }
+
+  .visual-setting-select {
+    min-height: 44px; /* Better touch target */
+    font-size: var(--ui-font-base, 14px);
+  }
+
+  .visual-settings-actions {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .visual-settings-actions-left,
+  .visual-settings-actions-right {
+    width: 100%;
+  }
+
+  .visual-settings-actions-left button,
+  .visual-settings-actions-right button {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+}

@@ -943,6 +943,18 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutVersion = document.getElementById("about-version");
   const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
+  const visualSettingsButton = document.getElementById("visual-settings-button");
+  const menuVisualSettingsButton = document.getElementById("menu-visual-settings-button");
+  const mobileVisualSettingsButton = document.getElementById("mobile-visual-settings-button");
+  const visualSettingsModal = document.getElementById("visual-settings-modal");
+  const visualSettingsCloseBtn = document.getElementById("visual-settings-close-btn");
+  const visualSettingsCloseIcon = document.getElementById("visual-settings-close-icon");
+  const visualSettingsResetBtn = document.getElementById("visual-settings-reset-btn");
+  const selectHljsTheme = document.getElementById("visual-setting-hljs-theme");
+  const selectMathFont = document.getElementById("visual-setting-math-font");
+  const selectMermaidTheme = document.getElementById("visual-setting-mermaid-theme");
+  const selectMermaidLook = document.getElementById("visual-setting-mermaid-look");
+  const selectEmojiSkinTone = document.getElementById("visual-setting-emoji-skin-tone");
   const storageSettingsButton = document.getElementById("storage-settings-button");
   const trashSettingsButton = document.getElementById("trash-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
@@ -24031,6 +24043,13 @@ ${selector} .arrowheadPath {
     });
   }
 
+  if (mobileVisualSettingsButton) {
+    mobileVisualSettingsButton.addEventListener('click', function() {
+      closeMobileMenu();
+      openVisualSettingsModal(mobileVisualSettingsButton);
+    });
+  }
+
   if (mobileStorageSettingsButton) {
     mobileStorageSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
@@ -24042,6 +24061,157 @@ ${selector} .arrowheadPath {
     mobileTrashSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
       openTrashModal(mobileTrashSettingsButton);
+    });
+  }
+
+  // Visual Library Settings (Issue #129)
+  function populateVisualSettingsOptions() {
+    const options = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.getOptions === 'function')
+      ? window.visualSettingsAdapters.getOptions()
+      : (window.visualSettingsStore ? window.visualSettingsStore.DEFAULT_OPTIONS : null);
+
+    if (!options) return;
+
+    const list = [
+      { el: selectHljsTheme, opts: options.hljsTheme },
+      { el: selectMathFont, opts: options.mathFont },
+      { el: selectMermaidTheme, opts: options.mermaidTheme },
+      { el: selectMermaidLook, opts: options.mermaidLook },
+      { el: selectEmojiSkinTone, opts: options.emojiSkinTone }
+    ];
+
+    list.forEach(function(item) {
+      if (!item.el || !item.opts) return;
+      const currentVal = item.el.value;
+      item.el.innerHTML = '';
+      item.opts.forEach(function(opt) {
+        const val = typeof opt === 'object' && opt !== null ? opt.value : opt;
+        const label = typeof opt === 'object' && opt !== null ? opt.label : opt;
+        const optEl = document.createElement('option');
+        optEl.value = val;
+        optEl.textContent = label;
+        item.el.appendChild(optEl);
+      });
+      if (currentVal) item.el.value = currentVal;
+    });
+  }
+
+  function syncVisualSettingsUI() {
+    if (!window.visualSettingsStore) return;
+    const settings = window.visualSettingsStore.getSettings();
+    if (selectHljsTheme && settings.hljsTheme) selectHljsTheme.value = settings.hljsTheme;
+    if (selectMathFont && settings.mathFont) selectMathFont.value = settings.mathFont;
+    if (selectMermaidTheme && settings.mermaidTheme) selectMermaidTheme.value = settings.mermaidTheme;
+    if (selectMermaidLook && settings.mermaidLook) selectMermaidLook.value = settings.mermaidLook;
+    if (selectEmojiSkinTone && settings.emojiSkinTone) selectEmojiSkinTone.value = settings.emojiSkinTone;
+  }
+
+  function openVisualSettingsModal(opener) {
+    if (!visualSettingsModal) return;
+    populateVisualSettingsOptions();
+    syncVisualSettingsUI();
+    openAppModal(visualSettingsModal, {
+      focusTarget: selectHljsTheme,
+      returnFocus: opener || document.activeElement,
+      onClose: closeVisualSettingsModal
+    });
+  }
+
+  function closeVisualSettingsModal() {
+    if (visualSettingsModal) closeAppModal(visualSettingsModal);
+  }
+
+  async function applyVisualSettings(settings, changedKey) {
+    if (window.visualSettingsAdapters) {
+      try {
+        if (changedKey === 'hljsTheme') {
+          await window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme);
+        } else if (changedKey === 'mathFont') {
+          await window.visualSettingsAdapters.applyMathFont(settings.mathFont);
+        } else if (changedKey === 'mermaidTheme' || changedKey === 'mermaidLook') {
+          await window.visualSettingsAdapters.applyMermaid({
+            theme: settings.mermaidTheme,
+            look: settings.mermaidLook
+          });
+        } else if (changedKey === 'emojiSkinTone') {
+          await window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone);
+        } else {
+          if (typeof window.visualSettingsAdapters.applyAll === 'function') {
+            await window.visualSettingsAdapters.applyAll(settings);
+          } else {
+            await Promise.all([
+              window.visualSettingsAdapters.applyHighlightTheme && window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme),
+              window.visualSettingsAdapters.applyMathFont && window.visualSettingsAdapters.applyMathFont(settings.mathFont),
+              window.visualSettingsAdapters.applyMermaid && window.visualSettingsAdapters.applyMermaid({ theme: settings.mermaidTheme, look: settings.mermaidLook }),
+              window.visualSettingsAdapters.applyEmojiSkinTone && window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone)
+            ]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error applying visual setting via adapter:', err);
+      }
+    }
+    renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+  }
+
+  if (visualSettingsButton) {
+    visualSettingsButton.addEventListener('click', function() {
+      openVisualSettingsModal(visualSettingsButton);
+    });
+  }
+
+  if (menuVisualSettingsButton) {
+    menuVisualSettingsButton.addEventListener('click', function() {
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
+        bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
+      }
+      openVisualSettingsModal(menuVisualSettingsButton);
+    });
+  }
+
+  if (visualSettingsCloseBtn) visualSettingsCloseBtn.addEventListener('click', closeVisualSettingsModal);
+  if (visualSettingsCloseIcon) visualSettingsCloseIcon.addEventListener('click', closeVisualSettingsModal);
+
+  if (selectHljsTheme) {
+    selectHljsTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('hljsTheme', selectHljsTheme.value);
+    });
+  }
+  if (selectMathFont) {
+    selectMathFont.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mathFont', selectMathFont.value);
+    });
+  }
+  if (selectMermaidTheme) {
+    selectMermaidTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidTheme', selectMermaidTheme.value);
+    });
+  }
+  if (selectMermaidLook) {
+    selectMermaidLook.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidLook', selectMermaidLook.value);
+    });
+  }
+  if (selectEmojiSkinTone) {
+    selectEmojiSkinTone.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('emojiSkinTone', selectEmojiSkinTone.value);
+    });
+  }
+
+  if (visualSettingsResetBtn) {
+    visualSettingsResetBtn.addEventListener('click', function() {
+      if (window.visualSettingsStore) {
+        window.visualSettingsStore.resetSettings();
+        syncVisualSettingsUI();
+      }
+    });
+  }
+
+  if (window.visualSettingsStore) {
+    window.visualSettingsStore.onSettingsChange(function(settings, changedKey) {
+      syncVisualSettingsUI();
+      applyVisualSettings(settings, changedKey);
     });
   }
 
@@ -24527,6 +24697,13 @@ ${selector} .arrowheadPath {
 
     updateMapThemes();
     updateStlThemes();
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      try {
+        window.visualSettingsAdapters.onAppThemeChange(theme);
+      } catch (err) {
+        console.warn('Error in visualSettingsAdapters.onAppThemeChange:', err);
+      }
+    }
   });
 
   async function nativeSaveMarkdown() {
@@ -32303,6 +32480,16 @@ ${selector} .arrowheadPath {
       activate: releaseNotesLaunch.activate
     });
   }
+
+  // Initialize Visual Library Settings (Issue #129)
+  window.renderMarkdown = renderMarkdown;
+  populateVisualSettingsOptions();
+  syncVisualSettingsUI();
+  if (window.visualSettingsStore) {
+    const initialVisualSettings = window.visualSettingsStore.getSettings();
+    await applyVisualSettings(initialVisualSettings, '*');
+  }
+
   document.documentElement.dataset.appReady = 'true';
   window.dispatchEvent(new Event('markdown-viewer:ready'));
 });
