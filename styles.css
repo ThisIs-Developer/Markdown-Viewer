@@ -1830,10 +1830,9 @@ body.document-sidebar-collapsed .document-sidebar {
   background: var(--preview-bg);
 }
 
-#document-split-editor:focus-visible,
-#document-split-preview:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: -2px;
+#document-split-editor:focus,
+#document-split-preview:focus {
+  outline: none;
 }
 
 #document-split-editor {
