@@ -17724,7 +17724,8 @@ ${selector} .arrowheadPath {
     const targetTab = tabs.find(function(tab) { return tab.id === targetTabId; });
     if (!targetTab || isTemporaryDocument(targetTab) || isPrivateStorageMode()) return true;
     if (liveCollaboration && liveCollaboration.tabId === targetTabId) return true;
-    saveCurrentTabState();
+    if (targetTabId === secondarySplitTabId) saveSecondarySplitState();
+    else if (targetTabId === activeTabId) saveCurrentTabState();
     if (targetTab.workspaceId === SECRET_WORKSPACE_ID) {
       await flushSecretWorkspaceToStorage();
       return true;
@@ -17732,13 +17733,21 @@ ${selector} .arrowheadPath {
     return await _flushTabsToStorage(tabs, { changedIds: [targetTabId] });
   }
 
-  function restoreEditorAfterFailedImageInsertion(targetTabId, originalValue, selectionStart, selectionEnd) {
-    if (activeTabId !== targetTabId) return;
+  function restoreEditorAfterFailedImageInsertion(targetTabId, originalValue, selectionStart, selectionEnd, editorOverride) {
+    const editor = editorOverride || markdownEditor;
+    if ((editor === documentSplitEditor ? secondarySplitTabId : activeTabId) !== targetTabId) return;
+    if (editor === documentSplitEditor) {
+      editor.value = originalValue;
+      editor.setSelectionRange(selectionStart, selectionEnd);
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
     const targetTab = tabs.find(function(tab) { return tab.id === targetTabId; });
     markdownEditor.value = originalValue;
     markdownEditor.setSelectionRange(selectionStart, selectionEnd);
     lastPushedValue = originalValue;
     if (targetTab) targetTab.content = originalValue;
+    markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
     renderMarkdown({ reason: 'image-storage-rollback', force: true });
     updateDocumentStats();
     scheduleLineNumberUpdate({ force: true });
@@ -17746,13 +17755,14 @@ ${selector} .arrowheadPath {
 
   async function insertImageFilesIntoEditor(fileList, options) {
     const settings = options || {};
+    const editor = settings.editor || markdownEditor;
     const suppliedFiles = Array.from(fileList || []);
     const mediaFiles = suppliedFiles.filter(isMediaFile);
     if (mediaFiles.length !== suppliedFiles.length) {
       showUnsupportedFileToast('Choose an image, GIF, MP4, WebM, or Ogg video file.');
     }
     if (!mediaFiles.length) return 0;
-    if (!hasActiveOpenDocument() || !canMutateEditor()) {
+    if (!isMarkdownEditorEditable(editor)) {
       announceToScreenReader(getEditorReadOnlyMessage());
       return 0;
     }
@@ -17767,19 +17777,27 @@ ${selector} .arrowheadPath {
       showUnsupportedFileToast('This media file exceeds the supported limit: still images 25 MB before optimization, GIFs 5 MB, and videos 10 MB.');
     }
     if (!acceptedFiles.length) return 0;
+    const targetTabId = editor === documentSplitEditor ? secondarySplitTabId : activeTabId;
+    const originalValue = editor.value;
+    const start = Number.isFinite(settings.selectionStart) ? settings.selectionStart : editor.selectionStart;
+    const end = Number.isFinite(settings.selectionEnd) ? settings.selectionEnd : editor.selectionEnd;
+    function targetIsUnchanged() {
+      return (editor === documentSplitEditor ? secondarySplitTabId : activeTabId) === targetTabId &&
+        editor.value === originalValue && isMarkdownEditorEditable(editor);
+    }
     if (!(await requestManagedImageUploadConsent())) {
       announceToScreenReader('Media upload cancelled.');
       return 0;
     }
-
-    const targetTabId = activeTabId;
-    const originalValue = markdownEditor.value;
-    const start = Number.isFinite(settings.selectionStart) ? settings.selectionStart : markdownEditor.selectionStart;
-    const end = Number.isFinite(settings.selectionEnd) ? settings.selectionEnd : markdownEditor.selectionEnd;
+    if (!targetIsUnchanged()) {
+      announceToScreenReader('Media insertion was cancelled because the document changed.');
+      return 0;
+    }
     const source = settings.source === 'clipboard'
       ? 'clipboard'
       : (settings.source === 'upload' ? 'upload' : 'drop');
     let didInsert = false;
+    let insertedValue;
     let uploadedCount = 0;
     showMediaProgress(acceptedFiles.length);
     if (typeof settings.onStage === 'function') settings.onStage('preparing');
@@ -17798,7 +17816,7 @@ ${selector} .arrowheadPath {
         uploadedCount = index + 1;
         updateMediaProgress(uploadedCount, acceptedFiles.length, (file.name || 'Media file') + ' uploaded');
       }
-      if (activeTabId !== targetTabId || markdownEditor.value !== originalValue || !canMutateEditor()) {
+      if (!targetIsUnchanged()) {
         finishMediaProgress(uploadedCount, acceptedFiles.length, { title: 'Media insertion cancelled', detail: 'The document changed during upload.' });
         announceToScreenReader('Media insertion was cancelled because the document changed.');
         return 0;
@@ -17818,16 +17836,17 @@ ${selector} .arrowheadPath {
         return '![' + altText + '](' + managedItem.url + ')';
       }).join('\n\n');
 
-      replaceEditorRange(start, end, markdown, start + markdown.length, start + markdown.length);
+      replaceMarkdownEditorRange(editor, start, end, markdown, start + markdown.length, start + markdown.length);
       didInsert = true;
+      insertedValue = editor.value;
       const persisted = await persistImageInsertion(targetTabId);
       if (!persisted) throw new Error('The browser could not save the short media link.');
       finishMediaProgress(acceptedFiles.length, acceptedFiles.length);
       announceToScreenReader(acceptedFiles.length + ' media file' + (acceptedFiles.length === 1 ? '' : 's') + ' uploaded and inserted with short links.');
       return acceptedFiles.length;
     } catch (error) {
-      if (didInsert) {
-        restoreEditorAfterFailedImageInsertion(targetTabId, originalValue, start, end);
+      if (didInsert && editor.value === insertedValue) {
+        restoreEditorAfterFailedImageInsertion(targetTabId, originalValue, start, end, editor);
       }
       finishMediaProgress(uploadedCount, acceptedFiles.length);
       console.warn('Media insertion failed:', error);
@@ -18238,6 +18257,14 @@ ${selector} .arrowheadPath {
     return true;
   }
 
+  function formatMarkdownDateTime() {
+    const now = new Date();
+    const datePart = now.toLocaleDateString('en-CA');
+    const timePart = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+    return `${datePart} ${timePart} ${dayName}`;
+  }
+
   const SLASH_COMMANDS = Object.freeze([
     { id: 'paragraph', label: 'Paragraph', description: 'Continue with plain text', icon: 'lucide-pilcrow', keywords: 'text normal body', insert: '' },
     { id: 'heading-1', label: 'Heading 1', description: 'Large section heading', textIcon: 'H1', keywords: 'title h1', insert: '# ' },
@@ -18253,13 +18280,14 @@ ${selector} .arrowheadPath {
     { id: 'code-block', label: 'Code block', description: 'Insert a fenced code block', icon: 'lucide-square-code', keywords: 'fence programming', insert: '```\ncode\n```\n', select: [4, 8] },
     { id: 'horizontal-rule', label: 'Horizontal rule', description: 'Separate sections', icon: 'lucide-minus', keywords: 'divider separator', insert: '---\n' },
     { id: 'link', label: 'Link', description: 'Insert a Markdown link', icon: 'lucide-link-2', keywords: 'url hyperlink', insert: '[text](https://example.com)', select: [1, 5] },
+    { id: 'reference', label: 'Reference', description: 'Insert a numbered reference link', icon: 'lucide-bookmark', keywords: 'reference numbered link', action: 'reference' },
     { id: 'image', label: 'Image or video', description: 'Upload media or use a URL', icon: 'lucide-image', keywords: 'photo picture media upload url', action: 'image' },
     { id: 'table', label: 'Table', description: 'Choose columns and rows', icon: 'lucide-grid-2x2', keywords: 'columns rows grid', action: 'table' },
     { id: 'alert', label: 'Alert', description: 'Choose Note, Tip, Important, Warning, or Caution', icon: 'lucide-badge-alert', keywords: 'callout note tip important warning caution', action: 'alert' },
     { id: 'math', label: 'Math block', description: 'Insert display math', icon: 'lucide-braces', keywords: 'latex equation', insert: '$$\nformula\n$$\n', select: [3, 10] },
     { id: 'diagram', label: 'Diagram', description: 'Choose a diagram or visualization', icon: 'lucide-workflow', keywords: 'mermaid plantuml graphviz d2 markmap vega wavedrom map chart', action: 'diagram' },
     { id: 'terminal-block', label: 'Terminal block', description: 'Insert a shell command block', icon: 'lucide-square-terminal', keywords: 'bash shell command console', insert: '```bash\nnpm run dev\n```\n', select: [8, 19] },
-    { id: 'date', label: 'Date and time', description: 'Insert the current date and time', icon: 'lucide-clock-3', keywords: 'today timestamp time', build: function() { return new Date().toLocaleString(); } }
+    { id: 'date', label: 'Date and time', description: 'Insert the current date and time', icon: 'lucide-clock-3', keywords: 'today timestamp time', build: formatMarkdownDateTime }
   ]);
   let slashCommandState = null;
   let slashCommandMenu = null;
@@ -18402,6 +18430,7 @@ ${selector} .arrowheadPath {
         else if (command.action === 'alert') openAlertModal(state.editor);
         else if (command.action === 'diagram') void openDiagramModal(null, state.editor);
         else if (command.action === 'image') insertMarkdownImage(state.editor);
+        else if (command.action === 'reference') insertMarkdownReference(state.editor);
       });
       return;
     }
@@ -21055,6 +21084,7 @@ ${selector} .arrowheadPath {
       if (isProcessing) return;
       setProcessing(true);
       const insertedCount = await insertImageFilesIntoEditor([file], {
+        editor: editor,
         source: 'upload',
         selectionStart: start,
         selectionEnd: end,
@@ -21156,7 +21186,8 @@ ${selector} .arrowheadPath {
     updateMode(true);
   }
 
-  function insertMarkdownReference() {
+  function insertMarkdownReference(editorOverride) {
+    const editor = editorOverride || markdownEditor;
     const modal = document.getElementById('reference-modal');
     const numberInput = document.getElementById('reference-modal-number');
     const urlInput = document.getElementById('reference-modal-url');
@@ -21164,9 +21195,9 @@ ${selector} .arrowheadPath {
     const confirmBtn = document.getElementById('reference-modal-apply');
     const cancelBtn = document.getElementById('reference-modal-cancel');
     if (!modal || !numberInput || !urlInput || !titleInput || !confirmBtn || !cancelBtn) return;
-    const start = markdownEditor.selectionStart;
-    const end = markdownEditor.selectionEnd;
-    const currentValue = markdownEditor.value;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const currentValue = editor.value;
     const used = getUsedReferenceNumbers(currentValue);
     const maxUsed = used.size ? Math.max(...used) : 0;
     referenceCounter = Math.max(1, maxUsed + 1);
@@ -21177,7 +21208,7 @@ ${selector} .arrowheadPath {
     modal.style.display = 'flex';
 
     function insertReference() {
-      const latestValue = markdownEditor.value;
+      const latestValue = editor.value;
       const usedNumbers = getUsedReferenceNumbers(latestValue);
       const parsed = parseInt(numberInput.value.replace(/[^\d]/g, ''), 10);
       const baseNumber = Number.isNaN(parsed) ? suggestedNumber : parsed;
@@ -21194,11 +21225,8 @@ ${selector} .arrowheadPath {
         separator = '\n';
       }
       const updatedValue = baseValue + separator + definition;
-      markdownEditor.value = updatedValue;
-      markdownEditor.focus();
       const caret = start + inlineReference.length;
-      markdownEditor.setSelectionRange(caret, caret);
-      markdownEditor.dispatchEvent(new Event('input', { bubbles: true }));
+      replaceMarkdownEditorRange(editor, 0, latestValue.length, updatedValue, caret, caret);
       referenceCounter = Math.max(referenceCounter, finalNumber + 1);
       modal.style.display = 'none';
       cleanup();
@@ -23398,11 +23426,7 @@ ${selector} .arrowheadPath {
     else if (action === 'code-block') insertMarkdownBlock('```js\n' + (markdownEditor.value.slice(markdownEditor.selectionStart, markdownEditor.selectionEnd) || 'console.log("Hello, Markdown!");') + '\n```\n');
     else if (action === 'table') openTableModal();
     else if (action === 'date-time') {
-      const now = new Date();
-      const datePart = now.toLocaleDateString('en-CA');
-      const timePart = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-      const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-      const timestamp = `${datePart} ${timePart} ${dayName}`;
+      const timestamp = formatMarkdownDateTime();
       replaceEditorRange(markdownEditor.selectionStart, markdownEditor.selectionEnd, timestamp, markdownEditor.selectionStart + timestamp.length, markdownEditor.selectionStart + timestamp.length);
     } else if (action === 'emoji') {
       openEmojiModal();

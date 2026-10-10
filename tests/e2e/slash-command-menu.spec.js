@@ -58,7 +58,7 @@ test('opens the full alert chooser from the slash menu', async ({ page }) => {
 test('uses available icons for every slash command', async ({ page }) => {
   await setEditorContent(page, '/');
   const icons = page.locator('#slash-command-menu .slash-command-icon.lucide');
-  await expect(icons).toHaveCount(15);
+  await expect(icons).toHaveCount(16);
   const missingIcons = await icons.evaluateAll(nodes => nodes
     .filter(node => getComputedStyle(node).maskImage === 'none' && getComputedStyle(node).webkitMaskImage === 'none')
     .map(node => node.className));
@@ -206,7 +206,7 @@ for (const width of [900, 375]) {
     const editor = page.locator('#markdown-editor');
     const menu = page.locator('#slash-command-menu');
     await editor.pressSequentially('/');
-    await expect(menu.getByRole('option')).toHaveCount(21);
+    await expect(menu.getByRole('option')).toHaveCount(22);
     await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
       belowLine: true, withinViewport: true, scrollable: true
     });
@@ -219,7 +219,7 @@ for (const width of [900, 375]) {
 
     await editor.press('Backspace');
     await editor.press('Backspace');
-    await expect(menu.getByRole('option')).toHaveCount(21);
+    await expect(menu.getByRole('option')).toHaveCount(22);
     await expect.poll(() => slashMenuPlacement(page)).toMatchObject({
       belowLine: true, withinViewport: true, scrollable: true
     });
