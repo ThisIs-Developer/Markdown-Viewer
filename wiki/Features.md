@@ -125,6 +125,8 @@ View-only Share Snapshot tabs and view-only Live Share participant tabs block mu
 
 Type `/` at the start of an Editor line to open a searchable block-command menu. Continue typing to filter, use the arrow keys to move, press **Enter** to run the selected command, or press **Escape** to close it. Pointer selection is also supported.
 
+The menu shares the application's compact dropdown typography, spacing, surfaces, and Lucide icons in light and dark themes. Heading symbols match the toolbar's text-style menu.
+
 Commands cover headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Commands that need more information open the same alert, table, diagram, or media chooser used by the toolbar.
 
 The menu opens only for a literal slash at column zero. A slash after other text or indentation, inside a URL, during IME composition, or outside an Editor remains normal text. The menu follows the active primary or secondary Editor, closes when the document or focus context changes, exposes listbox state to assistive technology, and positions correctly for RTL documents.

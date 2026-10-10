@@ -36,7 +36,9 @@ test('opens the full alert chooser from the slash menu', async ({ page }) => {
 
 test('uses available icons for every slash command', async ({ page }) => {
   await setEditorContent(page, '/');
-  const missingIcons = await page.locator('#slash-command-menu .slash-command-icon i').evaluateAll(nodes => nodes
+  const icons = page.locator('#slash-command-menu .slash-command-icon.lucide');
+  await expect(icons).toHaveCount(15);
+  const missingIcons = await icons.evaluateAll(nodes => nodes
     .filter(node => getComputedStyle(node).maskImage === 'none' && getComputedStyle(node).webkitMaskImage === 'none')
     .map(node => node.className));
   expect(missingIcons).toEqual([]);

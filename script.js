@@ -18270,11 +18270,13 @@ ${selector} .arrowheadPath {
     if (slashCommandMenu) return slashCommandMenu;
     slashCommandMenu = document.createElement('div');
     slashCommandMenu.id = 'slash-command-menu';
-    slashCommandMenu.className = 'slash-command-menu';
+    slashCommandMenu.className = 'slash-command-menu app-command-menu';
     slashCommandMenu.hidden = true;
     const header = document.createElement('div');
-    header.className = 'slash-command-header';
-    header.textContent = 'Insert block';
+    header.className = 'slash-command-header settings-menu-header';
+    const title = document.createElement('strong');
+    title.textContent = 'Insert block';
+    header.appendChild(title);
     slashCommandList = document.createElement('div');
     slashCommandList.id = 'slash-command-list';
     slashCommandList.className = 'slash-command-list';
@@ -18335,8 +18337,7 @@ ${selector} .arrowheadPath {
     if (!editor || !slashCommandMenu || slashCommandMenu.hidden) return;
     const caret = getSlashMenuCaretPosition(editor);
     const margin = 8;
-    const width = Math.min(340, window.innerWidth - margin * 2);
-    slashCommandMenu.style.width = width + 'px';
+    const width = slashCommandMenu.offsetWidth;
     const preferredLeft = window.getComputedStyle(editor).direction === 'rtl' ? caret.left - width : caret.left;
     const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - width - margin));
     let top = caret.top + caret.lineHeight + 6;
@@ -18423,18 +18424,18 @@ ${selector} .arrowheadPath {
         const item = document.createElement('button');
         item.type = 'button';
         item.id = 'slash-command-' + command.id;
-        item.className = 'slash-command-item';
+        item.className = 'slash-command-item app-menu-item';
         item.tabIndex = -1;
         item.setAttribute('role', 'option');
         item.setAttribute('aria-selected', 'false');
-        item.innerHTML = '<span class="slash-command-icon">' + (command.textIcon
-          ? '<span class="slash-command-text-icon" aria-hidden="true"></span>'
-          : '<i class="lucide ' + command.icon + '" aria-hidden="true"></i>') + '</span>' +
-          '<span class="slash-command-copy"><strong></strong><small></small></span>';
+        item.innerHTML = (command.textIcon
+          ? '<span class="slash-command-text-icon markdown-tool-menu-symbol" aria-hidden="true"></span>'
+          : '<i class="slash-command-icon lucide ' + command.icon + '" aria-hidden="true"></i>') +
+          '<span class="app-menu-copy"><span class="app-menu-label"></span><span class="app-menu-description"></span></span>';
         const textIcon = item.querySelector('.slash-command-text-icon');
         if (textIcon) textIcon.textContent = command.textIcon;
-        item.querySelector('strong').textContent = command.label;
-        item.querySelector('small').textContent = command.description;
+        item.querySelector('.app-menu-label').textContent = command.label;
+        item.querySelector('.app-menu-description').textContent = command.description;
         item.addEventListener('mouseenter', function() { selectSlashCommand(index); });
         item.addEventListener('click', function() { executeSlashCommand(command); });
         slashCommandList.appendChild(item);
