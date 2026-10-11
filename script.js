@@ -19307,10 +19307,9 @@ ${selector} .arrowheadPath {
     columnInput.addEventListener('keydown', onKey);
     rowInput.addEventListener('keydown', onKey);
 
-    requestAnimationFrame(() => {
-      columnInput.focus();
-      columnInput.select();
-    });
+    // Do not redirect input after the user has moved to the row field.
+    columnInput.focus();
+    columnInput.select();
   }
 
   function openEmojiModal() {

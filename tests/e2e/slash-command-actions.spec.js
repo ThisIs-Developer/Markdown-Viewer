@@ -118,6 +118,27 @@ for (const pane of ['primary', 'secondary']) {
         await expect(editor).toHaveValue(prefix + expected + suffix);
       }
     });
+    test('table chooser does not steal focus from an edited row field', async ({ page }) => {
+      await page.evaluate(() => {
+        const nativeFrame = window.requestAnimationFrame;
+        window.__tableFocusFrames = [];
+        window.requestAnimationFrame = function(callback) {
+          if (String(callback).includes('columnInput.focus()')) {
+            window.__tableFocusFrames.push(callback);
+            return 0;
+          }
+          return nativeFrame.call(window, callback);
+        };
+      });
+      await enterCommand(page, editor, 'table', 'table');
+      await page.locator('#table-modal-columns').fill('2');
+      await page.locator('#table-modal-rows').fill('2');
+      await page.evaluate(() => window.__tableFocusFrames.splice(0).forEach(callback => callback()));
+      await expect(page.locator('#table-modal-rows')).toBeFocused();
+      await page.locator('#table-modal-insert').click();
+      await expect(editor).toHaveValue(prefix + '| Column 1 | Column 2 |\n| --- | --- |\n| Value | Value |\n' + suffix);
+    });
+
     test('media chooser does not steal focus from an edited field', async ({ page }) => {
       await page.evaluate(() => {
         const nativeFrame = window.requestAnimationFrame;
