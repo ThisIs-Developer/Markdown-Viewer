@@ -1861,14 +1861,28 @@
       return records;
     }
 
-    async deleteDirtyJournals(journalIds) {
+    async deleteDirtyJournals(journalIds, options) {
       if (this.desktop) return;
       const ids = Array.isArray(journalIds) ? journalIds.filter(Boolean) : [];
       if (!ids.length) return;
       const transaction = this.db.transaction('journals', 'readwrite');
+      const completion = transactionToPromise(transaction);
       const store = transaction.objectStore('journals');
-      ids.forEach(function(id) { store.delete(id); });
-      await transactionToPromise(transaction);
+      const expected = options && options.expectedJournals;
+      ids.forEach(function(id) {
+        if (!expected) {
+          store.delete(id);
+          return;
+        }
+        if (!Object.prototype.hasOwnProperty.call(expected, id)) return;
+        const request = store.get(id);
+        request.onsuccess = function() {
+          // The read and conditional delete share a readwrite transaction,
+          // so a concurrent replacement cannot be deleted between them.
+          if (JSON.stringify(request.result) === JSON.stringify(expected[id])) store.delete(id);
+        };
+      });
+      await completion;
     }
 
     async restoreTrashItem(trashId) {

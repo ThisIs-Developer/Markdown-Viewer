@@ -10826,8 +10826,61 @@ document.addEventListener("DOMContentLoaded", async function () {
     return source;
   }
 
-  function clearDirtyDocumentJournal(tab) {
+  async function captureDirtyDocumentJournalSnapshot(storageTabs, changedIds) {
+    const snapshots = new Map();
+    changedIds.forEach(function(id) {
+      const tab = storageTabs.find(function(item) { return item.id === id; });
+      // Metadata-only writes do not commit a document body.
+      if (!tab || tab.contentLoaded === false || typeof tab.content !== 'string') return;
+      const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(id))));
+      const snapshot = { content: tab.content, local: {}, session: {}, indexed: {} };
+      [[localStorage, snapshot.local], [sessionStorage, snapshot.session]].forEach(function(pair) {
+        keys.forEach(function(key) {
+          try {
+            const raw = pair[0].getItem(key);
+            const value = raw && JSON.parse(raw);
+            if (value && value.documentId === id && value.content === snapshot.content) pair[1][key] = raw;
+          } catch (_) { /* Unknown recovery data must be retained. */ }
+        });
+      });
+      snapshots.set(id, snapshot);
+    });
+    if (workspaceStorage && typeof workspaceStorage.listDirtyJournals === 'function') {
+      try {
+        (await workspaceStorage.listDirtyJournals()).forEach(function(record) {
+          const snapshot = snapshots.get(record.documentId);
+          if (snapshot && record.journalId && record.content === snapshot.content) {
+            snapshot.indexed[record.journalId] = record;
+          }
+        });
+      } catch (error) {
+        console.warn('Unable to snapshot recovery journals; retaining them:', error);
+      }
+    }
+    return snapshots;
+  }
+
+  function clearDirtyDocumentJournal(tab, committedSnapshot) {
     if (!tab) return Promise.resolve();
+    if (committedSnapshot) {
+      // Compare the exact journal, not merely its key or timestamp. A new edit
+      // may reuse the same key while a storage operation is awaiting completion.
+      [[localStorage, committedSnapshot.local], [sessionStorage, committedSnapshot.session]].forEach(function(pair) {
+        Object.keys(pair[1]).forEach(function(key) {
+          try {
+            if (pair[0].getItem(key) === pair[1][key]) pair[0].removeItem(key);
+          } catch (_) {}
+        });
+      });
+      if (workspaceStorage && typeof workspaceStorage.deleteDirtyJournals === 'function') {
+        return workspaceStorage.deleteDirtyJournals(Object.keys(committedSnapshot.indexed), {
+          expectedJournals: committedSnapshot.indexed
+        }).catch(function(error) {
+          console.warn('Unable to clear a committed emergency journal:', error);
+        });
+      }
+      return Promise.resolve();
+    }
     const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(tab.id))));
     keys.forEach(function(key) {
       try { localStorage.removeItem(key); } catch (_) {}
@@ -11095,20 +11148,25 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     try {
       const storageTabs = getTabsForStorage(tabsArr);
+      const commit = async function() {
+        const journalSnapshots = await captureDirtyDocumentJournalSnapshot(storageTabs, changedIds);
+        if (workspaceStorage) {
+          await workspaceStorage.saveDocuments(storageTabs, documentOrganization, { changedIds: changedIds });
+        } else {
+          saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
+        }
+        await Promise.all(changedIds.map(function(id) {
+          const tab = tabs.find(function(item) { return item.id === id; });
+          const snapshot = journalSnapshots.get(id);
+          return tab && snapshot ? clearDirtyDocumentJournal(tab, snapshot) : Promise.resolve();
+        }));
+      };
       if (workspaceStorage) {
-        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
-          return workspaceStorage.saveDocuments(storageTabs, documentOrganization, {
-            changedIds: changedIds
-          });
-        });
+        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(commit);
         await workspacePersistenceChain;
       } else {
-        saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
+        await commit();
       }
-      await Promise.all(changedIds.map(function(id) {
-        const tab = tabs.find(function(item) { return item.id === id; });
-        return tab ? clearDirtyDocumentJournal(tab) : Promise.resolve();
-      }));
       evictInactiveDocumentContent();
       updateSaveStatus('saved');
       return true;
