@@ -147,7 +147,9 @@ Share Snapshot と Live Share の URL はベアラーリンクです。有効な
 | インストールとデプロイ | [Installation](../wiki/Installation.md) |
 | ストレージ、レンダラー、Cloudflare の設定 | [Configuration](../wiki/Configuration.md) |
 | トラブルシューティング | [Troubleshooting](../wiki/Troubleshooting.md)／[FAQ](../wiki/FAQ.md) |
-| コントリビューション | [Contributing](../wiki/Contributing.md) |
+| コントリビューション | [Contributing](../CONTRIBUTING.md) |
+| コミュニティの行動規範 | [Code of Conduct（英語）](../CODE_OF_CONDUCT.md) |
+| 脆弱性の報告とセキュリティサポート | [Security Policy（英語）](../SECURITY.md) |
 | 多言語用語とローカライズ | [Localization and Terminology](../wiki/Localization.md) |
 
 ## 主な制限
@@ -187,9 +189,7 @@ Markdown Viewer は、コミュニティからのコントリビューション�
 
 ## コントリビューションとサポート
 
-Pull Request を作成する前に、[Contributing（英語）](../wiki/Contributing.md)を確認してください。再現可能な不具合や明確な機能提案は [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) に報告できます。
-
-脆弱性の詳細は通常の Issue に投稿しないでください。[Contributing: Security Reports（英語）](../wiki/Contributing.md#security-reports)に記載されている、リポジトリの非公開セキュリティ報告手段を利用してください。
+[Contributing（英語）](../CONTRIBUTING.md)、[Code of Conduct（英語）](../CODE_OF_CONDUCT.md)、[Security Policy（英語）](../SECURITY.md)をご覧ください。不具合や機能提案には [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) を利用できます。
 
 ## ライセンス
 

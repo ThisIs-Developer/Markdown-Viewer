@@ -19,7 +19,9 @@ Most editing and rendering happens on the device. Managed media, GitHub import, 
 | Deploy behind Docker and a reverse proxy | [Docker Deployment](Docker-Deployment.md) |
 | Build or operate the Neutralino application | [Desktop Application](Desktop-App.md) |
 | Fix a problem | [Troubleshooting](Troubleshooting.md) or [FAQ](FAQ.md) |
-| Contribute code, documentation, or a translation | [Contributing](Contributing.md) |
+| Contribute code, documentation, or a translation | [Contributing](../CONTRIBUTING.md) |
+| Review community expectations | [Code of Conduct](../CODE_OF_CONDUCT.md) |
+| Report a vulnerability or check security support | [Security Policy](../SECURITY.md) |
 | Maintain interface translations and approved terms | [Localization and Terminology](Localization.md) |
 | Read project history and design context | [Development Journey](Development-Journey.md) |
 

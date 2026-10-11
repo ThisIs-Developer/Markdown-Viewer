@@ -85,18 +85,7 @@ The runtime also supports numbered templates such as `{{0}} files`. If a catalog
 
 ## Contributor Checklist
 
-- Add or update visible English source text first.
-- Regenerate catalogs from the repository root with `node assets/i18n/generate-ui-locales.mjs`.
-- Run `node assets/i18n/audit-ui-locales.mjs` and resolve every reported catalog, key, placeholder, terminology, or encoding problem.
-- Review every new translation in context; use curated overrides where literal machine translation is unclear.
-- Keep all locale catalogs on the same key set as `en.json`.
-- Run the desktop prepare step so bundled catalogs match the web app.
-- Check desktop and mobile menus, context menus, modal buttons, validation messages, Share Snapshot, Live Share, and `?lang=` URLs.
-- Update the terminology tables on this page when a named concept or interface label changes.
-- For documentation, finalize `README.md` before synchronizing the four localized READMEs.
-- Preserve code, commands, paths, URLs, routes, configuration keys, library names, Markdown syntax, and Git branch names.
-- Verify localized language navigation, relative paths, anchors, tables, code fences, heading length, and native grammar.
-- Record a section for native-speaker review when technical meaning cannot be translated confidently.
+Follow [Translation Contributions](../CONTRIBUTING.md#translation-contributions) in the contributing guide. The terminology and implementation reference remain on this page.
 
 ## Terminology Glossary
 
@@ -198,4 +187,4 @@ Use these terms in Markdown Viewer documentation and translation reviews. The Ja
 
 Localization is local. The app does not send document text or UI text to machine translation APIs.
 
-Related pages: [Contributing](Contributing.md) and [Documentation Home](Home.md).
+Related pages: [Contributing](../CONTRIBUTING.md) and [Documentation Home](Home.md).

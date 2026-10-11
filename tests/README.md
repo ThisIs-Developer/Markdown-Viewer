@@ -57,13 +57,4 @@ Live Share tests use a local WebSocket/Yjs substitute and do not replace a Cloud
 
 ## Contributor Workflow
 
-Before changing application behavior, run the focused specification for the affected area. Before opening a pull request, run:
-
-```bash
-npm test
-npm run test:e2e:cross-browser
-```
-
-Tests must be isolated, deterministic, and runnable locally on Windows, macOS, and Linux. Prefer user-facing roles and labels over DOM implementation selectors. Store fixtures under `tests/fixtures/`; never write artifacts to user-specific paths. Playwright captures screenshots and videos on failure under the ignored `test-results/` directory and writes its local HTML report to `playwright-report/`.
-
-This repository intentionally does not run the Playwright suite in GitHub Actions. Contributors are responsible for running the checks locally before requesting review or merging a change.
+Follow [Testing](../CONTRIBUTING.md#testing) in the contributing guide for required checks, test-writing conventions, and the local review workflow.

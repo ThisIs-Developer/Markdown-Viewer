@@ -255,14 +255,4 @@ See [Desktop Application](Desktop-App.md).
 
 ## Report an Issue
 
-Search [existing issues](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) first. If the problem is new, include:
-
-- version or commit;
-- browser/OS and delivery target;
-- exact reproduction steps;
-- minimal non-sensitive Markdown;
-- expected and actual result;
-- console/network errors; and
-- screenshots only when they add information not present in text.
-
-Do not attach confidential Documents, bearer links, deletion tokens, room secrets, or vulnerability details. Follow [Contributing](Contributing.md#security-reports) for security reports.
+See the [contributing guide](../CONTRIBUTING.md#issue-reports) for ordinary bug reports and the [Security Policy](../SECURITY.md) for vulnerabilities.

@@ -2,9 +2,11 @@
 
 Thanks for helping improve Markdown Viewer. Contributions can include bug reports, documentation fixes, renderer improvements, accessibility work, desktop packaging, deployment fixes, tests, and translations.
 
+This is the single contributing guide for the repository. Community expectations are defined in the [Code of Conduct](CODE_OF_CONDUCT.md); vulnerability reporting and supported versions are covered by the [Security Policy](SECURITY.md).
+
 ## Before Changing Code
 
-- Read [Features](Features.md) to understand current user-facing behavior and [Privacy and Security](Privacy-and-Security.md) for data boundaries.
+- Read [Features](wiki/Features.md) to understand current user-facing behavior and [Privacy and Security](wiki/Privacy-and-Security.md) for data boundaries.
 - Check `CHANGELOG.md` for historical context.
 - Keep changes scoped to the feature or bug you are working on.
 - Do not remove user-facing behavior from docs unless the code no longer implements it.
@@ -63,7 +65,8 @@ When changing managed media, snapshot, or live behavior, update the relevant fil
 
 ## Documentation Rules
 
-- Use concise, direct, internationally readable language and the approved feature names in [Localization and Terminology](Localization.md).
+- Use concise, direct, internationally readable language and the approved feature names in [Localization and Terminology](wiki/Localization.md).
+- Maintain one canonical document for each policy or guide. Update it in place and link to it from other pages instead of duplicating its instructions. The repository-wide community files are `CONTRIBUTING.md`, `SECURITY.md`, and `CODE_OF_CONDUCT.md` at the repository root.
 - Update the responsible Wiki page instead of creating a new page for a small addition.
 - Document user-facing behavior, limits, data handling, and privacy implications.
 - Keep wording simple and direct.
@@ -76,21 +79,24 @@ When changing managed media, snapshot, or live behavior, update the relevant fil
 
 ## Translation Contributions
 
-1. Finalize the English source.
-2. Review the terminology tables in [Localization and Terminology](Localization.md).
+1. Finalize the English source. For documentation, update `README.md` before synchronizing the four localized READMEs.
+2. Review the terminology tables in [Localization and Terminology](wiki/Localization.md).
 3. Update the relevant localized README or interface catalog without translating code, commands, paths, URLs, routes, keys, library names, Markdown syntax, or branch names.
 4. Preserve Markdown structure, links, anchors, tables, and code fences.
 5. Compare the translation with the English source for technical meaning and omissions.
 6. Review grammar, UI-label consistency, heading length, and link targets in context.
-7. Run `node assets/i18n/generate-ui-locales.mjs` only when interface catalogs are in scope, then review generated output before committing.
-8. Run `node assets/i18n/audit-ui-locales.mjs` and resolve every reported problem.
+7. Run `node assets/i18n/generate-ui-locales.mjs` only when interface catalogs are in scope, then review generated output before committing. Review every new translation in context and use curated overrides where literal machine translation is unclear.
+8. Keep all locale catalogs on the same key set as `en.json`. Run `node assets/i18n/audit-ui-locales.mjs` and resolve every reported catalog, key, placeholder, terminology, or encoding problem.
 9. Run the desktop preparation workflow when interface catalogs change so bundled copies remain synchronized.
+10. Check desktop and mobile menus, context menus, modal buttons, validation messages, Share Snapshot, Live Share, and `?lang=` URLs when interface translations change.
+11. Update the terminology tables in [Localization and Terminology](wiki/Localization.md) when a named concept or interface label changes.
+12. Flag any section needing native-speaker review when technical meaning cannot be translated confidently.
 
 Detailed Wiki pages are maintained in English. When no localized page exists, label the English destination instead of creating a broken localized link.
 
 ## Release Notes Format
 
-Use the single extensionless [`RELEASE_NOTES`](../RELEASE_NOTES) file as both the current release note and the canonical example. Update it in place for each version; do not add a duplicate template or a versioned copy. Keep its source entirely in Markdown. The application adds the branded layout, action icons, section navigation, and active-section state after Markdown rendering.
+Use the single extensionless [`RELEASE_NOTES`](RELEASE_NOTES) file as both the current release note and the canonical example. Update it in place for each version; do not add a duplicate template or a versioned copy. Keep its source entirely in Markdown. The application adds the branded layout, action icons, section navigation, and active-section state after Markdown rendering.
 
 Every release note must contain these parts in this order:
 
@@ -154,7 +160,9 @@ npm run test:e2e:cross-browser
 
 TOC logic lives in `src/document-toc.mjs`. `generateTableOfContents(tokens, options)` accepts a Marked block AST; alternatively, pass Markdown with `{ lexer: marked.lexer, ...options }` to strip front matter before lexing. Options include `minLevel`, `maxLevel`, `format` (`bulleted`, `numbered`, `plain`), `normalizeLevels`, `collapsible`, and `slugStrategy`. The default strategy is `github`; a custom strategy function maps plain heading text to a base slug, with duplicate suffixes still assigned per document. The preview and worker share the same heading renderer extension. After editing this module, run `npm run build:toc` and `node desktop-app/prepare.js`; commit the generated `assets/document-toc.js` and license file alongside the source. Static hosting uses the committed bundle without a build step.
 
-Tests start their own Node static server and must not depend on Python, machine-specific paths, developer credentials, or live third-party APIs. The suite is intentionally local-only: contributors must run the relevant checks before requesting review or merging a change. Playwright stores failure diagnostics in the ignored `test-results/` directory and writes its local HTML report to `playwright-report/`.
+Tests start their own Node static server and must not depend on Python, machine-specific paths, developer credentials, or live third-party APIs. Keep tests isolated, deterministic, and runnable on Windows, macOS, and Linux. Prefer user-facing roles and labels over DOM implementation selectors, and store fixtures under `tests/fixtures/`.
+
+The Playwright suite is intentionally local-only and does not run in GitHub Actions: contributors must run the relevant checks before requesting review or merging a change. Playwright stores failure diagnostics in the ignored `test-results/` directory and writes its local HTML report to `playwright-report/`. See the [test suite reference](tests/README.md) for coverage, environment setup, and debugging commands.
 
 For documentation:
 
@@ -203,12 +211,6 @@ A good PR includes:
 - Privacy/storage notes for share, import, live, renderer, or desktop changes.
 - Documentation updates when behavior changes.
 
-## Security Reports
-
-Please do not open public issues for vulnerabilities. Use GitHub Security Advisories if available or contact the maintainers privately with a minimal reproduction and impact notes.
-
-Include the affected version/commit, required preconditions, impact, minimal reproduction, and a suggested mitigation when known. Do not test against data or systems you do not own or have permission to assess.
-
 ## Repository Map
 
 | Path | Purpose |
@@ -231,4 +233,4 @@ Include the affected version/commit, required preconditions, impact, minimal rep
 | `desktop-app/` | Neutralino desktop wrapper and build preparation. |
 | `wiki/` | Documentation source pages. |
 
-Related pages: [Installation](Installation.md), [Localization and Terminology](Localization.md), and [Troubleshooting](Troubleshooting.md).
+Related pages: [Installation](wiki/Installation.md), [Localization and Terminology](wiki/Localization.md), and [Troubleshooting](wiki/Troubleshooting.md).

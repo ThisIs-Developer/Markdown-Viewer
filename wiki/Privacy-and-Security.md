@@ -166,15 +166,7 @@ The default Neutralino configuration enables only:
 
 ## Security Reporting
 
-Do not publish vulnerability details in a normal issue. Use GitHub's private security-reporting channel when it is available for this repository, or contact the maintainers privately with:
-
-- the affected version or commit;
-- a minimal reproduction;
-- security impact;
-- required preconditions; and
-- suggested mitigation, if known.
-
-See [Contributing: Security Reports](Contributing.md#security-reports).
+See the [Security Policy](../SECURITY.md) for supported versions and vulnerability-reporting instructions.
 
 ## Known Limitations
 

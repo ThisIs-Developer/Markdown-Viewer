@@ -147,7 +147,9 @@ Share Snapshot 및 Live Share URL은 베어러 링크입니다. 유효한 링크
 | 설치 및 배포 | [Installation](../wiki/Installation.md) |
 | 저장소, 렌더러 및 Cloudflare 설정 | [Configuration](../wiki/Configuration.md) |
 | 문제 해결 | [Troubleshooting](../wiki/Troubleshooting.md)/[FAQ](../wiki/FAQ.md) |
-| 기여 | [Contributing](../wiki/Contributing.md) |
+| 기여 | [Contributing](../CONTRIBUTING.md) |
+| 커뮤니티 행동 강령 | [Code of Conduct(영어)](../CODE_OF_CONDUCT.md) |
+| 취약점 신고 및 보안 지원 | [Security Policy(영어)](../SECURITY.md) |
 | 다국어 용어 및 현지화 | [Localization and Terminology](../wiki/Localization.md) |
 
 ## 주요 제한
@@ -187,9 +189,7 @@ Markdown Viewer는 커뮤니티의 기여를 통해 성장하고 있습니다.
 
 ## 기여 및 지원
 
-Pull Request를 만들기 전에 [Contributing(영어)](../wiki/Contributing.md)을 읽어 주세요. 재현 가능한 버그와 구체적인 기능 제안은 [이슈 추적기](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)에 등록할 수 있습니다.
-
-취약점 세부 정보는 일반 이슈에 게시하지 마세요. [Contributing: Security Reports(영어)](../wiki/Contributing.md#security-reports)에 설명된 저장소의 비공개 보안 신고 채널을 사용하세요.
+[Contributing(영어)](../CONTRIBUTING.md), [Code of Conduct(영어)](../CODE_OF_CONDUCT.md), [Security Policy(영어)](../SECURITY.md)을 참고하세요. 버그와 기능 제안은 [이슈 추적기](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)를 이용할 수 있습니다.
 
 ## 라이선스
 

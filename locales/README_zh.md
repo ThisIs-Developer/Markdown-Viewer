@@ -147,7 +147,9 @@ Share Snapshot 和 Live Share URL 都是持有者链接。任何获得有效链�
 | 安装与部署 | [Installation](../wiki/Installation.md) |
 | 配置存储、渲染器和 Cloudflare | [Configuration](../wiki/Configuration.md) |
 | 故障排除 | [Troubleshooting](../wiki/Troubleshooting.md)/[FAQ](../wiki/FAQ.md) |
-| 参与贡献 | [Contributing](../wiki/Contributing.md) |
+| 参与贡献 | [Contributing](../CONTRIBUTING.md) |
+| 社区行为准则 | [Code of Conduct（英文）](../CODE_OF_CONDUCT.md) |
+| 漏洞报告与安全支持 | [Security Policy（英文）](../SECURITY.md) |
 | 多语言术语与本地化 | [Localization and Terminology](../wiki/Localization.md) |
 
 ## 主要限制
@@ -187,9 +189,7 @@ Markdown Viewer 在社区贡献者的共同参与下不断成长。
 
 ## 参与贡献与支持
 
-创建 Pull Request 前，请阅读 [Contributing（英文）](../wiki/Contributing.md)。可复现的缺陷和明确的功能建议可提交至 [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)。
-
-请勿在普通 Issue 中发布漏洞详情。请使用 [Contributing: Security Reports（英文）](../wiki/Contributing.md#security-reports)中说明的仓库私密安全报告渠道。
+请参阅 [Contributing（英文）](../CONTRIBUTING.md)、[Code of Conduct（英文）](../CODE_OF_CONDUCT.md)和 [Security Policy（英文）](../SECURITY.md)。缺陷报告与功能建议可使用 [Issue Tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues)。
 
 ## 许可证
 

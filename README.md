@@ -150,7 +150,9 @@ Remote renderer services receive the source of the diagram they render. Do not s
 | Install or deploy the product | [Installation](wiki/Installation.md) |
 | Configure storage, renderers, and Cloudflare | [Configuration](wiki/Configuration.md) |
 | Resolve common problems | [Troubleshooting](wiki/Troubleshooting.md) and [FAQ](wiki/FAQ.md) |
-| Contribute code, documentation, or translations | [Contributing](wiki/Contributing.md) |
+| Contribute code, documentation, or translations | [Contributing](CONTRIBUTING.md) |
+| Review community expectations | [Code of Conduct](CODE_OF_CONDUCT.md) |
+| Report a vulnerability or check security support | [Security Policy](SECURITY.md) |
 | Maintain translations and approved multilingual terms | [Localization and Terminology](wiki/Localization.md) |
 
 ## Important Limits
@@ -191,9 +193,7 @@ Markdown Viewer grows through contributions from its community.
 
 ## Contributing and Support
 
-Read [Contributing](wiki/Contributing.md) before opening a pull request. Use the [issue tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) for reproducible bugs and focused feature requests.
-
-Do not publish vulnerability details in a normal issue. Use the repository's private security-reporting channel when available, as described in [Contributing: Security Reports](wiki/Contributing.md#security-reports).
+See the [contributing guide](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), and [Security Policy](SECURITY.md). The [issue tracker](https://github.com/ThisIs-Developer/Markdown-Viewer/issues) is available for bugs and feature requests.
 
 ## License
 
