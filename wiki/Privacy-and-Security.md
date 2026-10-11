@@ -33,6 +33,17 @@ Temporary Share Snapshot and Live Share participant tabs are removed before norm
 
 Browser storage quotas and user-cleared site data still apply. The application cannot recover data after the browser, operating system, user, or storage policy deletes it.
 
+Normal-document recovery journals retain newer edits and review comments when an
+older save completes. Matching committed records are cleared conditionally; a
+failed save retains its recovery records. Recovery is local and is not a substitute
+for an external backup. Secret Workspace recovery continues using encrypted records.
+
+Document saves and deletions are coordinated to avoid restoring a document through
+an obsolete queued save. Desktop moves check their source and destination before
+moving a document and reject occupied destinations. These checks are not filesystem
+locks or atomic compare-and-swap guarantees; another process can still change files
+after a check.
+
 Deleted normal documents and encrypted Secret Workspace recovery records remain in the application Trash for 30 days. Users can restore one item, permanently delete one item, or empty Trash after an explicit confirmation. Automatic cleanup requires a valid deletion timestamp and a recognized, structurally valid Trash record; missing, corrupt, or future-format records are retained rather than guessed at and deleted. Trash is local recovery storage, not a backup, and is excluded from exported workspace ZIP files.
 
 ## Private Mode, Reset Workspace, and Secret Workspace
@@ -47,6 +58,13 @@ These controls have different purposes:
 | Lock Secret Workspace | Removes the in-memory key and hides encrypted content | The encrypted payload remains stored locally. |
 
 Both **Reset workspace** and **Reset Secret Workspace** are destructive to encrypted content. Reset workspace clears everything; Reset Secret Workspace targets only the encrypted area.
+
+Whole-workspace reset and backup restore temporarily block editing and new imports,
+wait for pending document deletions, and flush current drafts before replacement.
+Failure during preparation re-enables editing without starting replacement. If a
+restore and its rollback both fail, editing remains blocked until reload so the
+application cannot continue writing an uncertain workspace state. These safeguards
+do not make reset reversible or guarantee recovery after storage failure.
 
 Secret Workspace uses PBKDF2 with SHA-256, 250,000 iterations, a random salt, and AES-GCM with a 256-bit derived key. The key remains in memory only while the Workspace is unlocked. File contents and folder names are encrypted; item counts, salt, initialization vector, iteration count, and format version remain outside the ciphertext as metadata. A forgotten password cannot be recovered.
 
