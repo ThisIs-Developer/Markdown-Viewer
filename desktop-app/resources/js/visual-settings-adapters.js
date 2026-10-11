@@ -82,7 +82,44 @@
   const HLJS_CDN_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/';
   const MATHJAX_FONT_CDN_BASE = 'https://cdn.jsdelivr.net/npm/';
 
+  // Mapping for highlight.js themes on cdnjs 11.9.0 (dracula & solarized live under base16/)
+  const HLJS_THEME_PATHS = Object.freeze({
+    'github': 'github.min.css',
+    'github-dark': 'github-dark.min.css',
+    'monokai': 'monokai.min.css',
+    'dracula': 'base16/dracula.min.css',
+    'atom-one-dark': 'atom-one-dark.min.css',
+    'atom-one-light': 'atom-one-light.min.css',
+    'solarized-dark': 'base16/solarized-dark.min.css',
+    'solarized-light': 'base16/solarized-light.min.css',
+    'vs': 'vs.min.css',
+    'vs2015': 'vs2015.min.css',
+    'nord': 'nord.min.css',
+    'tokyo-night-dark': 'tokyo-night-dark.min.css',
+    'tokyo-night-light': 'tokyo-night-light.min.css',
+    'default': 'default.min.css'
+  });
+
+  // Fallback background and foreground colors for syntax themes
+  const HLJS_THEME_COLORS = Object.freeze({
+    'github': { bg: '#ffffff', color: '#24292e' },
+    'github-dark': { bg: '#0d1117', color: '#c9d1d9' },
+    'monokai': { bg: '#272822', color: '#dddddd' },
+    'dracula': { bg: '#282a36', color: '#f8f8f2' },
+    'atom-one-dark': { bg: '#282c34', color: '#abb2bf' },
+    'atom-one-light': { bg: '#fafafa', color: '#383a42' },
+    'solarized-dark': { bg: '#002b36', color: '#839496' },
+    'solarized-light': { bg: '#fdf6e3', color: '#657b83' },
+    'vs': { bg: '#ffffff', color: '#000000' },
+    'vs2015': { bg: '#1e1e1e', color: '#dcdcdc' },
+    'nord': { bg: '#2e3440', color: '#d8dee9' },
+    'tokyo-night-dark': { bg: '#1a1b26', color: '#a9b1d6' },
+    'tokyo-night-light': { bg: '#d5d6db', color: '#343b58' },
+    'default': { bg: '#f3f3f3', color: '#444444' }
+  });
+
   function getEffectiveAppTheme() {
+    if (typeof document === 'undefined' || !document.documentElement) return 'light';
     return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   }
 
@@ -93,30 +130,79 @@
     return theme || 'github';
   }
 
-  function resolveMermaidThemeName(theme) {
+  function resolveMermaidThemeName(theme, themeOverride) {
     if (theme === 'auto') {
-      return getEffectiveAppTheme() === 'dark' ? 'dark' : 'default';
+      const effective = themeOverride || getEffectiveAppTheme();
+      return effective === 'dark' ? 'dark' : 'default';
     }
     return theme || 'default';
   }
 
-  // Ensure helper styling so highlight.js themes integrate cleanly with the editor preview
-  function ensureHljsStyleHelper() {
-    if (!document.getElementById('mdv-hljs-style-helper')) {
-      const style = document.createElement('style');
+  // Update dynamic helper stylesheet so code blocks adopt the theme's background and contrast
+  function updateHljsHelperStyle(effectiveName) {
+    if (typeof document === 'undefined') return;
+    let style = document.getElementById('mdv-hljs-style-helper');
+    if (!style) {
+      style = document.createElement('style');
       style.id = 'mdv-hljs-style-helper';
-      style.textContent = `
-        .markdown-body pre:has(> code.hljs) {
-          background-color: transparent !important;
-          padding: 0 !important;
-        }
-        .markdown-body pre > code.hljs {
-          border-radius: 6px;
-          padding: 16px !important;
-        }
-      `;
-      document.head.appendChild(style);
+      if (document.head) document.head.appendChild(style);
     }
+
+    const fallback = HLJS_THEME_COLORS[effectiveName] || HLJS_THEME_COLORS['github'];
+    let bg = fallback.bg;
+    let fg = fallback.color;
+
+    if (document.body && typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+      try {
+        const probe = document.createElement('div');
+        probe.className = 'hljs';
+        probe.style.position = 'fixed';
+        probe.style.top = '-9999px';
+        probe.style.left = '-9999px';
+        probe.style.visibility = 'hidden';
+        document.body.appendChild(probe);
+        const cs = window.getComputedStyle(probe);
+        if (cs && cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent') {
+          bg = cs.backgroundColor;
+        }
+        if (cs && cs.color && cs.color !== 'rgba(0, 0, 0, 0)' && cs.color !== 'transparent') {
+          fg = cs.color;
+        }
+        document.body.removeChild(probe);
+      } catch (_) {}
+    }
+
+    style.textContent = `
+      .markdown-body pre:has(> code.hljs) {
+        background-color: ${bg} !important;
+        color: ${fg} !important;
+        border-radius: 6px;
+        padding: 16px !important;
+        overflow: auto;
+      }
+      .markdown-body pre > code.hljs,
+      .markdown-body code.hljs {
+        background-color: ${bg} !important;
+        color: ${fg} !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+      }
+      @media print {
+        .markdown-body pre:has(> code.hljs),
+        .markdown-body pre > code.hljs,
+        .markdown-body code.hljs {
+          background-color: ${bg} !important;
+          color: ${fg} !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `;
+  }
+
+  function ensureHljsStyleHelper() {
+    const effectiveName = resolveHljsThemeName(_activeHljsTheme);
+    updateHljsHelperStyle(effectiveName);
   }
 
   /**
@@ -125,27 +211,36 @@
    */
   function applyHighlightTheme(theme) {
     _activeHljsTheme = theme || DEFAULTS.hljsTheme;
-    ensureHljsStyleHelper();
-
     const effectiveName = resolveHljsThemeName(_activeHljsTheme);
-    const href = `${HLJS_CDN_BASE}${effectiveName}.min.css`;
+    updateHljsHelperStyle(effectiveName);
+
+    if (typeof document === 'undefined') return Promise.resolve();
+
+    const subpath = HLJS_THEME_PATHS[effectiveName] || `${effectiveName}.min.css`;
+    const href = `${HLJS_CDN_BASE}${subpath}`;
 
     let link = document.getElementById('mdv-hljs-theme-link');
     if (!link) {
       link = document.createElement('link');
       link.id = 'mdv-hljs-theme-link';
       link.rel = 'stylesheet';
-      document.head.appendChild(link);
+      link.crossOrigin = 'anonymous';
+      if (document.head) document.head.appendChild(link);
     }
 
     if (link.getAttribute('href') === href) {
+      updateHljsHelperStyle(effectiveName);
       return Promise.resolve();
     }
 
-    return new Promise((resolve, reject) => {
-      link.onload = () => resolve();
+    return new Promise((resolve) => {
+      link.onload = () => {
+        updateHljsHelperStyle(effectiveName);
+        resolve();
+      };
       link.onerror = () => {
         console.warn(`[VisualAdapters] Failed to load highlight.js theme: ${href}`);
+        updateHljsHelperStyle(effectiveName);
         resolve(); // resolve gracefully so UI does not stall
       };
       link.href = href;
@@ -158,6 +253,7 @@
   const _loadedScripts = new Set();
   function loadScriptOnce(src) {
     if (_loadedScripts.has(src)) return Promise.resolve();
+    if (typeof document === 'undefined') return Promise.resolve();
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(`script[src="${src}"]`);
       if (existing) {
@@ -176,7 +272,8 @@
         console.warn(`[VisualAdapters] Script load failed: ${src}`, err);
         reject(err);
       };
-      document.head.appendChild(script);
+      if (document.head) document.head.appendChild(script);
+      else if (document.body) document.body.appendChild(script);
     });
   }
 
@@ -186,7 +283,7 @@
   async function applyMathFont(font) {
     _activeMathFont = font || DEFAULTS.mathFont;
 
-    if (!window.MathJax) {
+    if (typeof window === 'undefined' || !window.MathJax) {
       return;
     }
 
@@ -197,15 +294,51 @@
     window.MathJax.config.chtml = window.MathJax.config.chtml || {};
     window.MathJax.config.chtml.font = _activeMathFont;
 
-    // If MathJax startup has completed, switch the font and re-typeset
+    // Load external font script if needed (Modern is bundled by default)
+    if (_activeMathFont !== 'mathjax-modern') {
+      const fontUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font/chtml.js`;
+      try {
+        await loadScriptOnce(fontUrl);
+      } catch (err) {
+        console.warn(`[VisualAdapters] MathJax font load failed (${_activeMathFont}), falling back to bundled Modern:`, err);
+        _activeMathFont = 'mathjax-modern';
+      }
+    }
+
+    // Extract registered font class and activate its fontData
+    let fontClass = null;
+    if (window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts) {
+      const fontPkg = window.MathJax._.output.fonts[_activeMathFont];
+      if (fontPkg && fontPkg.chtml_ts) {
+        fontClass = Object.values(fontPkg.chtml_ts)[0] || null;
+      }
+    }
+
+    // If font class was not found (e.g. offline fallback), fall back to bundled modern font
+    if (!fontClass && _activeMathFont !== 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
+      _activeMathFont = 'mathjax-modern';
+      const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
+      if (modernPkg && modernPkg.chtml_ts) {
+        fontClass = Object.values(modernPkg.chtml_ts)[0] || null;
+      }
+    }
+
+    // Update MathJax configuration with effective font
+    window.MathJax.config.output.font = _activeMathFont;
+    window.MathJax.config.chtml.font = _activeMathFont;
+
+    if (fontClass) {
+      window.MathJax.config.chtml.fontData = fontClass;
+    } else if (_activeMathFont === 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
+      const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
+      if (modernPkg && modernPkg.chtml_ts) {
+        window.MathJax.config.chtml.fontData = Object.values(modernPkg.chtml_ts)[0] || null;
+      }
+    }
+
+    // If MathJax startup has completed, switch output jax, document and re-typeset
     if (window.MathJax.startup && typeof window.MathJax.startup.getOutputJax === 'function') {
       try {
-        // Load external font script if needed (Modern is bundled by default)
-        if (_activeMathFont !== 'mathjax-modern') {
-          const fontUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font/chtml.js`;
-          await loadScriptOnce(fontUrl).catch(() => {});
-        }
-
         const newOutputJax = window.MathJax.startup.getOutputJax();
         if (newOutputJax) {
           window.MathJax.startup.output = newOutputJax;
@@ -215,12 +348,19 @@
         }
 
         // Re-render math in preview if present
-        const preview = document.getElementById('markdown-preview');
-        if (preview && preview.querySelector('mjx-container, .math-block, .math-inline')) {
-          if (typeof window.renderMarkdown === 'function') {
-            window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
-          } else if (typeof window.MathJax.typesetPromise === 'function') {
-            await window.MathJax.typesetPromise([preview]);
+        if (typeof document !== 'undefined') {
+          const preview = document.getElementById('markdown-preview');
+          const splitPreview = document.getElementById('document-split-preview');
+          const roots = [];
+          if (preview && preview.querySelector('mjx-container, .math-block, .math-inline')) roots.push(preview);
+          if (splitPreview && splitPreview.querySelector('mjx-container, .math-block, .math-inline')) roots.push(splitPreview);
+
+          if (roots.length > 0) {
+            if (typeof window.renderMarkdown === 'function') {
+              window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+            } else if (typeof window.MathJax.typesetPromise === 'function') {
+              await window.MathJax.typesetPromise(roots);
+            }
           }
         }
       } catch (err) {
@@ -260,30 +400,31 @@
     }
 
     // Re-render existing Mermaid nodes in the preview
-    const preview = document.getElementById('markdown-preview');
-    if (preview) {
-      const mermaidNodes = preview.querySelectorAll('.mermaid');
-      if (mermaidNodes.length > 0) {
-        mermaidNodes.forEach((node) => {
-          // Restore source code to avoid rendering already rendered SVG
-          const originalCode = node.getAttribute('data-original-code');
-          if (originalCode) {
-            node.innerHTML = decodeURIComponent(originalCode)
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;');
-          }
-          node.removeAttribute('data-processed');
+    if (typeof document !== 'undefined') {
+      const preview = document.getElementById('markdown-preview');
+      if (preview) {
+        const mermaidNodes = preview.querySelectorAll('.mermaid');
+        if (mermaidNodes.length > 0) {
+          mermaidNodes.forEach((node) => {
+            const originalCode = node.getAttribute('data-original-code');
+            if (originalCode) {
+              node.innerHTML = decodeURIComponent(originalCode)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            }
+            node.removeAttribute('data-processed');
 
-          const container = node.closest('.mermaid-container');
-          if (container) {
-            const oldToolbar = container.querySelector('.mermaid-toolbar');
-            if (oldToolbar) oldToolbar.remove();
-          }
-        });
+            const container = node.closest('.mermaid-container');
+            if (container) {
+              const oldToolbar = container.querySelector('.mermaid-toolbar');
+              if (oldToolbar) oldToolbar.remove();
+            }
+          });
 
-        if (typeof window.renderMarkdown === 'function') {
-          window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+          if (typeof window.renderMarkdown === 'function') {
+            window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+          }
         }
       }
     }
@@ -306,7 +447,7 @@
 
     // Check JoyPixels library list if available
     const toneCandidate = `${shortcode}_${_activeEmojiSkinTone}`;
-    const joy = typeof joypixels !== 'undefined' ? joypixels : window.joypixels;
+    const joy = typeof joypixels !== 'undefined' ? joypixels : (typeof window !== 'undefined' ? window.joypixels : undefined);
     if (joy && joy.emojiList) {
       if (joy.emojiList[`:${toneCandidate}:`]) {
         return toneCandidate;
@@ -314,7 +455,6 @@
       return shortcode;
     }
 
-    // If JoyPixels isn't loaded yet, candidate will be validated when loaded
     return toneCandidate;
   }
 
@@ -324,8 +464,7 @@
   function applyEmojiSkinTone(tone) {
     _activeEmojiSkinTone = tone || DEFAULTS.emojiSkinTone;
 
-    // Wrap joypixels.shortnameToUnicode if loaded
-    const joy = typeof joypixels !== 'undefined' ? joypixels : window.joypixels;
+    const joy = typeof joypixels !== 'undefined' ? joypixels : (typeof window !== 'undefined' ? window.joypixels : undefined);
     if (joy && typeof joy.shortnameToUnicode === 'function' && !joy._visualAdapterWrapped) {
       const origShortnameToUnicode = joy.shortnameToUnicode.bind(joy);
       joy.shortnameToUnicode = function (str) {
@@ -340,10 +479,11 @@
       joy._visualAdapterWrapped = true;
     }
 
-    // Re-render preview so shortcodes reflect new tone
-    const preview = document.getElementById('markdown-preview');
-    if (preview && typeof window.renderMarkdown === 'function') {
-      window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+    if (typeof document !== 'undefined') {
+      const preview = document.getElementById('markdown-preview');
+      if (preview && typeof window.renderMarkdown === 'function') {
+        window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+      }
     }
   }
 
@@ -361,19 +501,44 @@
   }
 
   // Observe theme changes on documentElement
-  const themeObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-        onAppThemeChange(getEffectiveAppTheme());
+  if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined' && document.documentElement) {
+    const themeObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+          onAppThemeChange(getEffectiveAppTheme());
+        }
       }
-    }
-  });
+    });
 
-  if (document.documentElement) {
     themeObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['data-theme']
     });
+  }
+
+  /**
+   * Check if setting change needs a markdown document re-render.
+   */
+  function needsRerender(key) {
+    if (key === 'hljsTheme') return false;
+    return true;
+  }
+
+  /**
+   * Generic apply method for any setting key.
+   */
+  async function apply(key, value) {
+    if (key === 'hljsTheme') {
+      return applyHighlightTheme(value);
+    } else if (key === 'mathFont') {
+      return applyMathFont(value);
+    } else if (key === 'mermaidTheme') {
+      return applyMermaid({ theme: value, look: _activeMermaidLook });
+    } else if (key === 'mermaidLook') {
+      return applyMermaid({ theme: _activeMermaidTheme, look: value });
+    } else if (key === 'emojiSkinTone') {
+      return applyEmojiSkinTone(value);
+    }
   }
 
   /**
@@ -399,14 +564,10 @@
     }
 
     await Promise.all(tasks);
-
-    if (typeof window.renderMarkdown === 'function') {
-      window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
-    }
   }
 
   // Public API exported to window.visualSettingsAdapters
-  window.visualSettingsAdapters = {
+  const adapters = {
     getOptions: () => JSON.parse(JSON.stringify(OPTIONS)),
     getDefaults: () => Object.assign({}, DEFAULTS),
     getCurrentSettings: () => ({
@@ -418,9 +579,11 @@
     }),
     getCurrentMathFont: () => _activeMathFont,
     getMermaidConfig: (themeOverride) => ({
-      theme: resolveMermaidThemeName(_activeMermaidTheme),
+      theme: resolveMermaidThemeName(_activeMermaidTheme, themeOverride),
       look: _activeMermaidLook === 'handDrawn' ? 'handDrawn' : 'classic'
     }),
+    needsRerender,
+    apply,
     resolveEmojiShortcode,
     applyHighlightTheme,
     applyMathFont,
@@ -429,5 +592,12 @@
     applyAll,
     onAppThemeChange
   };
+
+  if (typeof window !== 'undefined') {
+    window.visualSettingsAdapters = adapters;
+  }
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = adapters;
+  }
 
 })();
