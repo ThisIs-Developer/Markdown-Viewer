@@ -4,6 +4,8 @@ FROM nginx:alpine
 # PERF-019: Only copy necessary web files (exclude .git, desktop-app, wiki, etc.)
 COPY index.html /usr/share/nginx/html/
 COPY workspace-storage.js /usr/share/nginx/html/
+COPY visual-settings-adapters.js /usr/share/nginx/html/
+COPY visual-settings-store.js /usr/share/nginx/html/
 COPY script.js /usr/share/nginx/html/
 COPY styles.css /usr/share/nginx/html/
 COPY sw.js /usr/share/nginx/html/
@@ -12,6 +14,8 @@ COPY manifest.json /usr/share/nginx/html/
 COPY robots.txt /usr/share/nginx/html/
 COPY sitemap.xml /usr/share/nginx/html/
 COPY assets/ /usr/share/nginx/html/assets/
+COPY seo/locales.mjs /usr/share/nginx/html/seo/
+COPY seo/welcome-content.mjs /usr/share/nginx/html/seo/
 
 # Create a custom nginx configuration with compression and security
 # PERF-020: Added gzip compression for text-based assets
