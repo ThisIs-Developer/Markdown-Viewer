@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "可折叠目录",
   "No headings in the selected range.": "所选范围内没有标题。",
   "Copy entire document as Markdown": "将整个文档复制为 Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "将整个文档复制为 Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "将整个文档复制为 Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "恢复及回滚到先前状态均失败。编辑仍被阻止；请重新加载应用程序后再继续。"
 }

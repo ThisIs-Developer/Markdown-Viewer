@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "Сгъваем блок за съдържанието",
   "No headings in the selected range.": "Няма заглавия в избрания диапазон.",
   "Copy entire document as Markdown": "Копиране на целия документ като Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Копиране на целия документ като Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Копиране на целия документ като Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "Възстановяването и връщането към предишното състояние са неуспешни. Редактирането остава блокирано; презаредете, преди да продължите."
 }

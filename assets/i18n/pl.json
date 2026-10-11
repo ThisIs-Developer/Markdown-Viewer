@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "Zwijany spis treści",
   "No headings in the selected range.": "Brak nagłówków w wybranym zakresie.",
   "Copy entire document as Markdown": "Kopiuj cały dokument jako Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Kopiuj cały dokument jako Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Kopiuj cały dokument jako Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "Przywracanie i powrót do poprzedniego stanu nie powiodły się. Edycja pozostaje zablokowana; odśwież aplikację przed kontynuowaniem."
 }

@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "折りたたみ可能な目次",
   "No headings in the selected range.": "選択した範囲に見出しがありません。",
   "Copy entire document as Markdown": "ドキュメント全体をMarkdownとしてコピー",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "ドキュメント全体をMarkdownとしてコピー (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "ドキュメント全体をMarkdownとしてコピー (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "復元と以前の状態へのロールバックに失敗しました。編集は引き続きブロックされています。続行する前にアプリを再読み込みしてください。"
 }

@@ -2098,18 +2098,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       detail: 'Validating backup…'
     });
     let restoreCommitted = false;
+    let maintenanceStarted = false;
     let preferenceSnapshot = null;
     try {
       const backup = await parseWorkspaceBackup(input);
-      suspendWorkspacePersistence = true;
-      clearTimeout(saveTabStateTimeout);
-      clearTimeout(secretWorkspaceSaveTimeout);
-      await Promise.all([
-        workspacePersistenceChain.catch(function() {}),
-        secretWorkspaceSaveChain.catch(function() {}),
-        secretDirtyJournalChain.catch(function() {}),
-        organizationPersistenceChain.catch(function() {})
-      ]);
+      await beginWorkspaceMaintenance();
+      maintenanceStarted = true;
       preferenceSnapshot = captureApplicationPreferences();
       try {
         await replaceApplicationPreferences(backup.preferences);
@@ -2143,7 +2137,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
       window.setTimeout(function() { window.location.reload(); }, 1100);
     } catch (error) {
-      if (!restoreCommitted) suspendWorkspacePersistence = false;
+      if (!restoreCommitted && maintenanceStarted && !error.rollbackError) endWorkspaceMaintenance();
       console.error('Workspace backup import failed:', error);
       if (restoreCommitted) {
         finishImportProgress(100, 100, {
@@ -2158,7 +2152,8 @@ document.addEventListener("DOMContentLoaded", async function () {
           success: false,
           title: 'Import failed',
           countText: 'Workspace not restored',
-          detail: error && error.message ? error.message : 'The backup could not be imported.'
+          detail: error.rollbackError ? 'Restore and rollback failed. Editing remains blocked; reload before continuing.' :
+            (error && error.message ? error.message : 'The backup could not be imported.')
         });
       }
     }
@@ -4262,6 +4257,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let pendingWorkspacePersistAll = false;
   let pendingWorkspacePersistIds = new Set();
   let suspendWorkspacePersistence = false;
+  let workspaceMaintenancePending = false;
+  let workspaceMaintenancePreviousInert = false;
   let secretWorkspaceEnvelopeCache = null;
   const LIVE_EDIT_ORIGIN = Symbol("markdown-viewer-live-local-edit");
   const LIVE_RELAY_ORIGIN = Symbol("markdown-viewer-live-relay");
@@ -11200,7 +11197,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function flushWorkspaceBeforeExit() {
+  async function flushWorkspaceBeforeExit(options) {
+    if ((workspaceMaintenancePending || suspendWorkspacePersistence) && !(options && options.allowMaintenance === true)) {
+      throw new Error('Workspace maintenance is still in progress. Wait for it to complete before closing.');
+    }
     saveCurrentTabState();
     await secretDirtyJournalChain.catch(function() {});
     const normalSaved = await _flushTabsToStorage(tabs);
@@ -11213,6 +11213,36 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   window.MarkdownViewerFlushWorkspace = flushWorkspaceBeforeExit;
+
+  async function beginWorkspaceMaintenance() {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) throw new Error('Workspace maintenance is already active. Reload or wait before retrying.');
+    if (nativeMarkdownSaveInProgress) throw new Error('A file Save is still in progress. Wait for it to finish, then retry.');
+    if (liveCollaboration) throw new Error('Leave the live collaboration session before replacing the workspace.');
+    workspaceMaintenancePending = true;
+    const container = document.querySelector('.app-container');
+    workspaceMaintenancePreviousInert = !!(container && container.inert);
+    if (container) container.inert = true;
+    clearTimeout(saveTabStateTimeout);
+    clearTimeout(secretWorkspaceSaveTimeout);
+    try {
+      await documentDeletionChain;
+      saveSecondarySplitState();
+      await flushWorkspaceBeforeExit({ allowMaintenance: true });
+      await secretWorkspaceSaveChain;
+      if (await organizationPersistenceChain === false) throw new Error('Workspace organization could not be saved. Maintenance was cancelled.');
+      suspendWorkspacePersistence = true;
+    } catch (error) {
+      endWorkspaceMaintenance();
+      throw error;
+    }
+  }
+
+  function endWorkspaceMaintenance() {
+    suspendWorkspacePersistence = false;
+    workspaceMaintenancePending = false;
+    const container = document.querySelector('.app-container');
+    if (container) container.inert = workspaceMaintenancePreviousInert;
+  }
 
   // Browser lifecycle events cannot guarantee that asynchronous storage finishes,
   // so ordinary edits are still debounced continuously. The desktop close handler
@@ -12535,6 +12565,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function newTab(content, title, location) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
     closeSlashCommandMenu();
     if (content === undefined) content = '';
     const targetLocation = location || (documentOrganization ? getPreferredDocumentLocation() : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
@@ -12556,6 +12587,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   let documentDeletionChain = Promise.resolve();
   function deleteTab(tabId) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return Promise.resolve(false);
     const operation = documentDeletionChain.catch(function() {}).then(function() {
       return deleteTabSnapshot(tabId);
     });
@@ -12851,21 +12883,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (closeBtn) closeBtn.disabled = true;
       confirmBtn.classList.add('is-loading');
       confirmBtn.setAttribute('aria-busy', 'true');
-      suspendWorkspacePersistence = true;
-      clearTimeout(saveTabStateTimeout);
-      clearTimeout(secretWorkspaceSaveTimeout);
       showImportProgress(100, {
         title: 'Resetting workspace',
         detail: 'Preparing a fresh workspace…'
       });
       let resetStarted = false;
+      let maintenanceStarted = false;
       try {
-        await Promise.all([
-          workspacePersistenceChain.catch(function() {}),
-          secretWorkspaceSaveChain.catch(function() {}),
-          secretDirtyJournalChain.catch(function() {}),
-          organizationPersistenceChain.catch(function() {})
-        ]);
+        await beginWorkspaceMaintenance();
+        maintenanceStarted = true;
         updateImportProgress(25, 100, 'Clearing workspace settings…');
         await replaceApplicationPreferences({});
         await clearLegacyWorkspaceStateForReset();
@@ -12895,7 +12921,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         cancelBtn.disabled = resetStarted;
         if (backupBtn) backupBtn.disabled = resetStarted;
         if (closeBtn) closeBtn.disabled = resetStarted;
-        if (!resetStarted) suspendWorkspacePersistence = false;
+        if (!resetStarted && maintenanceStarted) endWorkspaceMaintenance();
         isResetting = false;
       }
     }
@@ -13221,6 +13247,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // Late-load callback hook for Neutralino command-line files
   window.NL_IMPORT_EXTERNAL_FILE = function(content, name) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
     if (typeof tabs === 'undefined') return;
     const existing = tabs.find(function(t) { return t.title === name && t.content === content; });
     if (existing) {
@@ -15470,6 +15497,7 @@ ${selector} .arrowheadPath {
   }
 
   function createImportedDocument(content, title, location) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return null;
     const targetLocation = location || (documentOrganization
       ? getPreferredDocumentLocation()
       : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
@@ -24656,7 +24684,10 @@ ${selector} .arrowheadPath {
     updateStlThemes();
   });
 
+  let nativeMarkdownSaveInProgress = false;
   async function nativeSaveMarkdown() {
+    if (nativeMarkdownSaveInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) return;
+    nativeMarkdownSaveInProgress = true;
     try {
       const content = markdownEditor.value;
       const result = await Neutralino.os.showSaveDialog("Save Markdown File", {
@@ -24679,6 +24710,8 @@ ${selector} .arrowheadPath {
     } catch (e) {
       console.error("Native save failed:", e);
       alert("Native save failed: " + e.message);
+    } finally {
+      nativeMarkdownSaveInProgress = false;
     }
   }
 
