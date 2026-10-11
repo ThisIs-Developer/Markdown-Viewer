@@ -8,11 +8,11 @@ function setup() {
   const start = source.indexOf('  let documentDeletionChain =');
   const end = source.indexOf('  function closeTab(', start);
   const deleted = [], gates = [];
-  const context = { tabs: [{ id: 'A' }, { id: 'B' }, { id: 'C' }], activeTabId: null,
+  const context = { workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
+    tabs: [{ id: 'A' }, { id: 'B' }, { id: 'C' }], activeTabId: null,
     secondarySplitTabId: null, pendingReviewDelete: null, liveCollaboration: null,
     SECRET_WORKSPACE_ID: 'secret', selectedDocumentId: null,
-    workspacePersistenceChain: Promise.resolve(), workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
-    shareSnapshotViewOnlyTabIds: new Set(), tabHistories: {}, console,
+    workspacePersistenceChain: Promise.resolve(), shareSnapshotViewOnlyTabIds: new Set(), tabHistories: {}, console,
     workspaceStorage: { deleteDocument: async id => deleted.push(id) },
     _flushTabsToStorage: () => new Promise(resolve => gates.push(resolve)),
     isPrivateStorageMode: () => false, isTemporaryDocument: () => false };

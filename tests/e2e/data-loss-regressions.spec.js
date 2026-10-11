@@ -23,7 +23,7 @@ async function moveDocumentToFolder(page, documentId, folderName) {
   const row = page.locator(`.document-tree-row[data-document-id="${documentId}"]`);
   await row.click({ button: 'right' });
   await page.locator('.document-menu-context.open').getByRole('menuitem', { name: 'Move', exact: true }).click();
-  await page.locator('#document-move-destination').selectOption({ label: `Workspace / ${folderName}` });
+  await page.locator('#document-move-destination').selectOption({ label: `Workspace (Vault) / ${folderName}` });
   await page.locator('#document-move-modal-confirm').click();
 }
 
@@ -64,7 +64,8 @@ async function replacementBackupBuffer() {
 
 test('a stale tab move cannot delete documents created in another tab', async ({ context, page }) => {
   await openApp(page);
-  // Seed a persisted document before the second writer takes its snapshot.
+  // A fresh empty tab is not necessarily persisted or shared with another page.
+  // Seed and commit the document before taking the second writer's snapshot.
   await setEditorContent(page, '# Shared document before opening the stale writer');
   await waitForStoredContent(page, 'Shared document before opening the stale writer');
   const staleDocumentId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');

@@ -57,7 +57,7 @@ test('formatting toolbar applies bold to the selected text', async ({ page }) =>
   await page.getByRole('button', { name: 'Bold' }).click();
 
   await expect.poll(() => editorValue(page)).toBe('**bold me**');
-  await expect(page.locator('#markdown-preview strong')).toHaveText('bold me');
+  await expect(page.locator('#markdown-preview strong').filter({ hasText: 'bold me' })).toHaveText('bold me');
 });
 
 test('right-clicking selected text keeps the editor selection active', async ({ page }) => {

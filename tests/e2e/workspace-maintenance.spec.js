@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('import gates native launches, persists live drafts, and re-enables after safe failure', async ({ page }) => {
+test('import gates new linked/native actions, persists live drafts, and re-enables after safe failure', async ({ page }) => {
   await page.locator('#markdown-editor').fill('# newest draft');
   await page.evaluate(() => {
     MarkdownWorkspaceStorage.prototype.restoreBackupData = async function () {
@@ -45,7 +45,7 @@ test('import gates native launches, persists live drafts, and re-enables after s
   expect(await page.evaluate(async () => {
     const linked = await NL_IMPORT_EXTERNAL_FILE('# late', 'late', 'C:/late.md');
     const storage = new MarkdownWorkspaceStorage(); await storage.init();
-    const meta = (await storage.listDocumentMetadata()).find(x => x.title === 'notes');
+    const meta = (await storage.listDocumentMetadata()).find(x => x.sourcePath === 'C:/notes.md');
     return { linked: !!linked, inert: document.querySelector('.app-container').inert, draft: await storage.loadDocumentContent(meta.id), original: __desktopFiles.get('C:/notes.md') };
   })).toEqual({ linked: false, inert: true, draft: '# newest draft', original: '# original' });
   await page.evaluate(() => __releaseMaintenance());

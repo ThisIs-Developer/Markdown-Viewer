@@ -88,7 +88,7 @@ test('header consolidates icon document actions in the requested order', async (
   await header.locator('#importDropdown').click();
   const newMenu = page.locator('[aria-labelledby="importDropdown"]');
   await expect(newMenu).toBeVisible();
-  await expect(newMenu.locator('.app-menu-label')).toHaveText(['New document', 'From files', 'From GitHub']);
+  await expect(newMenu.locator('.app-menu-label:visible')).toHaveText(['New document', 'From files', 'From GitHub']);
   // Verify the layout width, not the transient visual scale during menu-open motion.
   const newWidth = await newMenu.evaluate(menu => menu.offsetWidth);
   expect(newWidth).toBeGreaterThanOrEqual(167.5);

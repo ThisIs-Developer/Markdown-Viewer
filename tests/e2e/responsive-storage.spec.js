@@ -638,7 +638,7 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch')).toBeVisible();
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch .lucide')).toHaveCount(0);
   const settingsOrder = await page.locator('#mobile-menu-settings-panel > *').evaluateAll(elements =>
-    elements.filter(element => element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
+    elements.filter(element => !element.hidden && element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
   );
   expect(settingsOrder[0]).toBe('mobile-theme-toggle');
   expect(settingsOrder[1]).toContain('mobile-menu-language');

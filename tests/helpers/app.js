@@ -92,6 +92,15 @@ async function openApp(page, url = '/', options = {}) {
   const expectEditorVisible = options.expectEditorVisible !== false;
   const criticalErrors = [];
   await installLocalBrowserAssets(page);
+  // Existing filesystem/race scenarios exercise the explicit user opt-out.
+  // Confirmation UX tests opt into the production default instead.
+  if (options.originalSaveConfirmation !== true) {
+    await page.addInitScript(() => {
+      if (typeof window.NL_PORT !== 'undefined' && window.Neutralino) {
+        localStorage.setItem('markdownViewerOriginalSaveWarningDisabled', 'true');
+      }
+    });
+  }
   if (options.showReleaseNotes !== true) {
     const version = await appVersion();
     await page.addInitScript(currentVersion => {
