@@ -175,12 +175,30 @@ Origin allowlists on Share and Live Share endpoints reduce unauthorized browser-
 The default Neutralino configuration enables only:
 
 - app exit;
-- open/save dialogs and message boxes;
+- open/save/folder dialogs and message boxes;
 - external URL opening and tray setup;
-- file read/write; and
+- file read/write, app-managed directory/metadata operations and linked-source watchers; and
 - storage get/set/list/remove/clear.
 
 `os.execCommand` is not in the default allowlist. The standard desktop application therefore cannot execute PlantUML or D2 command-line programs through the local-renderer code path. PlantUML and D2 use remote services in the standard build. A custom build that enables command execution changes the threat model and must use explicit user consent and narrowly fixed commands.
+
+### Linked-source data boundaries
+
+Desktop linked originals are external files explicitly selected by the user. Editing
+stores an internal recovery draft, separate from the ordinary Vault root; explicit Save
+is required to update an original. A recovered draft is not a backup guarantee.
+Conflicts and missing originals require an explicit decision before replacement or
+recreation. Removing a link does not delete its original. Conversion produces an
+independent Vault document from the live draft.
+
+Workspace ZIPs include linked recovery documents, but importing a ZIP does not restore
+authority to write its recorded external paths or register watchers for them. Recovered
+documents must be explicitly re-linked before they can modify originals.
+
+Source reads and scans are bounded. Native filesystem checks and verification reduce
+accidental data loss but are not atomic no-overwrite operations or multi-file
+transactions. Another local program can race a write; partial folder results are
+reported and retained rather than treated as a completed transaction.
 
 ## Security Reporting
 
