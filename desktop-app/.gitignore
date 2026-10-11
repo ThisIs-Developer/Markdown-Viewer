@@ -26,3 +26,7 @@ neutralino.js
 
 # Docker build output
 /output
+
+# Explicit local runtime experiment (not a distribution asset)
+neutralino.experimental.config.json
+resources/js/desktop-runtime-features.js
