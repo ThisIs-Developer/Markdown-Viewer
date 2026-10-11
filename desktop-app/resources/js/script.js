@@ -2098,18 +2098,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       detail: 'Validating backup…'
     });
     let restoreCommitted = false;
+    let maintenanceStarted = false;
     let preferenceSnapshot = null;
     try {
       const backup = await parseWorkspaceBackup(input);
-      suspendWorkspacePersistence = true;
-      clearTimeout(saveTabStateTimeout);
-      clearTimeout(secretWorkspaceSaveTimeout);
-      await Promise.all([
-        workspacePersistenceChain.catch(function() {}),
-        secretWorkspaceSaveChain.catch(function() {}),
-        secretDirtyJournalChain.catch(function() {}),
-        organizationPersistenceChain.catch(function() {})
-      ]);
+      await beginWorkspaceMaintenance();
+      maintenanceStarted = true;
       preferenceSnapshot = captureApplicationPreferences();
       try {
         await replaceApplicationPreferences(backup.preferences);
@@ -2143,7 +2137,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
       window.setTimeout(function() { window.location.reload(); }, 1100);
     } catch (error) {
-      if (!restoreCommitted) suspendWorkspacePersistence = false;
+      if (!restoreCommitted && maintenanceStarted && !error.rollbackError) endWorkspaceMaintenance();
       console.error('Workspace backup import failed:', error);
       if (restoreCommitted) {
         finishImportProgress(100, 100, {
@@ -2158,7 +2152,8 @@ document.addEventListener("DOMContentLoaded", async function () {
           success: false,
           title: 'Import failed',
           countText: 'Workspace not restored',
-          detail: error && error.message ? error.message : 'The backup could not be imported.'
+          detail: error.rollbackError ? 'Restore and rollback failed. Editing remains blocked; reload before continuing.' :
+            (error && error.message ? error.message : 'The backup could not be imported.')
         });
       }
     }
@@ -4262,6 +4257,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let pendingWorkspacePersistAll = false;
   let pendingWorkspacePersistIds = new Set();
   let suspendWorkspacePersistence = false;
+  let workspaceMaintenancePending = false;
+  let workspaceMaintenancePreviousInert = false;
   let secretWorkspaceEnvelopeCache = null;
   const LIVE_EDIT_ORIGIN = Symbol("markdown-viewer-live-local-edit");
   const LIVE_RELAY_ORIGIN = Symbol("markdown-viewer-live-relay");
@@ -8346,6 +8343,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function persistReviewThreads(message) {
     syncLiveReviewThreadsFromTab();
+    const tab = getActiveReviewTab();
+    if (tab && tab.contentLoaded !== false) {
+      saveCurrentTabState();
+      const journal = writeDirtyDocumentJournal(tab, tab.content);
+      if (!journal) persistEditWithoutDurableJournal(tab, tab.content);
+    }
     if (activeTabId) saveTabsToStorage(tabs, [activeTabId]);
     decorateReviewTargets();
     renderReviewPanel();
@@ -10169,7 +10172,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const input = reviewList && reviewList.querySelector(
         '.review-reply-edit-form[data-review-id="' + thread.id + '"][data-review-reply-id="' + reply.id + '"] .review-reply-edit-input'
       );
-      if (input) {
+      if (input && document.activeElement !== input) {
         input.focus({ preventScroll: true });
         input.setSelectionRange(input.value.length, input.value.length);
       }
@@ -10592,6 +10595,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         savedAt: Date.now(),
         metadata: {
           title: tab.title || 'Untitled',
+          reviewThreads: tab.reviewThreads || [],
           workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
           folderId: tab.folderId || null,
           viewMode: tab.viewMode || 'split',
@@ -10622,6 +10626,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           savedAt: Date.now(),
           metadata: {
             title: tab.title || 'Untitled',
+            reviewThreads: tab.reviewThreads || [],
             workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
             folderId: tab.folderId || null,
             viewMode: tab.viewMode || 'split',
@@ -10645,6 +10650,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           savedAt: Date.now(),
           metadata: {
             title: tab.title || 'Untitled',
+            reviewThreads: tab.reviewThreads || [],
             workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
             folderId: tab.folderId || null,
             viewMode: tab.viewMode || 'split',
@@ -10826,8 +10832,63 @@ document.addEventListener("DOMContentLoaded", async function () {
     return source;
   }
 
-  function clearDirtyDocumentJournal(tab) {
+  async function captureDirtyDocumentJournalSnapshot(storageTabs, changedIds) {
+    const snapshots = new Map();
+    changedIds.forEach(function(id) {
+      const tab = storageTabs.find(function(item) { return item.id === id; });
+      // Metadata-only writes do not commit a document body.
+      if (!tab || tab.contentLoaded === false || typeof tab.content !== 'string') return;
+      const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(id))));
+      const snapshot = { content: tab.content, reviewThreads: JSON.stringify(tab.reviewThreads || []), local: {}, session: {}, indexed: {} };
+      [[localStorage, snapshot.local], [sessionStorage, snapshot.session]].forEach(function(pair) {
+        keys.forEach(function(key) {
+          try {
+            const raw = pair[0].getItem(key);
+            const value = raw && JSON.parse(raw);
+            if (value && value.documentId === id && value.content === snapshot.content &&
+                (!value.metadata || !Array.isArray(value.metadata.reviewThreads) || JSON.stringify(value.metadata.reviewThreads) === snapshot.reviewThreads)) pair[1][key] = raw;
+          } catch (_) { /* Unknown recovery data must be retained. */ }
+        });
+      });
+      snapshots.set(id, snapshot);
+    });
+    if (workspaceStorage && typeof workspaceStorage.listDirtyJournals === 'function') {
+      try {
+        (await workspaceStorage.listDirtyJournals()).forEach(function(record) {
+          const snapshot = snapshots.get(record.documentId);
+          if (snapshot && record.journalId && record.content === snapshot.content &&
+              (!record.metadata || !Array.isArray(record.metadata.reviewThreads) || JSON.stringify(record.metadata.reviewThreads) === snapshot.reviewThreads)) {
+            snapshot.indexed[record.journalId] = record;
+          }
+        });
+      } catch (error) {
+        console.warn('Unable to snapshot recovery journals; retaining them:', error);
+      }
+    }
+    return snapshots;
+  }
+
+  function clearDirtyDocumentJournal(tab, committedSnapshot) {
     if (!tab) return Promise.resolve();
+    if (committedSnapshot) {
+      // Compare the exact journal, not merely its key or timestamp. A new edit
+      // may reuse the same key while a storage operation is awaiting completion.
+      [[localStorage, committedSnapshot.local], [sessionStorage, committedSnapshot.session]].forEach(function(pair) {
+        Object.keys(pair[1]).forEach(function(key) {
+          try {
+            if (pair[0].getItem(key) === pair[1][key]) pair[0].removeItem(key);
+          } catch (_) {}
+        });
+      });
+      if (workspaceStorage && typeof workspaceStorage.deleteDirtyJournals === 'function') {
+        return workspaceStorage.deleteDirtyJournals(Object.keys(committedSnapshot.indexed), {
+          expectedJournals: committedSnapshot.indexed
+        }).catch(function(error) {
+          console.warn('Unable to clear a committed emergency journal:', error);
+        });
+      }
+      return Promise.resolve();
+    }
     const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(tab.id))));
     keys.forEach(function(key) {
       try { localStorage.removeItem(key); } catch (_) {}
@@ -10899,6 +10960,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         existing.content = journal.content;
         existing.contentLoaded = true;
         existing.lastEditedAt = Number(journal.savedAt) || Date.now();
+        if (journal.metadata && Array.isArray(journal.metadata.reviewThreads)) existing.reviewThreads = normalizeReviewThreads(journal.metadata.reviewThreads);
         existing._dirtyJournalKeys = Array.from(new Set((existing._dirtyJournalKeys || []).concat(entry.key)));
         existing._dirtyIndexedDbJournalIds = Array.from(new Set((existing._dirtyIndexedDbJournalIds || []).concat(entry.key)));
         restoredOriginalIds.add(existing.id);
@@ -10912,6 +10974,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         folderId: metadata.folderId || null
       });
       recovered.favorite = metadata.favorite === true;
+      recovered.reviewThreads = normalizeReviewThreads(metadata.reviewThreads);
       recovered.createdAt = Number(metadata.createdAt) || recovered.createdAt;
       recovered.lastOpenedAt = Number(metadata.lastOpenedAt) || recovered.lastOpenedAt;
       recovered.lastEditedAt = Number(journal.savedAt) || Date.now();
@@ -11095,20 +11158,27 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     try {
       const storageTabs = getTabsForStorage(tabsArr);
+      const commit = async function() {
+        // A queued save must not resurrect documents removed before it runs.
+        const currentStorageTabs = storageTabs.filter(function(tab) { return tabs.some(function(item) { return item.id === tab.id; }); });
+        const journalSnapshots = await captureDirtyDocumentJournalSnapshot(currentStorageTabs, changedIds);
+        if (workspaceStorage) {
+          await workspaceStorage.saveDocuments(currentStorageTabs, documentOrganization, { changedIds: changedIds });
+        } else {
+          saveStorageItem(STORAGE_KEY, JSON.stringify(currentStorageTabs));
+        }
+        await Promise.all(changedIds.map(function(id) {
+          const tab = tabs.find(function(item) { return item.id === id; });
+          const snapshot = journalSnapshots.get(id);
+          return tab && snapshot ? clearDirtyDocumentJournal(tab, snapshot) : Promise.resolve();
+        }));
+      };
       if (workspaceStorage) {
-        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
-          return workspaceStorage.saveDocuments(storageTabs, documentOrganization, {
-            changedIds: changedIds
-          });
-        });
+        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(commit);
         await workspacePersistenceChain;
       } else {
-        saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
+        await commit();
       }
-      await Promise.all(changedIds.map(function(id) {
-        const tab = tabs.find(function(item) { return item.id === id; });
-        return tab ? clearDirtyDocumentJournal(tab) : Promise.resolve();
-      }));
       evictInactiveDocumentContent();
       updateSaveStatus('saved');
       return true;
@@ -11119,7 +11189,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
       console.warn('Failed to save workspace documents:', e);
       updateSaveStatus('error');
-      showAppToast('The workspace could not be saved. Existing saved documents were kept.', {
+      showAppToast(e.code === 'WORKSPACE_MOVE_BLOCKED' ? e.message : 'The workspace could not be saved. Existing saved documents were kept.', {
         tone: 'error',
         title: 'Changes not saved'
       });
@@ -11127,7 +11197,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function flushWorkspaceBeforeExit() {
+  async function flushWorkspaceBeforeExit(options) {
+    if ((workspaceMaintenancePending || suspendWorkspacePersistence) && !(options && options.allowMaintenance === true)) {
+      throw new Error('Workspace maintenance is still in progress. Wait for it to complete before closing.');
+    }
     saveCurrentTabState();
     await secretDirtyJournalChain.catch(function() {});
     const normalSaved = await _flushTabsToStorage(tabs);
@@ -11140,6 +11213,36 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   window.MarkdownViewerFlushWorkspace = flushWorkspaceBeforeExit;
+
+  async function beginWorkspaceMaintenance() {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) throw new Error('Workspace maintenance is already active. Reload or wait before retrying.');
+    if (nativeMarkdownSaveInProgress) throw new Error('A file Save is still in progress. Wait for it to finish, then retry.');
+    if (liveCollaboration) throw new Error('Leave the live collaboration session before replacing the workspace.');
+    workspaceMaintenancePending = true;
+    const container = document.querySelector('.app-container');
+    workspaceMaintenancePreviousInert = !!(container && container.inert);
+    if (container) container.inert = true;
+    clearTimeout(saveTabStateTimeout);
+    clearTimeout(secretWorkspaceSaveTimeout);
+    try {
+      await documentDeletionChain;
+      saveSecondarySplitState();
+      await flushWorkspaceBeforeExit({ allowMaintenance: true });
+      await secretWorkspaceSaveChain;
+      if (await organizationPersistenceChain === false) throw new Error('Workspace organization could not be saved. Maintenance was cancelled.');
+      suspendWorkspacePersistence = true;
+    } catch (error) {
+      endWorkspaceMaintenance();
+      throw error;
+    }
+  }
+
+  function endWorkspaceMaintenance() {
+    suspendWorkspacePersistence = false;
+    workspaceMaintenancePending = false;
+    const container = document.querySelector('.app-container');
+    if (container) container.inert = workspaceMaintenancePreviousInert;
+  }
 
   // Browser lifecycle events cannot guarantee that asynchronous storage finishes,
   // so ordinary edits are still debounced continuously. The desktop close handler
@@ -12462,6 +12565,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function newTab(content, title, location) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
     closeSlashCommandMenu();
     if (content === undefined) content = '';
     const targetLocation = location || (documentOrganization ? getPreferredDocumentLocation() : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
@@ -12481,7 +12585,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     return true;
   }
 
-  async function deleteTab(tabId) {
+  let documentDeletionChain = Promise.resolve();
+  function deleteTab(tabId) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return Promise.resolve(false);
+    const operation = documentDeletionChain.catch(function() {}).then(function() {
+      return deleteTabSnapshot(tabId);
+    });
+    documentDeletionChain = operation;
+    return operation;
+  }
+
+  async function deleteTabSnapshot(tabId) {
     if (pendingReviewDelete && pendingReviewDelete.tabId === tabId) {
       cancelReviewDeleteConfirmation();
     }
@@ -12494,11 +12608,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       return;
     }
 
-    const idx = tabs.findIndex(function(t) { return t.id === tabId; });
-    if (idx === -1) return;
+    let idx = tabs.findIndex(function(t) { return t.id === tabId; });
+    if (idx === -1) return false;
     const tab = tabs[idx];
-    const wasActive = activeTabId === tabId;
-    const splitPartnerId = wasActive ? secondarySplitTabId : null;
+    let wasActive = activeTabId === tabId;
+    let splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) saveCurrentTabState();
     saveSecondarySplitState();
     if (!isTemporaryDocument(tab) && tab.workspaceId !== SECRET_WORKSPACE_ID && workspaceStorage && !isPrivateStorageMode()) {
@@ -12511,7 +12625,14 @@ document.addEventListener("DOMContentLoaded", async function () {
         return false;
       }
       try {
-        await workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision });
+        // Use the same queue as document saves. Remove the live entry before
+        // subsequent queued saves select their current documents.
+        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(async function() {
+          await workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision });
+          const currentIndex = tabs.indexOf(tab);
+          if (currentIndex >= 0) { idx = currentIndex; tabs.splice(currentIndex, 1); }
+        });
+        await workspacePersistenceChain;
       } catch (error) {
         if (error && error.name === 'WorkspaceConflictError') {
           showAppToast('The document changed in another tab and was not deleted. Reload before trying again.', {
@@ -12528,6 +12649,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         return false;
       }
     }
+    wasActive = activeTabId === tabId;
+    splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) {
       closeReviewComposer();
       clearReviewDecorations();
@@ -12543,7 +12666,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       delete tabHistories[tabId];
     }
     
-    tabs.splice(idx, 1);
+    const remainingIndex = tabs.indexOf(tab);
+    if (remainingIndex >= 0) { idx = remainingIndex; tabs.splice(remainingIndex, 1); }
     clearDirtyDocumentJournal(tab);
     if (tab.workspaceId === SECRET_WORKSPACE_ID) saveTabsToStorage(tabs, []);
     if (wasActive) {
@@ -12555,7 +12679,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       } else {
         clearActiveDocument();
       }
-      return;
+      return true;
     }
     if (selectedDocumentId === tabId) selectedDocumentId = activeTabId;
     renderDocumentSplitView();
@@ -12759,21 +12883,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (closeBtn) closeBtn.disabled = true;
       confirmBtn.classList.add('is-loading');
       confirmBtn.setAttribute('aria-busy', 'true');
-      suspendWorkspacePersistence = true;
-      clearTimeout(saveTabStateTimeout);
-      clearTimeout(secretWorkspaceSaveTimeout);
       showImportProgress(100, {
         title: 'Resetting workspace',
         detail: 'Preparing a fresh workspace…'
       });
       let resetStarted = false;
+      let maintenanceStarted = false;
       try {
-        await Promise.all([
-          workspacePersistenceChain.catch(function() {}),
-          secretWorkspaceSaveChain.catch(function() {}),
-          secretDirtyJournalChain.catch(function() {}),
-          organizationPersistenceChain.catch(function() {})
-        ]);
+        await beginWorkspaceMaintenance();
+        maintenanceStarted = true;
         updateImportProgress(25, 100, 'Clearing workspace settings…');
         await replaceApplicationPreferences({});
         await clearLegacyWorkspaceStateForReset();
@@ -12803,7 +12921,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         cancelBtn.disabled = resetStarted;
         if (backupBtn) backupBtn.disabled = resetStarted;
         if (closeBtn) closeBtn.disabled = resetStarted;
-        if (!resetStarted) suspendWorkspacePersistence = false;
+        if (!resetStarted && maintenanceStarted) endWorkspaceMaintenance();
         isResetting = false;
       }
     }
@@ -13129,6 +13247,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   // Late-load callback hook for Neutralino command-line files
   window.NL_IMPORT_EXTERNAL_FILE = function(content, name) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
     if (typeof tabs === 'undefined') return;
     const existing = tabs.find(function(t) { return t.title === name && t.content === content; });
     if (existing) {
@@ -15378,6 +15497,7 @@ ${selector} .arrowheadPath {
   }
 
   function createImportedDocument(content, title, location) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence) return null;
     const targetLocation = location || (documentOrganization
       ? getPreferredDocumentLocation()
       : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
@@ -19187,10 +19307,9 @@ ${selector} .arrowheadPath {
     columnInput.addEventListener('keydown', onKey);
     rowInput.addEventListener('keydown', onKey);
 
-    requestAnimationFrame(() => {
-      columnInput.focus();
-      columnInput.select();
-    });
+    // Do not redirect input after the user has moved to the row field.
+    columnInput.focus();
+    columnInput.select();
   }
 
   function openEmojiModal() {
@@ -21105,14 +21224,13 @@ ${selector} .arrowheadPath {
       uploadFields.style.display = isUpload ? 'flex' : 'none';
       urlFields.style.display = isUpload ? 'none' : 'flex';
       if (shouldFocus) {
-        requestAnimationFrame(function() {
-          if (isUpload) {
-            fileInput.focus();
-          } else {
-            urlInput.focus();
-            urlInput.select();
-          }
-        });
+        // Focus immediately so a deferred callback cannot steal subsequent input.
+        if (isUpload) {
+          fileInput.focus();
+        } else {
+          urlInput.focus();
+          urlInput.select();
+        }
       }
     }
 
@@ -21261,10 +21379,10 @@ ${selector} .arrowheadPath {
     urlInput.addEventListener('keydown', onKey);
     titleInput.addEventListener('keydown', onKey);
 
-    requestAnimationFrame(function() {
-      numberInput.focus();
-      numberInput.select();
-    });
+    // The modal is already displayed. Focus synchronously so a deferred callback
+    // cannot steal focus after the user starts filling the URL or title field.
+    numberInput.focus();
+    numberInput.select();
   }
 
   function escapeRegExp(text) {
@@ -24564,7 +24682,10 @@ ${selector} .arrowheadPath {
     updateStlThemes();
   });
 
+  let nativeMarkdownSaveInProgress = false;
   async function nativeSaveMarkdown() {
+    if (nativeMarkdownSaveInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) return;
+    nativeMarkdownSaveInProgress = true;
     try {
       const content = markdownEditor.value;
       const result = await Neutralino.os.showSaveDialog("Save Markdown File", {
@@ -24587,6 +24708,8 @@ ${selector} .arrowheadPath {
     } catch (e) {
       console.error("Native save failed:", e);
       alert("Native save failed: " + e.message);
+    } finally {
+      nativeMarkdownSaveInProgress = false;
     }
   }
 

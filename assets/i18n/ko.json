@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "접을 수 있는 목차",
   "No headings in the selected range.": "선택한 범위에 제목이 없습니다.",
   "Copy entire document as Markdown": "전체 문서를 Markdown으로 복사",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "전체 문서를 Markdown으로 복사 (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "전체 문서를 Markdown으로 복사 (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "복원과 이전 상태로의 되돌리기가 실패했습니다. 편집이 계속 차단됩니다. 계속하기 전에 앱을 새로고침하세요."
 }

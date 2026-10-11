@@ -40,8 +40,8 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));
   await expect(themeSwitch).toHaveCSS('height', await privateModeSwitch.evaluate(element => getComputedStyle(element).height));
   await expect(themeSwitch.locator(':scope > span')).toHaveCSS('border-radius', '50%');
-  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
-  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await resolveCssColor(page, '--bg-color'));
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await resolveCssColor(page, '--text-color'));
 
   await themeToggle.click();
   const toggledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
@@ -49,8 +49,14 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   expect(toggledTheme).not.toBe(initialTheme);
   await expect(themeToggle).toHaveAttribute('aria-pressed', String(toggledTheme === 'dark'));
   await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${toggledThemeIcon}\\b`));
-  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
-  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
+  // Assert the target theme color, not a one-time snapshot halfway through
+  // the body's transition. Playwright still waits for the icon to reach it.
+  const backgroundColor = await resolveCssColor(page, '--bg-color');
+  const textColor = await resolveCssColor(page, '--text-color');
+  await expect(page.locator('body')).toHaveCSS('background-color', backgroundColor);
+  await expect(page.locator('body')).toHaveCSS('color', textColor);
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', backgroundColor);
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', textColor);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('markdownViewerGlobalState') || '{}').theme)).toBe(toggledTheme);
 
   await page.reload();

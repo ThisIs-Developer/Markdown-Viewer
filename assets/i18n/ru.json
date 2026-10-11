@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "Сворачиваемое оглавление",
   "No headings in the selected range.": "В выбранном диапазоне нет заголовков.",
   "Copy entire document as Markdown": "Копировать весь документ как Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Копировать весь документ как Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Копировать весь документ как Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "Восстановление и откат не удались. Редактирование остаётся заблокированным; перезагрузите приложение перед продолжением."
 }

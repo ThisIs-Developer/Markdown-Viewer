@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "Tabla de contenido plegable",
   "No headings in the selected range.": "No hay encabezados en el rango seleccionado.",
   "Copy entire document as Markdown": "Copiar todo el documento como Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copiar todo el documento como Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copiar todo el documento como Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "La restauración y la reversión fallaron. La edición sigue bloqueada; recarga la aplicación antes de continuar."
 }

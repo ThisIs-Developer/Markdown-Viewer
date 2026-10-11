@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "可摺疊目錄",
   "No headings in the selected range.": "所選範圍內沒有標題。",
   "Copy entire document as Markdown": "將整份文件複製為 Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "將整份文件複製為 Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "將整份文件複製為 Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "還原及回復至先前狀態均失敗。編輯仍被封鎖；請重新載入應用程式後再繼續。"
 }

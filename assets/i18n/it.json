@@ -1200,5 +1200,6 @@
   "Collapsible TOC wrapper": "Sommario comprimibile",
   "No headings in the selected range.": "Nessun titolo nell’intervallo selezionato.",
   "Copy entire document as Markdown": "Copia l’intero documento come Markdown",
-  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copia l’intero documento come Markdown (Ctrl/Cmd+Shift+C)"
+  "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copia l’intero documento come Markdown (Ctrl/Cmd+Shift+C)",
+  "Restore and rollback failed. Editing remains blocked; reload before continuing.": "Il ripristino e il ritorno allo stato precedente non sono riusciti. La modifica rimane bloccata; ricarica l’applicazione prima di continuare."
 }

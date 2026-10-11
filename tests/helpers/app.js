@@ -14,9 +14,9 @@ const localBrowserAssets = [
   ['https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js', 'node_modules/marked/marked.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js', 'node_modules/@highlightjs/cdn-assets/highlight.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js', 'node_modules/@highlightjs/cdn-assets/languages/powershell.min.js', 'application/javascript'],
-  ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.13/purify.min.js', 'node_modules/dompurify/dist/purify.min.js', 'application/javascript'],
+  ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js', 'node_modules/dompurify/dist/purify.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js', 'node_modules/file-saver/dist/FileSaver.min.js', 'application/javascript'],
-  ['https://cdn.jsdelivr.net/npm/js-yaml@4.3.1/dist/js-yaml.min.js', 'node_modules/js-yaml/dist/js-yaml.min.js', 'application/javascript'],
+  ['https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js', 'node_modules/js-yaml/dist/js-yaml.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js', 'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', 'node_modules/jszip/dist/jszip.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js', 'node_modules/pako/dist/pako.min.js', 'application/javascript']
