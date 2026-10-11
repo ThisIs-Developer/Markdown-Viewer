@@ -174,7 +174,9 @@
                         </button>
                         <ul class="dropdown-menu app-command-menu header-command-menu header-new-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="header-new-document"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i><span class="app-menu-label">New document</span></a></li>
-                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-upload" aria-hidden="true"></i><span class="app-menu-label">From files</span></a></li>
+                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-files" aria-hidden="true"></i><span class="app-menu-label">Import copies</span></a></li>
+                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-file"><i class="lucide lucide-file-symlink" aria-hidden="true"></i><span class="app-menu-label">Link files…</span></a></li>
+                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-folder"><i class="lucide lucide-folder-symlink" aria-hidden="true"></i><span class="app-menu-label">Link folder…</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-github"><i class="bi bi-github" aria-hidden="true"></i><span class="app-menu-label">From GitHub</span></a></li>
                         </ul>
                     </div>
@@ -257,6 +259,9 @@
                             </button>
                             <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and backup">
                                 <i class="lucide lucide-box" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage and Backup</span><span class="app-menu-description">Back up or restore your workspace</span></span>
+                            </button>
+                            <button class="settings-menu-item app-menu-item settings-menu-item--toggle desktop-linked-command" data-original-save-warning-toggle type="button" aria-pressed="true" hidden>
+                                <i class="lucide lucide-save" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Confirm saving to original</span><span class="app-menu-description" data-original-save-warning-description>Ask before updating linked originals</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                             </button>
                             <button id="trash-settings-button" class="settings-menu-item app-menu-item" type="button" title="Open Trash">
                                 <i class="lucide lucide-trash-2" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Trash</span><span class="app-menu-description">Restore or permanently delete files</span></span>
@@ -416,6 +421,9 @@
                                         <button id="mobile-storage-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Storage and backup">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-box" aria-hidden="true"></i><span>Storage and Backup</span></span>
                                         </button>
+                                        <button class="mobile-menu-item mobile-settings-item mobile-settings-toggle desktop-linked-command" data-original-save-warning-toggle type="button" aria-pressed="true" hidden>
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-save" aria-hidden="true"></i><span>Confirm saving to original</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
+                                        </button>
                                         <button id="mobile-trash-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Open Trash">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-trash-2" aria-hidden="true"></i><span>Trash</span></span>
                                         </button>
@@ -442,6 +450,16 @@
                 <h2 id="document-sidebar-title">Explorer</h2>
               </div>
               <div class="document-sidebar-actions" role="toolbar" aria-label="File actions">
+                <button id="sidebar-create-linked-file" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Create new linked file…" title="Create new linked file…" hidden>
+                  <i class="lucide lucide-file-plus" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-files" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link Markdown files" title="Link Markdown files" hidden>
+                  <i class="lucide lucide-file-symlink" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-folder" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link a Markdown folder" title="Link a Markdown folder" hidden>
+                  <i class="lucide lucide-folder-symlink" aria-hidden="true"></i>
+                </button>
+                <span id="sidebar-linked-separator" class="document-sidebar-actions-separator desktop-linked-command" role="separator" aria-orientation="vertical" hidden></span>
                 <button id="sidebar-new-document" class="document-sidebar-icon-btn" type="button" aria-label="Create a Markdown file" title="New Markdown file">
                   <i class="lucide lucide-file-plus-2" aria-hidden="true"></i>
                 </button>
@@ -2057,6 +2075,23 @@
       </div>
     </div>
 
+    <div id="linked-confirm-modal" class="reset-modal-overlay modal-overlay" role="alertdialog" aria-modal="true" aria-labelledby="linked-confirm-modal-title" aria-describedby="linked-confirm-modal-description" aria-hidden="true" style="display:none;">
+      <div class="reset-modal-box app-modal-box modal-box linked-confirm-modal-box">
+        <div class="modal-header">
+          <p id="linked-confirm-modal-title" class="reset-modal-message">Confirm action</p>
+          <button type="button" class="modal-close-btn" id="linked-confirm-modal-close" aria-label="Close confirmation"><i class="lucide lucide-x" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body">
+          <p id="linked-confirm-modal-description" class="modal-subtext"></p>
+          <label id="linked-confirm-modal-checkbox-label" class="app-toast-checkbox" hidden><input id="linked-confirm-modal-checkbox" type="checkbox"><span></span></label>
+        </div>
+        <div class="reset-modal-actions">
+          <button type="button" class="reset-modal-btn reset-modal-cancel" id="linked-confirm-modal-cancel">Cancel</button>
+          <button type="button" class="reset-modal-btn linked-confirm-primary" id="linked-confirm-modal-confirm">Continue</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Shared Diagram Viewer Modal -->
     <div id="mermaid-zoom-modal" role="dialog" aria-modal="true" aria-labelledby="diagram-viewer-modal-title" aria-hidden="true">
         <div class="mermaid-modal-content">
@@ -2308,6 +2343,7 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
     <script src="assets/document-toc.js" defer></script>
+    <script src="native-markdown-source.js" defer></script>
     <script src="workspace-storage.js" defer></script>
     <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->
