@@ -47,6 +47,22 @@ function setup() {
 }
 function journal(content, savedAt = 1) { return { documentId: 'notes', content, savedAt }; }
 
+test('a newer comments-only journal survives an older save of unchanged Markdown', async () => {
+  const { target, tab, key } = setup();
+  tab.reviewThreads = [{ body: 'OLD COMMENT' }];
+  target.localStorage.setItem(key, JSON.stringify({ ...journal('OLD'), metadata: { reviewThreads: [{ body: 'NEW COMMENT' }] } }));
+  await target._flushTabsToStorage([tab], { changedIds: [tab.id] });
+  assert.equal(JSON.parse(target.localStorage.getItem(key)).metadata.reviewThreads[0].body, 'NEW COMMENT');
+});
+
+test('a matching comments journal clears only after its save succeeds', async () => {
+  const { target, tab, key } = setup();
+  tab.reviewThreads = [{ body: 'COMMENT' }];
+  target.localStorage.setItem(key, JSON.stringify({ ...journal('OLD'), metadata: { reviewThreads: tab.reviewThreads } }));
+  await target._flushTabsToStorage([tab], { changedIds: [tab.id] });
+  assert.equal(target.localStorage.getItem(key), null);
+});
+
 for (const location of ['localStorage', 'sessionStorage', 'indexeddb']) {
   test(`older save must retain newer ${location} recovery journal`, async () => {
     const { target, tab, key } = setup();

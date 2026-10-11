@@ -8346,6 +8346,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function persistReviewThreads(message) {
     syncLiveReviewThreadsFromTab();
+    const tab = getActiveReviewTab();
+    if (tab && tab.contentLoaded !== false) {
+      saveCurrentTabState();
+      const journal = writeDirtyDocumentJournal(tab, tab.content);
+      if (!journal) persistEditWithoutDurableJournal(tab, tab.content);
+    }
     if (activeTabId) saveTabsToStorage(tabs, [activeTabId]);
     decorateReviewTargets();
     renderReviewPanel();
@@ -10169,7 +10175,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const input = reviewList && reviewList.querySelector(
         '.review-reply-edit-form[data-review-id="' + thread.id + '"][data-review-reply-id="' + reply.id + '"] .review-reply-edit-input'
       );
-      if (input) {
+      if (input && document.activeElement !== input) {
         input.focus({ preventScroll: true });
         input.setSelectionRange(input.value.length, input.value.length);
       }
@@ -10592,6 +10598,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         savedAt: Date.now(),
         metadata: {
           title: tab.title || 'Untitled',
+          reviewThreads: tab.reviewThreads || [],
           workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
           folderId: tab.folderId || null,
           viewMode: tab.viewMode || 'split',
@@ -10622,6 +10629,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           savedAt: Date.now(),
           metadata: {
             title: tab.title || 'Untitled',
+            reviewThreads: tab.reviewThreads || [],
             workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
             folderId: tab.folderId || null,
             viewMode: tab.viewMode || 'split',
@@ -10645,6 +10653,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           savedAt: Date.now(),
           metadata: {
             title: tab.title || 'Untitled',
+            reviewThreads: tab.reviewThreads || [],
             workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
             folderId: tab.folderId || null,
             viewMode: tab.viewMode || 'split',
@@ -10833,13 +10842,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       // Metadata-only writes do not commit a document body.
       if (!tab || tab.contentLoaded === false || typeof tab.content !== 'string') return;
       const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(id))));
-      const snapshot = { content: tab.content, local: {}, session: {}, indexed: {} };
+      const snapshot = { content: tab.content, reviewThreads: JSON.stringify(tab.reviewThreads || []), local: {}, session: {}, indexed: {} };
       [[localStorage, snapshot.local], [sessionStorage, snapshot.session]].forEach(function(pair) {
         keys.forEach(function(key) {
           try {
             const raw = pair[0].getItem(key);
             const value = raw && JSON.parse(raw);
-            if (value && value.documentId === id && value.content === snapshot.content) pair[1][key] = raw;
+            if (value && value.documentId === id && value.content === snapshot.content &&
+                (!value.metadata || !Array.isArray(value.metadata.reviewThreads) || JSON.stringify(value.metadata.reviewThreads) === snapshot.reviewThreads)) pair[1][key] = raw;
           } catch (_) { /* Unknown recovery data must be retained. */ }
         });
       });
@@ -10849,7 +10859,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       try {
         (await workspaceStorage.listDirtyJournals()).forEach(function(record) {
           const snapshot = snapshots.get(record.documentId);
-          if (snapshot && record.journalId && record.content === snapshot.content) {
+          if (snapshot && record.journalId && record.content === snapshot.content &&
+              (!record.metadata || !Array.isArray(record.metadata.reviewThreads) || JSON.stringify(record.metadata.reviewThreads) === snapshot.reviewThreads)) {
             snapshot.indexed[record.journalId] = record;
           }
         });
@@ -10952,6 +10963,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         existing.content = journal.content;
         existing.contentLoaded = true;
         existing.lastEditedAt = Number(journal.savedAt) || Date.now();
+        if (journal.metadata && Array.isArray(journal.metadata.reviewThreads)) existing.reviewThreads = normalizeReviewThreads(journal.metadata.reviewThreads);
         existing._dirtyJournalKeys = Array.from(new Set((existing._dirtyJournalKeys || []).concat(entry.key)));
         existing._dirtyIndexedDbJournalIds = Array.from(new Set((existing._dirtyIndexedDbJournalIds || []).concat(entry.key)));
         restoredOriginalIds.add(existing.id);
@@ -10965,6 +10977,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         folderId: metadata.folderId || null
       });
       recovered.favorite = metadata.favorite === true;
+      recovered.reviewThreads = normalizeReviewThreads(metadata.reviewThreads);
       recovered.createdAt = Number(metadata.createdAt) || recovered.createdAt;
       recovered.lastOpenedAt = Number(metadata.lastOpenedAt) || recovered.lastOpenedAt;
       recovered.lastEditedAt = Number(journal.savedAt) || Date.now();
