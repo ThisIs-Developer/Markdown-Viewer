@@ -14,6 +14,8 @@ const requiredFiles = [
   'index.html',
   '404.html',
   'workspace-storage.js',
+  'visual-settings-adapters.js',
+  'visual-settings-store.js',
   'script.js',
   'preview-worker.js',
   'styles.css',
@@ -123,7 +125,7 @@ if (SEO_LOCALES.length !== 15) {
   throw new Error(`Expected 15 supported SEO locales, found ${SEO_LOCALES.length}.`);
 }
 
-if (sitemapXml !== buildSitemap()) {
+if (sitemapXml.replace(/\r\n/g, '\n') !== buildSitemap().replace(/\r\n/g, '\n')) {
   throw new Error('sitemap.xml does not match the canonical locale configuration. Run npm run seo:sitemap.');
 }
 
