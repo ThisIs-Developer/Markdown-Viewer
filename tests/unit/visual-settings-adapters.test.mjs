@@ -9,7 +9,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../..');
 
 function createAdapterContext() {
-  const domListeners = new Map();
   const createdElements = [];
 
   const documentElement = {

@@ -200,11 +200,6 @@
     `;
   }
 
-  function ensureHljsStyleHelper() {
-    const effectiveName = resolveHljsThemeName(_activeHljsTheme);
-    updateHljsHelperStyle(effectiveName);
-  }
-
   /**
    * Apply highlight.js theme stylesheet.
    * Dynamically manages the <link id="mdv-hljs-theme-link"> in <head>.
@@ -318,7 +313,7 @@
     if (!fontClass && _activeMathFont !== 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
       _activeMathFont = 'mathjax-modern';
       const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
-      if (modernPkg && modernPkg.chtml_ts) {
+      if (modernPkg.chtml_ts) {
         fontClass = Object.values(modernPkg.chtml_ts)[0] || null;
       }
     }
@@ -331,7 +326,7 @@
       window.MathJax.config.chtml.fontData = fontClass;
     } else if (_activeMathFont === 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
       const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
-      if (modernPkg && modernPkg.chtml_ts) {
+      if (modernPkg.chtml_ts) {
         window.MathJax.config.chtml.fontData = Object.values(modernPkg.chtml_ts)[0] || null;
       }
     }
