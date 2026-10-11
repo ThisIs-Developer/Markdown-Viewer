@@ -64,6 +64,9 @@ async function replacementBackupBuffer() {
 
 test('a stale tab move cannot delete documents created in another tab', async ({ context, page }) => {
   await openApp(page);
+  // Seed a persisted document before the second writer takes its snapshot.
+  await setEditorContent(page, '# Shared document before opening the stale writer');
+  await waitForStoredContent(page, 'Shared document before opening the stale writer');
   const staleDocumentId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
   const secondPage = await context.newPage();
   await openApp(secondPage);
