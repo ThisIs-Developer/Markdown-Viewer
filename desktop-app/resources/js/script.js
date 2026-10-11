@@ -4161,7 +4161,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     configureMathJax();
     if (!mathJaxLoadPromise) {
-      mathJaxLoadPromise = loadScript(CDN.mathjax)
+      const initialFont = window.visualSettingsAdapters
+        ? window.visualSettingsAdapters.getCurrentMathFont()
+        : 'mathjax-modern';
+      const fontPreloadPromise = (initialFont && initialFont !== 'mathjax-modern' && window.visualSettingsAdapters)
+        ? window.visualSettingsAdapters.applyMathFont(initialFont)
+        : Promise.resolve();
+
+      mathJaxLoadPromise = fontPreloadPromise
+        .then(function() { return loadScript(CDN.mathjax); })
         .then(function() {
           return MathJax.startup && MathJax.startup.promise
             ? MathJax.startup.promise
@@ -24141,6 +24149,8 @@ ${selector} .arrowheadPath {
     if (visualSettingsModal) closeAppModal(visualSettingsModal);
   }
 
+  let _visualSettingsDebounceTimer = null;
+
   async function applyVisualSettings(settings, changedKey) {
     if (window.visualSettingsAdapters) {
       try {
@@ -24171,7 +24181,27 @@ ${selector} .arrowheadPath {
         console.warn('Error applying visual setting via adapter:', err);
       }
     }
-    renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+
+    // Invalidate secondary split document preview cache (P6)
+    documentSplitPreviewContent = null;
+    if (secondarySplitTabId && typeof renderDocumentSplitView === 'function') {
+      renderDocumentSplitView();
+    }
+
+    // Check if re-render is needed according to adapter contract (e.g. hljsTheme does not need markdown AST re-render)
+    const needsRender = !window.visualSettingsAdapters ||
+      typeof window.visualSettingsAdapters.needsRerender !== 'function' ||
+      window.visualSettingsAdapters.needsRerender(changedKey);
+
+    if (needsRender) {
+      if (_visualSettingsDebounceTimer) {
+        clearTimeout(_visualSettingsDebounceTimer);
+      }
+      _visualSettingsDebounceTimer = setTimeout(function() {
+        _visualSettingsDebounceTimer = null;
+        renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+      }, 50);
+    }
   }
 
   if (visualSettingsButton) {
