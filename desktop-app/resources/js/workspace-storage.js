@@ -1229,6 +1229,37 @@
       tab._storageContentJournalPaths = Array.from(new Set((tab._storageContentJournalPaths || []).concat(journalPath)));
     }
 
+    async _desktopInspectMovePath(path) {
+      try { return await Neutralino.filesystem.getStats(path); }
+      catch (error) {
+        if (!error || error.code !== 'NE_FS_NOPATHE') throw error;
+        // Native stat can report missing for an inaccessible entry. Confirm
+        // absence using its parent; never turn permission errors into absence.
+        const normalized = normalizePathSeparators(path);
+        const separator = normalized.lastIndexOf('/');
+        if (separator < 0) throw error;
+        const entries = await Neutralino.filesystem.readDirectory(normalized.slice(0, separator));
+        const name = normalized.slice(separator + 1);
+        const insensitive = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+        if (entries.some(function(entry) {
+          return insensitive ? String(entry.entry).toLowerCase() === name.toLowerCase() : entry.entry === name;
+        })) {
+          throw Object.assign(new Error('Move cancelled: a file exists but cannot be inspected at ' + path + '. No existing file was replaced.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
+        }
+        return null;
+      }
+    }
+
+    async _desktopCheckMovePaths(source, destination) {
+      const stats = await this._desktopInspectMovePath(source);
+      if (!stats || stats.isDirectory || stats.isFile === false) {
+        throw Object.assign(new Error('Move cancelled: the source is missing or is not a file at ' + source + '. No replacement was created.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
+      }
+      if (await this._desktopInspectMovePath(destination)) {
+        throw Object.assign(new Error('Move cancelled: the destination already exists at ' + destination + '. Both files were left unchanged.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
+      }
+    }
+
     async _desktopSaveDocument(tab, organization, forceContent) {
       requireDocumentId(tab && tab.id);
       const existing = this.vaultIndex.documents.find(function (item) { return item.id === tab.id; });
@@ -1254,6 +1285,7 @@
 
       if (existing && existing.vaultRelativePath && existing.vaultRelativePath !== relativePath) {
         const oldPath = await this._desktopResolveVaultRelativePath(existing.vaultRelativePath);
+        await this._desktopCheckMovePaths(oldPath, fullPath);
         const journalDirectory = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal');
         const moveJournalPath = await this._pathJoin(journalDirectory, sanitizePathSegment(tab.id, 'document') + '.move.json');
         await this._writeJsonFile(moveJournalPath, {
@@ -1266,14 +1298,10 @@
           startedAt: Date.now()
         });
         tab._storageMoveJournalPath = moveJournalPath;
-        if (await this._pathExists(oldPath)) {
-          if (await this._pathExists(fullPath)) {
-            await Neutralino.filesystem.writeFile(fullPath, typeof tab.content === 'string' ? tab.content : await Neutralino.filesystem.readFile(oldPath));
-            await Neutralino.filesystem.remove(oldPath);
-          } else {
-            await Neutralino.filesystem.move(oldPath, fullPath);
-          }
-        }
+        // Recheck after asynchronous journal writing. Do not overwrite a
+        // collision, delete the source or fall back to a destructive copy.
+        await this._desktopCheckMovePaths(oldPath, fullPath);
+        await Neutralino.filesystem.move(oldPath, fullPath);
       }
       if (forceContent || tab.contentLoaded !== false) {
         const content = typeof tab.content === 'string' ? tab.content : '';

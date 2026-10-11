@@ -11192,7 +11192,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
       console.warn('Failed to save workspace documents:', e);
       updateSaveStatus('error');
-      showAppToast('The workspace could not be saved. Existing saved documents were kept.', {
+      showAppToast(e.code === 'WORKSPACE_MOVE_BLOCKED' ? e.message : 'The workspace could not be saved. Existing saved documents were kept.', {
         tone: 'error',
         title: 'Changes not saved'
       });
