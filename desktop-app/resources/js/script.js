@@ -11162,11 +11162,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     try {
       const storageTabs = getTabsForStorage(tabsArr);
       const commit = async function() {
-        const journalSnapshots = await captureDirtyDocumentJournalSnapshot(storageTabs, changedIds);
+        // A queued save must not resurrect documents removed before it runs.
+        const currentStorageTabs = storageTabs.filter(function(tab) { return tabs.some(function(item) { return item.id === tab.id; }); });
+        const journalSnapshots = await captureDirtyDocumentJournalSnapshot(currentStorageTabs, changedIds);
         if (workspaceStorage) {
-          await workspaceStorage.saveDocuments(storageTabs, documentOrganization, { changedIds: changedIds });
+          await workspaceStorage.saveDocuments(currentStorageTabs, documentOrganization, { changedIds: changedIds });
         } else {
-          saveStorageItem(STORAGE_KEY, JSON.stringify(storageTabs));
+          saveStorageItem(STORAGE_KEY, JSON.stringify(currentStorageTabs));
         }
         await Promise.all(changedIds.map(function(id) {
           const tab = tabs.find(function(item) { return item.id === id; });
@@ -12552,7 +12554,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     return true;
   }
 
-  async function deleteTab(tabId) {
+  let documentDeletionChain = Promise.resolve();
+  function deleteTab(tabId) {
+    const operation = documentDeletionChain.catch(function() {}).then(function() {
+      return deleteTabSnapshot(tabId);
+    });
+    documentDeletionChain = operation;
+    return operation;
+  }
+
+  async function deleteTabSnapshot(tabId) {
     if (pendingReviewDelete && pendingReviewDelete.tabId === tabId) {
       cancelReviewDeleteConfirmation();
     }
@@ -12565,11 +12576,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       return;
     }
 
-    const idx = tabs.findIndex(function(t) { return t.id === tabId; });
-    if (idx === -1) return;
+    let idx = tabs.findIndex(function(t) { return t.id === tabId; });
+    if (idx === -1) return false;
     const tab = tabs[idx];
-    const wasActive = activeTabId === tabId;
-    const splitPartnerId = wasActive ? secondarySplitTabId : null;
+    let wasActive = activeTabId === tabId;
+    let splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) saveCurrentTabState();
     saveSecondarySplitState();
     if (!isTemporaryDocument(tab) && tab.workspaceId !== SECRET_WORKSPACE_ID && workspaceStorage && !isPrivateStorageMode()) {
@@ -12582,7 +12593,14 @@ document.addEventListener("DOMContentLoaded", async function () {
         return false;
       }
       try {
-        await workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision });
+        // Use the same queue as document saves. Remove the live entry before
+        // subsequent queued saves select their current documents.
+        workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(async function() {
+          await workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision });
+          const currentIndex = tabs.indexOf(tab);
+          if (currentIndex >= 0) { idx = currentIndex; tabs.splice(currentIndex, 1); }
+        });
+        await workspacePersistenceChain;
       } catch (error) {
         if (error && error.name === 'WorkspaceConflictError') {
           showAppToast('The document changed in another tab and was not deleted. Reload before trying again.', {
@@ -12599,6 +12617,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         return false;
       }
     }
+    wasActive = activeTabId === tabId;
+    splitPartnerId = wasActive ? secondarySplitTabId : null;
     if (wasActive) {
       closeReviewComposer();
       clearReviewDecorations();
@@ -12614,7 +12634,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       delete tabHistories[tabId];
     }
     
-    tabs.splice(idx, 1);
+    const remainingIndex = tabs.indexOf(tab);
+    if (remainingIndex >= 0) { idx = remainingIndex; tabs.splice(remainingIndex, 1); }
     clearDirtyDocumentJournal(tab);
     if (tab.workspaceId === SECRET_WORKSPACE_ID) saveTabsToStorage(tabs, []);
     if (wasActive) {
@@ -12626,7 +12647,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       } else {
         clearActiveDocument();
       }
-      return;
+      return true;
     }
     if (selectedDocumentId === tabId) selectedDocumentId = activeTabId;
     renderDocumentSplitView();
