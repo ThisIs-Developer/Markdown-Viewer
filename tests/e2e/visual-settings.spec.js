@@ -71,6 +71,14 @@ Greetings: :wave: :thumbsup: :smile:
     await expect(modal).toBeVisible();
     await page.locator('#visual-settings-close-icon').click();
     await expect(modal).not.toBeVisible();
+
+    // Open via workspace settings dropdown menu
+    await page.locator('#workspaceSettingsDropdown').click();
+    await expect(page.locator('#menu-visual-settings-button')).toBeVisible();
+    await page.locator('#menu-visual-settings-button').click();
+    await expect(modal).toBeVisible();
+    await page.locator('#visual-settings-close-btn').click();
+    await expect(modal).not.toBeVisible();
   });
 
   test('all settings update live, re-render preview, persist across reloads, and reset', async ({ page }) => {
@@ -206,5 +214,188 @@ Greetings: :wave: :thumbsup: :smile:
     expect(selectBg).toBeTruthy();
 
     await page.locator('#visual-settings-close-btn').click();
+  });
+
+  test('P4 & P5: all 14 highlight.js themes resolve valid stylesheets and dark themes have readable backgrounds in light mode', async ({ page }) => {
+    await openApp(page);
+
+    // Verify all 14 theme options exist
+    const options = await page.evaluate(() => window.visualSettingsAdapters.getOptions().hljsTheme.map(o => o.value));
+    const themeValues = options.filter(v => v !== 'auto');
+    expect(themeValues.length).toBe(14);
+
+    // Test base16 themes (P4)
+    for (const theme of ['dracula', 'solarized-dark', 'solarized-light']) {
+      await page.evaluate(async (t) => {
+        await window.visualSettingsAdapters.applyHighlightTheme(t);
+      }, theme);
+      const linkHref = await page.locator('#mdv-hljs-theme-link').getAttribute('href');
+      expect(linkHref).toContain(`base16/${theme}.min.css`);
+    }
+
+    // Set sample code in light mode (P5)
+    await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+    const editor = page.locator('#markdown-editor');
+    await editor.fill('```javascript\nfunction test() { return 42; }\n```');
+    await editor.dispatchEvent('input');
+    await page.waitForTimeout(500);
+
+    // Apply Monokai
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyHighlightTheme('monokai');
+    });
+
+    const preBg = await page.locator('#markdown-preview pre').first().evaluate(el => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    const codeColor = await page.locator('#markdown-preview pre code').first().evaluate(el => {
+      return window.getComputedStyle(el).color;
+    });
+
+    // Dark theme should NOT be transparent in light mode
+    expect(preBg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(preBg).not.toBe('transparent');
+    expect(preBg).toContain('39, 40, 34'); // #272822
+    expect(codeColor).toContain('221, 221, 221'); // #ddd
+  });
+
+  test('P1: MathJax font switches to STIX Two and updates output jax font data live and on reload', async ({ page }) => {
+    await openApp(page, '/', { mockMathJax: false });
+
+    // Fill math content
+    const editor = page.locator('#markdown-editor');
+    await editor.fill('$$E = mc^2$$');
+    await editor.dispatchEvent('input');
+    await page.locator('#markdown-preview mjx-container').first().waitFor({ timeout: 15_000 });
+
+    // Apply STIX Two font live
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyMathFont('mathjax-stix2');
+    });
+
+    const fontState = await page.evaluate(() => {
+      const mj = window.MathJax;
+      const font = mj?.startup?.output?.font;
+      const fontPkg = mj?._?.output?.fonts?.[window.visualSettingsAdapters?.getCurrentMathFont()];
+      const fontClassKey = fontPkg?.chtml_ts ? Object.keys(fontPkg.chtml_ts)[0] : null;
+      return {
+        activeFont: window.visualSettingsAdapters?.getCurrentMathFont(),
+        hasFontData: !!mj?.config?.chtml?.fontData,
+        fontClassKey,
+        cssFontPrefix: font?.cssFontPrefix
+      };
+    });
+
+    expect(fontState.activeFont).toBe('mathjax-stix2');
+    expect(fontState.hasFontData).toBe(true);
+    expect(fontState.fontClassKey).toBe('MathJaxStix2Font');
+    expect(fontState.cssFontPrefix).toBe('STX');
+  });
+
+  test('P6 & P7: split preview refreshes emoji, math, mermaid, and syntax themes across both panes', async ({ page }) => {
+    await openApp(page, '/', { mockMathJax: false });
+
+    // Primary document with emoji, math formula, mermaid diagram, and code block
+    const primaryContent = '# Primary\n\n:wave:\n\n$$\\sum_{i=1}^n i$$\n\n```mermaid\ngraph TD\n  A-->B\n```\n\n```javascript\nconst a = 1;\n```';
+    const secondaryContent = '# Secondary\n\n:wave:\n\n$$\\int_0^\\infty x dx$$\n\n```mermaid\ngraph TD\n  C-->D\n```\n\n```javascript\nconst b = 2;\n```';
+
+    const editor = page.locator('#markdown-editor');
+    await editor.fill(primaryContent);
+    await editor.dispatchEvent('input');
+    await page.waitForTimeout(1000);
+
+    // Create a second tab for split view test (P6)
+    await page.locator('#tab-new-btn').click();
+    await editor.fill(secondaryContent);
+    await editor.dispatchEvent('input');
+    await page.waitForTimeout(500);
+
+    // Open first tab in split view
+    const secondTabId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+    await page.locator('#tab-list .tab-item').first().click({ button: 'right' });
+    await page.getByRole('menuitem', { name: 'Open in split view' }).click();
+    await page.locator('#document-split-destination').selectOption(secondTabId);
+    await page.locator('#document-split-modal-confirm').click();
+
+    // Switch to preview mode to see split preview
+    await page.locator('button.view-toggle-btn[data-view-mode="preview"]').click();
+
+    // Verify initial yellow wave in both panes
+    await expect(page.locator('#markdown-preview')).toContainText('👋');
+    await expect(page.locator('#document-split-preview')).toContainText('👋');
+
+    // Verify math, mermaid, and code blocks rendered in both panes
+    await expect(page.locator('#markdown-preview mjx-container')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#document-split-preview mjx-container')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#markdown-preview .mermaid svg')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#document-split-preview .mermaid svg')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('#markdown-preview pre code.hljs')).toBeVisible();
+    await expect(page.locator('#document-split-preview pre code.hljs')).toBeVisible();
+
+    // 1. Change emoji skin tone to tone3
+    await page.locator('#visual-settings-button').click();
+    await page.locator('#visual-setting-emoji-skin-tone').selectOption('tone3');
+    await page.locator('#visual-settings-close-btn').click();
+
+    // Verify both primary and split preview refresh to tone3 (P6 & P7)
+    await expect.poll(async () => {
+      const primary = await page.locator('#markdown-preview').textContent();
+      const secondary = await page.locator('#document-split-preview').textContent();
+      return { primary: primary.includes('👋🏽'), secondary: secondary.includes('👋🏽') };
+    }, { timeout: 10_000 }).toEqual({ primary: true, secondary: true });
+
+    // 2. Change hljs theme to dracula (Base16 theme)
+    await page.locator('#visual-settings-button').click();
+    await page.locator('#visual-setting-hljs-theme').selectOption('dracula');
+    await page.locator('#visual-settings-close-btn').click();
+
+    await expect.poll(async () => {
+      return page.evaluate(() => document.getElementById('mdv-hljs-theme-link')?.href || '');
+    }, { timeout: 10_000 }).toContain('styles/base16/dracula.min.css');
+
+    // 3. Change math font to STIX Two
+    await page.locator('#visual-settings-button').click();
+    await page.locator('#visual-setting-math-font').selectOption('mathjax-stix2');
+    await page.locator('#visual-settings-close-btn').click();
+
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const adapters = window.visualSettingsAdapters;
+        return adapters ? adapters.getCurrentMathFont() : null;
+      });
+    }, { timeout: 15_000 }).toBe('mathjax-stix2');
+
+    // 4. Change mermaid theme to dark and look to handDrawn
+    await page.locator('#visual-settings-button').click();
+    await page.locator('#visual-setting-mermaid-theme').selectOption('dark');
+    await page.locator('#visual-setting-mermaid-look').selectOption('handDrawn');
+    await page.locator('#visual-settings-close-btn').click();
+
+    await expect.poll(async () => {
+      return page.evaluate(() => window.visualSettingsAdapters?.getMermaidConfig());
+    }, { timeout: 10_000 }).toMatchObject({ theme: 'dark', look: 'handDrawn' });
+
+    // 5. Verify reload persistence
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+
+    const persisted = await page.evaluate(() => window.visualSettingsStore.getSettings());
+    expect(persisted.emojiSkinTone).toBe('tone3');
+    expect(persisted.hljsTheme).toBe('dracula');
+    expect(persisted.mathFont).toBe('mathjax-stix2');
+    expect(persisted.mermaidTheme).toBe('dark');
+    expect(persisted.mermaidLook).toBe('handDrawn');
+  });
+
+  test('P3: Dockerfile includes visual settings scripts and distribution assets are complete', async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+    const dockerfile = fs.readFileSync(path.resolve(__dirname, '../../Dockerfile'), 'utf8');
+    expect(dockerfile).toContain('COPY visual-settings-adapters.js');
+    expect(dockerfile).toContain('COPY visual-settings-store.js');
+
+    const sw = fs.readFileSync(path.resolve(__dirname, '../../sw.js'), 'utf8');
+    expect(sw).toContain('visual-settings-adapters.js');
+    expect(sw).toContain('visual-settings-store.js');
   });
 });

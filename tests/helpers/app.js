@@ -33,7 +33,7 @@ async function appVersion() {
   return appVersionPromise;
 }
 
-async function installLocalBrowserAssets(page) {
+async function installLocalBrowserAssets(page, options = {}) {
   if (routedPages.has(page)) return;
   routedPages.add(page);
 
@@ -50,26 +50,28 @@ async function installLocalBrowserAssets(page) {
     });
   }
 
-  await page.addInitScript(() => {
-    window.MathJax = {
-      startup: { promise: Promise.resolve() },
-      typesetPromise(targets = []) {
-        targets.forEach(target => {
-          if (target.querySelector('mjx-container[data-test-renderer]')) return;
-          const rendered = document.createElement('mjx-container');
-          rendered.dataset.testRenderer = 'true';
-          rendered.textContent = 'Rendered math';
-          target.appendChild(rendered);
-        });
-        return Promise.resolve();
-      },
-      typesetClear(targets = []) {
-        targets.forEach(target => {
-          target.querySelectorAll('mjx-container[data-test-renderer]').forEach(node => node.remove());
-        });
-      }
-    };
-  });
+  if (options.mockMathJax !== false) {
+    await page.addInitScript(() => {
+      window.MathJax = {
+        startup: { promise: Promise.resolve() },
+        typesetPromise(targets = []) {
+          targets.forEach(target => {
+            if (target.querySelector('mjx-container[data-test-renderer]')) return;
+            const rendered = document.createElement('mjx-container');
+            rendered.dataset.testRenderer = 'true';
+            rendered.textContent = 'Rendered math';
+            target.appendChild(rendered);
+          });
+          return Promise.resolve();
+        },
+        typesetClear(targets = []) {
+          targets.forEach(target => {
+            target.querySelectorAll('mjx-container[data-test-renderer]').forEach(node => node.remove());
+          });
+        }
+      };
+    });
+  }
 }
 
 async function waitForAppReady(page) {
@@ -91,7 +93,7 @@ function isCriticalBrowserMessage(message) {
 async function openApp(page, url = '/', options = {}) {
   const expectEditorVisible = options.expectEditorVisible !== false;
   const criticalErrors = [];
-  await installLocalBrowserAssets(page);
+  await installLocalBrowserAssets(page, options);
   if (options.showReleaseNotes !== true) {
     const version = await appVersion();
     await page.addInitScript(currentVersion => {
