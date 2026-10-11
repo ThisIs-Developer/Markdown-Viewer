@@ -2,6 +2,13 @@ import { readFile, readdir } from 'node:fs/promises';
 
 const CATALOG_DIR = new URL('./', import.meta.url);
 const EXPECTED_LOCALES = ['bg', 'de', 'en', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'tr', 'tw', 'uk', 'zh'];
+// Keyboard key names and bare capacity values may legitimately remain identical.
+// Keep the exception finite: ordinary untranslated UI labels must still fail.
+const SHARED_TECHNICAL_LITERALS = ['Alt', 'Tab', 'Cmd', 'F11', 'F3', '10 MB.', '20 MiB.'];
+const REVIEWED_IDENTICAL_TRANSLATIONS = {
+  de: ['Option'],
+  it: ['$$ formula $$', ...Array.from({ length: 6 }, (_, index) => `Desktop: Ctrl/Cmd+${index + 1}`)]
+};
 const ALLOWED_IDENTICAL_TRANSLATIONS = {
   bg: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'Git Graph', 'GitHub', 'GitHub URL', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'Shift', 'SVG', 'ThisIs-Developer'],
   de: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Explorer', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Name', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer', 'Version', 'Wrap'],
@@ -54,6 +61,7 @@ addFailures(failures, 'en', 'non-English source pollution', englishKeys.filter(s
 addFailures(failures, 'en', 'non-interface source key', englishKeys.filter(source =>
   /^\d+\.\d+\.\d+(?:-[\w.-]+)?$/i.test(source)
   || /^bi(?:\s+bi-[\w-]+)+$/i.test(source)
+  || /\[[\w-]+[~|^$*]?=[^\]]*\]/.test(source)
   || /(?:^|\s)(?:style|class|id|aria-[\w-]+|data-[\w-]+|role|tabindex)=/i.test(source)
 ));
 
@@ -75,7 +83,7 @@ for (const locale of files) {
     || (key.includes('Markdown') && !catalog[key].includes('Markdown'))
   ));
   if (locale !== 'en') {
-    const allowed = new Set(ALLOWED_IDENTICAL_TRANSLATIONS[locale] || []);
+    const allowed = new Set([...SHARED_TECHNICAL_LITERALS, ...(ALLOWED_IDENTICAL_TRANSLATIONS[locale] || []), ...(REVIEWED_IDENTICAL_TRANSLATIONS[locale] || [])]);
     addFailures(failures, locale, 'unexpected English fallback', keys.filter(key =>
       catalog[key] === key && !allowed.has(key)
     ));
