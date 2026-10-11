@@ -21332,10 +21332,10 @@ ${selector} .arrowheadPath {
     urlInput.addEventListener('keydown', onKey);
     titleInput.addEventListener('keydown', onKey);
 
-    requestAnimationFrame(function() {
-      numberInput.focus();
-      numberInput.select();
-    });
+    // The modal is already displayed. Focus synchronously so a deferred callback
+    // cannot steal focus after the user starts filling the URL or title field.
+    numberInput.focus();
+    numberInput.select();
   }
 
   function escapeRegExp(text) {

@@ -154,6 +154,29 @@ for (const pane of ['primary', 'secondary']) {
       await expect(editor).toBeFocused();
     });
 
+    test('reference chooser does not steal focus from a field already being edited', async ({ page }) => {
+      // Capture the chooser's deferred focus callback without delaying slash-menu
+      // opening. Flushing it after a user selects another field exposes the race.
+      await page.evaluate(() => {
+        const nativeFrame = window.requestAnimationFrame;
+        window.__referenceFocusFrames = [];
+        window.requestAnimationFrame = function(callback) {
+          if (String(callback).includes('numberInput.focus()')) {
+            window.__referenceFocusFrames.push(callback);
+            return 0;
+          }
+          return nativeFrame.call(window, callback);
+        };
+      });
+      await enterCommand(page, editor, 'reference', 'reference');
+      await page.locator('#reference-modal-url').fill('https://example.com/focus');
+      await page.evaluate(() => window.__referenceFocusFrames.splice(0).forEach(callback => callback()));
+      await expect(page.locator('#reference-modal-url')).toBeFocused();
+      await page.locator('#reference-modal-title-input').fill('Kept title');
+      await page.locator('#reference-modal-apply').click();
+      await expect(editor).toHaveValue(prefix + '[1]' + suffix + '\n[1]: https://example.com/focus "Kept title"');
+    });
+
     test('cancels insertion when the target changes during upload', async ({ page }) => {
       let releaseUpload;
       const pendingUpload = new Promise(resolve => { releaseUpload = resolve; });
