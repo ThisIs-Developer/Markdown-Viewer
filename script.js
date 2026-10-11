@@ -21225,14 +21225,13 @@ ${selector} .arrowheadPath {
       uploadFields.style.display = isUpload ? 'flex' : 'none';
       urlFields.style.display = isUpload ? 'none' : 'flex';
       if (shouldFocus) {
-        requestAnimationFrame(function() {
-          if (isUpload) {
-            fileInput.focus();
-          } else {
-            urlInput.focus();
-            urlInput.select();
-          }
-        });
+        // Focus immediately so a deferred callback cannot steal subsequent input.
+        if (isUpload) {
+          fileInput.focus();
+        } else {
+          urlInput.focus();
+          urlInput.select();
+        }
       }
     }
 

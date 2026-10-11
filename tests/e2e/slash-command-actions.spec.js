@@ -118,6 +118,27 @@ for (const pane of ['primary', 'secondary']) {
         await expect(editor).toHaveValue(prefix + expected + suffix);
       }
     });
+    test('media chooser does not steal focus from an edited field', async ({ page }) => {
+      await page.evaluate(() => {
+        const nativeFrame = window.requestAnimationFrame;
+        window.__mediaFocusFrames = [];
+        window.requestAnimationFrame = function(callback) {
+          if (String(callback).includes('fileInput.focus()')) {
+            window.__mediaFocusFrames.push(callback);
+            return 0;
+          }
+          return nativeFrame.call(window, callback);
+        };
+      });
+      await enterCommand(page, editor, 'image', 'image');
+      await page.locator('#image-modal-url').fill('https://example.com/focus.mp4');
+      await page.locator('#image-modal-alt').fill('Kept title');
+      await page.evaluate(() => window.__mediaFocusFrames.splice(0).forEach(callback => callback()));
+      await expect(page.locator('#image-modal-alt')).toBeFocused();
+      await page.locator('#image-modal-insert').click();
+      await expect(editor).toHaveValue(prefix + '<video controls preload="metadata" src="https://example.com/focus.mp4" aria-label="Kept title"></video>' + suffix);
+    });
+
     test('media upload stays in the command target editor (mock upload API)', async ({ page }) => {
       await page.route('**/api/image', route => route.fulfill({ json: { id: mediaId } }));
       await mockMediaDownload(page);
