@@ -265,6 +265,14 @@ body {
   gap: 1px;
 }
 
+.document-sidebar-actions-separator:not([hidden]) {
+  display: block;
+  flex: 0 0 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--border-color);
+}
+
 .document-sidebar-heading h2 {
   margin: 0;
   color: var(--text-color);
@@ -554,6 +562,26 @@ body {
   outline: none;
 }
 
+.sidebar-pointer-dragging,
+.sidebar-pointer-dragging * {
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+.sidebar-pointer-dragging .document-drag-preview {
+  pointer-events: none;
+}
+
+.sidebar-pointer-dragging .document-drag-preview::after {
+  content: attr(data-drop-action);
+  display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--button-bg);
+  color: var(--text-primary);
+  font-size: var(--ui-font-xs);
+}
+
 .document-tree-load-more {
   width: calc(100% - 12px);
   min-height: 30px;
@@ -613,16 +641,18 @@ body {
   background: color-mix(in srgb, var(--accent-color) 7%, transparent);
 }
 
-.document-tree-row[data-tree-type="document"].is-selected > .document-tree-main > i:first-child,
 .document-tree-row[data-tree-type="document"].is-active > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
-.document-tree-row[draggable="true"] {
+.document-tree-row[draggable="true"],
+.document-tree-row[data-pointer-draggable="true"] {
   cursor: grab;
+  user-select: none;
 }
 
-.document-tree-row[draggable="true"].is-dragging {
+.document-tree-row[draggable="true"].is-dragging,
+.document-tree-row[data-pointer-draggable="true"].is-dragging {
   cursor: grabbing;
   opacity: 0.45;
 }
@@ -748,8 +778,7 @@ body {
   text-align: center;
 }
 
-.document-tree-main > .lucide-folder-open,
-.document-tree-row[aria-expanded="true"] > .document-tree-main > .lucide-briefcase-business {
+.document-tree-row.is-current-location > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
@@ -772,6 +801,27 @@ body {
   flex: 0 0 auto;
   color: var(--text-secondary);
   font-size: var(--ui-font-xs);
+}
+
+.document-source-missing-indicator,
+.document-source-conflict-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 2px;
+  color: #bf8700;
+  cursor: help;
+}
+
+.document-source-missing-indicator {
+  color: var(--color-danger-fg);
+}
+
+.document-source-missing-indicator:focus-visible,
+.document-source-conflict-indicator:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 .document-tree-main > .document-favorite-indicator {
@@ -1348,7 +1398,8 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--accent-color);
 }
 
-.app-toast-icon-shell > .bi {
+.app-toast-icon-shell > .bi,
+.app-toast-icon-shell > .lucide {
   font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }
@@ -1416,6 +1467,28 @@ body.document-sidebar-collapsed .document-sidebar {
   flex-wrap: wrap;
   gap: 8px;
   margin-block-start: 1px;
+}
+
+.app-toast-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.app-toast-message--full {
+  display: block;
+  -webkit-line-clamp: unset;
+  max-height: min(40vh, 240px);
+  overflow: auto;
+}
+
+.app-toast-checkbox input {
+  flex: none;
+  margin-top: 2px;
+  accent-color: var(--color-accent-fg);
 }
 
 .app-toast-action {
@@ -4281,6 +4354,10 @@ a:focus {
   color: var(--color-danger-fg);
 }
 
+.app-save-status.is-linked-conflict {
+  color: #bf8700;
+}
+
 @keyframes save-status-spin {
   to { transform: rotate(360deg); }
 }
@@ -6645,6 +6722,55 @@ a:focus {
 .reset-modal-btn:disabled {
   cursor: not-allowed;
   opacity: 0.48;
+}
+
+.linked-confirm-modal-box {
+  width: min(540px, calc(100vw - 32px));
+  max-width: 540px;
+}
+
+#linked-confirm-modal-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: min(40vh, 320px);
+  overflow: auto;
+}
+
+#linked-confirm-modal-checkbox-label[hidden] { display: none; }
+
+.linked-confirm-primary {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+.linked-confirm-primary:hover { filter: brightness(0.9); background: var(--accent-color); }
+
+/* Dark-theme accent text is too light for white labels on filled buttons. */
+[data-theme="dark"] .linked-confirm-primary {
+  background: #1f6feb;
+  border-color: #1f6feb;
+}
+
+[data-theme="dark"] .linked-confirm-primary:hover {
+  filter: none;
+  background: #1a5fce;
+  border-color: #1a5fce;
+}
+
+/* Only actions that explicitly discard/replace content are destructive. */
+.linked-confirm-primary.linked-confirm-danger,
+[data-theme="dark"] .linked-confirm-primary.linked-confirm-danger {
+  background: #b62324;
+  border-color: #b62324;
+  color: #fff;
+}
+
+.linked-confirm-primary.linked-confirm-danger:hover,
+[data-theme="dark"] .linked-confirm-primary.linked-confirm-danger:hover {
+  filter: none;
+  background: #a11f20;
+  border-color: #a11f20;
 }
 
 .reset-modal-confirm {
@@ -12428,6 +12554,108 @@ html[data-theme="dark"] .mermaid svg {
 
 .app-modal-box > .modal-header + .reset-modal-actions {
   border-top: 0;
+}
+
+.desktop-drop-modal-box {
+  width: min(94vw, 680px);
+  max-width: 680px;
+}
+
+.desktop-drop-modal-box .modal-header > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.desktop-drop-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desktop-drop-file-summary {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.desktop-drop-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.desktop-drop-choice {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 11px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-color);
+  color: var(--text-color);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.desktop-drop-choice:hover,
+.desktop-drop-choice:focus-visible {
+  border-color: var(--accent-color);
+  background: color-mix(in srgb, var(--accent-color) 7%, var(--bg-color));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  outline: 0;
+}
+
+.desktop-drop-choice-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--header-bg);
+  color: var(--accent-color);
+}
+
+.desktop-drop-choice-icon .lucide {
+  width: 17px;
+  height: 17px;
+}
+
+.desktop-drop-choice-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.desktop-drop-choice-copy strong {
+  font-size: var(--ui-font-md);
+  line-height: 1.25;
+}
+
+.desktop-drop-choice-copy span,
+.desktop-drop-choice-copy small {
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.4;
+}
+
+.desktop-drop-choice-copy small {
+  margin-top: 2px;
+  font-size: var(--ui-font-xs);
+}
+
+@media (max-width: 620px) {
+  .desktop-drop-choice-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Keep the custom table form compact: it only contains two numeric values. */

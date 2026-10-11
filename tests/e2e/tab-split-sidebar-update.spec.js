@@ -61,7 +61,7 @@ async function createPreviewDocuments(page, documents) {
 
 test('tab bar uses standard file, menu, and close controls', async ({ page }) => {
   const tab = page.locator('#tab-list .tab-item.active');
-  await expect(tab.locator('.tab-file-icon')).toHaveClass(/lucide-file-text/);
+  await expect(tab.locator('.tab-file-icon')).toHaveClass(/lucide-book-open-text/);
   await expect(tab.locator('.tab-menu-btn i')).toHaveClass(/lucide-ellipsis/);
   await expect(tab.locator('.tab-close-btn')).toBeVisible();
   await expect(page.locator('#document-sidebar-open i')).toHaveClass(/lucide-panel-left-close/);
@@ -330,7 +330,7 @@ test('header groups document actions before application preferences', async ({ p
   await header.locator('#importDropdown').click();
   const newMenu = header.locator('[aria-labelledby="importDropdown"]');
   await expect(newMenu).toBeVisible();
-  await expect(newMenu.locator('.app-menu-label')).toHaveText(['New document', 'From files', 'From GitHub']);
+  await expect(newMenu.locator('.app-menu-label:visible')).toHaveText(['New document', 'From files', 'From GitHub']);
   await expect(newMenu.locator('.settings-menu-header, .app-menu-description')).toHaveCount(0);
   await newMenu.locator('#header-new-document').click();
   await expect(page.locator('#tab-list .tab-item')).toHaveCount(initialTabCount + 1);

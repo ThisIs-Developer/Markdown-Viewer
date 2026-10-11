@@ -9,7 +9,7 @@ test('Explorer labels and sidebar toggle describe the next action', async ({ pag
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator('#document-sidebar-title')).toHaveText('Explorer');
   await expect(page.locator('.document-sidebar-heading i')).toHaveCount(0);
-  await expect(page.locator('.document-tree-row[data-tree-id="workspace_default"] .document-tree-label')).toHaveText('Workspace');
+  await expect(page.locator('.document-tree-row[data-tree-id="workspace_default"] .document-tree-label')).toHaveText('Workspace (Vault)');
 
   const toggle = page.locator('#document-sidebar-open');
   await expect(toggle).not.toHaveClass(/is-active/);

@@ -132,10 +132,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js" integrity="sha384-LWJZQx0dgGhEK7snfNYrQs5K+QKD1sOmE02sOQCz4br9UmqSJDvPLoUVFaUyFnjq" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.13/purify.min.js" integrity="sha384-ZuC+DIACqSIZTsp+7YF57cR5Y+6qXa7YFbEKdA/EHA/R0T+41dtorqucYl71Zp+t" crossorigin="anonymous" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy" crossorigin="anonymous" defer></script>
     <!-- PERF-002: MathJax, Mermaid, JoyPixels, jsPDF, html2canvas, pako are now lazy-loaded by script.js on first use -->
-    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.3.1/dist/js-yaml.min.js" integrity="sha384-S9ICdlb+JXmKnf3zbM1G+PBNWbhB7ARTUpJyvroFrHHHR8JsKt4oO+kPyfzbT+TM" crossorigin="anonymous" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js" integrity="sha384-uwLg6oO8ZhFG2SuQfgmkMtosjtrFYlkPspa/cXS+b3D8GLRTHMDl/mTwqImdlKQO" crossorigin="anonymous" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -174,7 +174,9 @@
                         </button>
                         <ul class="dropdown-menu app-command-menu header-command-menu header-new-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="header-new-document"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i><span class="app-menu-label">New document</span></a></li>
-                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-upload" aria-hidden="true"></i><span class="app-menu-label">From files</span></a></li>
+                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-files" aria-hidden="true"></i><span class="app-menu-label">Import copies</span></a></li>
+                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-file"><i class="lucide lucide-file-symlink" aria-hidden="true"></i><span class="app-menu-label">Link files…</span></a></li>
+                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-folder"><i class="lucide lucide-folder-symlink" aria-hidden="true"></i><span class="app-menu-label">Link folder…</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-github"><i class="bi bi-github" aria-hidden="true"></i><span class="app-menu-label">From GitHub</span></a></li>
                         </ul>
                     </div>
@@ -257,6 +259,9 @@
                             </button>
                             <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and backup">
                                 <i class="lucide lucide-box" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage and Backup</span><span class="app-menu-description">Back up or restore your workspace</span></span>
+                            </button>
+                            <button class="settings-menu-item app-menu-item settings-menu-item--toggle desktop-linked-command" data-original-save-warning-toggle type="button" aria-pressed="true" hidden>
+                                <i class="lucide lucide-save" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Confirm saving to original</span><span class="app-menu-description" data-original-save-warning-description>Ask before updating linked originals</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                             </button>
                             <button id="trash-settings-button" class="settings-menu-item app-menu-item" type="button" title="Open Trash">
                                 <i class="lucide lucide-trash-2" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Trash</span><span class="app-menu-description">Restore or permanently delete files</span></span>
@@ -416,6 +421,9 @@
                                         <button id="mobile-storage-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Storage and backup">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-box" aria-hidden="true"></i><span>Storage and Backup</span></span>
                                         </button>
+                                        <button class="mobile-menu-item mobile-settings-item mobile-settings-toggle desktop-linked-command" data-original-save-warning-toggle type="button" aria-pressed="true" hidden>
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-save" aria-hidden="true"></i><span>Confirm saving to original</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
+                                        </button>
                                         <button id="mobile-trash-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Open Trash">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-trash-2" aria-hidden="true"></i><span>Trash</span></span>
                                         </button>
@@ -442,6 +450,16 @@
                 <h2 id="document-sidebar-title">Explorer</h2>
               </div>
               <div class="document-sidebar-actions" role="toolbar" aria-label="File actions">
+                <button id="sidebar-create-linked-file" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Create new linked file…" title="Create new linked file…" hidden>
+                  <i class="lucide lucide-file-plus" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-files" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link Markdown files" title="Link Markdown files" hidden>
+                  <i class="lucide lucide-file-symlink" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-folder" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link a Markdown folder" title="Link a Markdown folder" hidden>
+                  <i class="lucide lucide-folder-symlink" aria-hidden="true"></i>
+                </button>
+                <span id="sidebar-linked-separator" class="document-sidebar-actions-separator desktop-linked-command" role="separator" aria-orientation="vertical" hidden></span>
                 <button id="sidebar-new-document" class="document-sidebar-icon-btn" type="button" aria-label="Create a Markdown file" title="New Markdown file">
                   <i class="lucide lucide-file-plus-2" aria-hidden="true"></i>
                 </button>
@@ -2057,6 +2075,58 @@
       </div>
     </div>
 
+    <div id="linked-confirm-modal" class="reset-modal-overlay modal-overlay" role="alertdialog" aria-modal="true" aria-labelledby="linked-confirm-modal-title" aria-describedby="linked-confirm-modal-description" aria-hidden="true" style="display:none;">
+      <div class="reset-modal-box app-modal-box modal-box linked-confirm-modal-box">
+        <div class="modal-header">
+          <p id="linked-confirm-modal-title" class="reset-modal-message">Confirm action</p>
+          <button type="button" class="modal-close-btn" id="linked-confirm-modal-close" aria-label="Close confirmation"><i class="lucide lucide-x" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body">
+          <p id="linked-confirm-modal-description" class="modal-subtext"></p>
+          <label id="linked-confirm-modal-checkbox-label" class="app-toast-checkbox" hidden><input id="linked-confirm-modal-checkbox" type="checkbox"><span></span></label>
+        </div>
+        <div class="reset-modal-actions">
+          <button type="button" class="reset-modal-btn reset-modal-cancel" id="linked-confirm-modal-cancel">Cancel</button>
+          <button type="button" class="reset-modal-btn linked-confirm-primary" id="linked-confirm-modal-confirm">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="desktop-drop-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="desktop-drop-modal-title" aria-describedby="desktop-drop-modal-description" aria-hidden="true" style="display:none;">
+      <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box desktop-drop-modal-box">
+        <div class="modal-header">
+          <div>
+            <p id="desktop-drop-modal-title" class="reset-modal-message">Add dropped Markdown</p>
+            <p id="desktop-drop-modal-description" class="modal-subtext">Choose whether to keep the original file linked or store an independent copy in the Vault.</p>
+          </div>
+          <button type="button" class="modal-close-btn" id="desktop-drop-modal-close" aria-label="Cancel dropped file import"><i class="lucide lucide-x" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body desktop-drop-modal-body">
+          <p id="desktop-drop-file-summary" class="desktop-drop-file-summary"></p>
+          <div class="desktop-drop-choice-grid">
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-link">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-file-symlink" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Link original</strong>
+                <span>Edit the file in its current location. Ctrl+S writes back to the original.</span>
+                <small>The original Windows path is retained directly from the drop.</small>
+              </span>
+            </button>
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-copy">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-files" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Import to Vault</strong>
+                <span>Create an independent Workspace copy. The original file will not be changed.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="reset-modal-actions">
+          <button type="button" class="reset-modal-btn reset-modal-cancel" id="desktop-drop-modal-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Shared Diagram Viewer Modal -->
     <div id="mermaid-zoom-modal" role="dialog" aria-modal="true" aria-labelledby="diagram-viewer-modal-title" aria-hidden="true">
         <div class="mermaid-modal-content">
@@ -2308,6 +2378,7 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
     <script src="assets/document-toc.js" defer></script>
+    <script src="native-markdown-source.js" defer></script>
     <script src="workspace-storage.js" defer></script>
     <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->

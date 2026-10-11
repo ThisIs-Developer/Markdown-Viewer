@@ -18,6 +18,53 @@ Network features remain network features: managed media upload, GitHub import, s
 
 PlantUML and D2 contain an optional local-command code path, but it requires `os.execCommand` plus explicit opt-in. Because the default native allowlist omits that API, the standard desktop build uses the remote PlantUML/Kroki paths.
 
+## Linked Workspace
+
+Linked Workspace keeps references to external Markdown files separate from independent
+Workspace (Vault) documents. Use the Explorer toolbar or Linked Workspace context menu
+to link files/folders, or create a new external linked file. Linking the same normalized
+source path reuses its existing document. Folder linking includes nested Markdown files.
+
+- Edits autosave recovery drafts under the separate **Linked Workspace** storage root,
+  mirroring linked-folder subdirectories. They do not automatically overwrite originals.
+- **Save / Ctrl+S** writes the selected linked original after preserving and verifying
+  its recovery draft. The ordinary original-save confirmation can be disabled in the
+  dialog and enabled again in Settings; conflict/missing-source decisions remain explicit.
+- **Save As…** creates a separate external file/link. **Save As linked file…** on a Vault
+  document keeps its Vault copy and activates the new link. Dialogs suggest the document
+  title and append `.md` when no extension is supplied. Ctrl+S recognizes keyboard layouts;
+  Ctrl+Shift+S keeps its existing scroll-sync action.
+- **Convert to Workspace copy** preserves the current draft as an independent Vault
+  document without changing its original. Files and linked-folder subtrees can also be
+  dragged into the Vault using ordinary internal HTML dragging. Reverse linking by
+  internal dragging is not supported.
+- Folder conversion retains the source hierarchy. **Save As linked folder…** exports a
+  Vault folder to a new external directory, preserves Vault documents and links the result.
+- Removing linked files/folders removes application references, not originals. Automatic
+  scans respect removed links; explicit Rescan or re-linking the same folder restores them.
+- External changes refresh unmodified drafts. Conflicts, missing sources and incomplete
+  scans retain drafts and show distinct hover indicators rather than repeated alerts.
+  Reload, overwrite and recreation decisions use application confirmations.
+- A built-in editable guide explains these workflows. Both built-in guides have a book
+  icon; identity comes from metadata, not an arbitrary document's title.
+- Workspace backups include normal and linked recovery documents. Imported backups
+  recover drafts but do not reconnect external paths or authorize writes to originals.
+
+External HTML drops continue importing Vault copies. Native-path drop choice and
+single-instance handling are separate runtime-dependent proposals, not enabled by this
+workflow. Browser/Docker use hides native linking, filesystem and Save As linked controls;
+recovered documents remain ordinary usable drafts without external write authority.
+
+Folder scans are bounded (20 MiB per Markdown source, 200 MiB staged content, 40,000
+entries, 10,000 Markdown files, 2,000 directories and 32 directory levels, with a 60-second
+scan budget). A failed scan retains its previous
+drafts. Save/conversion/export operations verify recoverable data and report partial
+failures, but filesystem writes are not atomic transactions and cannot eliminate every
+race with another process. Keep independent backups of important originals.
+
+The application integration uses standard desktop filesystem APIs. Windows is the
+manually tested development platform; native macOS/Linux behavior requires testing.
+
 ## Directory Structure
 
 ```text
