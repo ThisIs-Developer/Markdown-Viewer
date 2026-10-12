@@ -12365,8 +12365,17 @@ document.addEventListener("DOMContentLoaded", async function () {
         unavailable: false
       };
       documentOrganization.linkedLocations.push(location);
-      saveDocumentOrganization();
+      // Do not create document records/watchers for a root that cannot survive
+      // a restart. Roll back only this insertion, not concurrent folder edits.
+      const saved = await saveDocumentOrganization();
+      if (saved !== true) {
+        const index = documentOrganization.linkedLocations.indexOf(location);
+        if (index !== -1) documentOrganization.linkedLocations.splice(index, 1);
+        renderDocumentSidebar();
+        return null;
+      }
     }
+    if (workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return null;
     await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true });
     await refreshLinkedSourceMonitoring();
     return getLinkedLocation(location.id);
