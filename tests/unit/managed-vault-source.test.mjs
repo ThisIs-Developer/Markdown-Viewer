@@ -31,3 +31,10 @@ test('POSIX paths retain case and unavailable normalization fails closed', async
   c.Neutralino.filesystem.getNormalizedPath = async () => { throw Error('path denied'); };
   await assert.rejects(c.check('/external/a.md'), /path denied/);
 });
+
+test('only an IndexedDB backend can omit a physical Vault root', async () => {
+  const c = setup(); c.workspaceStorage = { desktop: false, vaultPath: null };
+  await c.check('C:/external/a.md');
+  c.workspaceStorage.desktop = true;
+  await assert.rejects(c.check('C:/external/a.md'), /not ready/);
+});

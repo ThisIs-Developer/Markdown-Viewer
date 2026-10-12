@@ -11858,6 +11858,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function assertOutsideManagedVault(sourcePath) {
+    // IndexedDB-only sessions have no managed filesystem Vault to protect.
+    // A real desktop backend with an unknown root must still fail closed.
+    if (workspaceStorage && workspaceStorage.desktop === false && !workspaceStorage.vaultPath) return;
     if (!workspaceStorage || !workspaceStorage.vaultPath) throw new Error('The managed Vault location is not ready. Retry after startup.');
     async function identity(path) {
       const normalized = Neutralino.filesystem.getNormalizedPath
