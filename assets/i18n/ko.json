@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "작업 공간이 복구 모드로 열렸습니다.",
   "Workspace repaired": "작업공간을 수리했습니다",
   "Workspace settings (Ctrl/Cmd+,)": "작업공간 설정(Ctrl/Cmd+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "작업공간 저장소를 읽을 수 없습니다. 대체 문서가 작성되지 않았습니다. 다시 시도하려면 새로고침하세요."
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "작업공간 저장소를 읽을 수 없습니다. 대체 문서가 작성되지 않았습니다. 다시 시도하려면 새로고침하세요.",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "폴더 문서를 저장할 수 없습니다. 기존 초안은 유지되었습니다. 다시 시도하려면 다시 검색하세요."
 }

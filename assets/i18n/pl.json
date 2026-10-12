@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "Obszar roboczy otwarty w trybie odzyskiwania",
   "Workspace repaired": "Naprawiono obszar roboczy",
   "Workspace settings (Ctrl/Cmd+,)": "Ustawienia obszaru roboczego (Ctrl/Cmd+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Nie można odczytać pamięci obszaru roboczego. Nie spisano żadnych dokumentów awaryjnych; załaduj ponownie, aby spróbować ponownie."
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Nie można odczytać pamięci obszaru roboczego. Nie spisano żadnych dokumentów awaryjnych; załaduj ponownie, aby spróbować ponownie.",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "Nie można zapisać dokumentów folderu. Zachowano istniejące projekty; przeskanuj ponownie, aby spróbować ponownie."
 }

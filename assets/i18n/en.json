@@ -1579,5 +1579,6 @@
   "Zoom In": "Zoom In",
   "Zoom model": "Zoom model",
   "Zoom out": "Zoom out",
-  "Zoom Out": "Zoom Out"
+  "Zoom Out": "Zoom Out",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "Folder documents could not be saved. Existing drafts were kept; rescan to retry."
 }

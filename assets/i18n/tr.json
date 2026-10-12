@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "Çalışma alanı kurtarma modunda açıldı",
   "Workspace repaired": "Çalışma alanı onarıldı",
   "Workspace settings (Ctrl/Cmd+,)": "Çalışma alanı ayarları (Ctrl/Cmd+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Çalışma alanı depolama alanı okunamadı. Hiçbir geri dönüş belgesi yazılmadı; yeniden denemek için yeniden yükleyin."
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Çalışma alanı depolama alanı okunamadı. Hiçbir geri dönüş belgesi yazılmadı; yeniden denemek için yeniden yükleyin.",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "Klasör belgeleri kaydedilemedi. Mevcut taslaklar tutuldu; yeniden denemek için yeniden tarayın."
 }

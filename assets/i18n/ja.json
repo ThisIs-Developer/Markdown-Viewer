@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "ワークスペースがリカバリモードで開かれました",
   "Workspace repaired": "ワークスペースが修復されました",
   "Workspace settings (Ctrl/Cmd+,)": "ワークスペース設定 (Ctrl/Cmd+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "ワークスペース ストレージを読み取れませんでした。フォールバック ドキュメントは作成されていません。再試行するにはリロードしてください。"
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "ワークスペース ストレージを読み取れませんでした。フォールバック ドキュメントは作成されていません。再試行するにはリロードしてください。",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "フォルダー文書を保存できませんでした。既存のドラフトは保持されました。再スキャンして再試行してください。"
 }

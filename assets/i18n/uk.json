@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "Робочу область відкрито в режимі відновлення",
   "Workspace repaired": "Робочу область відремонтовано",
   "Workspace settings (Ctrl/Cmd+,)": "Налаштування робочої області (Ctrl/Cmd+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Сховище робочої області не вдалося прочитати. Резервні документи не були написані; перезавантажте, щоб повторити спробу."
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Сховище робочої області не вдалося прочитати. Резервні документи не були написані; перезавантажте, щоб повторити спробу.",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "Не вдалося зберегти документи папки. Наявні чернетки збережено; повторно проскануйте папку, щоб спробувати ще раз."
 }

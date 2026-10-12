@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "Arbeitsbereich im Wiederherstellungsmodus geöffnet",
   "Workspace repaired": "Arbeitsbereich repariert",
   "Workspace settings (Ctrl/Cmd+,)": "Arbeitsbereichseinstellungen (Strg/Befehl+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Der Arbeitsbereichsspeicher konnte nicht gelesen werden. Es wurden keine Fallback-Dokumente geschrieben; Neu laden, um es erneut zu versuchen."
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Der Arbeitsbereichsspeicher konnte nicht gelesen werden. Es wurden keine Fallback-Dokumente geschrieben; Neu laden, um es erneut zu versuchen.",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "Ordnerdokumente konnten nicht gespeichert werden. Bestehende Entwürfe wurden beibehalten; Erneut scannen, um es erneut zu versuchen."
 }

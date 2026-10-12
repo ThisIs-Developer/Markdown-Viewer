@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "Работното пространство е отворено в режим на възстановяване",
   "Workspace repaired": "Работното пространство е поправено",
   "Workspace settings (Ctrl/Cmd+,)": "Настройки на работното пространство (Ctrl/Cmd+,)",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Хранилището на работното пространство не можа да бъде прочетено. Не са написани резервни документи; презаредете, за да опитате отново."
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "Хранилището на работното пространство не можа да бъде прочетено. Не са написани резервни документи; презаредете, за да опитате отново.",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "Документите в папката не можаха да бъдат запазени. Съществуващите чернови бяха запазени; сканирайте отново, за да опитате отново."
 }

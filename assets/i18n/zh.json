@@ -1579,5 +1579,6 @@
   "Workspace opened in recovery mode": "在恢复模式下打开的工作区",
   "Workspace repaired": "工作区已修复",
   "Workspace settings (Ctrl/Cmd+,)": "工作区设置（Ctrl/Cmd+,）",
-  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "无法读取工作区存储。没有编写后备文档；重新加载以重试。"
+  "Workspace storage could not be read. No fallback documents were written; reload to retry.": "无法读取工作区存储。没有编写后备文档；重新加载以重试。",
+  "Folder documents could not be saved. Existing drafts were kept; rescan to retry.": "无法保存文件夹文档。保留现有草稿；重新扫描以重试。"
 }
