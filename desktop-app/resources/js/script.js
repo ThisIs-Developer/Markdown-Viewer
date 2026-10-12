@@ -12361,6 +12361,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     tabs.filter(function(tab) { return tab.linkedRootId === location.id; }).forEach(function(tab) {
       if (!discoveredPaths.has(normalizeLinkedSourcePath(tab.sourcePath))) tab.sourceMissing = true;
     });
+    const appliedExclusions = getLinkedLocation(locationId).excludedPaths;
+    const documentsSaved = await _flushTabsToStorage(tabs, {
+      changedIds: tabs.filter(function(tab) { return tab.linkedRootId === locationId; }).map(function(tab) { return tab.id; }),
+      requireExactCommit: true
+    });
+    if (!canApply()) return 0;
+    if (documentsSaved !== true) {
+      const current = getLinkedLocation(locationId);
+      if (current.excludedPaths === appliedExclusions) current.excludedPaths = previousScanState.excludedPaths;
+      current.unavailable = previousScanState.unavailable;
+      linkedFolderScanErrors.set(locationId, 'Folder documents could not be saved. Rescan to retry.');
+      refreshUI();
+      if (settings.notify) showAppToast('Folder documents could not be saved. Existing drafts were kept; rescan to retry.', { tone: 'warning', title: 'Folder scan incomplete', dedupeKey: 'linked-scan-stopped-' + locationId });
+      return 0;
+    }
     if (applyFailure) {
       linkedFolderScanErrors.set(locationId, 'Some files could not be refreshed: ' + (applyFailure.message || 'Document inspection failed.'));
     } else getLinkedLocation(locationId).lastScanAt = Date.now();

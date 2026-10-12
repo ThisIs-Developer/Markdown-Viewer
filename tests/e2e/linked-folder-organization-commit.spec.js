@@ -12,6 +12,21 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test('document write failure suppresses scan success and keeps stored scan state unchanged', async ({ page }) => {
+  await page.evaluate(() => {
+    MarkdownWorkspaceStorage.prototype.saveDocuments = async () => { throw Error('Injected document write failure'); };
+  });
+  await page.locator('#sidebar-link-folder').click();
+  await expect(page.getByText('Folder scan incomplete', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Linked folder scanned\./)).toHaveCount(0);
+  const stored = await page.evaluate(async () => {
+    const storage = new MarkdownWorkspaceStorage(); await storage.init();
+    return { org: await storage.getDocumentOrganization(), docs: await storage.listDocumentMetadata() };
+  });
+  expect(stored.docs.filter(x => x.sourcePath === 'C:/Review/a.md')).toHaveLength(0);
+  expect(stored.org.linkedLocations[0].lastScanAt).toBe(0);
+});
+
 test('failed initial organization write creates no linked root or source records and can be retried', async ({ page }) => {
   await page.evaluate(() => {
     const save = MarkdownWorkspaceStorage.prototype.saveDocumentOrganization;

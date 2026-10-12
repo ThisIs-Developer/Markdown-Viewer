@@ -81,7 +81,7 @@ function scanHarness(save) {
     linkedSidebarState: () => '', findTabBySourcePath: () => null, getNativePathName: () => 'notes.md',
     collectMarkdownFilesFromFolder: async () => [{ path: 'C:/Root/notes.md', relativePath: 'notes.md', content: '# source' }],
     openLinkedMarkdownDocument: async () => { context.tabs.push({ id: 'draft', linkedRootId: 'root', sourcePath: 'C:/Root/notes.md', content: '# kept draft' }); return true; },
-    saveDocumentOrganization: save, saveTabsToStorage: tabs => persisted.push(tabs.map(x => x.content)),
+    saveDocumentOrganization: save, _flushTabsToStorage: async () => true, saveTabsToStorage: tabs => persisted.push(tabs.map(x => x.content)),
     renderTabBar() {}, renderDocumentSidebar() {}, requestLinkedBackgroundUIRefresh() {},
     showAppToast: (_, options) => toasts.push(options), console };
   vm.runInNewContext(functionSource('  async function reconcileLinkedLocationSnapshot(', '\n  async function addLinkedFolderPath(') + '\nthis.scan = reconcileLinkedLocationSnapshot;', context);
@@ -121,4 +121,26 @@ test('stale scan completion does not undo newer exclusions or report success', a
   assert.equal(await h.context.scan('root', { notify: true, restoreExcluded: true }, h.token), 0);
   assert.deepEqual(h.root.excludedPaths, ['newer.md']);
   assert.equal(h.toasts.length, 0);
+});
+
+test('failed document persistence never advances scan metadata or announces success', async () => {
+  let organizationWrites = 0;
+  const h = scanHarness(async () => { organizationWrites++; return true; });
+  h.context._flushTabsToStorage = async () => false;
+  assert.equal(await h.context.scan('root', { notify: true, restoreExcluded: true }, h.token), 0);
+  assert.equal(organizationWrites, 0);
+  assert.equal(h.root.lastScanAt, 123);
+  assert.deepEqual(Array.from(h.root.excludedPaths), ['notes.md']);
+  assert.equal(h.context.tabs[0].content, '# kept draft');
+  assert.equal(h.toasts.some(x => x.tone === 'success'), false);
+});
+
+test('scan waits for document persistence before committing organization or success', async () => {
+  let finish, organizationWrites = 0;
+  const h = scanHarness(async () => { organizationWrites++; return true; });
+  h.context._flushTabsToStorage = () => new Promise(resolve => { finish = resolve; });
+  const pending = h.context.scan('root', { notify: true, restoreExcluded: true }, h.token);
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(organizationWrites, 0); assert.equal(h.toasts.length, 0);
+  finish(true); assert.equal(await pending, 1); assert.equal(organizationWrites, 1);
 });
