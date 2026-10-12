@@ -15,7 +15,7 @@ function addHarness(save) {
   const context = { Date, documentOrganization: organization,
     linkedReadEpoch: 0, linkedLocationScanTokens: new Map(), linkedLocationMutations: new Map(),
     linkedMutationOperations: new Set(), linkedLocationMutationChains: new Map(),
-    hasDesktopFileAccess: () => true, workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
+    hasDesktopFileAccess: () => true, assertOutsideManagedVault: async () => {}, workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
     normalizeLinkedSourcePath: x => x, createDocumentEntityId: () => 'new-root', getNativePathName: () => 'Root',
     saveDocumentOrganization: save, renderDocumentSidebar() { events.push('render'); },
     getLinkedLocation: id => organization.linkedLocations.find(x => x.id === id),

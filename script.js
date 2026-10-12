@@ -11855,6 +11855,26 @@ document.addEventListener("DOMContentLoaded", async function () {
     return /^[a-z]:\\/i.test(normalized) || windowsUnc ? normalized.toLocaleLowerCase('en-US') : normalized;
   }
 
+  async function assertOutsideManagedVault(sourcePath) {
+    if (!workspaceStorage || !workspaceStorage.vaultPath) throw new Error('The managed Vault location is not ready. Retry after startup.');
+    async function identity(path) {
+      const normalized = Neutralino.filesystem.getNormalizedPath
+        ? await Neutralino.filesystem.getNormalizedPath(path) : path;
+      const parts = [];
+      normalizeLinkedSourcePath(normalized).replace(/\\/g, '/').split('/').forEach(function(part) {
+        if (part === '.') return;
+        if (part === '..') parts.pop();
+        else parts.push(part);
+      });
+      return parts.join('/').replace(/\/+$/, '');
+    }
+    const root = await identity(workspaceStorage.vaultPath);
+    const candidate = await identity(sourcePath);
+    if (candidate === root || candidate.startsWith(root + '/')) {
+      throw new Error('Choose a source or destination outside the managed Vault storage.');
+    }
+  }
+
   function findTabBySourcePath(sourcePath) {
     const pathKey = normalizeLinkedSourcePath(sourcePath);
     if (!pathKey) return null;
@@ -11931,6 +11951,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function openLinkedMarkdownDocument(content, title, sourcePath, options) {
     if (!hasDesktopFileAccess() || workspaceMaintenancePending || suspendWorkspacePersistence) return null;
+    await assertOutsideManagedVault(sourcePath);
     const settings = options || {};
     const readEpoch = linkedReadEpoch;
     const canApply = function() { return !workspaceMaintenancePending && !suspendWorkspacePersistence && readEpoch === linkedReadEpoch && (!settings.canApply || settings.canApply()); };
@@ -12370,6 +12391,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function addLinkedFolderPath(folderPath, options) {
     if (!hasDesktopFileAccess() || workspaceMaintenancePending || suspendWorkspacePersistence) return null;
+    await assertOutsideManagedVault(folderPath);
     const readEpoch = linkedReadEpoch;
     const normalized = normalizeLinkedSourcePath(folderPath);
     let location = (documentOrganization.linkedLocations || []).find(function(item) {
@@ -26411,6 +26433,7 @@ ${selector} .arrowheadPath {
 
   async function writeLinkedMarkdownSource(tab, content) {
     if (!isLinkedDocument(tab)) return false;
+    await assertOutsideManagedVault(tab.sourcePath);
     const requestedSource = tab.sourcePath;
     const requestedBaseline = tab.sourceContentHash;
     let confirmed = false;
@@ -26529,6 +26552,7 @@ ${selector} .arrowheadPath {
     if (!chosen) return null;
     const name = getNativePathName(chosen);
     const result = name.lastIndexOf('.') > 0 && !name.endsWith('.') ? chosen : chosen.replace(/\.+$/, '') + '.md';
+    await assertOutsideManagedVault(result);
     if (options && options.newLinked && tab.sourcePath && normalizeLinkedSourcePath(result) === normalizeLinkedSourcePath(tab.sourcePath)) {
       showAppToast('Choose a different path to create a new linked file. Use Save to update the current original.', { tone: 'warning', title: 'Choose a new file' });
       return null;
@@ -26571,9 +26595,7 @@ ${selector} .arrowheadPath {
     try {
       const parentPath = await Neutralino.os.showFolderDialog('Choose parent folder for the new linked copy');
       if (!parentPath) return;
-      const managedRoot = workspaceStorage && workspaceStorage.vaultPath ? normalizeLinkedSourcePath(workspaceStorage.vaultPath).replace(/\\/g, '/').replace(/\/$/, '') : '';
-      const chosenParent = normalizeLinkedSourcePath(parentPath).replace(/\\/g, '/').replace(/\/$/, '');
-      if (managedRoot && (chosenParent === managedRoot || chosenParent.startsWith(managedRoot + '/'))) throw new Error('Choose a destination outside the managed Vault storage.');
+      await assertOutsideManagedVault(parentPath);
       if (container) container.inert = true;
       const folder = getFolderById(folderId);
       if (!folder || folder.workspaceId !== DEFAULT_WORKSPACE_ID) throw new Error('The Vault folder changed. Retry from its current location.');
