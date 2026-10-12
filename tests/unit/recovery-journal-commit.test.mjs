@@ -47,6 +47,24 @@ function setup() {
 }
 function journal(content, savedAt = 1) { return { documentId: 'notes', content, savedAt }; }
 
+test('conflict recovery is not an exact commit but ordinary autosave remains recovered', async () => {
+  for (const exact of [false, true]) {
+    const { target, tab } = setup(); let recovered = 0;
+    target.workspaceStorage.saveDocuments = async () => { throw Error('conflict'); };
+    target.preserveWorkspaceConflict = async () => { recovered++; return true; };
+    assert.equal(await target._flushTabsToStorage([tab], { changedIds: [tab.id], requireExactCommit: exact }), !exact);
+    assert.equal(recovered, 1);
+  }
+});
+
+test('private or suspended persistence cannot satisfy a required exact commit', async () => {
+  const { target, tab } = setup();
+  target.isPrivateStorageMode = () => true;
+  assert.equal(await target._flushTabsToStorage([tab], { requireExactCommit: true }), false);
+  target.suspendWorkspacePersistence = true;
+  assert.equal(await target._flushTabsToStorage([tab], { requireExactCommit: true }), false);
+});
+
 test('a newer comments-only journal survives an older save of unchanged Markdown', async () => {
   const { target, tab, key } = setup();
   tab.reviewThreads = [{ body: 'OLD COMMENT' }];

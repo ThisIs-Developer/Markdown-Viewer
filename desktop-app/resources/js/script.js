@@ -11660,13 +11660,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function _flushTabsToStorage(tabsArr, options) {
+    const settings = options || {};
     clearTimeout(saveTabStateTimeout);
     if (suspendWorkspacePersistence) {
       pendingWorkspacePersistAll = false;
       pendingWorkspacePersistIds.clear();
-      return true;
+      return settings.requireExactCommit !== true;
     }
-    const settings = options || {};
     const hasExplicitIds = Array.isArray(settings.changedIds);
     const changedIds = Array.isArray(settings.changedIds)
       ? settings.changedIds.slice()
@@ -11677,7 +11677,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     pendingWorkspacePersistIds.clear();
     if (isPrivateStorageMode()) {
       updateSaveStatus('saved');
-      return true;
+      return settings.requireExactCommit !== true;
     }
     try {
       const storageTabs = getTabsForStorage(tabsArr);
@@ -11708,7 +11708,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (e) {
       if (await preserveWorkspaceConflict(e)) {
         updateSaveStatus('saved');
-        return true;
+        // Preserving a conflict copy is successful recovery, not the requested
+        // conversion/scan commit. Ordinary autosave can still report recovery.
+        return settings.requireExactCommit !== true;
       }
       console.warn('Failed to save workspace documents:', e);
       updateSaveStatus('error');
@@ -12549,7 +12551,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     setDocumentLocation(tab, DEFAULT_WORKSPACE_ID, destination && destination.folderId || null);
     tab.isOpen = true;
     try {
-      if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Workspace copy could not be saved.');
+      if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id], requireExactCommit: true }))) throw new Error('The requested conversion did not complete. Any conflict copy was kept; retry after reviewing both versions.');
     } catch (error) {
       if (tabs.includes(tab)) {
         captureLiveLinkedDraft(tab);
