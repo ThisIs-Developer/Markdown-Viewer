@@ -33270,7 +33270,7 @@ ${selector} .arrowheadPath {
       syncOff: "Sync Off",
       syncOn: "Sync On",
       import: "Import",
-      importFile: "From files",
+      importFile: "Import copies",
       importGithub: "From GitHub",
       export: "Export",
       exportMd: "Markdown (.md)",
@@ -34130,12 +34130,12 @@ ${selector} .arrowheadPath {
       if (importText) importText.textContent = translateUiString('New');
     }
     const importFileEl = document.getElementById('import-from-file');
-    if (importFileEl) updateMenuLabel(importFileEl, translateUiString('From files'));
+    if (importFileEl) updateMenuLabel(importFileEl, translateUiString('Import copies'));
     const importGithubEl = document.getElementById('import-from-github');
     if (importGithubEl) updateMenuLabel(importGithubEl, translateUiString('From GitHub'));
 
     const mImportFileEl = document.getElementById('mobile-import-button');
-    if (mImportFileEl) mImportFileEl.innerHTML = `<i class="lucide lucide-upload"></i>${translateUiString('From files')}`;
+    if (mImportFileEl) mImportFileEl.innerHTML = `<i class="lucide lucide-upload"></i>${translateUiString('Import copies')}`;
     const mImportGithubEl = document.getElementById('mobile-import-github-button');
     if (mImportGithubEl) mImportGithubEl.innerHTML = `<i class="bi bi-github" aria-hidden="true"></i>${translateUiString('From GitHub')}`;
 
