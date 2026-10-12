@@ -13,13 +13,15 @@ function functionSource(start, end) {
 function addHarness(save) {
   const events = [], organization = { linkedLocations: [] };
   const context = { Date, documentOrganization: organization,
+    linkedReadEpoch: 0, linkedLocationScanTokens: new Map(), linkedLocationMutations: new Map(),
+    linkedMutationOperations: new Set(), linkedLocationMutationChains: new Map(),
     hasDesktopFileAccess: () => true, workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
     normalizeLinkedSourcePath: x => x, createDocumentEntityId: () => 'new-root', getNativePathName: () => 'Root',
     saveDocumentOrganization: save, renderDocumentSidebar() { events.push('render'); },
     getLinkedLocation: id => organization.linkedLocations.find(x => x.id === id),
     reconcileLinkedLocation: async () => { events.push('scan'); },
     refreshLinkedSourceMonitoring: async () => { events.push('watch'); } };
-  vm.runInNewContext(functionSource('  async function addLinkedFolderPath(', '\n  async function addLinkedFilePath(') + '\nthis.add = addLinkedFolderPath;', context);
+  vm.runInNewContext(functionSource('  async function withLinkedLocationMutation(', '\n  async function reconcileLinkedLocation(') + functionSource('  async function addLinkedFolderPath(', '\n  async function addLinkedFilePath(') + '\nthis.add = addLinkedFolderPath;', context);
   return { context, events, organization };
 }
 
@@ -27,6 +29,7 @@ test('new linked root is not scanned or watched before its organization commit c
   let finish;
   const h = addHarness(() => new Promise(resolve => { finish = resolve; }));
   const pending = h.context.add('C:/Root');
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(h.events, []);
   finish(true);
   assert.equal((await pending).id, 'new-root');
@@ -45,6 +48,26 @@ test('failed initial organization commit removes only the new root and prevents 
 
 test('workspace maintenance beginning during initial commit prevents the scan', async () => {
   const h = addHarness(async () => { h.context.workspaceMaintenancePending = true; return true; });
+  assert.equal(await h.context.add('C:/Root'), null);
+  assert.deepEqual(h.events, []);
+});
+
+test('concurrent linking of the same root cannot bypass a failed initial commit', async () => {
+  let finish;
+  const h = addHarness(() => new Promise(resolve => { finish = resolve; }));
+  const first = h.context.add('C:/Root');
+  const second = h.context.add('C:/Root');
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(h.events, []);
+  finish(false);
+  assert.equal(await first, null);
+  assert.equal(await second, null);
+  assert.deepEqual(h.organization.linkedLocations, []);
+  assert.equal(h.events.includes('scan'), false);
+});
+
+test('workspace read epoch changing during initial commit prevents stale follow-up', async () => {
+  const h = addHarness(async () => { h.context.linkedReadEpoch++; return true; });
   assert.equal(await h.context.add('C:/Root'), null);
   assert.deepEqual(h.events, []);
 });

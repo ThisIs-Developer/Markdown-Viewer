@@ -12370,11 +12370,13 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function addLinkedFolderPath(folderPath, options) {
     if (!hasDesktopFileAccess() || workspaceMaintenancePending || suspendWorkspacePersistence) return null;
+    const readEpoch = linkedReadEpoch;
     const normalized = normalizeLinkedSourcePath(folderPath);
     let location = (documentOrganization.linkedLocations || []).find(function(item) {
       return normalizeLinkedSourcePath(item.path) === normalized;
     });
-    if (!location) {
+    const isNewRoot = !location;
+    if (isNewRoot) {
       location = {
         id: createDocumentEntityId('linked'),
         path: String(folderPath),
@@ -12386,6 +12388,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         unavailable: false
       };
       documentOrganization.linkedLocations.push(location);
+    }
+    const committed = await withLinkedLocationMutation(location.id, async function() {
+      if (readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return false;
+      if (!isNewRoot) return true;
       // Do not create document records/watchers for a root that cannot survive
       // a restart. Roll back only this insertion, not concurrent folder edits.
       const saved = await saveDocumentOrganization();
@@ -12393,10 +12399,18 @@ document.addEventListener("DOMContentLoaded", async function () {
         const index = documentOrganization.linkedLocations.indexOf(location);
         if (index !== -1) documentOrganization.linkedLocations.splice(index, 1);
         renderDocumentSidebar();
-        return null;
+        return false;
+      }
+      return true;
+    });
+    if (!committed && isNewRoot) {
+      const index = documentOrganization.linkedLocations.indexOf(location);
+      if (index !== -1) {
+        documentOrganization.linkedLocations.splice(index, 1);
+        renderDocumentSidebar();
       }
     }
-    if (workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return null;
+    if (!committed || readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return null;
     await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true });
     await refreshLinkedSourceMonitoring();
     return getLinkedLocation(location.id);
