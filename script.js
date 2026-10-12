@@ -11851,7 +11851,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     const value = String(sourcePath || '').trim();
     if (!value) return '';
     const normalized = value.replace(/\//g, '\\').replace(/\\+$/g, '');
-    return /^[a-z]:\\/i.test(normalized) ? normalized.toLocaleLowerCase('en-US') : normalized;
+    const windowsUnc = typeof window !== 'undefined' && window.NL_OS === 'Windows' && /^\\\\[^\\]+\\[^\\]+/.test(normalized);
+    return /^[a-z]:\\/i.test(normalized) || windowsUnc ? normalized.toLocaleLowerCase('en-US') : normalized;
   }
 
   function findTabBySourcePath(sourcePath) {
