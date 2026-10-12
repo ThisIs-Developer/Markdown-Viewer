@@ -12261,6 +12261,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function reconcileLinkedLocationSnapshot(locationId, options, token) {
     const location = getLinkedLocation(locationId);
     if (!location) return 0;
+    const previousScanState = {
+      excludedPaths: (location.excludedPaths || []).slice(),
+      lastScanAt: location.lastScanAt,
+      unavailable: location.unavailable
+    };
     const originalPath = normalizeLinkedSourcePath(location.path);
     const readEpoch = linkedReadEpoch;
     const canApply = function() {
@@ -12337,7 +12342,22 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (applyFailure) {
       linkedFolderScanErrors.set(locationId, 'Some files could not be refreshed: ' + (applyFailure.message || 'Document inspection failed.'));
     } else getLinkedLocation(locationId).lastScanAt = Date.now();
-    saveDocumentOrganization();
+    const committedExclusions = getLinkedLocation(locationId).excludedPaths;
+    const committedScanAt = getLinkedLocation(locationId).lastScanAt;
+    const saved = await saveDocumentOrganization();
+    if (!canApply()) return 0;
+    if (saved !== true) {
+      const current = getLinkedLocation(locationId);
+      // Retain applied records/drafts, but do not advertise uncommitted scan
+      // metadata. Never undo a newer operation's changes to these fields.
+      if (current.excludedPaths === committedExclusions) current.excludedPaths = previousScanState.excludedPaths;
+      if (current.lastScanAt === committedScanAt) current.lastScanAt = previousScanState.lastScanAt;
+      current.unavailable = previousScanState.unavailable;
+      linkedFolderScanErrors.set(locationId, 'Folder changes could not be saved. Existing stored folders were kept.');
+      saveTabsToStorage(tabs);
+      refreshUI();
+      return 0;
+    }
     saveTabsToStorage(tabs);
     refreshUI();
     if (settings.notify) {

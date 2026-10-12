@@ -48,3 +48,54 @@ test('workspace maintenance beginning during initial commit prevents the scan', 
   assert.equal(await h.context.add('C:/Root'), null);
   assert.deepEqual(h.events, []);
 });
+
+function scanHarness(save) {
+  const root = { id: 'root', path: 'C:/Root', name: 'Root', excludedPaths: ['notes.md'], lastScanAt: 123, unavailable: true };
+  const token = {}, toasts = [], persisted = [];
+  const context = { Date, tabs: [], linkedReadEpoch: 0, linkedLocationScanTokens: new Map([['root', token]]),
+    linkedLocationMutations: new Map(), linkedFolderScanErrors: new Map(), activeTabId: null,
+    getLinkedLocation: () => root, normalizeLinkedSourcePath: x => x, normalizeLinkedRelativePath: x => x,
+    linkedSidebarState: () => '', findTabBySourcePath: () => null, getNativePathName: () => 'notes.md',
+    collectMarkdownFilesFromFolder: async () => [{ path: 'C:/Root/notes.md', relativePath: 'notes.md', content: '# source' }],
+    openLinkedMarkdownDocument: async () => { context.tabs.push({ id: 'draft', linkedRootId: 'root', sourcePath: 'C:/Root/notes.md', content: '# kept draft' }); return true; },
+    saveDocumentOrganization: save, saveTabsToStorage: tabs => persisted.push(tabs.map(x => x.content)),
+    renderTabBar() {}, renderDocumentSidebar() {}, requestLinkedBackgroundUIRefresh() {},
+    showAppToast: (_, options) => toasts.push(options), console };
+  vm.runInNewContext(functionSource('  async function reconcileLinkedLocationSnapshot(', '\n  async function addLinkedFolderPath(') + '\nthis.scan = reconcileLinkedLocationSnapshot;', context);
+  return { context, root, token, toasts, persisted };
+}
+
+test('failed scan organization commit retains records but restores exclusions and scan metadata', async () => {
+  const h = scanHarness(async () => false);
+  assert.equal(await h.context.scan('root', { notify: true, restoreExcluded: true }, h.token), 0);
+  assert.deepEqual(Array.from(h.root.excludedPaths), ['notes.md']);
+  assert.equal(h.root.lastScanAt, 123);
+  assert.equal(h.root.unavailable, true);
+  assert.equal(h.context.tabs[0].content, '# kept draft');
+  assert.equal(h.persisted.length, 1);
+  assert.equal(h.context.linkedFolderScanErrors.has('root'), true);
+  assert.equal(h.toasts.some(x => x.tone === 'success'), false);
+});
+
+test('scan success notification waits for durable organization metadata', async () => {
+  let finish;
+  const h = scanHarness(() => new Promise(resolve => { finish = resolve; }));
+  const pending = h.context.scan('root', { notify: true, restoreExcluded: true }, h.token);
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.toasts.length, 0);
+  finish(true);
+  assert.equal(await pending, 1);
+  assert.equal(h.toasts[0].tone, 'success');
+  assert.deepEqual(Array.from(h.root.excludedPaths), []);
+});
+
+test('stale scan completion does not undo newer exclusions or report success', async () => {
+  const h = scanHarness(async () => {
+    h.root.excludedPaths = ['newer.md'];
+    h.context.linkedLocationScanTokens.delete('root');
+    return false;
+  });
+  assert.equal(await h.context.scan('root', { notify: true, restoreExcluded: true }, h.token), 0);
+  assert.deepEqual(h.root.excludedPaths, ['newer.md']);
+  assert.equal(h.toasts.length, 0);
+});

@@ -14,7 +14,7 @@ test('partial snapshot application is not reported as a successful complete scan
     linkedSidebarState: () => '', findTabBySourcePath: () => null, getNativePathName: () => 'notes.md',
     collectMarkdownFilesFromFolder: async () => [{ path: 'C:/Root/notes.md', relativePath: 'notes.md', content: '# source' }],
     openLinkedMarkdownDocument: async () => { throw new Error('Recovery content unavailable'); },
-    saveDocumentOrganization() {}, saveTabsToStorage() {}, renderTabBar() {}, renderDocumentSidebar() {},
+    saveDocumentOrganization: async () => true, saveTabsToStorage() {}, renderTabBar() {}, renderDocumentSidebar() {},
     requestLinkedBackgroundUIRefresh() {}, showAppToast: (_, options) => toasts.push(options), console: { warn() {} } };
   vm.runInNewContext(source.slice(start, end) + '\nthis.scan = reconcileLinkedLocationSnapshot;', ctx);
   await ctx.scan('root', { notify: true }, token);
