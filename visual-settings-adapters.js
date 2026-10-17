@@ -282,17 +282,53 @@
       return;
     }
 
-    // Configure font in MathJax configuration object
+    const isMathJax3 = (window.MathJax.version && String(window.MathJax.version).startsWith('3.')) ||
+                       (window.MathJax._ && !window.MathJax._.output?.fonts);
+
+    // Configure font and complete resource configuration in MathJax
+    const fontPkgUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font`;
+    const fontWoffUrl = `${fontPkgUrl}/chtml/woff`;
+    const fontDynamicPrefix = `[${_activeMathFont}]/chtml/dynamic`;
+
+    window.MathJax.output = window.MathJax.output || {};
+    window.MathJax.output.font = _activeMathFont;
+
     window.MathJax.config = window.MathJax.config || {};
     window.MathJax.config.output = window.MathJax.config.output || {};
     window.MathJax.config.output.font = _activeMathFont;
+
+    window.MathJax.chtml = window.MathJax.chtml || {};
     window.MathJax.config.chtml = window.MathJax.config.chtml || {};
+    if (typeof window.MathJax.chtml.font === 'string') {
+      delete window.MathJax.chtml.font;
+    }
     if (typeof window.MathJax.config.chtml.font === 'string') {
       delete window.MathJax.config.chtml.font;
     }
 
-    // Load external font script if needed (Modern is bundled by default)
-    if (_activeMathFont !== 'mathjax-modern') {
+    if (!isMathJax3) {
+      window.MathJax.chtml.fontURL = fontWoffUrl;
+      window.MathJax.chtml.dynamicPrefix = fontDynamicPrefix;
+      window.MathJax.config.chtml.fontURL = fontWoffUrl;
+      window.MathJax.config.chtml.dynamicPrefix = fontDynamicPrefix;
+
+      window.MathJax.loader = window.MathJax.loader || {};
+      window.MathJax.loader.paths = window.MathJax.loader.paths || {};
+      window.MathJax.loader.paths[_activeMathFont] = fontPkgUrl;
+
+      window.MathJax.config.loader = window.MathJax.config.loader || {};
+      window.MathJax.config.loader.paths = window.MathJax.config.loader.paths || {};
+      window.MathJax.config.loader.paths[_activeMathFont] = fontPkgUrl;
+
+      if (window.MathJax._ && window.MathJax._.components && window.MathJax._.components.loader && window.MathJax._.components.loader.CONFIG && window.MathJax._.components.loader.CONFIG.paths) {
+        window.MathJax._.components.loader.CONFIG.paths[_activeMathFont] = fontPkgUrl;
+      }
+    }
+
+    // Load external font script if needed and MathJax core is already loaded.
+    // If MathJax has not loaded yet, configuring output.font and resource URLs
+    // is sufficient because MathJax's startup loader will load the font component itself.
+    if (_activeMathFont !== 'mathjax-modern' && window.MathJax._) {
       const fontUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font/chtml.js`;
       try {
         await loadScriptOnce(fontUrl);
@@ -320,28 +356,53 @@
       }
     }
 
-    // Update MathJax configuration with effective font
+    // Update MathJax configuration with effective font and complete resource configuration
+    const effectivePkgUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font`;
+    const effectiveWoffUrl = `${effectivePkgUrl}/chtml/woff`;
+    const effectiveDynamicPrefix = `[${_activeMathFont}]/chtml/dynamic`;
+
     window.MathJax.config.output.font = _activeMathFont;
     if (typeof window.MathJax.config.chtml.font === 'string') {
       delete window.MathJax.config.chtml.font;
     }
+    if (typeof window.MathJax.chtml.font === 'string') {
+      delete window.MathJax.chtml.font;
+    }
+    window.MathJax.config.chtml.fontURL = effectiveWoffUrl;
+    window.MathJax.config.chtml.dynamicPrefix = effectiveDynamicPrefix;
+    window.MathJax.chtml.fontURL = effectiveWoffUrl;
+    window.MathJax.chtml.dynamicPrefix = effectiveDynamicPrefix;
+
+    window.MathJax.config.loader = window.MathJax.config.loader || {};
+    window.MathJax.config.loader.paths = window.MathJax.config.loader.paths || {};
+    window.MathJax.config.loader.paths[_activeMathFont] = effectivePkgUrl;
+    window.MathJax.loader = window.MathJax.loader || {};
+    window.MathJax.loader.paths = window.MathJax.loader.paths || {};
+    window.MathJax.loader.paths[_activeMathFont] = effectivePkgUrl;
+    if (window.MathJax._ && window.MathJax._.components && window.MathJax._.components.loader && window.MathJax._.components.loader.CONFIG && window.MathJax._.components.loader.CONFIG.paths) {
+      window.MathJax._.components.loader.CONFIG.paths[_activeMathFont] = effectivePkgUrl;
+    }
 
     if (fontClass) {
       window.MathJax.config.chtml.fontData = fontClass;
+      window.MathJax.chtml.fontData = fontClass;
     } else if (_activeMathFont === 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
       const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
       if (modernPkg.chtml_ts) {
         window.MathJax.config.chtml.fontData = Object.values(modernPkg.chtml_ts)[0] || null;
+        window.MathJax.chtml.fontData = window.MathJax.config.chtml.fontData;
       }
     }
 
     // If MathJax startup has completed, switch output jax, document and re-typeset
-    const isMathJax3 = (window.MathJax.version && String(window.MathJax.version).startsWith('3.')) ||
-                       (window.MathJax._ && !window.MathJax._.output?.fonts);
     if (!isMathJax3 && window.MathJax.startup && typeof window.MathJax.startup.getOutputJax === 'function') {
       try {
         const newOutputJax = window.MathJax.startup.getOutputJax();
         if (newOutputJax) {
+          if (newOutputJax.font && newOutputJax.font.options) {
+            newOutputJax.font.options.fontURL = effectiveWoffUrl;
+            newOutputJax.font.options.dynamicPrefix = effectiveDynamicPrefix;
+          }
           window.MathJax.startup.output = newOutputJax;
           if (typeof window.MathJax.startup.getDocument === 'function') {
             window.MathJax.startup.document = window.MathJax.startup.getDocument();

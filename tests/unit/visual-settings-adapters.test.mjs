@@ -245,3 +245,59 @@ test('applyMathFont maintains MathJax 3 and 4 configuration compatibility withou
   assert.equal(typeof context.window.MathJax.config.chtml.font, 'undefined');
   assert.equal(context.window.MathJax.config.output.font, 'mathjax-modern');
 });
+
+test('applyMathFont initializes complete font resource configuration in MathJax 4', async () => {
+  const { context, adapters } = createAdapterContext();
+
+  const mockOutputJax = {
+    font: {
+      name: 'mathjax-modern',
+      options: {
+        fontURL: 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff',
+        dynamicPrefix: '[mathjax-modern]/chtml/dynamic'
+      }
+    }
+  };
+
+  context.window.MathJax = {
+    version: '4.0.0-beta.7',
+    config: {},
+    loader: { paths: {} },
+    _: {
+      components: {
+        loader: {
+          CONFIG: {
+            paths: {
+              mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7'
+            }
+          }
+        }
+      },
+      output: {
+        fonts: {
+          'mathjax-stix2': {
+            chtml_ts: {
+              MathJaxStix2Font: class MockStixFont {}
+            }
+          }
+        }
+      }
+    },
+    startup: {
+      getOutputJax: () => mockOutputJax,
+      getDocument: () => ({})
+    }
+  };
+
+  await adapters.applyMathFont('mathjax-stix2');
+
+  const mj = context.window.MathJax;
+  assert.equal(mj.config.chtml.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font/chtml/woff');
+  assert.equal(mj.config.chtml.dynamicPrefix, '[mathjax-stix2]/chtml/dynamic');
+  assert.equal(mj.config.loader.paths['mathjax-stix2'], 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font');
+  assert.equal(mj.loader.paths['mathjax-stix2'], 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font');
+  assert.equal(mj._.components.loader.CONFIG.paths['mathjax-stix2'], 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font');
+  assert.equal(mockOutputJax.font.options.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font/chtml/woff');
+  assert.equal(mockOutputJax.font.options.dynamicPrefix, '[mathjax-stix2]/chtml/dynamic');
+});
+

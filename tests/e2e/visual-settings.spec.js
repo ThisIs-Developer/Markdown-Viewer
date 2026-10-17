@@ -473,4 +473,76 @@ Greetings: :wave: :thumbsup: :smile:
     expect(legacyResult.rendered).toBe(true);
     await legacyPage.close();
   });
+
+  test('P2: MathJax font switches font resource URLs and dynamic font packages without failed glyph loads', async ({ page }) => {
+    const failedFontRequests = [];
+    page.on('response', resp => {
+      if (resp.status() >= 400 && (resp.url().includes('woff') || resp.url().includes('dynamic') || resp.url().includes('font'))) {
+        failedFontRequests.push({ url: resp.url(), status: resp.status() });
+      }
+    });
+
+    const wrongPackageRequests = [];
+    page.on('request', req => {
+      if (req.url().includes('mathjax-modern-font') && (req.url().includes('stx') || req.url().includes('asn'))) {
+        wrongPackageRequests.push(req.url());
+      }
+    });
+
+    await openApp(page, '/', { mockMathJax: false });
+
+    // Initial render with Modern
+    const editor = page.locator('#markdown-editor');
+    await editor.fill('$$x^2$$\n\n$$\\mathbb{R}$$');
+    await editor.dispatchEvent('input');
+    await expect(page.locator('#markdown-preview mjx-container').first()).toBeVisible({ timeout: 15_000 });
+
+    // 1. Switch to STIX Two live via adapter
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyMathFont('mathjax-stix2');
+    });
+
+    // Check font resource options on startup.output.font
+    const stixFontOptions = await page.evaluate(() => {
+      const font = window.MathJax?.startup?.output?.font;
+      return {
+        prefix: font?.cssFontPrefix,
+        fontURL: font?.options?.fontURL,
+        dynamicPrefix: font?.options?.dynamicPrefix
+      };
+    });
+    expect(stixFontOptions.prefix).toBe('STX');
+    expect(stixFontOptions.fontURL).toContain('mathjax-stix2-font/chtml/woff');
+    expect(stixFontOptions.dynamicPrefix).toBe('[mathjax-stix2]/chtml/dynamic');
+
+    // 2. Switch to Asana live with \mathbb{R}
+    let asanaDynamicLoaded = false;
+    page.on('request', req => {
+      if (req.url().includes('mathjax-asana-font') && req.url().includes('double-struck.js')) {
+        asanaDynamicLoaded = true;
+      }
+    });
+
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyMathFont('mathjax-asana');
+    });
+
+    const asanaFontOptions = await page.evaluate(() => {
+      const font = window.MathJax?.startup?.output?.font;
+      return {
+        prefix: font?.cssFontPrefix,
+        fontURL: font?.options?.fontURL,
+        dynamicPrefix: font?.options?.dynamicPrefix
+      };
+    });
+    expect(asanaFontOptions.prefix).toBe('ASNA');
+    expect(asanaFontOptions.fontURL).toContain('mathjax-asana-font/chtml/woff');
+    expect(asanaFontOptions.dynamicPrefix).toBe('[mathjax-asana]/chtml/dynamic');
+
+    // Verify equations are rendered and no failed font requests occurred
+    await expect(page.locator('#markdown-preview mjx-container')).toHaveCount(2);
+    expect(failedFontRequests).toEqual([]);
+    expect(wrongPackageRequests).toEqual([]);
+  });
 });
+
