@@ -47,6 +47,7 @@ fs.copyFileSync(path.join(ROOT_DIR, "script.js"), path.join(jsDest, "script.js")
 console.log("✓ Copied script.js → resources/js/script.js");
 
 fs.copyFileSync(path.join(ROOT_DIR, "workspace-storage.js"), path.join(jsDest, "workspace-storage.js"));
+fs.copyFileSync(path.join(ROOT_DIR, "native-markdown-source.js"), path.join(jsDest, "native-markdown-source.js"));
 console.log("✓ Copied workspace-storage.js → resources/js/workspace-storage.js");
 
 fs.copyFileSync(path.join(ROOT_DIR, "preview-worker.js"), path.join(jsDest, "preview-worker.js"));
@@ -330,6 +331,8 @@ async function prepareOfflineDependencies() {
   html = html.replace(/<!-- Primary Meta Tags -->[\s\S]*?<!-- JSON-LD Structured Data Schema/i, '<!-- JSON-LD Structured Data Schema');
   html = html.replace(/<script\b[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/i, '');
   html = html.replace(/\s*<!-- Browser fallback for hosts that do not run the Cloudflare Pages SEO middleware\. -->\s*<script type="module" src="assets\/seo-metadata\.mjs"><\/script>/i, '');
+
+  html = html.replace(/<script src="native-markdown-source\.js" defer><\/script>/g, '<script src="/js/native-markdown-source.js"></script>');
 
   // Inject Neutralino script tags
   html = html.replace(
