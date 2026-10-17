@@ -549,6 +549,60 @@ Greetings: :wave: :thumbsup: :smile:
     expect(wrongPackageRequests).toEqual([]);
   });
 
+  test('P2: load Modern when resetting after an alternate-font reload', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('mdv.visualSettings.v1', JSON.stringify({
+        mathFont: 'mathjax-stix2'
+      }));
+    });
+
+    const failedFontRequests = [];
+    page.on('response', resp => {
+      if (resp.url().includes('mathjax') && resp.status() >= 400) {
+        failedFontRequests.push({ url: resp.url(), status: resp.status() });
+      }
+    });
+
+    await openApp(page, '/', { mockMathJax: false });
+
+    // Initial render with STIX Two
+    const editor = page.locator('#markdown-editor');
+    await editor.fill('$$x^2 + y^2 = z^2$$');
+    await editor.dispatchEvent('input');
+    await expect(page.locator('#markdown-preview mjx-container')).toBeVisible({ timeout: 15_000 });
+
+    const initialBootPrefix = await page.evaluate(() => {
+      return window.MathJax?.startup?.output?.font?.cssFontPrefix;
+    });
+    expect(initialBootPrefix).toBe('STX');
+
+    // Reset visual settings to default (Modern math font)
+    await page.locator('#visual-settings-button').click();
+    await page.locator('#visual-settings-reset-btn').click();
+
+    await expect(page.locator('#visual-setting-math-font')).toHaveValue('mathjax-modern');
+
+    await expect.poll(async () => {
+      return page.evaluate(() => {
+        const font = window.MathJax?.startup?.output?.font;
+        return {
+          prefix: font?.cssFontPrefix,
+          fontURL: font?.options?.fontURL,
+          dynamicPrefix: font?.options?.dynamicPrefix,
+          activeFont: window.visualSettingsAdapters?.getCurrentMathFont()
+        };
+      });
+    }, { timeout: 15_000 }).toEqual({
+      prefix: 'MM',
+      fontURL: 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff',
+      dynamicPrefix: '[mathjax-modern]/chtml/dynamic',
+      activeFont: 'mathjax-modern'
+    });
+
+    await expect(page.locator('#markdown-preview mjx-container')).toBeVisible();
+    expect(failedFontRequests).toEqual([]);
+  });
+
   test('P2: resolve automatic code colors against PDF export theme', async ({ page }) => {
     await openApp(page);
     const editor = page.locator('#markdown-editor');

@@ -448,13 +448,30 @@
     // Load external font script if needed and MathJax core is already loaded.
     // If MathJax has not loaded yet, configuring output.font and resource URLs
     // is sufficient because MathJax's startup loader will load the font component itself.
-    if (_activeMathFont !== 'mathjax-modern' && window.MathJax._) {
+    const fontAlreadyLoaded = !!(
+      window.MathJax._ &&
+      window.MathJax._.output &&
+      window.MathJax._.output.fonts &&
+      window.MathJax._.output.fonts[_activeMathFont]
+    );
+
+    if (!fontAlreadyLoaded && window.MathJax._ && !isMathJax3) {
       const fontUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font/chtml.js`;
       try {
         await loadScriptOnce(fontUrl);
       } catch (err) {
         console.warn(`[VisualAdapters] MathJax font load failed (${_activeMathFont}), falling back to bundled Modern:`, err);
         _activeMathFont = 'mathjax-modern';
+        if (
+          window.MathJax._ &&
+          (!window.MathJax._.output || !window.MathJax._.output.fonts || !window.MathJax._.output.fonts['mathjax-modern'])
+        ) {
+          try {
+            await loadScriptOnce(`${MATHJAX_FONT_CDN_BASE}mathjax-modern-font/chtml.js`);
+          } catch (modernErr) {
+            console.warn('[VisualAdapters] MathJax modern fallback load failed:', modernErr);
+          }
+        }
       }
     }
 

@@ -347,3 +347,81 @@ test('applyMathFont initializes complete font resource configuration in MathJax 
   assert.equal(mockOutputJax.font.options.dynamicPrefix, '[mathjax-stix2]/chtml/dynamic');
 });
 
+test('applyMathFont loads Modern font resources when resetting after alternate-font boot', async () => {
+  const { context, adapters } = createAdapterContext();
+
+  const mockOutputJax = {
+    font: {
+      name: 'mathjax-stix2',
+      options: {
+        fontURL: 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font/chtml/woff',
+        dynamicPrefix: '[mathjax-stix2]/chtml/dynamic'
+      }
+    }
+  };
+
+  context.window.MathJax = {
+    version: '4.0.0-beta.7',
+    config: {},
+    loader: { paths: {} },
+    _: {
+      components: {
+        loader: {
+          CONFIG: {
+            paths: {
+              mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7'
+            }
+          }
+        }
+      },
+      output: {
+        fonts: {
+          'mathjax-stix2': {
+            chtml_ts: {
+              MathJaxStix2Font: class MockStixFont {}
+            }
+          }
+        }
+      }
+    },
+    startup: {
+      getOutputJax: () => mockOutputJax,
+      getDocument: () => ({})
+    }
+  };
+
+  const origCreateElement = context.document.createElement.bind(context.document);
+  context.document.createElement = function(tag) {
+    const el = origCreateElement(tag);
+    if (tag.toLowerCase() === 'script') {
+      let _src = '';
+      Object.defineProperty(el, 'src', {
+        get() { return _src; },
+        set(val) {
+          _src = val;
+          if (val.includes('mathjax-modern-font')) {
+            context.window.MathJax._.output.fonts['mathjax-modern'] = {
+              chtml_ts: {
+                MathJaxModernFont: class MockModernFont {}
+              }
+            };
+          }
+          setTimeout(() => { if (this.onload) this.onload(); }, 1);
+        }
+      });
+    }
+    return el;
+  };
+
+  await adapters.applyMathFont('mathjax-modern');
+
+  const mj = context.window.MathJax;
+  assert.equal(mj.config.output.font, 'mathjax-modern');
+  assert.equal(mj.config.chtml.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff');
+  assert.equal(mj.config.chtml.dynamicPrefix, '[mathjax-modern]/chtml/dynamic');
+  assert.equal(mj.config.loader.paths['mathjax-modern'], 'https://cdn.jsdelivr.net/npm/mathjax-modern-font');
+  assert.equal(mockOutputJax.font.options.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff');
+  assert.equal(mockOutputJax.font.options.dynamicPrefix, '[mathjax-modern]/chtml/dynamic');
+  assert.ok(mj._.output.fonts['mathjax-modern']);
+});
+
