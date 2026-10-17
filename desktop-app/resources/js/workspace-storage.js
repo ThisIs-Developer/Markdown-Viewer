@@ -1603,6 +1603,10 @@
     async deleteDocument(id, options) {
       requireDocumentId(id);
       const settings = options || {};
+      if (settings.discardAfterSecretMove) {
+        const encrypted = (await this.listSecretRecords()).find(function(record) { return record.id === id && validateEncryptedEnvelope(record.envelope); });
+        if (!encrypted) throw new Error('Cannot remove the Vault copy before its encrypted record is saved.');
+      }
       this._normalContentCache.delete(id);
       if (this.desktop) {
         const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
@@ -1637,6 +1641,17 @@
           }
           throw error;
         }
+        if (settings.discardAfterSecretMove) {
+          if (trashRecord) await this.permanentlyDeleteTrashItem(trashRecord.trashId);
+          const historyPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'history', sanitizePathSegment(id, 'document'));
+          if (await this._pathExists(historyPath)) {
+            for (const entry of await Neutralino.filesystem.readDirectory(historyPath)) {
+              if (entry.type === 'FILE' && /^\d+\.md$/.test(entry.entry || '')) {
+                await Neutralino.filesystem.remove(await this._pathJoin(historyPath, entry.entry));
+              }
+            }
+          }
+        }
         return;
       }
       const transaction = this.db.transaction(['documents', 'contents', 'trash'], 'readwrite');
@@ -1649,7 +1664,7 @@
         transaction.abort();
         throw new WorkspaceConflictError(id, null, metadata, content && content.content);
       }
-      if (metadata || content) {
+      if ((metadata || content) && !settings.discardAfterSecretMove) {
         transaction.objectStore('trash').put({
           trashId: randomId('trash'),
           documentId: id,
@@ -2778,7 +2793,12 @@
             metadata.kind = 'linked-recovery';
             metadata.workspaceId = 'workspace_default';
             metadata.folderId = null;
-            metadata.recoveryFolderSegments = recoveryFoldersFromStoredPath(importedMetadata.vaultRelativePath || importedMetadata._vaultRelativePath);
+            const storedPath = importedMetadata.vaultRelativePath || importedMetadata._vaultRelativePath;
+            metadata.recoveryFolderSegments = storedPath
+              ? recoveryFoldersFromStoredPath(storedPath)
+              : importedMetadata.recoveryFolderSegments !== undefined
+                ? validatedRecoveryFolderSegments(importedMetadata.recoveryFolderSegments)
+                : recoveryFoldersFromStoredPath(item.path);
             recoveredLinkedDocumentCount += 1;
           } else if (importedMetadata.kind === 'linked-workspace-guide' || importedMetadata.kind === 'workspace-guide') {
             metadata.kind = importedMetadata.kind;

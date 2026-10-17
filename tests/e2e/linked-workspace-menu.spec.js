@@ -13,26 +13,22 @@ const root = page => page.locator('#document-tree [data-tree-type="linked-worksp
 const menu = page => page.locator('.document-menu-dropdown.open');
 
 for (const theme of ['light', 'dark']) {
-  test(`creation toolbar and menu share the official file-plus icon in ${theme} theme`, async ({ page }) => {
+  test(`linking controls retain their icons without a creation action in ${theme} theme`, async ({ page }) => {
     await openDesktop(page);
     await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
-    const button = page.locator('#sidebar-create-linked-file');
-    await expect(button).toBeVisible();
-    await expect(button).toHaveAttribute('title', 'Create new linked file…');
+    await expect(page.locator('#sidebar-create-linked-file')).toHaveCount(0);
     await expect(page.locator('#sidebar-new-document > .lucide-file-plus-2')).toHaveCount(1);
     await root(page).dispatchEvent('contextmenu', { clientX: 120, clientY: 160 });
-    const menuItem = menu(page).getByRole('menuitem', { name: 'Create new linked file…', exact: true });
-    for (const control of [button, menuItem]) {
-      const glyph = control.locator('.lucide-file-plus');
-      await expect(glyph).toHaveAttribute('aria-hidden', 'true');
-      await expect(glyph).toBeVisible();
-      expect(await glyph.evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none');
-      await expect(control.locator('.linked-create-icon, .linked-create-icon-badge')).toHaveCount(0);
+    await expect(menu(page).getByRole('menuitem', { name: /Create new linked/ })).toHaveCount(0);
+    for (const [id, name, icon] of [['sidebar-link-files', 'Link Markdown files', 'file-symlink'], ['sidebar-link-folder', 'Link Markdown folder', 'folder-symlink']]) {
+      for (const control of [page.locator('#' + id), menu(page).getByRole('menuitem', { name, exact: true })]) {
+        const glyph = control.locator('.lucide-' + icon);
+        await expect(glyph).toHaveAttribute('aria-hidden', 'true');
+        await expect(glyph).toBeVisible();
+        expect(await glyph.evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none');
+      }
     }
-    const mask = control => control.locator('.lucide-file-plus').evaluate(node => getComputedStyle(node).maskImage);
-    expect(await mask(button)).toBe(await mask(menuItem));
-    expect(await mask(button)).not.toBe(await page.locator('#sidebar-new-document > .lucide-file-plus-2').evaluate(node => getComputedStyle(node).maskImage));
-    await page.screenshot({ path: `test-results/linked-create-icon-${theme}.png`, clip: { x: 0, y: 35, width: 480, height: 380 } });
+    await page.screenshot({ path: `test-results/linked-menu-${theme}.png`, clip: { x: 0, y: 35, width: 480, height: 380 } });
   });
 }
 
@@ -43,10 +39,10 @@ for (const os of ['Windows', 'Darwin']) {
     for (const trigger of ['contextmenu', 'button']) {
       if (trigger === 'contextmenu') await root(page).dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
       else await root(page).locator('.document-menu-btn').click();
-      await expect(menu(page).getByRole('menuitem')).toHaveCount(3);
-      await expect(menu(page).getByRole('separator')).toHaveCount(1);
-      expect(await menu(page).evaluate(node => Array.from(node.children).map(child => child.getAttribute('role')))).toEqual(['menuitem', 'separator', 'menuitem', 'menuitem']);
-      for (const [name, icon] of [['Create new linked file…', 'file-plus'], ['Link Markdown files', 'file-symlink'], ['Link Markdown folder', 'folder-symlink']]) {
+      await expect(menu(page).getByRole('menuitem')).toHaveCount(2);
+      await expect(menu(page).getByRole('separator')).toHaveCount(0);
+      expect(await menu(page).evaluate(node => Array.from(node.children).map(child => child.getAttribute('role')))).toEqual(['menuitem', 'menuitem']);
+      for (const [name, icon] of [['Link Markdown files', 'file-symlink'], ['Link Markdown folder', 'folder-symlink']]) {
         const item = menu(page).getByRole('menuitem', { name, exact: true });
         await expect(item).toBeVisible();
         expect(await item.locator('.lucide-' + icon).evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none');
@@ -56,8 +52,8 @@ for (const os of ['Windows', 'Darwin']) {
     }
     await expect(root(page).locator('.document-tree-main > .lucide-link-2')).toHaveCount(1);
     await expect(page.locator('#sidebar-linked-separator')).toBeVisible();
-    expect(await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).filter(child => !child.hidden).map(child => child.id).slice(0, 6))).toEqual([
-      'sidebar-create-linked-file', 'sidebar-link-files', 'sidebar-link-folder', 'sidebar-linked-separator', 'sidebar-new-document', 'sidebar-new-folder'
+    expect(await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).filter(child => !child.hidden).map(child => child.id).slice(0, 5))).toEqual([
+      'sidebar-link-files', 'sidebar-link-folder', 'sidebar-linked-separator', 'sidebar-new-document', 'sidebar-new-folder'
     ]);
     const positions = await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).slice(0, 4).map(child => child.getBoundingClientRect().left));
     expect(positions[0]).toBeLessThan(positions[1]);

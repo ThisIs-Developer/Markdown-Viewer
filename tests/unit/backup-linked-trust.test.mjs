@@ -16,10 +16,12 @@ function backup(){return {
   documents:[{metadata:{id:'untrusted',title:'Recovered notes',sourcePath:'C:/Private/notes.md',sourceContentHash:'fake',sourceKind:'file',linkedRootId:'root',sourceRelativePath:'notes.md',sourceMissing:false,sourceConflict:false,_vaultRelativePath:'../../Private/notes.md',vaultRelativePath:'../../Private/notes.md',_persistedContent:'fake',temporary:true,workspaceId:'workspace_default',favorite:true},content:'# imported draft'}],secretRecords:[]
 };}
 test('imported metadata is allowlisted and source paths/root associations are detached',async()=>{
-  const {storage}=await setup();const input=backup();const result=storage._normalizeBackupForRestore(input);
+  const {storage}=await setup();const input=backup();
+  Object.assign(input.documents[0].metadata,{linkedParentId:'root',linkedParentPath:'group'});
+  const result=storage._normalizeBackupForRestore(input);
   assert.equal(result.tabs[0].kind,'linked-recovery');assert.equal(result.tabs[0].content,'# imported draft');
   assert.equal(result.tabs[0].favorite,true);
-  for(const key of ['sourcePath','sourceContentHash','sourceKind','linkedRootId','sourceRelativePath','vaultRelativePath','_vaultRelativePath','temporary','_persistedContent'])assert.equal(result.tabs[0][key],undefined,key);
+  for(const key of ['sourcePath','sourceContentHash','sourceKind','linkedRootId','sourceRelativePath','linkedParentId','linkedParentPath','vaultRelativePath','_vaultRelativePath','temporary','_persistedContent'])assert.equal(result.tabs[0][key],undefined,key);
   assert.equal(result.organization.linkedLocations.length,0);assert.equal(result.recoveredLinkedDocumentCount,1);
   assert.equal(input.documents[0].metadata.sourcePath,'C:/Private/notes.md');
 });

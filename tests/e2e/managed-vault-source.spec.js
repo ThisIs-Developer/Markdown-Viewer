@@ -18,9 +18,10 @@ test('Save As refuses internal metadata before overwrite confirmation or write',
   await expect(page.getByRole('alertdialog', { name: 'Replace Markdown file?' })).toHaveCount(0);
   expect(await page.evaluate(() => __desktopFiles.get(__managedIndex))).toBe(await page.evaluate(() => __managedBefore));
 });
-test('Create linked file refuses managed body storage', async ({ page }) => {
+test('Save As refuses managed body storage', async ({ page }) => {
   await page.evaluate(() => { Neutralino.os.showSaveDialog = async () => 'C:/Documents/Markdown Viewer Vault/Workspace/new.md'; });
-  await page.locator('#sidebar-create-linked-file').click();
+  await page.locator('[data-tree-type="document"]').filter({ has: page.locator('.document-tree-label', { hasText: /^Welcome to Markdown$/ }) }).click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Save As linked file…', exact: true }).click();
   await expect(page.locator('.app-toast').filter({ hasText: 'outside the managed Vault' })).toBeVisible();
   expect(await page.evaluate(() => __desktopFiles.has('C:/Documents/Markdown Viewer Vault/Workspace/new.md'))).toBe(false);
 });

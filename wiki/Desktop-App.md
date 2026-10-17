@@ -22,14 +22,18 @@ PlantUML and D2 contain an optional local-command code path, but it requires `os
 
 Linked Workspace keeps references to external Markdown files separate from independent
 Workspace (Vault) documents. Use the Explorer toolbar or Linked Workspace context menu
-to link files/folders, or create a new external linked file. Linking the same normalized
+to link existing files/folders. Linking the same normalized
 source path reuses its existing document. Folder linking includes nested Markdown files.
+
+Right-click a linked folder or subfolder to group existing links inside it. This sidebar
+organization does not move originals or change filesystem scan roots. Independently
+grouped links remain available if their parent source folder is removed or converted.
 
 - Edits autosave recovery drafts under the separate **Linked Workspace** storage root,
   mirroring linked-folder subdirectories. They do not automatically overwrite originals.
 - **Save / Ctrl+S** writes the selected linked original after preserving and verifying
-  its recovery draft. The ordinary original-save confirmation can be disabled in the
-  dialog and enabled again in Settings; conflict/missing-source decisions remain explicit.
+  its recovery draft, without an ordinary confirmation prompt. Conflict/missing-source
+  decisions remain explicit.
 - **Save As…** creates a separate external file/link. **Save As linked file…** on a Vault
   document keeps its Vault copy and activates the new link. Dialogs suggest the document
   title and append `.md` when no extension is supplied. Ctrl+S recognizes keyboard layouts;
@@ -45,10 +49,13 @@ source path reuses its existing document. Folder linking includes nested Markdow
 - External changes refresh unmodified drafts. Conflicts, missing sources and incomplete
   scans retain drafts and show distinct hover indicators rather than repeated alerts.
   Reload, overwrite and recreation decisions use application confirmations.
-- A built-in editable guide explains these workflows. Both built-in guides have a book
-  icon; identity comes from metadata, not an arbitrary document's title.
+- A built-in editable guide explains these workflows. Both guides use the normal Markdown
+  file icon; guide identity still comes from metadata, not an arbitrary document's title.
 - Workspace backups include normal and linked recovery documents. Imported backups
   recover drafts but do not reconnect external paths or authorize writes to originals.
+- Linked documents cannot move directly into Secret Workspace. Convert to a Vault copy
+  first. Moving a Vault document into Secret saves its encrypted record before removing
+  the active plaintext copy and its automatic history; a failed cleanup reports a failed move.
 
 External HTML drops continue importing Vault copies. Native-path drop choice and
 single-instance handling are separate runtime-dependent proposals, not enabled by this

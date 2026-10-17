@@ -65,7 +65,7 @@ test('first file-association launch seeds Welcome in the Vault without replacing
   await openApp(page);
   const welcome = page.locator('#document-tree [data-tree-type="document"]').filter({ hasText: 'Welcome to Markdown' });
   await expect(welcome).toHaveCount(1);
-  await expect(welcome.locator('.lucide-book-open-text')).toHaveCount(1);
+  await expect(welcome.locator('.lucide-file-text')).toHaveCount(1);
   await expect(welcome).not.toHaveClass(/is-linked-document/);
   await expect(welcome).toHaveAttribute('data-tree-depth', '1');
   await expect.poll(() => editorValue(page)).toBe('# Initial original');

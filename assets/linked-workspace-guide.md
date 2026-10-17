@@ -4,9 +4,11 @@ Linked Workspace lets you edit Markdown files where they already live on your co
 
 ## Link a file or folder
 
-Use **Link Markdown files** or **Link a Markdown folder** in the Explorer toolbar or the New menu. A linked folder includes Markdown files in its subfolders.
+Use **Link Markdown files** or **Link Markdown folder** in the Explorer toolbar or the Linked Workspace menu. A linked folder includes Markdown files in its subfolders.
 
-**Create new linked file…** creates a new external Markdown file and opens its link. Dropping an external Markdown file imports an independent Vault copy. Use the explicit linking actions when you want to keep an original file linked.
+Right-click a linked folder or subfolder to add existing file or folder links inside it. This only groups links in the sidebar: originals stay in their current locations. Grouping survives reopening the app and does not change which source a folder scans. Removing or converting the parent source folder keeps independently grouped links available outside that group.
+
+Dropping an external Markdown file imports an independent Vault copy. Use the explicit linking actions when you want to keep an original file linked.
 
 Linked documents use a file-with-arrow icon; linked folders use a folder-with-arrow icon. Hover over a linked document to see its original path.
 
@@ -20,11 +22,13 @@ Linked-folder recovery drafts mirror the source subfolders under a separate reco
 - **Save As** creates a new external file and a separate link. The previous document and original remain unchanged.
 - Saving a Vault document externally keeps its independent Vault copy and activates the new linked document.
 
-The Save shortcut works across keyboard layouts, including Greek. Saving to an original normally asks for confirmation and shows its full path. **Don't show this warning again** disables that ordinary warning for all linked files in this installation; **Confirm saving to original** in Settings enables it again. Conflict and missing-original warnings still require confirmation.
+The Save shortcut works across keyboard layouts, including Greek. Ordinary Save updates the original directly and reports success. Conflict and missing-original warnings still require confirmation.
 
 ## Independent Vault copies
 
 **Convert to Workspace copy** turns a linked draft into an independent Vault document without changing the original. You can also drag a linked document into the Vault or one of its folders.
+
+Linked documents cannot move directly into Secret Workspace. Convert to an independent Vault copy first, then move that copy into Secret Workspace.
 
 Reopening the original creates or activates its link; it never replaces the independent Vault copy.
 
