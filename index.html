@@ -14,6 +14,8 @@
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
     <link rel="preload" href="styles.css" as="style">
     <link rel="preload" href="workspace-storage.js" as="script">
+    <link rel="preload" href="visual-settings-adapters.js" as="script">
+    <link rel="preload" href="visual-settings-store.js" as="script">
     <link rel="preload" href="script.js" as="script">
 
     <!-- Canonical Link -->
@@ -218,6 +220,10 @@
                         <i class="lucide lucide-info" aria-hidden="true"></i>
                     </button>
 
+                    <button id="visual-settings-button" class="header-icon-command" type="button" title="Visual library settings" aria-label="Open visual library settings">
+                        <i class="lucide lucide-layers-3" aria-hidden="true"></i>
+                    </button>
+
                     <div class="dropdown settings-dropdown">
                         <button class="header-icon-command" type="button" id="workspaceSettingsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Workspace settings (Ctrl/Cmd+,)" aria-label="Open workspace settings" aria-keyshortcuts="Control+, Meta+,">
                             <i class="lucide lucide-settings" aria-hidden="true"></i>
@@ -228,6 +234,9 @@
                             </div>
                             <button id="theme-toggle" class="settings-menu-item app-menu-item settings-menu-item--toggle" type="button" aria-pressed="false" title="Toggle appearance">
                                 <i id="theme-toggle-icon" class="lucide lucide-sun" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Appearance</span><span id="theme-toggle-description" class="app-menu-description">Switch to dark appearance</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span><i id="theme-switch-icon" class="lucide lucide-sun settings-switch-icon"></i></span></span>
+                            </button>
+                            <button id="menu-visual-settings-button" class="settings-menu-item app-menu-item" type="button" title="Visual library settings">
+                                <i class="lucide lucide-layers-3" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Visual Settings</span><span class="app-menu-description">Themes, fonts, and styles for libraries</span></span>
                             </button>
                             <div class="dropdown dropstart settings-language-dropdown">
                                 <button class="settings-menu-item app-menu-item dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Switch language">
@@ -412,6 +421,9 @@
                                         </div>
                                         <button id="mobile-private-mode-toggle" class="mobile-menu-item mobile-settings-item mobile-settings-toggle" type="button" aria-pressed="false" title="Turn private mode on">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-hat-glasses" aria-hidden="true"></i><span>Private mode</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
+                                        </button>
+                                        <button id="mobile-visual-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Visual library settings">
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-layers-3" aria-hidden="true"></i><span>Visual Settings</span></span>
                                         </button>
                                         <button id="mobile-storage-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Storage and backup">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-box" aria-hidden="true"></i><span>Storage and Backup</span></span>
@@ -655,6 +667,83 @@
           </div>
         </div>
         <input id="storage-backup-file-input" type="file" accept=".zip,application/zip" hidden>
+
+        <!-- Visual Library Settings Modal -->
+        <div id="visual-settings-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="visual-settings-title" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box visual-settings-box">
+            <div class="modal-header">
+              <p id="visual-settings-title" class="reset-modal-message">Visual Library Settings</p>
+              <button type="button" class="modal-close-btn" id="visual-settings-close-icon" aria-label="Close visual library settings">
+                <i class="lucide lucide-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="modal-body visual-settings-body">
+              <p class="visual-setting-desc mb-2">Configure default themes, fonts, and rendering styles for preview visual libraries.</p>
+
+              <!-- highlight.js theme -->
+              <div class="visual-setting-group">
+                <label for="visual-setting-hljs-theme" class="visual-setting-label">
+                  <i class="lucide lucide-code-2" aria-hidden="true"></i> Syntax Highlighting Theme (highlight.js)
+                </label>
+                <select id="visual-setting-hljs-theme" class="form-select visual-setting-select" aria-describedby="visual-setting-hljs-desc">
+                </select>
+                <p id="visual-setting-hljs-desc" class="visual-setting-desc">Color palette for highlighted code blocks in the preview.</p>
+              </div>
+
+              <!-- MathJax math font -->
+              <div class="visual-setting-group">
+                <label for="visual-setting-math-font" class="visual-setting-label">
+                  <i class="lucide lucide-spline" aria-hidden="true"></i> Math Font (MathJax)
+                </label>
+                <select id="visual-setting-math-font" class="form-select visual-setting-select" aria-describedby="visual-setting-math-desc">
+                </select>
+                <p id="visual-setting-math-desc" class="visual-setting-desc">Font family used for rendering LaTeX mathematical notation.</p>
+              </div>
+
+              <!-- Mermaid theme -->
+              <div class="visual-setting-group">
+                <label for="visual-setting-mermaid-theme" class="visual-setting-label">
+                  <i class="lucide lucide-workflow" aria-hidden="true"></i> Diagram Theme (Mermaid)
+                </label>
+                <select id="visual-setting-mermaid-theme" class="form-select visual-setting-select" aria-describedby="visual-setting-mermaid-theme-desc">
+                </select>
+                <p id="visual-setting-mermaid-theme-desc" class="visual-setting-desc">Color palette and appearance for Mermaid diagrams.</p>
+              </div>
+
+              <!-- Mermaid look -->
+              <div class="visual-setting-group">
+                <label for="visual-setting-mermaid-look" class="visual-setting-label">
+                  <i class="lucide lucide-square-pen" aria-hidden="true"></i> Diagram Drawing Style (Mermaid Look)
+                </label>
+                <select id="visual-setting-mermaid-look" class="form-select visual-setting-select" aria-describedby="visual-setting-mermaid-look-desc">
+                </select>
+                <p id="visual-setting-mermaid-look-desc" class="visual-setting-desc">Geometric drawing style (Classic or Hand Drawn sketch).</p>
+              </div>
+
+              <!-- JoyPixels emoji skin tone -->
+              <div class="visual-setting-group">
+                <label for="visual-setting-emoji-skin-tone" class="visual-setting-label">
+                  <i class="lucide lucide-smile" aria-hidden="true"></i> Emoji Skin Tone (JoyPixels)
+                </label>
+                <select id="visual-setting-emoji-skin-tone" class="form-select visual-setting-select" aria-describedby="visual-setting-emoji-skin-tone-desc">
+                </select>
+                <p id="visual-setting-emoji-skin-tone-desc" class="visual-setting-desc">Default Fitzpatrick skin tone for supported emoji shortcodes.</p>
+              </div>
+            </div>
+            <div class="reset-modal-actions visual-settings-actions">
+              <div class="visual-settings-actions-left">
+                <button type="button" class="reset-modal-btn reset-modal-cancel" id="visual-settings-reset-btn" title="Reset all visual settings to defaults">
+                  <i class="lucide lucide-refresh-cw me-1" aria-hidden="true"></i> Reset to defaults
+                </button>
+              </div>
+              <div class="visual-settings-actions-right">
+                <button type="button" class="reset-modal-btn storage-primary-action" id="visual-settings-close-btn">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Trash Modal -->
         <div id="trash-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="trash-modal-title" aria-describedby="trash-modal-description" aria-hidden="true" style="display:none;">
@@ -2309,6 +2398,8 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
     <script src="assets/document-toc.js" defer></script>
     <script src="workspace-storage.js" defer></script>
+    <script src="visual-settings-adapters.js" defer></script>
+    <script src="visual-settings-store.js" defer></script>
     <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->
     <div id="app-accessibility-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>

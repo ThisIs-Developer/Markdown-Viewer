@@ -4122,94 +4122,94 @@ a:focus {
   background-color: var(--code-bg);
 }
 
-/* Syntax Highlighting Mapping to GitHub Variables */
-.hljs {
+/* Syntax Highlighting Mapping to GitHub Variables (scoped to when no external syntax theme is selected) */
+html:not([data-custom-syntax-theme]) .hljs {
   color: var(--color-fg-default);
 }
 
-.hljs-doctag,
-.hljs-keyword,
-.hljs-meta .hljs-keyword,
-.hljs-template-tag,
-.hljs-template-variable,
-.hljs-type,
-.hljs-variable.language_ {
+html:not([data-custom-syntax-theme]) .hljs-doctag,
+html:not([data-custom-syntax-theme]) .hljs-keyword,
+html:not([data-custom-syntax-theme]) .hljs-meta .hljs-keyword,
+html:not([data-custom-syntax-theme]) .hljs-template-tag,
+html:not([data-custom-syntax-theme]) .hljs-template-variable,
+html:not([data-custom-syntax-theme]) .hljs-type,
+html:not([data-custom-syntax-theme]) .hljs-variable.language_ {
   color: var(--color-prettylights-syntax-keyword);
 }
 
-.hljs-title,
-.hljs-title.class_,
-.hljs-title.class_.inherited__,
-.hljs-title.function_ {
+html:not([data-custom-syntax-theme]) .hljs-title,
+html:not([data-custom-syntax-theme]) .hljs-title.class_,
+html:not([data-custom-syntax-theme]) .hljs-title.class_.inherited__,
+html:not([data-custom-syntax-theme]) .hljs-title.function_ {
   color: var(--color-prettylights-syntax-entity);
 }
 
-.hljs-attr,
-.hljs-attribute,
-.hljs-literal,
-.hljs-meta,
-.hljs-number,
-.hljs-operator,
-.hljs-variable,
-.hljs-selector-attr,
-.hljs-selector-class,
-.hljs-selector-id {
+html:not([data-custom-syntax-theme]) .hljs-attr,
+html:not([data-custom-syntax-theme]) .hljs-attribute,
+html:not([data-custom-syntax-theme]) .hljs-literal,
+html:not([data-custom-syntax-theme]) .hljs-meta,
+html:not([data-custom-syntax-theme]) .hljs-number,
+html:not([data-custom-syntax-theme]) .hljs-operator,
+html:not([data-custom-syntax-theme]) .hljs-variable,
+html:not([data-custom-syntax-theme]) .hljs-selector-attr,
+html:not([data-custom-syntax-theme]) .hljs-selector-class,
+html:not([data-custom-syntax-theme]) .hljs-selector-id {
   color: var(--color-prettylights-syntax-constant);
 }
 
-.hljs-regexp,
-.hljs-string,
-.hljs-meta .hljs-string {
+html:not([data-custom-syntax-theme]) .hljs-regexp,
+html:not([data-custom-syntax-theme]) .hljs-string,
+html:not([data-custom-syntax-theme]) .hljs-meta .hljs-string {
   color: var(--color-prettylights-syntax-string);
 }
 
-.hljs-built_in,
-.hljs-symbol {
+html:not([data-custom-syntax-theme]) .hljs-built_in,
+html:not([data-custom-syntax-theme]) .hljs-symbol {
   color: var(--color-prettylights-syntax-variable);
 }
 
-.hljs-comment,
-.hljs-code,
-.hljs-formula {
+html:not([data-custom-syntax-theme]) .hljs-comment,
+html:not([data-custom-syntax-theme]) .hljs-code,
+html:not([data-custom-syntax-theme]) .hljs-formula {
   color: var(--color-prettylights-syntax-comment);
 }
 
-.hljs-name,
-.hljs-quote,
-.hljs-selector-tag,
-.hljs-selector-pseudo {
+html:not([data-custom-syntax-theme]) .hljs-name,
+html:not([data-custom-syntax-theme]) .hljs-quote,
+html:not([data-custom-syntax-theme]) .hljs-selector-tag,
+html:not([data-custom-syntax-theme]) .hljs-selector-pseudo {
   color: var(--color-prettylights-syntax-entity-tag);
 }
 
-.hljs-subst {
+html:not([data-custom-syntax-theme]) .hljs-subst {
   color: var(--color-fg-default);
 }
 
-.hljs-section {
+html:not([data-custom-syntax-theme]) .hljs-section {
   color: var(--color-prettylights-syntax-markup-heading);
   font-weight: bold;
 }
 
-.hljs-bullet {
+html:not([data-custom-syntax-theme]) .hljs-bullet {
   color: var(--color-prettylights-syntax-constant);
 }
 
-.hljs-emphasis {
+html:not([data-custom-syntax-theme]) .hljs-emphasis {
   color: var(--color-fg-default);
   font-style: italic;
 }
 
-.hljs-strong {
+html:not([data-custom-syntax-theme]) .hljs-strong {
   color: var(--color-fg-default);
   font-weight: bold;
 }
 
-.hljs-addition {
+html:not([data-custom-syntax-theme]) .hljs-addition {
   color: var(--color-prettylights-syntax-markup-inserted-text);
   background-color: var(--color-prettylights-syntax-markup-inserted-bg);
 }
 
-.hljs-deletion {
+html:not([data-custom-syntax-theme]) .hljs-deletion {
   color: var(--color-prettylights-syntax-markup-deleted-text);
   background-color: var(--color-prettylights-syntax-markup-deleted-bg);
 }
@@ -14486,4 +14486,159 @@ body.release-notes-active .mobile-stats-container {
   visibility: hidden;
   min-height: 0;
   overflow: hidden;
+}
+
+/* ==========================================================================
+   Visual Library Settings Modal (Issue #129)
+   ========================================================================== */
+
+.visual-settings-box {
+  width: min(94vw, 560px);
+  max-width: 560px;
+}
+
+.visual-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px;
+  max-height: calc(85vh - 120px);
+  overflow-y: auto;
+}
+
+.visual-setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.visual-setting-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--ui-font-md);
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 2px;
+}
+
+.visual-setting-label i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+}
+
+.visual-setting-desc {
+  font-size: var(--ui-font-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.visual-setting-select {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: var(--ui-font-md);
+  line-height: 1.5;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  background-clip: padding-box;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.visual-setting-select:focus,
+.visual-setting-select:focus-visible {
+  outline: 0;
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.25);
+}
+
+.visual-settings-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-color);
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+}
+
+.visual-settings-actions-left {
+  display: flex;
+  align-items: center;
+}
+
+.visual-settings-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Dark mode styling for visual settings */
+[data-theme="dark"] .visual-setting-select {
+  background-color: #161b22;
+  color: #c9d1d9;
+  border-color: #30363d;
+}
+
+[data-theme="dark"] .visual-setting-select:focus,
+[data-theme="dark"] .visual-setting-select:focus-visible {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.3);
+}
+
+[data-theme="dark"] .visual-setting-select option {
+  background-color: #161b22;
+  color: #c9d1d9;
+}
+
+[data-theme="dark"] .visual-settings-actions {
+  background-color: var(--bg-color);
+  border-top-color: #30363d;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .visual-settings-box {
+    width: 96vw;
+    margin: 8px auto;
+  }
+
+  .visual-settings-body {
+    padding: 14px 16px;
+    gap: 14px;
+    max-height: calc(85vh - 140px);
+  }
+
+  .visual-setting-select {
+    min-height: 44px; /* Better touch target */
+    font-size: var(--ui-font-base, 14px);
+  }
+
+  .visual-settings-actions {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .visual-settings-actions-left,
+  .visual-settings-actions-right {
+    width: 100%;
+  }
+
+  .visual-settings-actions-left button,
+  .visual-settings-actions-right button {
+    width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
 }
