@@ -18,6 +18,9 @@ function createAdapterContext() {
     setAttribute(name, val) {
       this._attrs = this._attrs || {};
       this._attrs[name] = val;
+    },
+    removeAttribute(name) {
+      if (this._attrs) delete this._attrs[name];
     }
   };
 
@@ -200,7 +203,7 @@ test('applyMermaid handles auto theme and look style', async () => {
   assert.equal(config.look, 'classic');
 });
 
-test('applyHighlightTheme manages stylesheet and auto theme', async () => {
+test('applyHighlightTheme manages stylesheet, auto theme, and export styling', async () => {
   const { context, adapters } = createAdapterContext();
 
   context.document.documentElement.setAttribute('data-theme', 'light');
@@ -208,15 +211,37 @@ test('applyHighlightTheme manages stylesheet and auto theme', async () => {
   let link = context.document.getElementById('mdv-hljs-theme-link');
   assert.ok(link);
   assert.ok(link.href.includes('monokai.min.css'));
+  assert.equal(context.document.documentElement.getAttribute('data-custom-syntax-theme'), 'monokai');
+  assert.equal(context.document.documentElement.getAttribute('data-hljs-theme'), 'monokai');
+
+  // Test getHljsTheme and resolveHljsThemeName
+  assert.equal(adapters.resolveHljsThemeName('monokai'), 'monokai');
+  assert.equal(adapters.resolveHljsThemeName('auto', 'dark'), 'github-dark');
+  assert.equal(adapters.resolveHljsThemeName('auto', 'light'), 'github');
+  assert.equal(adapters.getHljsTheme(), 'monokai');
 
   await adapters.applyHighlightTheme('auto');
   link = context.document.getElementById('mdv-hljs-theme-link');
   assert.ok(link.href.includes('github.min.css'));
+  assert.equal(adapters.getHljsTheme(), 'github');
+  assert.equal(adapters.getHljsTheme('dark'), 'github-dark');
+  assert.equal(context.document.documentElement.getAttribute('data-custom-syntax-theme'), null);
+  assert.equal(context.document.documentElement.getAttribute('data-hljs-theme'), 'auto');
+
+  // Verify mdv-hljs-style-helper content scopes preview and provides export rules
+  const helper = context.document.getElementById('mdv-hljs-style-helper');
+  assert.ok(helper);
+  assert.ok(helper.textContent.includes('.markdown-body:not(.pdf-export):not(.export-render-root)'));
+  assert.ok(helper.textContent.includes('.pdf-export.theme-dark'));
+  assert.ok(helper.textContent.includes('.pdf-export.theme-light'));
+  assert.ok(helper.textContent.includes('data-browser-print-export="dark"'));
 
   context.document.documentElement.setAttribute('data-theme', 'dark');
   adapters.onAppThemeChange('dark');
   link = context.document.getElementById('mdv-hljs-theme-link');
   assert.ok(link.href.includes('github-dark.min.css'));
+  assert.equal(adapters.getHljsTheme(), 'github-dark');
+  assert.equal(adapters.getHljsTheme('light'), 'github');
 });
 
 test('applyMathFont maintains MathJax 3 and 4 configuration compatibility without chtml.font string', async () => {

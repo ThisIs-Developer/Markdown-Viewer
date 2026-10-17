@@ -4112,94 +4112,94 @@ a:focus {
   background-color: var(--code-bg);
 }
 
-/* Syntax Highlighting Mapping to GitHub Variables */
-.hljs {
+/* Syntax Highlighting Mapping to GitHub Variables (scoped to when no external syntax theme is selected) */
+html:not([data-custom-syntax-theme]) .hljs {
   color: var(--color-fg-default);
 }
 
-.hljs-doctag,
-.hljs-keyword,
-.hljs-meta .hljs-keyword,
-.hljs-template-tag,
-.hljs-template-variable,
-.hljs-type,
-.hljs-variable.language_ {
+html:not([data-custom-syntax-theme]) .hljs-doctag,
+html:not([data-custom-syntax-theme]) .hljs-keyword,
+html:not([data-custom-syntax-theme]) .hljs-meta .hljs-keyword,
+html:not([data-custom-syntax-theme]) .hljs-template-tag,
+html:not([data-custom-syntax-theme]) .hljs-template-variable,
+html:not([data-custom-syntax-theme]) .hljs-type,
+html:not([data-custom-syntax-theme]) .hljs-variable.language_ {
   color: var(--color-prettylights-syntax-keyword);
 }
 
-.hljs-title,
-.hljs-title.class_,
-.hljs-title.class_.inherited__,
-.hljs-title.function_ {
+html:not([data-custom-syntax-theme]) .hljs-title,
+html:not([data-custom-syntax-theme]) .hljs-title.class_,
+html:not([data-custom-syntax-theme]) .hljs-title.class_.inherited__,
+html:not([data-custom-syntax-theme]) .hljs-title.function_ {
   color: var(--color-prettylights-syntax-entity);
 }
 
-.hljs-attr,
-.hljs-attribute,
-.hljs-literal,
-.hljs-meta,
-.hljs-number,
-.hljs-operator,
-.hljs-variable,
-.hljs-selector-attr,
-.hljs-selector-class,
-.hljs-selector-id {
+html:not([data-custom-syntax-theme]) .hljs-attr,
+html:not([data-custom-syntax-theme]) .hljs-attribute,
+html:not([data-custom-syntax-theme]) .hljs-literal,
+html:not([data-custom-syntax-theme]) .hljs-meta,
+html:not([data-custom-syntax-theme]) .hljs-number,
+html:not([data-custom-syntax-theme]) .hljs-operator,
+html:not([data-custom-syntax-theme]) .hljs-variable,
+html:not([data-custom-syntax-theme]) .hljs-selector-attr,
+html:not([data-custom-syntax-theme]) .hljs-selector-class,
+html:not([data-custom-syntax-theme]) .hljs-selector-id {
   color: var(--color-prettylights-syntax-constant);
 }
 
-.hljs-regexp,
-.hljs-string,
-.hljs-meta .hljs-string {
+html:not([data-custom-syntax-theme]) .hljs-regexp,
+html:not([data-custom-syntax-theme]) .hljs-string,
+html:not([data-custom-syntax-theme]) .hljs-meta .hljs-string {
   color: var(--color-prettylights-syntax-string);
 }
 
-.hljs-built_in,
-.hljs-symbol {
+html:not([data-custom-syntax-theme]) .hljs-built_in,
+html:not([data-custom-syntax-theme]) .hljs-symbol {
   color: var(--color-prettylights-syntax-variable);
 }
 
-.hljs-comment,
-.hljs-code,
-.hljs-formula {
+html:not([data-custom-syntax-theme]) .hljs-comment,
+html:not([data-custom-syntax-theme]) .hljs-code,
+html:not([data-custom-syntax-theme]) .hljs-formula {
   color: var(--color-prettylights-syntax-comment);
 }
 
-.hljs-name,
-.hljs-quote,
-.hljs-selector-tag,
-.hljs-selector-pseudo {
+html:not([data-custom-syntax-theme]) .hljs-name,
+html:not([data-custom-syntax-theme]) .hljs-quote,
+html:not([data-custom-syntax-theme]) .hljs-selector-tag,
+html:not([data-custom-syntax-theme]) .hljs-selector-pseudo {
   color: var(--color-prettylights-syntax-entity-tag);
 }
 
-.hljs-subst {
+html:not([data-custom-syntax-theme]) .hljs-subst {
   color: var(--color-fg-default);
 }
 
-.hljs-section {
+html:not([data-custom-syntax-theme]) .hljs-section {
   color: var(--color-prettylights-syntax-markup-heading);
   font-weight: bold;
 }
 
-.hljs-bullet {
+html:not([data-custom-syntax-theme]) .hljs-bullet {
   color: var(--color-prettylights-syntax-constant);
 }
 
-.hljs-emphasis {
+html:not([data-custom-syntax-theme]) .hljs-emphasis {
   color: var(--color-fg-default);
   font-style: italic;
 }
 
-.hljs-strong {
+html:not([data-custom-syntax-theme]) .hljs-strong {
   color: var(--color-fg-default);
   font-weight: bold;
 }
 
-.hljs-addition {
+html:not([data-custom-syntax-theme]) .hljs-addition {
   color: var(--color-prettylights-syntax-markup-inserted-text);
   background-color: var(--color-prettylights-syntax-markup-inserted-bg);
 }
 
-.hljs-deletion {
+html:not([data-custom-syntax-theme]) .hljs-deletion {
   color: var(--color-prettylights-syntax-markup-deleted-text);
   background-color: var(--color-prettylights-syntax-markup-deleted-bg);
 }

@@ -123,9 +123,10 @@
     return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   }
 
-  function resolveHljsThemeName(theme) {
+  function resolveHljsThemeName(theme, themeOverride) {
     if (theme === 'auto') {
-      return getEffectiveAppTheme() === 'dark' ? 'github-dark' : 'github';
+      const effective = themeOverride || getEffectiveAppTheme();
+      return effective === 'dark' ? 'github-dark' : 'github';
     }
     return theme || 'github';
   }
@@ -172,32 +173,139 @@
       } catch (_) {}
     }
 
-    style.textContent = `
-      .markdown-body pre:has(> code.hljs) {
-        background-color: ${bg} !important;
-        color: ${fg} !important;
-        border-radius: 6px;
-        padding: 16px !important;
-        overflow: auto;
-      }
-      .markdown-body pre > code.hljs,
-      .markdown-body code.hljs {
-        background-color: ${bg} !important;
-        color: ${fg} !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-      }
-      @media print {
-        .markdown-body pre:has(> code.hljs),
+    if (_activeHljsTheme === 'auto') {
+      style.textContent = `
+        /* Preview code blocks in Auto mode adopt application theme */
+        .markdown-body:not(.pdf-export):not(.export-render-root) pre:has(> code.hljs) {
+          background-color: ${bg} !important;
+          color: ${fg} !important;
+          border-radius: 6px;
+          padding: 16px !important;
+          overflow: auto;
+        }
+        .markdown-body:not(.pdf-export):not(.export-render-root) pre > code.hljs,
+        .markdown-body:not(.pdf-export):not(.export-render-root) code.hljs {
+          background-color: ${bg} !important;
+          color: ${fg} !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+        }
+
+        /* Export documents in Auto mode resolve against the selected export theme */
+        .pdf-export.theme-dark pre:has(> code.hljs),
+        .pdf-export[data-theme="dark"] pre:has(> code.hljs),
+        .export-render-root[data-theme="dark"] pre:has(> code.hljs),
+        .export-render-root.theme-dark pre:has(> code.hljs) {
+          background-color: #161b22 !important;
+          color: #c9d1d9 !important;
+          border-radius: 6px;
+          padding: 16px !important;
+          overflow: auto;
+        }
+        .pdf-export.theme-dark pre > code.hljs,
+        .pdf-export[data-theme="dark"] pre > code.hljs,
+        .export-render-root[data-theme="dark"] pre > code.hljs,
+        .export-render-root.theme-dark pre > code.hljs,
+        .pdf-export.theme-dark code.hljs,
+        .pdf-export[data-theme="dark"] code.hljs,
+        .export-render-root[data-theme="dark"] code.hljs,
+        .export-render-root.theme-dark code.hljs {
+          background-color: #161b22 !important;
+          color: #c9d1d9 !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+        }
+
+        .pdf-export.theme-light pre:has(> code.hljs),
+        .pdf-export[data-theme="light"] pre:has(> code.hljs),
+        .export-render-root[data-theme="light"] pre:has(> code.hljs),
+        .export-render-root.theme-light pre:has(> code.hljs) {
+          background-color: #f6f8fa !important;
+          color: #24292e !important;
+          border-radius: 6px;
+          padding: 16px !important;
+          overflow: auto;
+        }
+        .pdf-export.theme-light pre > code.hljs,
+        .pdf-export[data-theme="light"] pre > code.hljs,
+        .export-render-root[data-theme="light"] pre > code.hljs,
+        .export-render-root.theme-light pre > code.hljs,
+        .pdf-export.theme-light code.hljs,
+        .pdf-export[data-theme="light"] code.hljs,
+        .export-render-root[data-theme="light"] code.hljs,
+        .export-render-root.theme-light code.hljs {
+          background-color: #f6f8fa !important;
+          color: #24292e !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+        }
+
+        @media print {
+          .markdown-body:not(.pdf-export):not(.export-render-root) pre:has(> code.hljs),
+          .markdown-body:not(.pdf-export):not(.export-render-root) pre > code.hljs,
+          .markdown-body:not(.pdf-export):not(.export-render-root) code.hljs {
+            background-color: ${bg} !important;
+            color: ${fg} !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          html[data-browser-print-export="dark"] .markdown-body pre:has(> code.hljs),
+          html[data-browser-print-export="dark"] .markdown-body pre > code.hljs,
+          html[data-browser-print-export="dark"] .markdown-body code.hljs,
+          .pdf-export.theme-dark pre:has(> code.hljs),
+          .pdf-export.theme-dark pre > code.hljs,
+          .pdf-export.theme-dark code.hljs {
+            background-color: #161b22 !important;
+            color: #c9d1d9 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          html:not([data-browser-print-export="dark"]) .markdown-body.pdf-export.theme-light pre:has(> code.hljs),
+          html:not([data-browser-print-export="dark"]) .markdown-body.pdf-export.theme-light pre > code.hljs,
+          html:not([data-browser-print-export="dark"]) .markdown-body.pdf-export.theme-light code.hljs,
+          html[data-browser-print-export="light"] .markdown-body pre:has(> code.hljs),
+          html[data-browser-print-export="light"] .markdown-body pre > code.hljs,
+          html[data-browser-print-export="light"] .markdown-body code.hljs,
+          .pdf-export.theme-light pre:has(> code.hljs),
+          .pdf-export.theme-light pre > code.hljs,
+          .pdf-export.theme-light code.hljs {
+            background-color: #f6f8fa !important;
+            color: #24292e !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `;
+    } else {
+      style.textContent = `
+        .markdown-body pre:has(> code.hljs) {
+          background-color: ${bg} !important;
+          color: ${fg} !important;
+          border-radius: 6px;
+          padding: 16px !important;
+          overflow: auto;
+        }
         .markdown-body pre > code.hljs,
         .markdown-body code.hljs {
           background-color: ${bg} !important;
           color: ${fg} !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
         }
-      }
-    `;
+        @media print {
+          .markdown-body pre:has(> code.hljs),
+          .markdown-body pre > code.hljs,
+          .markdown-body code.hljs {
+            background-color: ${bg} !important;
+            color: ${fg} !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `;
+    }
   }
 
   /**
@@ -210,6 +318,18 @@
     updateHljsHelperStyle(effectiveName);
 
     if (typeof document === 'undefined') return Promise.resolve();
+
+    if (document.documentElement) {
+      if (_activeHljsTheme !== 'auto') {
+        document.documentElement.setAttribute('data-custom-syntax-theme', _activeHljsTheme);
+        document.documentElement.setAttribute('data-hljs-theme', _activeHljsTheme);
+      } else {
+        if (typeof document.documentElement.removeAttribute === 'function') {
+          document.documentElement.removeAttribute('data-custom-syntax-theme');
+        }
+        document.documentElement.setAttribute('data-hljs-theme', 'auto');
+      }
+    }
 
     const subpath = HLJS_THEME_PATHS[effectiveName] || `${effectiveName}.min.css`;
     const href = `${HLJS_CDN_BASE}${subpath}`;
@@ -644,6 +764,8 @@
       theme: resolveMermaidThemeName(_activeMermaidTheme, themeOverride),
       look: _activeMermaidLook === 'handDrawn' ? 'handDrawn' : 'classic'
     }),
+    getHljsTheme: (themeOverride) => resolveHljsThemeName(_activeHljsTheme, themeOverride),
+    resolveHljsThemeName,
     needsRerender,
     apply,
     resolveEmojiShortcode,

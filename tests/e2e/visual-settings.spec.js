@@ -257,6 +257,10 @@ Greetings: :wave: :thumbsup: :smile:
     expect(preBg).not.toBe('transparent');
     expect(preBg).toContain('39, 40, 34'); // #272822
     expect(codeColor).toContain('221, 221, 221'); // #ddd
+    const fnColor = await page.locator('#markdown-preview pre code .hljs-title').first().evaluate(el => {
+      return window.getComputedStyle(el).color;
+    });
+    expect(fnColor).toBe('rgb(166, 226, 46)'); // Monokai green
   });
 
   test('P1: MathJax font switches to STIX Two and updates output jax font data live and on reload', async ({ page }) => {
@@ -544,5 +548,183 @@ Greetings: :wave: :thumbsup: :smile:
     expect(failedFontRequests).toEqual([]);
     expect(wrongPackageRequests).toEqual([]);
   });
+
+  test('P2: resolve automatic code colors against PDF export theme', async ({ page }) => {
+    await openApp(page);
+    const editor = page.locator('#markdown-editor');
+    await editor.fill('```javascript\nfunction greet() { return "hello"; }\n```');
+    await editor.dispatchEvent('input');
+    await expect(page.locator('#markdown-preview pre code.hljs')).toBeVisible({ timeout: 15_000 });
+
+    // Ensure Auto syntax highlighting is active
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyHighlightTheme('auto');
+    });
+
+    // 1. Light app theme + Auto syntax + Dark PDF export
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      window.visualSettingsAdapters.onAppThemeChange('light');
+    });
+
+    // Preview code block has light background (app theme)
+    const previewLightBg = await page.locator('#markdown-preview pre').first().evaluate(el => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    expect(previewLightBg).not.toBe('rgb(22, 27, 34)');
+
+    // Trigger dark vector PDF export to inspect the export render snapshot
+    await page.evaluate(() => {
+      window.print = () => { window.__darkPdfPrintReady = true; };
+    });
+    await page.locator('#export-pdf').dispatchEvent('click');
+    await page.locator('#pdf-export-theme-card-dark').click();
+    await page.locator('#pdf-export-confirm').click();
+
+    await expect.poll(() => page.evaluate(() => window.__darkPdfPrintReady), { timeout: 20_000 }).toBe(true);
+
+    // Evaluate snapshot code block colors under dark export
+    const darkExportColors = await page.locator('.browser-print-export-snapshot').evaluate(root => {
+      const pre = root.querySelector('pre');
+      const code = root.querySelector('code');
+      return {
+        preBg: window.getComputedStyle(pre).backgroundColor,
+        codeColor: window.getComputedStyle(code).color
+      };
+    });
+
+    expect(darkExportColors.preBg).toBe('rgb(22, 27, 34)'); // #161b22
+    expect(darkExportColors.codeColor).toBe('rgb(201, 209, 217)'); // #c9d1d9
+
+    // Close/restore afterprint
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('afterprint'));
+    });
+
+    // 2. Dark app theme + Auto syntax + Light PDF export
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      window.visualSettingsAdapters.onAppThemeChange('dark');
+      window.print = () => { window.__lightPdfPrintReady = true; };
+    });
+
+    // Preview code block has dark background in dark mode
+    const previewDarkBg = await page.locator('#markdown-preview pre').first().evaluate(el => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    expect(previewDarkBg).not.toBe('rgb(246, 248, 250)');
+
+    await page.locator('#export-pdf').dispatchEvent('click');
+    await page.locator('#pdf-export-theme-card-light').click();
+    await page.locator('#pdf-export-confirm').click();
+
+    await expect.poll(() => page.evaluate(() => window.__lightPdfPrintReady), { timeout: 20_000 }).toBe(true);
+
+    const lightExportColors = await page.locator('.browser-print-export-snapshot').evaluate(root => {
+      const pre = root.querySelector('pre');
+      const code = root.querySelector('code');
+      return {
+        preBg: window.getComputedStyle(pre).backgroundColor,
+        codeColor: window.getComputedStyle(code).color
+      };
+    });
+
+    expect(lightExportColors.preBg).toBe('rgb(246, 248, 250)'); // #f6f8fa
+    expect(lightExportColors.codeColor).toBe('rgb(36, 41, 46)'); // #24292e
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('afterprint'));
+    });
+  });
+
+  test('P2: remove built-in token palette when applying syntax theme and match external stylesheets', async ({ page }) => {
+    await openApp(page);
+    const editor = page.locator('#markdown-editor');
+    await editor.fill('```javascript\nfunction hello() { return 42; }\n```');
+    await editor.dispatchEvent('input');
+    await expect(page.locator('#markdown-preview pre code.hljs')).toBeVisible({ timeout: 15_000 });
+
+    // 1. In Auto mode (light app), function title uses the built-in GitHub purple
+    await page.evaluate(async () => {
+      document.documentElement.setAttribute('data-theme', 'light');
+      await window.visualSettingsAdapters.applyHighlightTheme('auto');
+    });
+    const autoFnColor = await page.locator('#markdown-preview pre code .hljs-title').first().evaluate(el => {
+      return window.getComputedStyle(el).color;
+    });
+    expect(autoFnColor).toBe('rgb(111, 66, 193)');
+
+    // 2. Select Monokai: function name must be Monokai green, NOT legacy purple
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyHighlightTheme('monokai');
+    });
+    await expect.poll(async () => {
+      return await page.locator('#markdown-preview pre code .hljs-title').first().evaluate(el => {
+        return window.getComputedStyle(el).color;
+      });
+    }, { timeout: 10_000 }).toBe('rgb(166, 226, 46)');
+
+    // 3. Compare actual token colors against an isolated iframe containing only the selected stylesheet
+    const testThemes = ['monokai', 'dracula', 'atom-one-dark', 'solarized-dark', 'nord', 'default'];
+    for (const theme of testThemes) {
+      await page.evaluate(async (t) => {
+        await window.visualSettingsAdapters.applyHighlightTheme(t);
+      }, theme);
+
+      const comparison = await page.evaluate(async () => {
+        const link = document.getElementById('mdv-hljs-theme-link');
+        const href = link ? link.href : '';
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '-9999px';
+        iframe.style.left = '-9999px';
+        document.body.appendChild(iframe);
+
+        const idoc = iframe.contentDocument;
+        idoc.open();
+        idoc.write(`<!DOCTYPE html><html><head><link rel="stylesheet" href="${href}"></head><body><pre><code class="hljs language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">hello</span>() { <span class="hljs-keyword">return</span> <span class="hljs-number">42</span>; }</code></pre></body></html>`);
+        idoc.close();
+
+        await new Promise(resolve => {
+          const l = idoc.querySelector('link');
+          if (l && l.sheet) return resolve();
+          if (l) {
+            l.onload = () => resolve();
+            l.onerror = () => resolve();
+          }
+          setTimeout(resolve, 1000);
+        });
+
+        const previewFn = document.querySelector('#markdown-preview pre code .hljs-title');
+        const iframeFn = idoc.querySelector('pre code .hljs-title');
+        const previewKw = document.querySelector('#markdown-preview pre code .hljs-keyword');
+        const iframeKw = idoc.querySelector('pre code .hljs-keyword');
+
+        const result = {
+          previewFnColor: previewFn ? getComputedStyle(previewFn).color : null,
+          iframeFnColor: iframeFn ? iframe.contentWindow.getComputedStyle(iframeFn).color : null,
+          previewKwColor: previewKw ? getComputedStyle(previewKw).color : null,
+          iframeKwColor: iframeKw ? iframe.contentWindow.getComputedStyle(iframeKw).color : null
+        };
+        iframe.remove();
+        return result;
+      });
+
+      expect(comparison.previewFnColor).toBe(comparison.iframeFnColor);
+      expect(comparison.previewKwColor).toBe(comparison.iframeKwColor);
+    }
+
+    // 4. Switching back to Auto restores built-in palette
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyHighlightTheme('auto');
+    });
+    await expect.poll(async () => {
+      return await page.locator('#markdown-preview pre code .hljs-title').first().evaluate(el => {
+        return window.getComputedStyle(el).color;
+      });
+    }, { timeout: 10_000 }).toBe('rgb(111, 66, 193)');
+  });
 });
+
 
