@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Resolve local paths for desktop (Neutralinojs) offline support
   if (typeof Neutralino !== 'undefined') {
     CDN.mermaid = '/libs/mermaid.min.js';
-    CDN.mathjax = '/libs/tex-mml-chtml.min.js';
+    CDN.mathjax = '/libs/tex-mml-chtml.js';
     CDN.jspdf = '/libs/jspdf.umd.min.js';
     CDN.html2canvas = '/libs/html2canvas.min.js';
     CDN.pako = '/libs/pako.min.js';
@@ -4127,10 +4127,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function configureMathJax() {
     if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
-    if (window.MathJax && MathJax.loader && MathJax.tex) return;
+    if (window.MathJax && MathJax.loader && MathJax.tex) {
+      if (window.MathJax.chtml && typeof window.MathJax.chtml.font === 'string') {
+        delete window.MathJax.chtml.font;
+      }
+      return;
+    }
     const initialFont = window.visualSettingsAdapters
       ? window.visualSettingsAdapters.getCurrentMathFont()
       : 'mathjax-modern';
+    if (window.MathJax && window.MathJax.chtml && typeof window.MathJax.chtml.font === 'string') {
+      delete window.MathJax.chtml.font;
+    }
     window.MathJax = {
       startup: {
         typeset: false
@@ -4139,9 +4147,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         a11y: { inTabOrder: false }
       },
       output: {
-        font: initialFont
-      },
-      chtml: {
         font: initialFont
       },
       tex: {

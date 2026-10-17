@@ -271,9 +271,9 @@ async function prepareOfflineDependencies() {
       hash: null
     },
     {
-      url: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js",
-      dest: path.join(LIBS_DIR, "tex-mml-chtml.min.js"),
-      hash: null
+      url: "https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js",
+      dest: path.join(LIBS_DIR, "tex-mml-chtml.js"),
+      hash: "sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab"
     },
     {
       url: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
@@ -314,6 +314,12 @@ async function prepareOfflineDependencies() {
   // Wait for all downloads and cryptographic validations to finish
   try {
     await Promise.all(downloads);
+    // Keep backwards-compatible copy for tex-mml-chtml.min.js
+    const mathjaxDest = path.join(LIBS_DIR, "tex-mml-chtml.js");
+    const mathjaxMinDest = path.join(LIBS_DIR, "tex-mml-chtml.min.js");
+    if (fs.existsSync(mathjaxDest)) {
+      fs.copyFileSync(mathjaxDest, mathjaxMinDest);
+    }
     console.log("✓ All offline libraries successfully downloaded and cryptographically validated.");
   } catch (err) {
     console.error("✗ Critical Security Error: Dependency integrity check failed!", err.message);

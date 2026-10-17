@@ -33,6 +33,7 @@ function createAdapterContext() {
     head,
     createElement(tag) {
       let _href = '';
+      let _src = '';
       const el = {
         tagName: tag.toUpperCase(),
         id: '',
@@ -43,6 +44,11 @@ function createAdapterContext() {
         get href() { return _href; },
         set href(val) {
           _href = val;
+          setTimeout(() => { if (this.onload) this.onload(); }, 1);
+        },
+        get src() { return _src; },
+        set src(val) {
+          _src = val;
           setTimeout(() => { if (this.onload) this.onload(); }, 1);
         },
         setAttribute(k, v) { this[k] = v; },
@@ -211,4 +217,31 @@ test('applyHighlightTheme manages stylesheet and auto theme', async () => {
   adapters.onAppThemeChange('dark');
   link = context.document.getElementById('mdv-hljs-theme-link');
   assert.ok(link.href.includes('github-dark.min.css'));
+});
+
+test('applyMathFont maintains MathJax 3 and 4 configuration compatibility without chtml.font string', async () => {
+  const { context, adapters } = createAdapterContext();
+
+  // Test when MathJax is not yet loaded
+  context.window.MathJax = {};
+  await adapters.applyMathFont('mathjax-stix2');
+
+  assert.equal(context.window.MathJax.config.output.font, 'mathjax-stix2');
+  assert.equal(typeof context.window.MathJax.config.chtml.font, 'undefined');
+
+  // Test when MathJax 3 is present (has version 3.x and no modular fonts)
+  context.window.MathJax = {
+    version: '3.2.2',
+    config: {
+      output: {},
+      chtml: {}
+    },
+    startup: {
+      getOutputJax: () => ({ name: 'chtml' })
+    }
+  };
+
+  await adapters.applyMathFont('mathjax-modern');
+  assert.equal(typeof context.window.MathJax.config.chtml.font, 'undefined');
+  assert.equal(context.window.MathJax.config.output.font, 'mathjax-modern');
 });

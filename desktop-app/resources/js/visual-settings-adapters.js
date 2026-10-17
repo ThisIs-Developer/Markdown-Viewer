@@ -287,7 +287,9 @@
     window.MathJax.config.output = window.MathJax.config.output || {};
     window.MathJax.config.output.font = _activeMathFont;
     window.MathJax.config.chtml = window.MathJax.config.chtml || {};
-    window.MathJax.config.chtml.font = _activeMathFont;
+    if (typeof window.MathJax.config.chtml.font === 'string') {
+      delete window.MathJax.config.chtml.font;
+    }
 
     // Load external font script if needed (Modern is bundled by default)
     if (_activeMathFont !== 'mathjax-modern') {
@@ -320,7 +322,9 @@
 
     // Update MathJax configuration with effective font
     window.MathJax.config.output.font = _activeMathFont;
-    window.MathJax.config.chtml.font = _activeMathFont;
+    if (typeof window.MathJax.config.chtml.font === 'string') {
+      delete window.MathJax.config.chtml.font;
+    }
 
     if (fontClass) {
       window.MathJax.config.chtml.fontData = fontClass;
@@ -332,7 +336,9 @@
     }
 
     // If MathJax startup has completed, switch output jax, document and re-typeset
-    if (window.MathJax.startup && typeof window.MathJax.startup.getOutputJax === 'function') {
+    const isMathJax3 = (window.MathJax.version && String(window.MathJax.version).startsWith('3.')) ||
+                       (window.MathJax._ && !window.MathJax._.output?.fonts);
+    if (!isMathJax3 && window.MathJax.startup && typeof window.MathJax.startup.getOutputJax === 'function') {
       try {
         const newOutputJax = window.MathJax.startup.getOutputJax();
         if (newOutputJax) {

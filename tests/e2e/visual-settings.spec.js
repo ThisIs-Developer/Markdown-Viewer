@@ -398,4 +398,79 @@ Greetings: :wave: :thumbsup: :smile:
     expect(sw).toContain('visual-settings-adapters.js');
     expect(sw).toContain('visual-settings-store.js');
   });
+
+  test('P1: MathJax configuration is compatible with desktop MathJax bundle and legacy bundles', async ({ page }) => {
+    // 1. Verify desktop prepare.js downloads MathJax 4 bundle with SRI hash
+    const fs = require('fs');
+    const path = require('path');
+    const prepareSource = fs.readFileSync(path.resolve(__dirname, '../../desktop-app/prepare.js'), 'utf8');
+    expect(prepareSource).toContain('https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js');
+    expect(prepareSource).toContain('sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab');
+
+    // 2. Verify configureMathJax does not pass font name string to chtml.font
+    const testPage = await page.context().newPage();
+    await testPage.addInitScript(() => {
+      window.__initialChtmlFont = null;
+      let _mj = undefined;
+      Object.defineProperty(window, 'MathJax', {
+        configurable: true,
+        enumerable: true,
+        get: () => _mj,
+        set: (v) => {
+          _mj = v;
+          if (v && v.chtml) {
+            window.__initialChtmlFont = v.chtml.font;
+          }
+        }
+      });
+    });
+
+    await openApp(testPage, '/', { mockMathJax: false });
+    const initialChtmlFont = await testPage.evaluate(() => window.__initialChtmlFont);
+    expect(typeof initialChtmlFont).not.toBe('string');
+    await testPage.close();
+
+    // 3. Verify MathJax 3 bundle dependency is compatible with configuration without crashing startup
+    const legacyPage = await page.context().newPage();
+    const errors = [];
+    legacyPage.on('pageerror', err => errors.push(err.message));
+    legacyPage.on('console', msg => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
+    await legacyPage.setContent(`<!DOCTYPE html><html><head>
+      <script>
+        window.MathJax = {
+          startup: { typeset: false },
+          options: { a11y: { inTabOrder: false } },
+          output: { font: 'mathjax-modern' },
+          tex: {
+            inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+            displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+            processEscapes: true
+          }
+        };
+      </script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    </head><body><div id="math">$$x^2$$</div></body></html>`);
+    await legacyPage.waitForTimeout(1500);
+
+    const legacyResult = await legacyPage.evaluate(async () => {
+      if (window.MathJax?.startup?.promise) {
+        await window.MathJax.startup.promise;
+      }
+      let rendered = false;
+      if (typeof window.MathJax?.typesetPromise === 'function') {
+        await window.MathJax.typesetPromise([document.getElementById('math')]);
+        rendered = !!document.querySelector('mjx-container');
+      }
+      return {
+        hasTypesetPromise: typeof window.MathJax?.typesetPromise === 'function',
+        rendered
+      };
+    });
+    expect(errors.filter(e => e.includes('adaptiveCSS')).length).toBe(0);
+    expect(legacyResult.hasTypesetPromise).toBe(true);
+    expect(legacyResult.rendered).toBe(true);
+    await legacyPage.close();
+  });
 });
