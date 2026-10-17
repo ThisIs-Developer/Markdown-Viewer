@@ -725,6 +725,63 @@ Greetings: :wave: :thumbsup: :smile:
       });
     }, { timeout: 10_000 }).toBe('rgb(111, 66, 193)');
   });
+
+  test('P2: canonicalize emoji aliases before adding skin-tone suffix', async ({ page }) => {
+    await openApp(page);
+    const editor = page.locator('#markdown-editor');
+    await editor.fill(':thumbsup: :+1: :runner: :wave_tone3: :smile:');
+    await editor.dispatchEvent('input');
+    await expect(page.locator('#markdown-preview')).toContainText('👋🏽', { timeout: 15_000 });
+
+    const expectedGlyphs = {
+      tone1: { thumbs: '👍🏻', runner: '🏃🏻' },
+      tone2: { thumbs: '👍🏼', runner: '🏃🏼' },
+      tone3: { thumbs: '👍🏽', runner: '🏃🏽' },
+      tone4: { thumbs: '👍🏾', runner: '🏃🏾' },
+      tone5: { thumbs: '👍🏿', runner: '🏃🏿' }
+    };
+
+    // Test across all 5 non-default skin tones in light and dark mode
+    for (const [tone, glyphs] of Object.entries(expectedGlyphs)) {
+      for (const appTheme of ['light', 'dark']) {
+        await page.evaluate(async ({ tone, appTheme }) => {
+          document.documentElement.setAttribute('data-theme', appTheme);
+          await window.visualSettingsAdapters.applyEmojiSkinTone(tone);
+        }, { tone, appTheme });
+
+        await expect.poll(async () => {
+          return await page.locator('#markdown-preview').textContent();
+        }, { timeout: 10_000 }).toContain(glyphs.thumbs);
+
+        const previewText = await page.locator('#markdown-preview').textContent();
+        // Both canonical :thumbsup: and alias :+1: must render with the chosen skin tone
+        const thumbsOccurrences = (previewText.match(new RegExp(glyphs.thumbs, 'g')) || []).length;
+        expect(thumbsOccurrences).toBe(2);
+
+        // Alias :runner: must render with the chosen skin tone (not yellow 🏃)
+        expect(previewText).toContain(glyphs.runner);
+
+        // Explicit tone :wave_tone3: preserved
+        expect(previewText).toContain('👋🏽');
+
+        // Genuinely unsupported emoji :smile: remains 😄
+        expect(previewText).toContain('😄');
+      }
+    }
+
+    // Reset to default
+    await page.evaluate(async () => {
+      await window.visualSettingsAdapters.applyEmojiSkinTone('default');
+    });
+    await expect.poll(async () => {
+      return await page.locator('#markdown-preview').textContent();
+    }, { timeout: 10_000 }).toContain('👍');
+    const defaultText = await page.locator('#markdown-preview').textContent();
+    const defaultThumbs = (defaultText.match(/👍/g) || []).length;
+    expect(defaultThumbs).toBe(2);
+    expect(defaultText).toContain('🏃');
+    expect(defaultText).toContain('👋🏽');
+  });
 });
 
 

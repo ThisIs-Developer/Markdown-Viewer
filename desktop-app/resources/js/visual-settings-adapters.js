@@ -613,26 +613,72 @@
   }
 
   /**
+   * Resolves a shortcode to JoyPixels' canonical shortcode name (e.g. '+1' -> 'thumbsup', 'runner' -> 'person_running').
+   */
+  function getCanonicalEmojiShortcode(code, joy) {
+    if (!code) return code;
+    const clean = code.replace(/^:|:$/g, '');
+    if (!joy) return clean;
+    const colonCode = `:${clean}:`;
+
+    // 1. If it's already a canonical key in joy.emojiList
+    if (joy.emojiList && joy.emojiList[colonCode]) {
+      return clean;
+    }
+
+    // 2. Check joy.altShortNames (native JoyPixels alias map)
+    if (joy.altShortNames) {
+      const alt = joy.altShortNames[colonCode] || joy.altShortNames[clean];
+      if (alt) {
+        return alt.replace(/^:|:$/g, '');
+      }
+    }
+
+    // 3. Fallback: scan emojiList if altShortNames is not populated
+    if (joy.emojiList) {
+      for (const [key, val] of Object.entries(joy.emojiList)) {
+        if (val && Array.isArray(val.shortnames)) {
+          if (val.shortnames.includes(colonCode) || val.shortnames.includes(clean)) {
+            return key.replace(/^:|:$/g, '');
+          }
+        }
+      }
+    }
+
+    return clean;
+  }
+
+  /**
    * Resolves an emoji shortcode to include the active Fitzpatrick skin tone modifier
    * if the emoji supports skin tone modifiers, otherwise returns the original shortcode.
+   * Canonicalizes JoyPixels aliases prior to checking tone support.
    * Shortcodes with explicit tone modifiers are left untouched.
    */
   function resolveEmojiShortcode(shortcode) {
+    if (!shortcode) return shortcode;
+    const clean = shortcode.replace(/^:|:$/g, '');
+
     if (!_activeEmojiSkinTone || _activeEmojiSkinTone === 'default') {
       return shortcode;
     }
 
     // If already has an explicit skin tone suffix, preserve it
-    if (/_tone[1-5]$/.test(shortcode)) {
+    if (/_tone[1-5]$/.test(clean)) {
       return shortcode;
     }
 
-    // Check JoyPixels library list if available
-    const toneCandidate = `${shortcode}_${_activeEmojiSkinTone}`;
     const joy = typeof joypixels !== 'undefined' ? joypixels : (typeof window !== 'undefined' ? window.joypixels : undefined);
+    const canonical = getCanonicalEmojiShortcode(clean, joy);
+    const toneCandidate = `${canonical}_${_activeEmojiSkinTone}`;
+
+    // Check JoyPixels library list if available
     if (joy && joy.emojiList) {
       if (joy.emojiList[`:${toneCandidate}:`]) {
         return toneCandidate;
+      }
+      const directCandidate = `${clean}_${_activeEmojiSkinTone}`;
+      if (joy.emojiList[`:${directCandidate}:`]) {
+        return directCandidate;
       }
       return shortcode;
     }
@@ -768,6 +814,7 @@
     resolveHljsThemeName,
     needsRerender,
     apply,
+    getCanonicalEmojiShortcode: (code) => getCanonicalEmojiShortcode(code, typeof joypixels !== 'undefined' ? joypixels : (typeof window !== 'undefined' ? window.joypixels : undefined)),
     resolveEmojiShortcode,
     applyHighlightTheme,
     applyMathFont,

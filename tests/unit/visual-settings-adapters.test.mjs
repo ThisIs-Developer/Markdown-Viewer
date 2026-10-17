@@ -145,7 +145,7 @@ test('getDefaults() returns standard default visual settings', () => {
 test('resolveEmojiShortcode handles skin tones accurately', () => {
   const { context, adapters } = createAdapterContext();
 
-  // Mock joypixels emojiList
+  // Mock joypixels emojiList and altShortNames
   context.joypixels = {
     emojiList: {
       ':wave:': {},
@@ -154,29 +154,50 @@ test('resolveEmojiShortcode handles skin tones accurately', () => {
       ':wave_tone3:': {},
       ':wave_tone4:': {},
       ':wave_tone5:': {},
-      ':thumbsup:': {},
-      ':thumbsup_tone1:': {},
+      ':thumbsup:': { shortnames: [':+1:', ':thumbup:'] },
+      ':thumbsup_tone1:': { shortnames: [':+1_tone1:'] },
+      ':thumbsup_tone5:': { shortnames: [':+1_tone5:'] },
+      ':person_running:': { shortnames: [':runner:'] },
+      ':person_running_tone1:': { shortnames: [':runner_tone1:'] },
+      ':person_running_tone5:': { shortnames: [':runner_tone5:'] },
       ':smile:': {}
+    },
+    altShortNames: {
+      ':+1:': ':thumbsup:',
+      ':+1_tone1:': ':thumbsup_tone1:',
+      ':runner:': ':person_running:',
+      ':runner_tone1:': ':person_running_tone1:'
     }
   };
 
   // When default tone is active
   adapters.applyEmojiSkinTone('default');
   assert.equal(adapters.resolveEmojiShortcode('wave'), 'wave');
+  assert.equal(adapters.resolveEmojiShortcode('thumbsup'), 'thumbsup');
+  assert.equal(adapters.resolveEmojiShortcode('+1'), '+1');
+  assert.equal(adapters.resolveEmojiShortcode('runner'), 'runner');
   assert.equal(adapters.resolveEmojiShortcode('smile'), 'smile');
 
   // When tone1 is active
   adapters.applyEmojiSkinTone('tone1');
   assert.equal(adapters.resolveEmojiShortcode('wave'), 'wave_tone1');
   assert.equal(adapters.resolveEmojiShortcode('thumbsup'), 'thumbsup_tone1');
+  // Aliases canonicalize to JoyPixels canonical keys with tone
+  assert.equal(adapters.resolveEmojiShortcode('+1'), 'thumbsup_tone1');
+  assert.equal(adapters.resolveEmojiShortcode('runner'), 'person_running_tone1');
   // Emoji that does NOT support tone is untouched
   assert.equal(adapters.resolveEmojiShortcode('smile'), 'smile');
   // Emoji with existing tone modifier is untouched
   assert.equal(adapters.resolveEmojiShortcode('wave_tone3'), 'wave_tone3');
+  assert.equal(adapters.resolveEmojiShortcode('+1_tone3'), '+1_tone3');
+  assert.equal(adapters.resolveEmojiShortcode('runner_tone2'), 'runner_tone2');
 
   // When tone5 is active
   adapters.applyEmojiSkinTone('tone5');
   assert.equal(adapters.resolveEmojiShortcode('wave'), 'wave_tone5');
+  assert.equal(adapters.resolveEmojiShortcode('thumbsup'), 'thumbsup_tone5');
+  assert.equal(adapters.resolveEmojiShortcode('+1'), 'thumbsup_tone5');
+  assert.equal(adapters.resolveEmojiShortcode('runner'), 'person_running_tone5');
   assert.equal(adapters.resolveEmojiShortcode('smile'), 'smile');
 });
 
