@@ -24123,7 +24123,7 @@ ${selector} .arrowheadPath {
     });
   }
 
-  // Preview appearance settings
+  // Preview Styling settings
   function populateVisualSettingsOptions() {
     const options = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.getOptions === 'function')
       ? window.visualSettingsAdapters.getOptions()

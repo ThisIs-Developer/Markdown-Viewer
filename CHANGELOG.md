@@ -5,7 +5,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- Simplified **Preview appearance** into five compact controls under Workspace settings and removed its separate navbar shortcut.
+- Simplified **Preview Styling** into five compact controls under Workspace settings and removed its separate navbar shortcut.
 - Kept math rendering available during font downloads, prevented older requests from overriding the latest font selection, and restored fallback, retry, and Reset after font-loading failures.
 
 ---

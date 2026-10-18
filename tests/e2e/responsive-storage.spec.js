@@ -641,7 +641,7 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   expect(settingsOrder[4]).toBe('mobile-storage-settings-button');
   expect(settingsOrder[5]).toBe('mobile-trash-settings-button');
   expect(settingsOrder[6]).toBe('mobile-tab-reset-btn');
-  await expect(page.locator('#mobile-visual-settings-button')).toHaveText('Preview appearance');
+  await expect(page.locator('#mobile-visual-settings-button')).toHaveText('Preview Styling');
   await expect(page.locator('#mobile-tab-reset-btn')).toBeVisible();
   await expect(page.locator('#mobile-about-button')).toBeVisible();
 

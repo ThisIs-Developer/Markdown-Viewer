@@ -113,11 +113,11 @@ Use these terms in Markdown Viewer documentation and translation reviews. The Ja
 | Local storage | ローカルストレージ | 로컬 저장소 | 本地存储 | 本機儲存空間 |
 | Temporary tab | 一時タブ | 임시 탭 | 临时标签页 | 暫存分頁 |
 
-### Preview Appearance
+### Preview Styling
 
 | English | Japanese | Korean | Simplified Chinese | Traditional Chinese |
 | :--- | :--- | :--- | :--- | :--- |
-| Preview appearance | プレビューの外観 | 미리보기 모양 | 预览外观 | 預覽外觀 |
+| Preview Styling | プレビューのスタイル | 미리보기 스타일 | 预览样式 | 預覽樣式 |
 | Code theme | コードのテーマ | 코드 테마 | 代码主题 | 程式碼主題 |
 | Math font | 数式のフォント | 수식 글꼴 | 公式字体 | 公式字型 |
 | Diagram theme | 図のテーマ | 다이어그램 테마 | 图表主题 | 圖表主題 |

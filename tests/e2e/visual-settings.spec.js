@@ -7,7 +7,7 @@ async function openAppearance(page) {
   await expect(page.locator('#visual-settings-modal')).toBeVisible();
 }
 
-test.describe('Preview appearance', () => {
+test.describe('Preview Styling', () => {
   const SAMPLE_DOC = `
 # Visual Settings Verification
 
@@ -61,7 +61,7 @@ Greetings: :wave: :thumbsup: :smile:
     await expect(page.locator('#visual-setting-mermaid-look')).toBeVisible();
     await expect(page.locator('#visual-setting-emoji-skin-tone')).toBeVisible();
 
-    await expect(modal).toHaveAccessibleName('Preview appearance');
+    await expect(modal).toHaveAccessibleName('Preview Styling');
     await page.locator('#visual-settings-close-btn').focus();
     await page.keyboard.press('Tab');
     await expect(page.locator('#visual-settings-close-icon')).toBeFocused();
