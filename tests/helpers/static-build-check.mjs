@@ -25,6 +25,8 @@ const requiredFiles = [
   'assets/seo-metadata.mjs',
   'assets/document-toc.js',
   'assets/document-toc.LICENSE.txt',
+  'assets/emoji/catalog.json',
+  'assets/emoji/LICENSE',
   'seo/locales.mjs',
   'seo/welcome-content.mjs',
   'seo/server-render.mjs',

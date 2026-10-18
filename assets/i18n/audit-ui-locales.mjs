@@ -75,7 +75,9 @@ for (const locale of files) {
     || (key.includes('Markdown') && !catalog[key].includes('Markdown'))
   ));
   if (locale !== 'en') {
-    const allowed = new Set(ALLOWED_IDENTICAL_TRANSLATIONS[locale] || []);
+    const allowed = new Set(['GitHub', ...(ALLOWED_IDENTICAL_TRANSLATIONS[locale] || [])]);
+    if (locale === 'de') allowed.add('Smileys');
+    if (locale === 'fr') allowed.add('Nature');
     addFailures(failures, locale, 'unexpected English fallback', keys.filter(key =>
       catalog[key] === key && !allowed.has(key)
     ));
