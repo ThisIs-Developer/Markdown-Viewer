@@ -637,9 +637,11 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   expect(settingsOrder[0]).toBe('mobile-theme-toggle');
   expect(settingsOrder[1]).toContain('mobile-menu-language');
   expect(settingsOrder[2]).toBe('mobile-private-mode-toggle');
-  expect(settingsOrder[3]).toBe('mobile-storage-settings-button');
-  expect(settingsOrder[4]).toBe('mobile-trash-settings-button');
-  expect(settingsOrder[5]).toBe('mobile-tab-reset-btn');
+  expect(settingsOrder[3]).toBe('mobile-visual-settings-button');
+  expect(settingsOrder[4]).toBe('mobile-storage-settings-button');
+  expect(settingsOrder[5]).toBe('mobile-trash-settings-button');
+  expect(settingsOrder[6]).toBe('mobile-tab-reset-btn');
+  await expect(page.locator('#mobile-visual-settings-button')).toHaveText('Preview appearance');
   await expect(page.locator('#mobile-tab-reset-btn')).toBeVisible();
   await expect(page.locator('#mobile-about-button')).toBeVisible();
 

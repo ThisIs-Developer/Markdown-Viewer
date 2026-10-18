@@ -1,7 +1,13 @@
 const { test, expect } = require('@playwright/test');
 const { openApp, waitForAppReady } = require('../helpers/app.js');
 
-test.describe('Visual Library Settings Panel (Issue #129)', () => {
+async function openAppearance(page) {
+  await page.locator('#workspaceSettingsDropdown').click();
+  await page.locator('#menu-visual-settings-button').click();
+  await expect(page.locator('#visual-settings-modal')).toBeVisible();
+}
+
+test.describe('Preview appearance', () => {
   const SAMPLE_DOC = `
 # Visual Settings Verification
 
@@ -32,14 +38,14 @@ graph TD
 Greetings: :wave: :thumbsup: :smile:
 `;
 
-  test('panel opens and closes via header button, close button, and Esc key with focus trap', async ({ page }) => {
+  test('panel opens from Settings with keyboard focus, accessible controls, and no navbar shortcut', async ({ page }) => {
     await openApp(page);
 
-    const visualBtn = page.locator('#visual-settings-button');
-    await expect(visualBtn).toBeVisible();
+    const settingsButton = page.locator('#workspaceSettingsDropdown');
+    await expect(page.locator('#visual-settings-button')).toHaveCount(0);
 
     // Open panel
-    await visualBtn.click();
+    await openAppearance(page);
     const modal = page.locator('#visual-settings-modal');
     await expect(modal).toBeVisible();
     await expect(modal).toHaveAttribute('aria-hidden', 'false');
@@ -55,19 +61,27 @@ Greetings: :wave: :thumbsup: :smile:
     await expect(page.locator('#visual-setting-mermaid-look')).toBeVisible();
     await expect(page.locator('#visual-setting-emoji-skin-tone')).toBeVisible();
 
+    await expect(modal).toHaveAccessibleName('Preview appearance');
+    await page.locator('#visual-settings-close-btn').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('#visual-settings-close-icon')).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(page.locator('#visual-settings-close-btn')).toBeFocused();
+
     // Close via Esc key
     await page.keyboard.press('Escape');
     await expect(modal).not.toBeVisible();
     await expect(modal).toHaveAttribute('aria-hidden', 'true');
+    await expect(settingsButton).toBeFocused();
 
     // Reopen and close via Close button
-    await visualBtn.click();
+    await openAppearance(page);
     await expect(modal).toBeVisible();
     await page.locator('#visual-settings-close-btn').click();
     await expect(modal).not.toBeVisible();
 
     // Reopen and close via X icon
-    await visualBtn.click();
+    await openAppearance(page);
     await expect(modal).toBeVisible();
     await page.locator('#visual-settings-close-icon').click();
     await expect(modal).not.toBeVisible();
@@ -90,7 +104,7 @@ Greetings: :wave: :thumbsup: :smile:
     await editor.dispatchEvent('input');
 
     // Open settings panel
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await expect(page.locator('#visual-settings-modal')).toBeVisible();
 
     // 1. Change highlight.js theme
@@ -139,7 +153,7 @@ Greetings: :wave: :thumbsup: :smile:
     expect(reloadedSettings.emojiSkinTone).toBe('tone3');
 
     // Verify modal selects reflect persisted settings
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await expect(page.locator('#visual-setting-hljs-theme')).toHaveValue('monokai');
     await expect(page.locator('#visual-setting-math-font')).toHaveValue('mathjax-stix2');
     await expect(page.locator('#visual-setting-mermaid-theme')).toHaveValue('forest');
@@ -194,6 +208,7 @@ Greetings: :wave: :thumbsup: :smile:
     await page.locator('#visual-setting-hljs-theme').selectOption('dracula');
     await page.locator('#visual-settings-close-btn').click();
     await expect(modal).not.toBeVisible();
+    await expect(mobileMenuToggle).toBeFocused();
 
     // Switch to dark appearance
     await page.evaluate(() => {
@@ -337,7 +352,7 @@ Greetings: :wave: :thumbsup: :smile:
     await expect(page.locator('#document-split-preview pre code.hljs')).toBeVisible();
 
     // 1. Change emoji skin tone to tone3
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await page.locator('#visual-setting-emoji-skin-tone').selectOption('tone3');
     await page.locator('#visual-settings-close-btn').click();
 
@@ -349,7 +364,7 @@ Greetings: :wave: :thumbsup: :smile:
     }, { timeout: 10_000 }).toEqual({ primary: true, secondary: true });
 
     // 2. Change hljs theme to dracula (Base16 theme)
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await page.locator('#visual-setting-hljs-theme').selectOption('dracula');
     await page.locator('#visual-settings-close-btn').click();
 
@@ -358,7 +373,7 @@ Greetings: :wave: :thumbsup: :smile:
     }, { timeout: 10_000 }).toContain('styles/base16/dracula.min.css');
 
     // 3. Change math font to STIX Two
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await page.locator('#visual-setting-math-font').selectOption('mathjax-stix2');
     await page.locator('#visual-settings-close-btn').click();
 
@@ -370,7 +385,7 @@ Greetings: :wave: :thumbsup: :smile:
     }, { timeout: 15_000 }).toBe('mathjax-stix2');
 
     // 4. Change mermaid theme to dark and look to handDrawn
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await page.locator('#visual-setting-mermaid-theme').selectOption('dark');
     await page.locator('#visual-setting-mermaid-look').selectOption('handDrawn');
     await page.locator('#visual-settings-close-btn').click();
@@ -567,17 +582,18 @@ Greetings: :wave: :thumbsup: :smile:
 
     // Initial render with STIX Two
     const editor = page.locator('#markdown-editor');
-    await editor.fill('$$x^2 + y^2 = z^2$$');
+    await editor.fill('# Saved math font\n\n$$x^2 + y^2 = z^2$$');
     await editor.dispatchEvent('input');
+    await expect(page.locator('#markdown-preview h1')).toHaveText('Saved math font');
+    await expect(page.locator('#markdown-preview mjx-container')).toHaveCount(1);
     await expect(page.locator('#markdown-preview mjx-container')).toBeVisible({ timeout: 15_000 });
 
-    const initialBootPrefix = await page.evaluate(() => {
-      return window.MathJax?.startup?.output?.font?.cssFontPrefix;
-    });
-    expect(initialBootPrefix).toBe('STX');
+    await expect.poll(() => page.evaluate(() =>
+      window.MathJax?.startup?.output?.font?.cssFontPrefix
+    )).toBe('STX');
 
     // Reset visual settings to default (Modern math font)
-    await page.locator('#visual-settings-button').click();
+    await openAppearance(page);
     await page.locator('#visual-settings-reset-btn').click();
 
     await expect(page.locator('#visual-setting-math-font')).toHaveValue('mathjax-modern');

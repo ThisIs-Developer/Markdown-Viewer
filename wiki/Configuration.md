@@ -26,6 +26,16 @@ Temporary shared content is intentionally not persisted:
 
 Private mode in Workspace settings pauses new document-state writes for the current page session; its visible incognito status resets after reload or exit, and it does not clear existing normal or Secret Workspace documents. **Trash** retains deleted normal and encrypted items for 30 days, then automatically purges only records whose shape and deletion timestamp are valid. The dedicated Trash window supports search, contiguous or separate multi-selection, restore, confirmed permanent deletion, and confirmed emptying. **Storage and Backup** reports workspace usage, normal and secret document counts, the read-only browser persistence state or fixed desktop vault path, and exports/imports folder-preserving ZIP backups. Import replaces the current workspace after confirmation. Backups contain normal documents, organization, review data, selected preferences, and optional encrypted Secret Workspace records; trash, desktop history, and recovery journals remain outside the ZIP. Browser storage uses the browser's best-effort policy by default. **Reset workspace** permanently deletes documents, folders, settings, Secret Workspace ciphertext, history, trash, and recovery data after confirmation.
 
+## Preview Appearance
+
+Open **Workspace settings → Preview appearance** (or **Menu → Settings → Preview appearance** on mobile) to choose a code theme, math font, diagram theme, diagram style, and emoji skin tone. Changes apply automatically and persist in `localStorage` under `mdv.visualSettings.v1`. **Follow app theme** uses the current light or dark appearance. **Reset defaults** restores these five preferences without changing your documents.
+
+Math stays available in Computer Modern while an optional font downloads. The latest selection takes effect when it is ready; an unavailable font falls back to Computer Modern. Reset also works during a pending download. To retry an unavailable font, choose another font and select it again. Font and theme assets may require a network connection, including in the desktop app.
+
+![Preview appearance on desktop](images/preview-appearance-desktop.png)
+
+The same controls stack vertically on [small screens](images/preview-appearance-mobile.png).
+
 ## Client Libraries
 
 The web build loads core libraries from CDN with Subresource Integrity where checked into `index.html`. Larger feature libraries are lazy-loaded from `script.js` only when needed.

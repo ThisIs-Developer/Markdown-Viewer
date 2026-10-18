@@ -14,7 +14,7 @@
   // Allowed options metadata
   const OPTIONS = Object.freeze({
     hljsTheme: [
-      { value: 'auto', label: 'Auto (Follow App)' },
+      { value: 'auto', label: 'Follow app theme' },
       { value: 'github', label: 'GitHub' },
       { value: 'github-dark', label: 'GitHub Dark' },
       { value: 'monokai', label: 'Monokai' },
@@ -31,8 +31,8 @@
       { value: 'default', label: 'Default' }
     ],
     mathFont: [
-      { value: 'mathjax-modern', label: 'Computer Modern (TeX)' },
-      { value: 'mathjax-tex', label: 'TeX (Classic)' },
+      { value: 'mathjax-modern', label: 'Computer Modern' },
+      { value: 'mathjax-tex', label: 'Classic TeX' },
       { value: 'mathjax-stix2', label: 'STIX Two' },
       { value: 'mathjax-asana', label: 'Asana Math' },
       { value: 'mathjax-bonum', label: 'Gyre Bonum' },
@@ -43,7 +43,7 @@
       { value: 'mathjax-termes', label: 'Gyre Termes' }
     ],
     mermaidTheme: [
-      { value: 'auto', label: 'Auto (Follow App)' },
+      { value: 'auto', label: 'Follow app theme' },
       { value: 'default', label: 'Default' },
       { value: 'neutral', label: 'Neutral' },
       { value: 'dark', label: 'Dark' },
@@ -52,15 +52,15 @@
     ],
     mermaidLook: [
       { value: 'classic', label: 'Classic' },
-      { value: 'handDrawn', label: 'Hand Drawn' }
+      { value: 'handDrawn', label: 'Hand drawn' }
     ],
     emojiSkinTone: [
-      { value: 'default', label: 'Default (Yellow)' },
-      { value: 'tone1', label: 'Light (Tone 1)' },
-      { value: 'tone2', label: 'Medium-Light (Tone 2)' },
-      { value: 'tone3', label: 'Medium (Tone 3)' },
-      { value: 'tone4', label: 'Medium-Dark (Tone 4)' },
-      { value: 'tone5', label: 'Dark (Tone 5)' }
+      { value: 'default', label: 'Default yellow' },
+      { value: 'tone1', label: 'Light' },
+      { value: 'tone2', label: 'Medium light' },
+      { value: 'tone3', label: 'Medium' },
+      { value: 'tone4', label: 'Medium dark' },
+      { value: 'tone5', label: 'Dark' }
     ]
   });
 
@@ -362,208 +362,112 @@
     });
   }
 
-  /**
-   * Dynamically loads a script tag if not already loaded.
-   */
-  const _loadedScripts = new Set();
+  // Share pending downloads, and allow a failed component to be retried.
+  const _loadingScripts = new Map();
   function loadScriptOnce(src) {
-    if (_loadedScripts.has(src)) return Promise.resolve();
-    if (typeof document === 'undefined') return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${src}"]`);
-      if (existing) {
-        _loadedScripts.add(src);
-        return resolve();
-      }
+    if (_loadingScripts.has(src)) return _loadingScripts.get(src);
+    const pending = new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
       script.charset = 'UTF-8';
       script.crossOrigin = 'anonymous';
       script.onload = () => {
-        _loadedScripts.add(src);
+        script.remove();
         resolve();
       };
-      script.onerror = (err) => {
-        console.warn(`[VisualAdapters] Script load failed: ${src}`, err);
-        reject(err);
+      script.onerror = () => {
+        script.remove();
+        reject(new Error(`Failed to load math font: ${src}`));
       };
-      if (document.head) document.head.appendChild(script);
-      else if (document.body) document.body.appendChild(script);
-    });
+      document.head.appendChild(script);
+    }).finally(() => _loadingScripts.delete(src));
+    _loadingScripts.set(src, pending);
+    return pending;
   }
 
-  /**
-   * Apply MathJax mathematical font.
-   */
-  async function applyMathFont(font) {
-    _activeMathFont = font || DEFAULTS.mathFont;
+  function getMathFontClass(mathJax, font) {
+    const exports = mathJax._?.output?.fonts?.[font]?.chtml_ts;
+    return exports ? Object.values(exports)[0] : null;
+  }
 
-    if (typeof window === 'undefined' || !window.MathJax) {
+  async function loadMathFont(mathJax, font) {
+    if (!getMathFontClass(mathJax, font)) {
+      await loadScriptOnce(`${MATHJAX_FONT_CDN_BASE}${font}-font/chtml.js`);
+    }
+    const fontClass = getMathFontClass(mathJax, font);
+    if (!fontClass) throw new Error(`Math font did not register: ${font}`);
+    return fontClass;
+  }
+
+  let _mathFontRequest = 0;
+
+  /** Apply only the latest font selection, after the default renderer is ready. */
+  async function applyMathFont(font) {
+    const requestedFont = font || DEFAULTS.mathFont;
+    const request = ++_mathFontRequest;
+    _activeMathFont = requestedFont;
+
+    const mathJax = typeof window !== 'undefined' && window.MathJax;
+    // Startup owns its configuration until the bundled Modern renderer exists.
+    // ensureMathJaxReady will apply the saved/latest choice once it is ready.
+    // Legacy v3 bundles retain their supported built-in font.
+    if (!mathJax?._?.output?.fonts || !mathJax.startup?.output ||
+        String(mathJax.version).startsWith('3.')) return;
+
+    const isCurrent = () => request === _mathFontRequest && window.MathJax === mathJax;
+    let effectiveFont = requestedFont;
+    let fontClass;
+    try {
+      fontClass = await loadMathFont(mathJax, requestedFont);
+    } catch (error) {
+      if (!isCurrent()) return;
+      console.warn(`[VisualAdapters] Math font unavailable (${requestedFont}); using Modern.`, error);
+      effectiveFont = DEFAULTS.mathFont;
+      fontClass = await loadMathFont(mathJax, effectiveFont);
+    }
+    if (!isCurrent()) return;
+
+    // Finish any queued typesetting before replacing its output/document.
+    if (mathJax.startup.promise) await mathJax.startup.promise;
+    if (!isCurrent()) return;
+
+    const packageUrl = `${MATHJAX_FONT_CDN_BASE}${effectiveFont}-font`;
+    const fontURL = `${packageUrl}/chtml/woff`;
+    const dynamicPrefix = `[${effectiveFont}]/chtml/dynamic`;
+    mathJax.config.output = Object.assign(mathJax.config.output || {}, { font: effectiveFont });
+    mathJax.config.chtml = Object.assign(mathJax.config.chtml || {}, {
+      fontData: fontClass, fontURL, dynamicPrefix
+    });
+    // v3 expects a font instance in chtml.font; v4 uses fontData for the class.
+    if (typeof mathJax.config.chtml.font === 'string') delete mathJax.config.chtml.font;
+    mathJax.config.loader = mathJax.config.loader || {};
+    mathJax.config.loader.paths = Object.assign(mathJax.config.loader.paths || {}, {
+      [effectiveFont]: packageUrl
+    });
+    // The loader's runtime path table is separate from its original config.
+    const loaderConfig = mathJax._.components?.loader?.CONFIG;
+    if (loaderConfig) {
+      loaderConfig.paths = Object.assign(loaderConfig.paths || {}, { [effectiveFont]: packageUrl });
+    }
+
+    _activeMathFont = effectiveFont;
+    const currentOutput = mathJax.startup.output;
+    if (currentOutput.font?.constructor === fontClass) {
+      Object.assign(currentOutput.font.options, { fontURL, dynamicPrefix });
       return;
     }
 
-    const isMathJax3 = (window.MathJax.version && String(window.MathJax.version).startsWith('3.')) ||
-                       (window.MathJax._ && !window.MathJax._.output?.fonts);
+    mathJax.startup.output = mathJax.startup.getOutputJax();
+    mathJax.startup.document = mathJax.startup.getDocument();
 
-    // Configure font and complete resource configuration in MathJax
-    const fontPkgUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font`;
-    const fontWoffUrl = `${fontPkgUrl}/chtml/woff`;
-    const fontDynamicPrefix = `[${_activeMathFont}]/chtml/dynamic`;
-
-    window.MathJax.output = window.MathJax.output || {};
-    window.MathJax.output.font = _activeMathFont;
-
-    window.MathJax.config = window.MathJax.config || {};
-    window.MathJax.config.output = window.MathJax.config.output || {};
-    window.MathJax.config.output.font = _activeMathFont;
-
-    window.MathJax.chtml = window.MathJax.chtml || {};
-    window.MathJax.config.chtml = window.MathJax.config.chtml || {};
-    if (typeof window.MathJax.chtml.font === 'string') {
-      delete window.MathJax.chtml.font;
-    }
-    if (typeof window.MathJax.config.chtml.font === 'string') {
-      delete window.MathJax.config.chtml.font;
-    }
-
-    if (!isMathJax3) {
-      window.MathJax.chtml.fontURL = fontWoffUrl;
-      window.MathJax.chtml.dynamicPrefix = fontDynamicPrefix;
-      window.MathJax.config.chtml.fontURL = fontWoffUrl;
-      window.MathJax.config.chtml.dynamicPrefix = fontDynamicPrefix;
-
-      window.MathJax.loader = window.MathJax.loader || {};
-      window.MathJax.loader.paths = window.MathJax.loader.paths || {};
-      window.MathJax.loader.paths[_activeMathFont] = fontPkgUrl;
-
-      window.MathJax.config.loader = window.MathJax.config.loader || {};
-      window.MathJax.config.loader.paths = window.MathJax.config.loader.paths || {};
-      window.MathJax.config.loader.paths[_activeMathFont] = fontPkgUrl;
-
-      if (window.MathJax._ && window.MathJax._.components && window.MathJax._.components.loader && window.MathJax._.components.loader.CONFIG && window.MathJax._.components.loader.CONFIG.paths) {
-        window.MathJax._.components.loader.CONFIG.paths[_activeMathFont] = fontPkgUrl;
-      }
-    }
-
-    // Load external font script if needed and MathJax core is already loaded.
-    // If MathJax has not loaded yet, configuring output.font and resource URLs
-    // is sufficient because MathJax's startup loader will load the font component itself.
-    const fontAlreadyLoaded = !!(
-      window.MathJax._ &&
-      window.MathJax._.output &&
-      window.MathJax._.output.fonts &&
-      window.MathJax._.output.fonts[_activeMathFont]
-    );
-
-    if (!fontAlreadyLoaded && window.MathJax._ && !isMathJax3) {
-      const fontUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font/chtml.js`;
-      try {
-        await loadScriptOnce(fontUrl);
-      } catch (err) {
-        console.warn(`[VisualAdapters] MathJax font load failed (${_activeMathFont}), falling back to bundled Modern:`, err);
-        _activeMathFont = 'mathjax-modern';
-        if (
-          window.MathJax._ &&
-          (!window.MathJax._.output || !window.MathJax._.output.fonts || !window.MathJax._.output.fonts['mathjax-modern'])
-        ) {
-          try {
-            await loadScriptOnce(`${MATHJAX_FONT_CDN_BASE}mathjax-modern-font/chtml.js`);
-          } catch (modernErr) {
-            console.warn('[VisualAdapters] MathJax modern fallback load failed:', modernErr);
-          }
-        }
-      }
-    }
-
-    // Extract registered font class and activate its fontData
-    let fontClass = null;
-    if (window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts) {
-      const fontPkg = window.MathJax._.output.fonts[_activeMathFont];
-      if (fontPkg && fontPkg.chtml_ts) {
-        fontClass = Object.values(fontPkg.chtml_ts)[0] || null;
-      }
-    }
-
-    // If font class was not found (e.g. offline fallback), fall back to bundled modern font
-    if (!fontClass && _activeMathFont !== 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
-      _activeMathFont = 'mathjax-modern';
-      const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
-      if (modernPkg.chtml_ts) {
-        fontClass = Object.values(modernPkg.chtml_ts)[0] || null;
-      }
-    }
-
-    // Update MathJax configuration with effective font and complete resource configuration
-    const effectivePkgUrl = `${MATHJAX_FONT_CDN_BASE}${_activeMathFont}-font`;
-    const effectiveWoffUrl = `${effectivePkgUrl}/chtml/woff`;
-    const effectiveDynamicPrefix = `[${_activeMathFont}]/chtml/dynamic`;
-
-    window.MathJax.config.output.font = _activeMathFont;
-    if (typeof window.MathJax.config.chtml.font === 'string') {
-      delete window.MathJax.config.chtml.font;
-    }
-    if (typeof window.MathJax.chtml.font === 'string') {
-      delete window.MathJax.chtml.font;
-    }
-    window.MathJax.config.chtml.fontURL = effectiveWoffUrl;
-    window.MathJax.config.chtml.dynamicPrefix = effectiveDynamicPrefix;
-    window.MathJax.chtml.fontURL = effectiveWoffUrl;
-    window.MathJax.chtml.dynamicPrefix = effectiveDynamicPrefix;
-
-    window.MathJax.config.loader = window.MathJax.config.loader || {};
-    window.MathJax.config.loader.paths = window.MathJax.config.loader.paths || {};
-    window.MathJax.config.loader.paths[_activeMathFont] = effectivePkgUrl;
-    window.MathJax.loader = window.MathJax.loader || {};
-    window.MathJax.loader.paths = window.MathJax.loader.paths || {};
-    window.MathJax.loader.paths[_activeMathFont] = effectivePkgUrl;
-    if (window.MathJax._ && window.MathJax._.components && window.MathJax._.components.loader && window.MathJax._.components.loader.CONFIG && window.MathJax._.components.loader.CONFIG.paths) {
-      window.MathJax._.components.loader.CONFIG.paths[_activeMathFont] = effectivePkgUrl;
-    }
-
-    if (fontClass) {
-      window.MathJax.config.chtml.fontData = fontClass;
-      window.MathJax.chtml.fontData = fontClass;
-    } else if (_activeMathFont === 'mathjax-modern' && window.MathJax._ && window.MathJax._.output && window.MathJax._.output.fonts && window.MathJax._.output.fonts['mathjax-modern']) {
-      const modernPkg = window.MathJax._.output.fonts['mathjax-modern'];
-      if (modernPkg.chtml_ts) {
-        window.MathJax.config.chtml.fontData = Object.values(modernPkg.chtml_ts)[0] || null;
-        window.MathJax.chtml.fontData = window.MathJax.config.chtml.fontData;
-      }
-    }
-
-    // If MathJax startup has completed, switch output jax, document and re-typeset
-    if (!isMathJax3 && window.MathJax.startup && typeof window.MathJax.startup.getOutputJax === 'function') {
-      try {
-        const newOutputJax = window.MathJax.startup.getOutputJax();
-        if (newOutputJax) {
-          if (newOutputJax.font && newOutputJax.font.options) {
-            newOutputJax.font.options.fontURL = effectiveWoffUrl;
-            newOutputJax.font.options.dynamicPrefix = effectiveDynamicPrefix;
-          }
-          window.MathJax.startup.output = newOutputJax;
-          if (typeof window.MathJax.startup.getDocument === 'function') {
-            window.MathJax.startup.document = window.MathJax.startup.getDocument();
-          }
-        }
-
-        // Re-render math in preview if present
-        if (typeof document !== 'undefined') {
-          const preview = document.getElementById('markdown-preview');
-          const splitPreview = document.getElementById('document-split-preview');
-          const roots = [];
-          if (preview && preview.querySelector('mjx-container, .math-block, .math-inline')) roots.push(preview);
-          if (splitPreview && splitPreview.querySelector('mjx-container, .math-block, .math-inline')) roots.push(splitPreview);
-
-          if (roots.length > 0) {
-            if (typeof window.renderMarkdown === 'function') {
-              window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
-            } else if (typeof window.MathJax.typesetPromise === 'function') {
-              await window.MathJax.typesetPromise(roots);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[VisualAdapters] MathJax font switch error:', err);
+    const roots = ['markdown-preview', 'document-split-preview']
+      .map(id => document.getElementById(id))
+      .filter(root => root && root.querySelector('mjx-container, .math-block, .math-inline'));
+    if (roots.length > 0) {
+      if (typeof window.renderMarkdown === 'function') {
+        window.renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+      } else if (typeof mathJax.typesetPromise === 'function') {
+        await mathJax.typesetPromise(roots);
       }
     }
   }

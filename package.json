@@ -39,6 +39,9 @@
     "js-yaml": "4.3.1",
     "jszip": "3.10.1",
     "marked": "9.1.6",
+    "mathjax": "4.0.0-beta.7",
+    "mathjax-asana-font": "4.0.0-beta.7",
+    "mathjax-stix2-font": "4.0.0-beta.7",
     "pako": "2.1.0"
   }
 }

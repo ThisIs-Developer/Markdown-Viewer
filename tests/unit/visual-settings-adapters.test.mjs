@@ -265,163 +265,158 @@ test('applyHighlightTheme manages stylesheet, auto theme, and export styling', a
   assert.equal(adapters.getHljsTheme('light'), 'github');
 });
 
-test('applyMathFont maintains MathJax 3 and 4 configuration compatibility without chtml.font string', async () => {
-  const { context, adapters } = createAdapterContext();
-
-  // Test when MathJax is not yet loaded
-  context.window.MathJax = {};
-  await adapters.applyMathFont('mathjax-stix2');
-
-  assert.equal(context.window.MathJax.config.output.font, 'mathjax-stix2');
-  assert.equal(typeof context.window.MathJax.config.chtml.font, 'undefined');
-
-  // Test when MathJax 3 is present (has version 3.x and no modular fonts)
-  context.window.MathJax = {
-    version: '3.2.2',
-    config: {
-      output: {},
-      chtml: {}
+function installMathRuntime(context) {
+  class ModernFont {
+    constructor(options) { this.options = options; }
+  }
+  const mathJax = {
+    version: '4.0.0-beta.7',
+    config: { output: {}, chtml: {} },
+    _: {
+      components: { loader: { CONFIG: { paths: {} } } },
+      output: { fonts: { 'mathjax-modern': { chtml_ts: { ModernFont } } } }
     },
     startup: {
-      getOutputJax: () => ({ name: 'chtml' })
+      promise: Promise.resolve(),
+      output: { font: new ModernFont({}) },
+      getOutputJax() { return { font: new mathJax.config.chtml.fontData(mathJax.config.chtml) }; },
+      getDocument() { return { outputJax: this.output }; }
     }
   };
+  context.window.MathJax = mathJax;
+  return mathJax;
+}
 
+function controlFontDownloads(context, mathJax) {
+  const scripts = [];
+  const createElement = context.document.createElement.bind(context.document);
+  context.document.createElement = tag => {
+    if (tag !== 'script') return createElement(tag);
+    const script = { remove() { this.removed = true; } };
+    scripts.push(script);
+    return script;
+  };
+  return {
+    scripts,
+    succeed(index, font) {
+      class LoadedFont {
+        constructor(options) { this.options = options; }
+      }
+      mathJax._.output.fonts[font] = { chtml_ts: { LoadedFont } };
+      scripts[index].onload();
+      return LoadedFont;
+    }
+  };
+}
+
+test('font choices preserve an initializing runtime and legacy v3 configuration', async () => {
+  const { context, adapters } = createAdapterContext();
+  const starting = { _: {}, config: { output: { font: 'mathjax-modern' } }, startup: {} };
+  context.window.MathJax = starting;
+  await adapters.applyMathFont('mathjax-stix2');
+  assert.equal(context.window.MathJax, starting);
+  assert.deepEqual(starting.config, { output: { font: 'mathjax-modern' } });
+  assert.equal(adapters.getCurrentMathFont(), 'mathjax-stix2');
+
+  const legacy = { version: '3.2.2', config: { chtml: {} }, startup: {} };
+  context.window.MathJax = legacy;
   await adapters.applyMathFont('mathjax-modern');
-  assert.equal(typeof context.window.MathJax.config.chtml.font, 'undefined');
-  assert.equal(context.window.MathJax.config.output.font, 'mathjax-modern');
+  assert.deepEqual(legacy.config, { chtml: {} });
 });
 
-test('applyMathFont initializes complete font resource configuration in MathJax 4', async () => {
+test('font switches configure matching WOFF and dynamic resources, including reset', async () => {
   const { context, adapters } = createAdapterContext();
+  const mj = installMathRuntime(context);
+  const downloads = controlFontDownloads(context, mj);
+  const pending = adapters.applyMathFont('mathjax-stix2');
+  downloads.succeed(0, 'mathjax-stix2');
+  await pending;
 
-  const mockOutputJax = {
-    font: {
-      name: 'mathjax-modern',
-      options: {
-        fontURL: 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff',
-        dynamicPrefix: '[mathjax-modern]/chtml/dynamic'
-      }
-    }
-  };
-
-  context.window.MathJax = {
-    version: '4.0.0-beta.7',
-    config: {},
-    loader: { paths: {} },
-    _: {
-      components: {
-        loader: {
-          CONFIG: {
-            paths: {
-              mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7'
-            }
-          }
-        }
-      },
-      output: {
-        fonts: {
-          'mathjax-stix2': {
-            chtml_ts: {
-              MathJaxStix2Font: class MockStixFont {}
-            }
-          }
-        }
-      }
-    },
-    startup: {
-      getOutputJax: () => mockOutputJax,
-      getDocument: () => ({})
-    }
-  };
-
-  await adapters.applyMathFont('mathjax-stix2');
-
-  const mj = context.window.MathJax;
-  assert.equal(mj.config.chtml.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font/chtml/woff');
-  assert.equal(mj.config.chtml.dynamicPrefix, '[mathjax-stix2]/chtml/dynamic');
-  assert.equal(mj.config.loader.paths['mathjax-stix2'], 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font');
-  assert.equal(mj.loader.paths['mathjax-stix2'], 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font');
-  assert.equal(mj._.components.loader.CONFIG.paths['mathjax-stix2'], 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font');
-  assert.equal(mockOutputJax.font.options.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font/chtml/woff');
-  assert.equal(mockOutputJax.font.options.dynamicPrefix, '[mathjax-stix2]/chtml/dynamic');
+  for (const font of ['mathjax-stix2', 'mathjax-modern']) {
+    await adapters.applyMathFont(font);
+    const base = `https://cdn.jsdelivr.net/npm/${font}-font`;
+    assert.equal(mj.config.output.font, font);
+    assert.equal(mj.config.chtml.fontURL, `${base}/chtml/woff`);
+    assert.equal(mj.config.chtml.dynamicPrefix, `[${font}]/chtml/dynamic`);
+    assert.equal(mj.config.loader.paths[font], base);
+    assert.equal(mj._.components.loader.CONFIG.paths[font], base);
+    assert.equal(mj.startup.output.font.options.fontURL, `${base}/chtml/woff`);
+    assert.equal(mj.startup.document.outputJax, mj.startup.output);
+    assert.equal(typeof mj.config.chtml.font, 'undefined');
+  }
 });
 
-test('applyMathFont loads Modern font resources when resetting after alternate-font boot', async () => {
+for (const order of ['older-first', 'newer-first', 'older-fails']) {
+  test(`the latest font wins when overlapping requests finish ${order}`, async () => {
+    const { context, adapters } = createAdapterContext();
+    const mj = installMathRuntime(context);
+    const downloads = controlFontDownloads(context, mj);
+    const stix = adapters.applyMathFont('mathjax-stix2');
+    const asana = adapters.applyMathFont('mathjax-asana');
+    let expectedFont;
+    if (order === 'older-first') {
+      downloads.succeed(0, 'mathjax-stix2');
+      await stix;
+      assert.equal(adapters.getCurrentMathFont(), 'mathjax-asana');
+      expectedFont = downloads.succeed(1, 'mathjax-asana');
+    } else {
+      expectedFont = downloads.succeed(1, 'mathjax-asana');
+      await asana;
+      if (order === 'older-fails') downloads.scripts[0].onerror();
+      else downloads.succeed(0, 'mathjax-stix2');
+    }
+    await Promise.all([stix, asana]);
+    assert.equal(adapters.getCurrentMathFont(), 'mathjax-asana');
+    assert.equal(mj.startup.output.font.constructor, expectedFont);
+    assert.equal(mj.config.output.font, 'mathjax-asana');
+  });
+}
+
+test('duplicate font selections share a pending download without resolving early', async () => {
   const { context, adapters } = createAdapterContext();
+  const mj = installMathRuntime(context);
+  const downloads = controlFontDownloads(context, mj);
+  const first = adapters.applyMathFont('mathjax-stix2');
+  let finished = false;
+  const second = adapters.applyMathFont('mathjax-stix2').then(() => { finished = true; });
+  await Promise.resolve();
+  assert.equal(finished, false);
+  assert.equal(downloads.scripts.length, 1);
+  const Font = downloads.succeed(0, 'mathjax-stix2');
+  await Promise.all([first, second]);
+  assert.equal(mj.startup.output.font.constructor, Font);
+});
 
-  const mockOutputJax = {
-    font: {
-      name: 'mathjax-stix2',
-      options: {
-        fontURL: 'https://cdn.jsdelivr.net/npm/mathjax-stix2-font/chtml/woff',
-        dynamicPrefix: '[mathjax-stix2]/chtml/dynamic'
-      }
-    }
-  };
+test('a failed font falls back to Modern and can be retried', async () => {
+  const { context, adapters } = createAdapterContext();
+  const mj = installMathRuntime(context);
+  const downloads = controlFontDownloads(context, mj);
+  const fallback = mj.startup.output;
+  const failed = adapters.applyMathFont('mathjax-stix2');
+  downloads.scripts[0].onerror();
+  await failed;
+  assert.equal(mj.startup.output, fallback);
+  assert.equal(adapters.getCurrentMathFont(), 'mathjax-modern');
+  assert.equal(downloads.scripts[0].removed, true);
 
-  context.window.MathJax = {
-    version: '4.0.0-beta.7',
-    config: {},
-    loader: { paths: {} },
-    _: {
-      components: {
-        loader: {
-          CONFIG: {
-            paths: {
-              mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7'
-            }
-          }
-        }
-      },
-      output: {
-        fonts: {
-          'mathjax-stix2': {
-            chtml_ts: {
-              MathJaxStix2Font: class MockStixFont {}
-            }
-          }
-        }
-      }
-    },
-    startup: {
-      getOutputJax: () => mockOutputJax,
-      getDocument: () => ({})
-    }
-  };
+  const retry = adapters.applyMathFont('mathjax-stix2');
+  assert.equal(downloads.scripts.length, 2);
+  const Font = downloads.succeed(1, 'mathjax-stix2');
+  await retry;
+  assert.equal(mj.startup.output.font.constructor, Font);
+});
 
-  const origCreateElement = context.document.createElement.bind(context.document);
-  context.document.createElement = function(tag) {
-    const el = origCreateElement(tag);
-    if (tag.toLowerCase() === 'script') {
-      let _src = '';
-      Object.defineProperty(el, 'src', {
-        get() { return _src; },
-        set(val) {
-          _src = val;
-          if (val.includes('mathjax-modern-font')) {
-            context.window.MathJax._.output.fonts['mathjax-modern'] = {
-              chtml_ts: {
-                MathJaxModernFont: class MockModernFont {}
-              }
-            };
-          }
-          setTimeout(() => { if (this.onload) this.onload(); }, 1);
-        }
-      });
-    }
-    return el;
-  };
-
+test('reset takes effect while a font is pending and ignores its later completion', async () => {
+  const { context, adapters } = createAdapterContext();
+  const mj = installMathRuntime(context);
+  const downloads = controlFontDownloads(context, mj);
+  const initialOutput = mj.startup.output;
+  const pending = adapters.applyMathFont('mathjax-stix2');
   await adapters.applyMathFont('mathjax-modern');
-
-  const mj = context.window.MathJax;
+  assert.equal(mj.startup.output, initialOutput);
+  downloads.succeed(0, 'mathjax-stix2');
+  await pending;
+  assert.equal(mj.startup.output, initialOutput);
+  assert.equal(adapters.getCurrentMathFont(), 'mathjax-modern');
   assert.equal(mj.config.output.font, 'mathjax-modern');
-  assert.equal(mj.config.chtml.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff');
-  assert.equal(mj.config.chtml.dynamicPrefix, '[mathjax-modern]/chtml/dynamic');
-  assert.equal(mj.config.loader.paths['mathjax-modern'], 'https://cdn.jsdelivr.net/npm/mathjax-modern-font');
-  assert.equal(mockOutputJax.font.options.fontURL, 'https://cdn.jsdelivr.net/npm/mathjax-modern-font/chtml/woff');
-  assert.equal(mockOutputJax.font.options.dynamicPrefix, '[mathjax-modern]/chtml/dynamic');
-  assert.ok(mj._.output.fonts['mathjax-modern']);
 });
-

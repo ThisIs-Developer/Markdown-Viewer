@@ -14489,46 +14489,36 @@ body.release-notes-active .mobile-stats-container {
 }
 
 /* ==========================================================================
-   Visual Library Settings Modal (Issue #129)
+   Preview appearance
    ========================================================================== */
 
 .visual-settings-box {
-  width: min(94vw, 560px);
-  max-width: 560px;
+  width: min(500px, calc(100vw - 32px));
+  max-width: 500px;
+  max-height: calc(100dvh - 32px);
 }
 
-.visual-settings-body {
+.visual-settings-box > .visual-settings-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px 20px;
-  max-height: calc(85vh - 120px);
+  gap: 14px;
+  padding: 20px;
+  min-height: 0;
   overflow-y: auto;
 }
 
 .visual-setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: 16px;
 }
 
 .visual-setting-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-size: var(--ui-font-md);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-color);
-  margin-bottom: 2px;
-}
-
-.visual-setting-label i {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  color: var(--text-secondary);
+  margin: 0;
 }
 
 .visual-setting-desc {
@@ -14541,8 +14531,9 @@ body.release-notes-active .mobile-stats-container {
 .visual-setting-select {
   display: block;
   width: 100%;
-  min-height: 38px;
-  padding: 8px 12px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 36px 8px 12px;
   font-size: var(--ui-font-md);
   line-height: 1.5;
   color: var(--text-color);
@@ -14561,30 +14552,26 @@ body.release-notes-active .mobile-stats-container {
   box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.25);
 }
 
-.visual-settings-actions {
+.visual-settings-box > .visual-settings-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 12px 20px;
   border-top: 1px solid var(--border-color);
-  background-color: var(--bg-color);
   border-bottom-left-radius: inherit;
   border-bottom-right-radius: inherit;
 }
 
-.visual-settings-actions-left {
-  display: flex;
-  align-items: center;
-}
-
-.visual-settings-actions-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.visual-settings-actions .reset-modal-btn {
+  min-height: 40px;
+  margin: 0;
 }
 
 /* Dark mode styling for visual settings */
 [data-theme="dark"] .visual-setting-select {
+  color-scheme: dark;
+  --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%238b949e' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
   background-color: #161b22;
   color: #c9d1d9;
   border-color: #30363d;
@@ -14601,44 +14588,32 @@ body.release-notes-active .mobile-stats-container {
   color: #c9d1d9;
 }
 
-[data-theme="dark"] .visual-settings-actions {
-  background-color: var(--bg-color);
-  border-top-color: #30363d;
-}
-
-/* Mobile responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .visual-settings-box {
-    width: 96vw;
-    margin: 8px auto;
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
   }
 
-  .visual-settings-body {
-    padding: 14px 16px;
-    gap: 14px;
-    max-height: calc(85vh - 140px);
+  .visual-settings-box > .visual-settings-body {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .visual-setting-group {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
   }
 
   .visual-setting-select {
-    min-height: 44px; /* Better touch target */
-    font-size: var(--ui-font-base, 14px);
+    min-height: 44px;
+    font-size: 16px;
   }
 
-  .visual-settings-actions {
+  .visual-settings-box > .visual-settings-actions {
     padding: 12px 16px;
-    flex-wrap: wrap;
-    gap: 10px;
   }
 
-  .visual-settings-actions-left,
-  .visual-settings-actions-right {
-    width: 100%;
-  }
-
-  .visual-settings-actions-left button,
-  .visual-settings-actions-right button {
-    width: 100%;
-    min-height: 40px;
-    justify-content: center;
+  .visual-settings-actions .reset-modal-btn {
+    min-height: 44px;
   }
 }

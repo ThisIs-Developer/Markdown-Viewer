@@ -50,6 +50,20 @@ async function installLocalBrowserAssets(page, options = {}) {
     });
   }
 
+  if (options.mockMathJax === false) {
+    // Exercise real rendering and network timing with locked, local packages.
+    await page.route(/^https:\/\/cdn\.jsdelivr\.net\/npm\/(mathjax@4\.0\.0-beta\.7|mathjax-(?:modern|stix2|asana)-font)\//, async route => {
+      const [, packageName, resource] = new URL(route.request().url()).pathname.match(/^\/npm\/([^/]+)\/(.+)$/);
+      const file = path.join(rootDir, 'node_modules', packageName.split('@')[0], resource);
+      if (!assetBodyCache.has(file)) assetBodyCache.set(file, fs.readFile(file));
+      await route.fulfill({
+        status: 200,
+        contentType: resource.endsWith('.woff') ? 'font/woff' : 'application/javascript',
+        body: await assetBodyCache.get(file)
+      });
+    });
+  }
+
   if (options.mockMathJax !== false) {
     await page.addInitScript(() => {
       window.MathJax = {

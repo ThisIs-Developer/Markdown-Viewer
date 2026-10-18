@@ -43,6 +43,8 @@ npm run test:e2e:report
 
 The Playwright configuration starts a cross-platform Node static server automatically. Core browser libraries are fulfilled from locked npm packages during tests. External renderer, GitHub, and Live Share calls are mocked in the specifications that exercise those integrations.
 
+Math font lifecycle tests use the real MathJax bundle, Modern, STIX Two, and Asana components from locked development dependencies. Controlled response timing and failures cover editing during a saved-font download, overlapping selections, fallback, Reset, and retry without depending on CDN availability for those resources.
+
 ## Coverage
 
 - Static validation and application startup
