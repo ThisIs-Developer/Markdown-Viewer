@@ -1203,7 +1203,7 @@
   "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Копіювати весь документ як Markdown (Ctrl/Cmd+Shift+C)",
   "Preview Styling": "Стиль попереднього перегляду",
   "Close Preview Styling": "Закрити стиль попереднього перегляду",
-  "Customize code, math, diagrams, and emoji": "Налаштуйте код, формули, діаграми й емодзі",
+  "Customize preview elements.": "Налаштуйте елементи попереднього перегляду.",
   "Changes apply automatically.": "Зміни застосовуються автоматично.",
   "Code theme": "Тема коду",
   "Math font": "Шрифт формул",

@@ -1203,7 +1203,7 @@
   "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "將整份文件複製為 Markdown (Ctrl/Cmd+Shift+C)",
   "Preview Styling": "預覽樣式",
   "Close Preview Styling": "關閉預覽樣式",
-  "Customize code, math, diagrams, and emoji": "自訂程式碼、公式、圖表和表情符號",
+  "Customize preview elements.": "自訂預覽元素。",
   "Changes apply automatically.": "變更會自動套用。",
   "Code theme": "程式碼主題",
   "Math font": "公式字型",

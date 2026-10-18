@@ -1203,7 +1203,7 @@
   "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)",
   "Preview Styling": "Preview Styling",
   "Close Preview Styling": "Close Preview Styling",
-  "Customize code, math, diagrams, and emoji": "Customize code, math, diagrams, and emoji",
+  "Customize preview elements.": "Customize preview elements.",
   "Changes apply automatically.": "Changes apply automatically.",
   "Code theme": "Code theme",
   "Math font": "Math font",

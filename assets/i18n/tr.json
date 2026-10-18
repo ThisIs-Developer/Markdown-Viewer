@@ -1203,7 +1203,7 @@
   "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "Belgenin tamamını Markdown olarak kopyala (Ctrl/Cmd+Shift+C)",
   "Preview Styling": "Önizleme stili",
   "Close Preview Styling": "Önizleme stilini kapat",
-  "Customize code, math, diagrams, and emoji": "Kod, formül, diyagram ve emojileri özelleştirin",
+  "Customize preview elements.": "Önizleme öğelerini özelleştirin.",
   "Changes apply automatically.": "Değişiklikler otomatik uygulanır.",
   "Code theme": "Kod teması",
   "Math font": "Matematik yazı tipi",

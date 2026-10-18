@@ -1203,7 +1203,7 @@
   "Copy entire document as Markdown (Ctrl/Cmd+Shift+C)": "ドキュメント全体をMarkdownとしてコピー (Ctrl/Cmd+Shift+C)",
   "Preview Styling": "プレビューのスタイル",
   "Close Preview Styling": "プレビューのスタイルを閉じる",
-  "Customize code, math, diagrams, and emoji": "コード・数式・図・絵文字をカスタマイズ",
+  "Customize preview elements.": "プレビューの要素をカスタマイズ。",
   "Changes apply automatically.": "変更は自動的に適用されます。",
   "Code theme": "コードのテーマ",
   "Math font": "数式のフォント",
