@@ -944,7 +944,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutVersion = document.getElementById("about-version");
   const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
-  const visualSettingsButton = document.getElementById("visual-settings-button");
   const menuVisualSettingsButton = document.getElementById("menu-visual-settings-button");
   const mobileVisualSettingsButton = document.getElementById("mobile-visual-settings-button");
   const visualSettingsModal = document.getElementById("visual-settings-modal");
@@ -4126,19 +4125,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function configureMathJax() {
-    if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
-    if (window.MathJax && MathJax.loader && MathJax.tex) {
-      if (window.MathJax.chtml && typeof window.MathJax.chtml.font === 'string') {
-        delete window.MathJax.chtml.font;
-      }
-      return;
-    }
-    const initialFont = window.visualSettingsAdapters
-      ? window.visualSettingsAdapters.getCurrentMathFont()
-      : 'mathjax-modern';
-    if (window.MathJax && window.MathJax.chtml && typeof window.MathJax.chtml.font === 'string') {
-      delete window.MathJax.chtml.font;
-    }
+    // A partially initialized runtime keeps its configuration under config.
+    // Never replace it while an edit or another preview requests math.
+    if (window.MathJax && (MathJax._ || typeof MathJax.typesetPromise === 'function')) return;
     window.MathJax = {
       startup: {
         typeset: false
@@ -4147,7 +4136,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         a11y: { inTabOrder: false }
       },
       output: {
-        font: initialFont
+        // The combined bundle includes Modern. Load optional fonts only after
+        // startup so an unavailable font cannot leave startup.promise pending.
+        font: 'mathjax-modern'
       },
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
@@ -4158,6 +4149,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function ensureMathJaxReady() {
+    if (mathJaxLoadPromise) return mathJaxLoadPromise;
     if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
       return MathJax.startup && MathJax.startup.promise
         ? MathJax.startup.promise
@@ -4165,39 +4157,38 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     configureMathJax();
-    if (!mathJaxLoadPromise) {
-      const initialFont = window.visualSettingsAdapters
-        ? window.visualSettingsAdapters.getCurrentMathFont()
-        : 'mathjax-modern';
-      const fontPreloadPromise = (initialFont && initialFont !== 'mathjax-modern' && window.visualSettingsAdapters)
-        ? window.visualSettingsAdapters.applyMathFont(initialFont)
-        : Promise.resolve();
-
-      mathJaxLoadPromise = fontPreloadPromise
-        .then(function() { return loadScript(CDN.mathjax); })
-        .then(function() {
-          return MathJax.startup && MathJax.startup.promise
-            ? MathJax.startup.promise
-            : Promise.resolve();
-        })
-        .then(function() {
-          if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') {
-            throw new Error('MathJax typesetPromise API is unavailable.');
+    mathJaxLoadPromise = loadScript(CDN.mathjax)
+      .then(function() {
+        return MathJax.startup && MathJax.startup.promise
+          ? MathJax.startup.promise
+          : Promise.resolve();
+      })
+      .then(function() {
+        if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') {
+          throw new Error('MathJax typesetPromise API is unavailable.');
+        }
+        // Keep math usable in Modern while the saved font downloads. The
+        // adapter rerenders when the latest selection is ready or falls back.
+        if (window.visualSettingsAdapters) {
+          window.visualSettingsAdapters.applyMathFont(
+            window.visualSettingsAdapters.getCurrentMathFont()
+          ).catch(function(error) {
+            console.warn('Failed to apply MathJax font:', error);
+          });
+        }
+      })
+      .catch(function(error) {
+        mathJaxLoadPromise = null;
+        _loadedScripts.delete(CDN.mathjax);
+        if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
+          try {
+            delete window.MathJax;
+          } catch (_) {
+            window.MathJax = undefined;
           }
-        })
-        .catch(function(error) {
-          mathJaxLoadPromise = null;
-          _loadedScripts.delete(CDN.mathjax);
-          if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
-            try {
-              delete window.MathJax;
-            } catch (_) {
-              window.MathJax = undefined;
-            }
-          }
-          throw error;
-        });
-    }
+        }
+        throw error;
+      });
     return mathJaxLoadPromise;
   }
 
@@ -24114,7 +24105,7 @@ ${selector} .arrowheadPath {
   if (mobileVisualSettingsButton) {
     mobileVisualSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
-      openVisualSettingsModal(mobileVisualSettingsButton);
+      openVisualSettingsModal(mobileMenuToggle);
     });
   }
 
@@ -24132,7 +24123,7 @@ ${selector} .arrowheadPath {
     });
   }
 
-  // Visual Library Settings (Issue #129)
+  // Preview Styling settings
   function populateVisualSettingsOptions() {
     const options = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.getOptions === 'function')
       ? window.visualSettingsAdapters.getOptions()
@@ -24141,8 +24132,8 @@ ${selector} .arrowheadPath {
     if (!options) return;
 
     const list = [
-      { el: selectHljsTheme, opts: options.hljsTheme },
-      { el: selectMathFont, opts: options.mathFont },
+      { el: selectHljsTheme, opts: options.hljsTheme, namedOptions: true },
+      { el: selectMathFont, opts: options.mathFont, namedOptions: true },
       { el: selectMermaidTheme, opts: options.mermaidTheme },
       { el: selectMermaidLook, opts: options.mermaidLook },
       { el: selectEmojiSkinTone, opts: options.emojiSkinTone }
@@ -24158,6 +24149,9 @@ ${selector} .arrowheadPath {
         const optEl = document.createElement('option');
         optEl.value = val;
         optEl.textContent = label;
+        if (item.namedOptions && val !== 'auto' && val !== 'default') {
+          optEl.setAttribute('data-i18n-skip', '');
+        }
         item.el.appendChild(optEl);
       });
       if (currentVal) item.el.value = currentVal;
@@ -24244,19 +24238,13 @@ ${selector} .arrowheadPath {
     }
   }
 
-  if (visualSettingsButton) {
-    visualSettingsButton.addEventListener('click', function() {
-      openVisualSettingsModal(visualSettingsButton);
-    });
-  }
-
   if (menuVisualSettingsButton) {
     menuVisualSettingsButton.addEventListener('click', function() {
       const settingsToggle = document.getElementById('workspaceSettingsDropdown');
       if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
         bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
       }
-      openVisualSettingsModal(menuVisualSettingsButton);
+      openVisualSettingsModal(settingsToggle);
     });
   }
 
@@ -32581,7 +32569,8 @@ ${selector} .arrowheadPath {
   syncVisualSettingsUI();
   if (window.visualSettingsStore) {
     const initialVisualSettings = window.visualSettingsStore.getSettings();
-    await applyVisualSettings(initialVisualSettings, '*');
+    // Optional theme/font downloads must not delay workspace readiness.
+    applyVisualSettings(initialVisualSettings, '*');
   }
 
   document.documentElement.dataset.appReady = 'true';
