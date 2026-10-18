@@ -14553,19 +14553,7 @@ body.release-notes-active .mobile-stats-container {
 }
 
 .visual-settings-box > .visual-settings-actions {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--border-color);
-  border-bottom-left-radius: inherit;
-  border-bottom-right-radius: inherit;
-}
-
-.visual-settings-actions .reset-modal-btn {
-  min-height: 40px;
-  margin: 0;
 }
 
 /* Dark mode styling for visual settings */
@@ -14607,13 +14595,5 @@ body.release-notes-active .mobile-stats-container {
   .visual-setting-select {
     min-height: 44px;
     font-size: 16px;
-  }
-
-  .visual-settings-box > .visual-settings-actions {
-    padding: 12px 16px;
-  }
-
-  .visual-settings-actions .reset-modal-btn {
-    min-height: 44px;
   }
 }
