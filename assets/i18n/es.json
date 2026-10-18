@@ -1224,5 +1224,10 @@
   "Default": "Predeterminado",
   "Neutral": "Neutro",
   "Forest": "Bosque",
-  "Base": "Base"
+  "Base": "Base",
+  "About diagram theme": "Acerca del tema de diagramas",
+  "About diagram style": "Acerca del estilo de diagramas",
+  "About emoji skin tone": "Acerca del tono de piel de emojis",
+  "Only applies to Mermaid diagrams.": "Solo se aplica a diagramas Mermaid.",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "Solo se aplica a códigos cortos de emoji compatibles, como :wave:, sin un tono de piel explícito."
 }

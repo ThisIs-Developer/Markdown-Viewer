@@ -1224,5 +1224,10 @@
   "Default": "По умолчанию",
   "Neutral": "Нейтральная",
   "Forest": "Лес",
-  "Base": "Базовая"
+  "Base": "Базовая",
+  "About diagram theme": "О теме диаграмм",
+  "About diagram style": "О стиле диаграмм",
+  "About emoji skin tone": "О тоне кожи эмодзи",
+  "Only applies to Mermaid diagrams.": "Применяется только к диаграммам Mermaid.",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "Применяется только к поддерживаемым коротким кодам эмодзи, таким как :wave:, без явно заданного тона кожи."
 }

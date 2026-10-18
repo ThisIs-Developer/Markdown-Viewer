@@ -1224,5 +1224,10 @@
   "Default": "既定",
   "Neutral": "ニュートラル",
   "Forest": "フォレスト",
-  "Base": "ベース"
+  "Base": "ベース",
+  "About diagram theme": "図のテーマについて",
+  "About diagram style": "図のスタイルについて",
+  "About emoji skin tone": "絵文字の肌の色について",
+  "Only applies to Mermaid diagrams.": "Mermaid の図にのみ適用されます。",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "肌の色を明示的に指定していない、:wave: などの対応する絵文字ショートコードにのみ適用されます。"
 }

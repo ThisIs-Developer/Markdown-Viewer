@@ -30,6 +30,8 @@ Private mode in Workspace settings pauses new document-state writes for the curr
 
 Open **Workspace settings → Preview Styling** (or **Menu → Settings → Preview Styling** on mobile) to choose a code theme, math font, diagram theme, diagram style, and emoji skin tone. Changes apply automatically and persist in `localStorage` under `mdv.visualSettings.v1`. **Follow app theme** uses the current light or dark appearance. **Reset defaults** restores these five preferences without changing your documents.
 
+The info buttons beside diagram theme, diagram style, and emoji skin tone explain their scope on hover, keyboard focus, or tap. Both diagram controls apply only to Mermaid. Emoji skin tone applies to supported shortcodes such as `:wave:`; existing emoji and explicitly selected tones are preserved.
+
 Math stays available in Computer Modern while an optional font downloads. The latest selection takes effect when it is ready; an unavailable font falls back to Computer Modern. Reset also works during a pending download. To retry an unavailable font, choose another font and select it again. Font and theme assets may require a network connection, including in the desktop app.
 
 ![Preview Styling on desktop](images/preview-appearance-desktop.png)

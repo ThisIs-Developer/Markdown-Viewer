@@ -1224,5 +1224,10 @@
   "Default": "Varsayılan",
   "Neutral": "Nötr",
   "Forest": "Orman",
-  "Base": "Temel"
+  "Base": "Temel",
+  "About diagram theme": "Diyagram teması hakkında",
+  "About diagram style": "Diyagram stili hakkında",
+  "About emoji skin tone": "Emoji ten rengi hakkında",
+  "Only applies to Mermaid diagrams.": "Yalnızca Mermaid diyagramlarına uygulanır.",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "Yalnızca :wave: gibi, ten rengi açıkça belirtilmemiş desteklenen emoji kısa kodlarına uygulanır."
 }

@@ -587,16 +587,28 @@
                 <select id="visual-setting-math-font" class="form-select visual-setting-select"></select>
               </div>
               <div class="visual-setting-group">
-                <label for="visual-setting-mermaid-theme" class="visual-setting-label">Diagram theme</label>
-                <select id="visual-setting-mermaid-theme" class="form-select visual-setting-select"></select>
+                <div class="visual-setting-label-row">
+                  <label for="visual-setting-mermaid-theme" class="visual-setting-label">Diagram theme</label>
+                  <button type="button" class="visual-setting-info" data-setting-help="visual-setting-mermaid-theme-help" aria-label="About diagram theme"><i class="lucide lucide-info" aria-hidden="true"></i></button>
+                  <span id="visual-setting-mermaid-theme-help" hidden>Only applies to Mermaid diagrams.</span>
+                </div>
+                <select id="visual-setting-mermaid-theme" class="form-select visual-setting-select" aria-describedby="visual-setting-mermaid-theme-help"></select>
               </div>
               <div class="visual-setting-group">
-                <label for="visual-setting-mermaid-look" class="visual-setting-label">Diagram style</label>
-                <select id="visual-setting-mermaid-look" class="form-select visual-setting-select"></select>
+                <div class="visual-setting-label-row">
+                  <label for="visual-setting-mermaid-look" class="visual-setting-label">Diagram style</label>
+                  <button type="button" class="visual-setting-info" data-setting-help="visual-setting-mermaid-look-help" aria-label="About diagram style"><i class="lucide lucide-info" aria-hidden="true"></i></button>
+                  <span id="visual-setting-mermaid-look-help" hidden>Only applies to Mermaid diagrams.</span>
+                </div>
+                <select id="visual-setting-mermaid-look" class="form-select visual-setting-select" aria-describedby="visual-setting-mermaid-look-help"></select>
               </div>
               <div class="visual-setting-group">
-                <label for="visual-setting-emoji-skin-tone" class="visual-setting-label">Emoji skin tone</label>
-                <select id="visual-setting-emoji-skin-tone" class="form-select visual-setting-select"></select>
+                <div class="visual-setting-label-row">
+                  <label for="visual-setting-emoji-skin-tone" class="visual-setting-label">Emoji skin tone</label>
+                  <button type="button" class="visual-setting-info" data-setting-help="visual-setting-emoji-skin-tone-help" aria-label="About emoji skin tone"><i class="lucide lucide-info" aria-hidden="true"></i></button>
+                  <span id="visual-setting-emoji-skin-tone-help" hidden>Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.</span>
+                </div>
+                <select id="visual-setting-emoji-skin-tone" class="form-select visual-setting-select" aria-describedby="visual-setting-emoji-skin-tone-help"></select>
               </div>
             </div>
             <div class="reset-modal-actions visual-settings-actions">

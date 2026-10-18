@@ -1224,5 +1224,10 @@
   "Default": "預設",
   "Neutral": "中性",
   "Forest": "森林",
-  "Base": "基本"
+  "Base": "基本",
+  "About diagram theme": "關於圖表主題",
+  "About diagram style": "關於圖表樣式",
+  "About emoji skin tone": "關於表情符號膚色",
+  "Only applies to Mermaid diagrams.": "僅適用於 Mermaid 圖表。",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "僅適用於未明確指定膚色的支援表情符號短代碼，例如 :wave:。"
 }

@@ -14521,6 +14521,59 @@ body.release-notes-active .mobile-stats-container {
   margin: 0;
 }
 
+.visual-setting-label-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.visual-setting-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: help;
+}
+
+.visual-setting-info:hover {
+  background: var(--button-hover);
+  color: var(--text-color);
+}
+
+.visual-setting-info:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 1px;
+}
+
+.visual-setting-tooltip.tooltip {
+  --bs-tooltip-bg: var(--header-bg);
+  --bs-tooltip-color: var(--text-color);
+  --bs-tooltip-max-width: 240px;
+  --bs-tooltip-font-size: var(--ui-font-sm);
+  --bs-tooltip-opacity: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  animation: none;
+  pointer-events: auto;
+}
+
+.visual-setting-tooltip .tooltip-inner {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  text-align: start;
+}
+
 .visual-setting-desc {
   font-size: var(--ui-font-sm);
   color: var(--text-secondary);

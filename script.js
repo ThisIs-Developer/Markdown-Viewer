@@ -24168,10 +24168,76 @@ ${selector} .arrowheadPath {
     if (selectEmojiSkinTone && settings.emojiSkinTone) selectEmojiSkinTone.value = settings.emojiSkinTone;
   }
 
+  const visualSettingHints = [];
+
+  function hideVisualSettingHints() {
+    visualSettingHints.forEach(hint => hint.hide());
+  }
+
+  function initializeVisualSettingHints() {
+    if (visualSettingHints.length || !window.bootstrap?.Tooltip) return;
+    visualSettingsModal.querySelectorAll('[data-setting-help]').forEach(button => {
+      const help = document.getElementById(button.dataset.settingHelp);
+      const tooltip = new bootstrap.Tooltip(button, {
+        title: () => help.textContent.trim(),
+        container: visualSettingsModal,
+        customClass: 'visual-setting-tooltip',
+        placement: 'top',
+        trigger: 'manual',
+        animation: false
+      });
+      let hideTimer;
+      const hide = () => {
+        clearTimeout(hideTimer);
+        tooltip.hide();
+      };
+      const show = () => {
+        clearTimeout(hideTimer);
+        if (button.hasAttribute('aria-describedby')) return;
+        hideVisualSettingHints();
+        tooltip.show();
+      };
+      const scheduleHide = () => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          const tip = document.getElementById(button.getAttribute('aria-describedby'));
+          if (document.activeElement !== button && !button.matches(':hover') && !tip?.matches(':hover')) hide();
+        }, 120);
+      };
+      visualSettingHints.push({ hide });
+      button.addEventListener('mouseenter', show);
+      button.addEventListener('mouseleave', scheduleHide);
+      button.addEventListener('focus', show);
+      button.addEventListener('blur', scheduleHide);
+      button.addEventListener('click', () => {
+        button.focus();
+        show();
+      });
+      button.addEventListener('inserted.bs.tooltip', () => {
+        const tip = document.getElementById(button.getAttribute('aria-describedby'));
+        tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        tip.addEventListener('mouseleave', scheduleHide);
+      });
+    });
+    visualSettingsModal.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && visualSettingsModal.querySelector('.visual-setting-tooltip.show')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        hideVisualSettingHints();
+      }
+    }, true);
+    visualSettingsModal.addEventListener('pointerdown', event => {
+      if (!event.target.closest('.visual-setting-info, .visual-setting-tooltip')) hideVisualSettingHints();
+    });
+    visualSettingsModal.querySelector('.visual-settings-body').addEventListener('scroll', hideVisualSettingHints);
+  }
+
   function openVisualSettingsModal(opener) {
     if (!visualSettingsModal) return;
+    hideVisualSettingHints();
     populateVisualSettingsOptions();
     syncVisualSettingsUI();
+    initializeVisualSettingHints();
     openAppModal(visualSettingsModal, {
       focusTarget: selectHljsTheme,
       returnFocus: opener || document.activeElement,
@@ -24180,6 +24246,7 @@ ${selector} .arrowheadPath {
   }
 
   function closeVisualSettingsModal() {
+    hideVisualSettingHints();
     if (visualSettingsModal) closeAppModal(visualSettingsModal);
   }
 

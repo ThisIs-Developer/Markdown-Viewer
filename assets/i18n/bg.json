@@ -1224,5 +1224,10 @@
   "Default": "По подразбиране",
   "Neutral": "Неутрална",
   "Forest": "Гора",
-  "Base": "Основна"
+  "Base": "Основна",
+  "About diagram theme": "За темата на диаграмите",
+  "About diagram style": "За стила на диаграмите",
+  "About emoji skin tone": "За цвета на кожата на емоджитата",
+  "Only applies to Mermaid diagrams.": "Прилага се само за диаграми Mermaid.",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "Прилага се само за поддържани кратки кодове за емоджита, като :wave:, без изрично зададен цвят на кожата."
 }

@@ -5,6 +5,7 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- Added compact info hints for the Mermaid diagram controls and emoji skin tones in Preview Styling, available on hover, keyboard focus, and tap.
 - Simplified **Preview Styling** into five compact controls under Workspace settings and removed its separate navbar shortcut.
 - Kept math rendering available during font downloads, prevented older requests from overriding the latest font selection, and restored fallback, retry, and Reset after font-loading failures.
 

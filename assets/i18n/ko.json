@@ -1224,5 +1224,10 @@
   "Default": "기본값",
   "Neutral": "중립",
   "Forest": "숲",
-  "Base": "기본"
+  "Base": "기본",
+  "About diagram theme": "다이어그램 테마 안내",
+  "About diagram style": "다이어그램 스타일 안내",
+  "About emoji skin tone": "이모지 피부색 안내",
+  "Only applies to Mermaid diagrams.": "Mermaid 다이어그램에만 적용됩니다.",
+  "Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.": "피부색을 명시적으로 지정하지 않은 :wave: 등의 지원되는 이모지 단축 코드에만 적용됩니다."
 }
