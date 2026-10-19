@@ -1025,8 +1025,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let emojiUrlMap = new Map();
   let emojiLookupLoaded = false;
   let emojiRenderScheduled = false;
-  let emojiItems = [];
-  const emojiSelection = new Set();
+  let emojiCatalogPromise = null;
   let symbolItems = [];
   const symbolSelection = new Set();
   const SYMBOL_SECTIONS = [
@@ -19117,12 +19116,14 @@ ${selector} .arrowheadPath {
             shortcode: `:${name}:`,
             search: `${name} :${name}:`.toLowerCase(),
           }));
+        if (!emojiEntries.length) throw new Error('Empty emoji response');
         emojiUrlMap = new Map(emojiEntries.map((entry) => [entry.name, entry.url]));
         emojiLookupLoaded = true;
         return emojiEntries;
       })
       .catch((error) => {
         console.error('Failed to load GitHub emojis:', error);
+        emojiLoadPromise = null;
         emojiEntries = [];
         emojiUrlMap = new Map();
         emojiLookupLoaded = true;
@@ -19229,193 +19230,388 @@ ${selector} .arrowheadPath {
     });
   }
 
-  function openEmojiModal() {
+  function loadEmojiCatalog() {
+    if (!emojiCatalogPromise) {
+      emojiCatalogPromise = fetch('assets/emoji/catalog.json')
+        .then(response => {
+          if (!response.ok) throw new Error(`Emoji catalog request failed (${response.status})`);
+          return response.json();
+        })
+        .then(catalog => {
+          if (!Array.isArray(catalog) || !catalog.length) throw new Error('Empty emoji catalog');
+          return catalog;
+        })
+        .catch(error => {
+          emojiCatalogPromise = null;
+          throw error;
+        });
+    }
+    return emojiCatalogPromise;
+  }
+
+  function buildEmojiPickerEntries(entries, catalog) {
+    const available = new Map(entries.map(entry => [entry.name, entry]));
+    const grouped = [];
+    catalog.forEach(record => {
+      const aliases = record.aliases.filter(alias => available.has(alias));
+      if (!aliases.length) return;
+      const entry = available.get(aliases[0]);
+      grouped.push({ ...entry, ...record, name: entry.name, aliases,
+        search: [record.emoji, record.description, ...record.tags, ...aliases].join(' ').toLowerCase().replace(/[_-]/g, ' ') });
+      aliases.forEach(alias => available.delete(alias));
+    });
+    available.forEach(entry => grouped.push({ ...entry, category: 'github', aliases: [entry.name],
+      search: entry.search.replace(/[_-]/g, ' '), emoji: '', description: entry.name.replace(/_/g, ' ') }));
+    return grouped;
+  }
+
+  function openEmojiModal(trigger) {
     const modal = document.getElementById('emoji-modal');
     const grid = document.getElementById('emoji-modal-grid');
-    const emptyMessage = document.getElementById('emoji-modal-empty');
+    const emptyState = document.getElementById('emoji-modal-empty');
+    const status = document.getElementById('emoji-modal-status');
+    const loadingSpinner = document.getElementById('emoji-modal-spinner');
     const searchInput = document.getElementById('emoji-modal-search');
+    const clearSearch = document.getElementById('emoji-modal-clear-search');
+    const categoryBar = document.getElementById('emoji-modal-categories');
+    const heading = document.getElementById('emoji-modal-category-title');
+    const shortcodePreview = document.getElementById('emoji-modal-shortcode');
+    const selectionTray = document.getElementById('emoji-modal-selection');
+    const selectionHint = document.getElementById('emoji-modal-selection-hint');
+    const selectionCount = document.getElementById('emoji-modal-selection-count');
+    const copyBtn = document.getElementById('emoji-modal-copy');
+    const retryBtn = document.getElementById('emoji-modal-retry');
     const confirmBtn = document.getElementById('emoji-modal-insert');
     const cancelBtn = document.getElementById('emoji-modal-cancel');
-    if (!modal || !grid || !emptyMessage || !searchInput || !confirmBtn || !cancelBtn) return;
+    if (!modal || !grid) return;
     const start = markdownEditor.selectionStart;
     const end = markdownEditor.selectionEnd;
-    modal.style.display = 'flex';
-    confirmBtn.disabled = true;
-
-    // Localized and accessible announcements for loading
-    const loadingText = I18N_DICTS[activeLang].loadingEmojis || "Loading emojis...";
-    emptyMessage.textContent = loadingText;
-    emptyMessage.style.display = 'block';
-    announceToScreenReader(loadingText);
-
-    searchInput.value = '';
-    emojiSelection.clear();
-    // PERF-007: Clear elements using textContent
-    grid.textContent = '';
-    grid.scrollTop = 0;
-    emojiItems = [];
-
-    // Render visual placeholders during active requests
-    if (!emojiLookupLoaded) {
-      renderEmojiSkeletons();
-    }
-
-    let currentFilteredEntries = [];
-    let renderedCount = 0;
-    const CHUNK_SIZE = 120;
-
-    function updateInsertState() {
-      confirmBtn.disabled = emojiSelection.size === 0;
-    }
-
-    function toggleSelection(shortcode, element) {
-      if (emojiSelection.has(shortcode)) {
-        emojiSelection.delete(shortcode);
-        element.classList.remove('is-selected');
-      } else {
-        emojiSelection.add(shortcode);
-        element.classList.add('is-selected');
-      }
-      element.setAttribute('aria-pressed', emojiSelection.has(shortcode).toString());
-      updateInsertState();
-    }
-
-    function renderEmojiChunk(clear = false) {
-      if (clear) {
-        // PERF-007: Clear elements using textContent
-        grid.textContent = '';
-        emojiItems = [];
-        renderedCount = 0;
-      }
-
-      const nextBatch = currentFilteredEntries.slice(renderedCount, renderedCount + CHUNK_SIZE);
-      if (nextBatch.length === 0) {
-        emptyMessage.style.display = emojiItems.length ? 'none' : 'block';
-        return;
-      }
-
-      const fragment = document.createDocumentFragment();
-      const newItems = nextBatch.map((entry) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'emoji-item';
-
-        const isSelected = emojiSelection.has(entry.shortcode);
-        if (isSelected) {
-          item.classList.add('is-selected');
-        }
-        item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-        item.dataset.search = entry.search;
-        item.dataset.shortcode = entry.shortcode;
-
-        const preview = document.createElement('span');
-        preview.className = 'emoji-preview';
-        const image = document.createElement('img');
-        image.src = entry.url;
-        image.alt = entry.shortcode;
-        image.loading = 'lazy';
-        preview.appendChild(image);
-
-        const shortcodeRow = document.createElement('div');
-        shortcodeRow.className = 'emoji-shortcode';
-        const code = document.createElement('span');
-        code.textContent = entry.shortcode;
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.className = 'emoji-copy-btn';
-        copyBtn.setAttribute('aria-label', `Copy ${entry.shortcode}`);
-        copyBtn.innerHTML = '<i class="lucide lucide-copy"></i>';
-        copyBtn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          copyTextToClipboard(entry.shortcode)
-            .then(() => flashCopyButton(copyBtn))
-            .catch((error) => console.error('Copy failed:', error));
-        });
-        shortcodeRow.appendChild(code);
-        shortcodeRow.appendChild(copyBtn);
-
-        item.appendChild(preview);
-        item.appendChild(shortcodeRow);
-        item.addEventListener('click', () => toggleSelection(entry.shortcode, item));
-        fragment.appendChild(item);
-        return { element: item, search: entry.search, shortcode: entry.shortcode };
+    const selection = new Map();
+    const itemCache = new Map();
+    const chipCache = new Map();
+    const listeners = new AbortController();
+    // Load only the visible rows and one row ahead, rather than competing with
+    // hundreds of offscreen downloads when a category is opened.
+    const imageObserver = new IntersectionObserver(entries => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (!isIntersecting || !grid.contains(target)) return;
+        loadPreviewImage(target);
+        imageObserver.unobserve(target);
       });
+    }, { root: grid, rootMargin: '50px 0px' });
+    const categories = [
+      { id: 'smileys', label: 'Smileys', title: 'Smileys & emotion', icon: 'smile' },
+      { id: 'people', label: 'People', title: 'People & body', icon: 'hand' },
+      { id: 'nature', label: 'Nature', title: 'Animals & nature', icon: 'leaf' },
+      { id: 'food', label: 'Food', title: 'Food & drink', icon: 'coffee' },
+      { id: 'travel', label: 'Travel', title: 'Travel & places', icon: 'plane' },
+      { id: 'activities', label: 'Activities', title: 'Activities', icon: 'trophy' },
+      { id: 'objects', label: 'Objects', title: 'Objects', icon: 'lightbulb' },
+      { id: 'symbols', label: 'Symbols', title: 'Symbols', icon: 'heart' },
+      { id: 'flags', label: 'Flags', title: 'Flags', icon: 'flag' },
+      { id: 'github', label: 'GitHub', title: 'GitHub', icon: 'code-2' }
+    ];
+    let activeCategory = 'smileys';
+    let pickerEntries = [];
+    let visibleEntries = [];
+    let activeIndex = 0;
+    let closed = false;
+    let loading = true;
+    let failed = false;
 
-      emojiItems = emojiItems.concat(newItems);
-      grid.appendChild(fragment);
-      renderedCount += nextBatch.length;
-      emptyMessage.style.display = emojiItems.length ? 'none' : 'block';
+    function listen(element, event, handler) {
+      element.addEventListener(event, handler, { signal: listeners.signal });
     }
 
-    function applyFilter() {
-      const query = searchInput.value.trim().toLowerCase();
-      currentFilteredEntries = emojiEntries.filter(entry => !query || entry.search.includes(query));
-      renderEmojiChunk(true);
+    function loadPreviewImage(image) {
+      if (!image.dataset.src) return;
+      image.src = image.dataset.src;
+      delete image.dataset.src;
     }
 
-    function handleScroll() {
-      if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 60) {
-        renderEmojiChunk(false);
+    function createPreview(entry, eager = false) {
+      const preview = document.createElement('span');
+      preview.className = 'emoji-preview skeleton-placeholder';
+      preview.setAttribute('aria-hidden', 'true');
+      preview.dataset.i18nSkip = 'true';
+      const image = document.createElement('img');
+      image.dataset.src = entry.url;
+      image.alt = '';
+      image.decoding = 'async';
+      function unavailable() {
+        preview.classList.remove('skeleton-placeholder');
+        preview.classList.add('is-unavailable');
+        preview.title = translateUiString('Unable to load emojis.');
+        const icon = document.createElement('i');
+        icon.className = 'lucide lucide-circle-alert';
+        preview.replaceChildren(icon);
       }
+      image.addEventListener('load', async () => {
+        try {
+          await image.decode();
+          preview.classList.remove('skeleton-placeholder');
+          preview.classList.add('has-image');
+        } catch (_) {
+          unavailable();
+        }
+      }, { once: true });
+      image.addEventListener('error', unavailable, { once: true });
+      preview.appendChild(image);
+      if (eager) loadPreviewImage(image);
+      return preview;
     }
 
-    function insertEmojis() {
-      if (!emojiSelection.size) return;
-      // Retain the modal's visual/definition order of emojis, consistent with the Symbols modal
-      const ordered = emojiItems
-        .filter(item => emojiSelection.has(item.shortcode))
-        .map(item => item.shortcode);
-      const insertion = ordered.join(' ');
-      modal.style.display = 'none';
-      cleanup();
-      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
+    function shortcodeFor(entry) {
+      const alias = searchInput.value.trim().toLowerCase().replace(/^:|:$/g, '');
+      return entry.aliases.includes(alias) ? `:${alias}:` : entry.shortcode;
     }
 
-    function closeModal() {
-      modal.style.display = 'none';
-      cleanup();
+    function selectedText() {
+      return Array.from(selection.values(), item => item.shortcode).join(' ');
     }
 
-    function onKey(e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeModal();
-      }
+    function updateSelection() {
+      confirmBtn.disabled = copyBtn.disabled = selection.size === 0;
+      selectionCount.textContent = selection.size ? translateUiString(`${selection.size} selected`) : '';
+      selectionHint.hidden = selection.size > 0;
+      selectionTray.hidden = selection.size === 0;
+      chipCache.forEach((chip, name) => {
+        if (!selection.has(name)) { chip.remove(); chipCache.delete(name); }
+      });
+      selection.forEach(({ entry, shortcode }) => {
+        if (chipCache.has(entry.name)) return;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'emoji-selection-chip';
+        chip.dataset.name = entry.name;
+        chip.title = shortcode;
+        chip.setAttribute('aria-label', translateUiString(`Remove ${shortcode}`));
+        chip.appendChild(createPreview(entry, true));
+        const removeIcon = document.createElement('i');
+        removeIcon.className = 'lucide lucide-x';
+        removeIcon.setAttribute('aria-hidden', 'true');
+        chip.appendChild(removeIcon);
+        chipCache.set(entry.name, chip);
+        selectionTray.appendChild(chip);
+      });
+      Array.from(grid.children).forEach((item, index) => {
+        const selected = selection.has(visibleEntries[index].name);
+        item.setAttribute('aria-selected', String(selected));
+        item.classList.toggle('is-selected', selected);
+      });
     }
 
-    function cleanup() {
-      confirmBtn.removeEventListener('click', insertEmojis);
-      cancelBtn.removeEventListener('click', closeModal);
-      searchInput.removeEventListener('input', applyFilter);
-      searchInput.removeEventListener('keydown', onKey);
-      grid.removeEventListener('scroll', handleScroll);
+    function focusEmoji(index) {
+      if (!visibleEntries.length) return;
+      grid.children[activeIndex]?.setAttribute('tabindex', '-1');
+      activeIndex = Math.max(0, Math.min(index, visibleEntries.length - 1));
+      const item = grid.children[activeIndex];
+      item.tabIndex = 0;
+      item.focus({ preventScroll: true });
+      item.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
 
-    loadEmojiEntries().then((entries) => {
-      if (!entries.length) {
-        emptyMessage.textContent = 'Unable to load emojis.';
-        emptyMessage.style.display = 'block';
-        // PERF-007: Clear elements using textContent
-        grid.textContent = '';
-        emojiItems = [];
-        announceToScreenReader("Failed to load emojis.");
-        return;
-      }
-      currentFilteredEntries = entries;
-      renderEmojiChunk(true);
-      emptyMessage.textContent = 'No emojis found.';
-      announceToScreenReader("Emojis loaded. " + entries.length + " items available.");
-      updateInsertState();
+    function renderEntries() {
+      const rawQuery = searchInput.value.trim().toLowerCase();
+      const aliasQuery = rawQuery.replace(/^:|:$/g, '');
+      const terms = rawQuery.replace(/[:_-]/g, ' ').split(/\s+/).filter(Boolean);
+      clearSearch.hidden = !searchInput.value;
+      shortcodePreview.textContent = '';
+      heading.textContent = rawQuery ? 'Search results' : categories.find(category => category.id === activeCategory).title;
+      categoryBar.querySelectorAll('button').forEach(button => {
+        button.setAttribute('aria-pressed', String(!rawQuery && button.dataset.category === activeCategory));
+      });
+      visibleEntries = pickerEntries.filter(entry => rawQuery
+        ? entry.aliases.includes(aliasQuery) || terms.every(term => entry.search.includes(term))
+        : entry.category === activeCategory);
+      if (rawQuery) visibleEntries.sort((a, b) => Number(b.aliases.includes(aliasQuery)) - Number(a.aliases.includes(aliasQuery)));
+      imageObserver.disconnect();
+      grid.scrollTop = 0;
+      activeIndex = 0;
+      const fragment = document.createDocumentFragment();
+      visibleEntries.forEach((entry, index) => {
+        let item = itemCache.get(entry.name);
+        if (!item) {
+          item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'emoji-item';
+          item.setAttribute('role', 'option');
+          item.dataset.name = entry.name;
+          item.dataset.i18nSkip = 'true';
+          item.appendChild(createPreview(entry));
+          itemCache.set(entry.name, item);
+        }
+        item.dataset.shortcode = shortcodeFor(entry);
+        item.setAttribute('aria-label', `${entry.description} ${item.dataset.shortcode}`);
+        item.title = item.dataset.shortcode;
+        item.tabIndex = index === 0 ? 0 : -1;
+        fragment.appendChild(item);
+      });
+      grid.replaceChildren(fragment);
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
+      grid.setAttribute('aria-busy', String(loading));
+      emptyState.hidden = visibleEntries.length > 0;
+      loadingSpinner.hidden = !loading;
+      emptyState.querySelector('.lucide').hidden = loading;
+      retryBtn.hidden = !failed;
+      status.textContent = loading ? 'Loading emojis...' : failed ? 'Unable to load emojis.' : 'No emojis found.';
+      updateSelection();
+    }
+
+    function chooseCategory(button) {
+      activeCategory = button.dataset.category;
+      searchInput.value = '';
+      categoryBar.querySelectorAll('button').forEach(item => { item.tabIndex = item === button ? 0 : -1; });
+      renderEntries();
+      button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    categoryBar.textContent = '';
+    categories.forEach((category, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'emoji-category';
+      button.dataset.category = category.id;
+      button.tabIndex = index === 0 ? 0 : -1;
+      button.title = category.title;
+      button.setAttribute('aria-label', category.title);
+      button.setAttribute('aria-controls', 'emoji-modal-grid');
+      const icon = document.createElement('i');
+      icon.className = `lucide lucide-${category.icon}`;
+      icon.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = category.label;
+      button.append(icon, label);
+      categoryBar.appendChild(button);
     });
 
-    confirmBtn.addEventListener('click', insertEmojis);
-    cancelBtn.addEventListener('click', closeModal);
-    searchInput.addEventListener('input', applyFilter);
-    searchInput.addEventListener('keydown', onKey);
-    grid.addEventListener('scroll', handleScroll);
+    listen(categoryBar, 'click', event => {
+      const button = event.target.closest('button');
+      if (button) chooseCategory(button);
+    });
+    listen(categoryBar, 'keydown', event => {
+      const buttons = Array.from(categoryBar.children);
+      const index = buttons.indexOf(event.target);
+      const rtl = getComputedStyle(categoryBar).direction === 'rtl';
+      let next;
+      if (event.key === 'ArrowRight') next = index + (rtl ? -1 : 1);
+      if (event.key === 'ArrowLeft') next = index + (rtl ? 1 : -1);
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = buttons.length - 1;
+      if (event.key === 'ArrowDown') { event.preventDefault(); focusEmoji(0); }
+      if (next === undefined) return;
+      event.preventDefault();
+      const button = buttons[(next + buttons.length) % buttons.length];
+      chooseCategory(button);
+      button.focus({ preventScroll: true });
+    });
+    listen(grid, 'click', event => {
+      const item = event.target.closest('.emoji-item');
+      if (!item) return;
+      const entry = visibleEntries.find(entry => entry.name === item.dataset.name);
+      if (selection.has(entry.name)) selection.delete(entry.name);
+      else selection.set(entry.name, { entry, shortcode: item.dataset.shortcode });
+      updateSelection();
+    });
+    function previewItem(event) {
+      const item = event.target.closest('.emoji-item');
+      if (!item) return;
+      shortcodePreview.textContent = item.dataset.shortcode;
+      if (event.type === 'focusin') {
+        grid.children[activeIndex]?.setAttribute('tabindex', '-1');
+        activeIndex = Array.from(grid.children).indexOf(item);
+        item.tabIndex = 0;
+      }
+    }
+    listen(grid, 'mouseover', previewItem);
+    listen(grid, 'focusin', previewItem);
+    listen(grid, 'keydown', event => {
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+      const rtl = getComputedStyle(grid).direction === 'rtl';
+      let next;
+      if (event.key === 'ArrowRight') next = activeIndex + (rtl ? -1 : 1);
+      if (event.key === 'ArrowLeft') next = activeIndex + (rtl ? 1 : -1);
+      if (event.key === 'ArrowDown') next = activeIndex + columns;
+      if (event.key === 'ArrowUp') next = activeIndex - columns;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = visibleEntries.length - 1;
+      if (next === undefined) return;
+      event.preventDefault();
+      focusEmoji(next);
+    });
+    listen(selectionTray, 'click', event => {
+      const chip = event.target.closest('button');
+      if (!chip) return;
+      const index = Array.from(selectionTray.children).indexOf(chip);
+      selection.delete(chip.dataset.name);
+      updateSelection();
+      (selectionTray.children[Math.min(index, selection.size - 1)] || searchInput).focus();
+    });
+    listen(copyBtn, 'click', async () => {
+      try {
+        await copyTextToClipboard(selectedText());
+        if (!closed) {
+          flashCopyButton(copyBtn);
+          announceToScreenReader(translateUiString('Copied!'));
+        }
+      } catch (error) {
+        if (!closed) showAppToast(translateUiString('Copy failed. Please try again.'));
+      }
+    });
+    listen(searchInput, 'input', renderEntries);
+    listen(searchInput, 'keydown', event => {
+      if (event.key === 'ArrowDown') { event.preventDefault(); focusEmoji(0); }
+    });
+    listen(clearSearch, 'click', () => {
+      searchInput.value = '';
+      renderEntries();
+      searchInput.focus();
+    });
 
-    requestAnimationFrame(() => searchInput.focus());
+    function closeModal() {
+      if (closed) return;
+      closed = true;
+      listeners.abort();
+      imageObserver.disconnect();
+      clearTimeout(copyBtn.copyTimeout);
+      closeAppModal(modal);
+    }
+    listen(confirmBtn, 'click', () => {
+      if (!selection.size) return;
+      const insertion = selectedText();
+      closeModal();
+      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
+    });
+    listen(cancelBtn, 'click', closeModal);
+    async function load() {
+      loading = true;
+      failed = false;
+      renderEntries();
+      try {
+        const [entries, catalog] = await Promise.all([loadEmojiEntries(), loadEmojiCatalog()]);
+        if (closed) return;
+        if (!entries.length) throw new Error('Empty emoji response');
+        pickerEntries = buildEmojiPickerEntries(entries, catalog);
+      } catch (error) {
+        if (closed) return;
+        failed = true;
+      }
+      loading = false;
+      renderEntries();
+    }
+    listen(retryBtn, 'click', () => {
+      searchInput.focus();
+      load();
+    });
+    searchInput.value = '';
+    selectionTray.replaceChildren();
+    copyBtn.classList.remove('is-copied');
+    copyBtn.querySelector('i').className = 'lucide lucide-copy';
+    categoryBar.scrollLeft = 0;
+    openAppModal(modal, { focusTarget: searchInput, returnFocus: trigger, onClose: closeModal });
+    load();
   }
+
 
   function openSymbolsModal() {
     const modal = document.getElementById('symbols-modal');
@@ -23465,7 +23661,7 @@ ${selector} .arrowheadPath {
       const timestamp = formatMarkdownDateTime();
       replaceEditorRange(markdownEditor.selectionStart, markdownEditor.selectionEnd, timestamp, markdownEditor.selectionStart + timestamp.length, markdownEditor.selectionStart + timestamp.length);
     } else if (action === 'emoji') {
-      openEmojiModal();
+      openEmojiModal(button);
     }
     else if (action === 'symbols') openSymbolsModal();
     else if (action === 'alert') openAlertModal();
@@ -32437,42 +32633,6 @@ ${selector} .arrowheadPath {
     announceToScreenReader._timeoutId = setTimeout(() => {
       announcer.textContent = message;
     }, 50);
-  }
-
-  // Visual skeleton loader generator for emoji list
-  function renderEmojiSkeletons() {
-    const grid = document.getElementById('emoji-modal-grid');
-    if (!grid) return;
-    // PERF-007: Clear elements using textContent
-    grid.textContent = '';
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < 18; i++) {
-      const item = document.createElement('div');
-      item.className = 'emoji-item skeleton-placeholder';
-      item.setAttribute('aria-hidden', 'true');
-      item.style.border = '1px solid var(--border-color)';
-      item.style.borderRadius = '10px';
-      item.style.padding = '10px';
-      item.style.display = 'flex';
-      item.style.flexDirection = 'column';
-      item.style.alignItems = 'center';
-      item.style.gap = '8px';
-
-      const preview = document.createElement('span');
-      preview.className = 'emoji-preview skeleton-circle';
-      item.appendChild(preview);
-
-      const shortcodeRow = document.createElement('div');
-      shortcodeRow.className = 'emoji-shortcode';
-      const code = document.createElement('span');
-      code.className = 'skeleton-text';
-      code.style.width = '60px';
-      shortcodeRow.appendChild(code);
-      item.appendChild(shortcodeRow);
-
-      fragment.appendChild(item);
-    }
-    grid.appendChild(fragment);
   }
 
   // Visual skeleton loader generator for GitHub file list tree
