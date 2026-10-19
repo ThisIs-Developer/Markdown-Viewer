@@ -14791,13 +14791,12 @@ body.release-notes-active .mobile-stats-container {
   width: 30px;
   height: 30px;
   overflow: hidden;
-  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
-  font-size: 26px;
   line-height: 1;
 }
 
-.emoji-preview.has-image {
-  color: transparent;
+.emoji-preview.is-unavailable {
+  color: var(--text-secondary);
+  font-size: 18px;
 }
 
 .emoji-preview img {
@@ -14833,6 +14832,12 @@ body.release-notes-active .mobile-stats-container {
 
 .emoji-empty-state p {
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #emoji-modal-spinner {
+    animation: none;
+  }
 }
 
 .emoji-selection-bar {

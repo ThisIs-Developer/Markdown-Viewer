@@ -121,6 +121,8 @@ The formatting toolbar inserts or transforms Markdown at the current selection. 
 - Fullscreen uses the browser Fullscreen API when available, including the prefixed API on older Safari/iPadOS. If the API is unavailable or the request fails, **Expanded view** hides the app header and fits the workspace to the visible viewport. A notification explains that browser controls remain visible. Use the same button or **Escape** to exit; dialogs handle Escape first. Fullscreen remains available in Release Notes and with no open documents so the exit button stays usable. The expanded layout does not affect printing or document contents. See [Fullscreen on Safari and mobile](Usage-Guide.md#fullscreen-on-safari-and-mobile) for platform limits.
 - Find and Replace and Fullscreen are direct formatting-toolbar actions. About Markdown Viewer opens from the header or mobile menu.
 
+The emoji picker shows a spinner while fetching its catalog, then neutral loading tiles until each GitHub image is ready. It loads images near the visible rows and reuses loaded tiles as you switch categories or search. Unavailable images show an error icon; their named shortcodes can still be selected.
+
 ![Emoji picker with categories and selected emojis](images/emoji-picker-desktop.png)
 
 View-only Share Snapshot tabs and view-only Live Share participant tabs block mutating tools and announce that the editor is read-only. Non-mutating actions such as fullscreen, find, help, and info remain available.

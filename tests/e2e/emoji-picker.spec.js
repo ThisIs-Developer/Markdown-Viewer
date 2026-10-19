@@ -7,10 +7,10 @@ const imageUrl = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://
 const api = Object.fromEntries(catalog.flatMap(entry => entry.aliases.map(alias => [alias, imageUrl])));
 api.octocat = imageUrl;
 
-async function prepare(page) {
+async function prepare(page, emojiApi = api) {
   await stubLazyRendererLibraries(page);
   await page.addInitScript(() => { window.joypixels = { shortnameToUnicode: text => text }; });
-  await page.route('https://api.github.com/emojis', route => route.fulfill({ json: api }));
+  await page.route('https://api.github.com/emojis', route => route.fulfill({ json: emojiApi }));
   await openApp(page);
   await setEditorContent(page, 'Hello world');
 }
@@ -111,6 +111,56 @@ test('supports arrow navigation, selection, focus trapping and Escape', async ({
   await expect(page.getByRole('button', { name: 'Insert emoji shortcode', exact: true })).toBeFocused();
 });
 
+test('loads nearby images without temporary emojis and reuses loaded tiles across categories', async ({ page }) => {
+  const imageApi = Object.fromEntries(catalog.flatMap(entry => entry.aliases.map(alias =>
+    [alias, `/__emoji-fixture/${entry.aliases[0]}.svg`])));
+  imageApi.octocat = '/__emoji-fixture/octocat.svg';
+  let releaseImages;
+  const pendingImages = new Promise(resolve => { releaseImages = resolve; });
+  const requested = [];
+  await page.route('**/__emoji-fixture/*.svg', async route => {
+    requested.push(route.request().url());
+    await pendingImages;
+    if (route.request().url().endsWith('/octocat.svg')) return route.abort();
+    return route.fulfill({ contentType: 'image/svg+xml', body: decodeURIComponent(imageUrl.split(',')[1]) });
+  });
+  await prepare(page, imageApi);
+  await openPicker(page);
+  try {
+    await expect.poll(() => requested.length).toBeGreaterThan(0);
+    // A cold open must not download every offscreen image or paint native emoji fallbacks.
+    expect(requested.length).toBeLessThan(catalog.filter(entry => entry.category === 'smileys').length);
+    await expect(page.getByRole('option').first().locator('.skeleton-placeholder')).toBeVisible();
+    await expect(page.getByRole('option').last().locator('img')).not.toHaveAttribute('src');
+    expect(await page.locator('#emoji-modal-grid .emoji-preview').allTextContents()).toEqual(
+      Array(catalog.filter(entry => entry.category === 'smileys').length).fill(''));
+    await category(page, 'Animals & nature').click();
+    await expect(page.getByRole('option').first().locator('.skeleton-placeholder')).toBeVisible();
+    await expect(page.locator('#emoji-modal-grid .has-image')).toHaveCount(0);
+    await expect(page.getByRole('option').first().locator('img')).toHaveCSS('opacity', '0');
+  } finally {
+    releaseImages();
+  }
+  const firstNatureTile = page.getByRole('option').first();
+  await expect(firstNatureTile.locator('.has-image img')).toHaveCSS('opacity', '1');
+  const loadedTile = await firstNatureTile.elementHandle();
+  const loadedUrl = await firstNatureTile.locator('img').evaluate(image => image.src);
+  await category(page, 'Food & drink').click();
+  await category(page, 'Animals & nature').click();
+  expect(await loadedTile.evaluate(tile => tile === document.querySelector('#emoji-modal-grid .emoji-item'))).toBe(true);
+  await expect(page.getByRole('option').first().locator('.skeleton-placeholder')).toHaveCount(0);
+  expect(requested.filter(url => url === loadedUrl)).toHaveLength(1);
+  await category(page, 'People & body').click();
+  await category(page, 'People & body').press('ArrowDown');
+  await page.keyboard.press('End');
+  await expect(page.getByRole('option').last().locator('.has-image img')).toHaveCSS('opacity', '1');
+  await category(page, 'GitHub').click();
+  await expect(emoji(page, ':octocat:').locator('.is-unavailable')).toBeVisible();
+  await expect(emoji(page, ':octocat:').locator('.skeleton-placeholder')).toHaveCount(0);
+  await emoji(page, ':octocat:').click();
+  await expect(page.locator('#emoji-modal-insert')).toBeEnabled();
+});
+
 test('retains typed search while loading, ignores closed requests, and retries failures', async ({ page }) => {
   await prepare(page);
   let release;
@@ -122,6 +172,8 @@ test('retains typed search while loading, ignores closed requests, and retries f
     return route.fulfill({ json: catalog });
   });
   await page.getByRole('button', { name: 'Insert emoji shortcode', exact: true }).click();
+  await expect(page.locator('#emoji-modal-spinner')).toBeVisible();
+  await expect(page.getByRole('option')).toHaveCount(0);
   await page.locator('#emoji-modal-search').fill('pizza');
   await page.keyboard.press('Escape');
   await expect(page.locator('#emoji-modal')).toBeHidden();

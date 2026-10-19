@@ -19270,6 +19270,7 @@ ${selector} .arrowheadPath {
     const grid = document.getElementById('emoji-modal-grid');
     const emptyState = document.getElementById('emoji-modal-empty');
     const status = document.getElementById('emoji-modal-status');
+    const loadingSpinner = document.getElementById('emoji-modal-spinner');
     const searchInput = document.getElementById('emoji-modal-search');
     const clearSearch = document.getElementById('emoji-modal-clear-search');
     const categoryBar = document.getElementById('emoji-modal-categories');
@@ -19286,7 +19287,18 @@ ${selector} .arrowheadPath {
     const start = markdownEditor.selectionStart;
     const end = markdownEditor.selectionEnd;
     const selection = new Map();
+    const itemCache = new Map();
+    const chipCache = new Map();
     const listeners = new AbortController();
+    // Load only the visible rows and one row ahead, rather than competing with
+    // hundreds of offscreen downloads when a category is opened.
+    const imageObserver = new IntersectionObserver(entries => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (!isIntersecting || !grid.contains(target)) return;
+        loadPreviewImage(target);
+        imageObserver.unobserve(target);
+      });
+    }, { root: grid, rootMargin: '50px 0px' });
     const categories = [
       { id: 'smileys', label: 'Smileys', title: 'Smileys & emotion', icon: 'smile' },
       { id: 'people', label: 'People', title: 'People & body', icon: 'hand' },
@@ -19311,21 +19323,41 @@ ${selector} .arrowheadPath {
       element.addEventListener(event, handler, { signal: listeners.signal });
     }
 
-    function createPreview(entry) {
+    function loadPreviewImage(image) {
+      if (!image.dataset.src) return;
+      image.src = image.dataset.src;
+      delete image.dataset.src;
+    }
+
+    function createPreview(entry, eager = false) {
       const preview = document.createElement('span');
-      preview.className = 'emoji-preview';
+      preview.className = 'emoji-preview skeleton-placeholder';
       preview.setAttribute('aria-hidden', 'true');
       preview.dataset.i18nSkip = 'true';
-      // Keep a readable fallback when the image host is unavailable.
-      preview.textContent = entry.emoji || entry.shortcode;
       const image = document.createElement('img');
-      image.src = entry.url;
+      image.dataset.src = entry.url;
       image.alt = '';
-      image.loading = 'lazy';
       image.decoding = 'async';
-      image.addEventListener('load', () => preview.classList.add('has-image'), { once: true });
-      image.addEventListener('error', () => image.remove(), { once: true });
+      function unavailable() {
+        preview.classList.remove('skeleton-placeholder');
+        preview.classList.add('is-unavailable');
+        preview.title = translateUiString('Unable to load emojis.');
+        const icon = document.createElement('i');
+        icon.className = 'lucide lucide-circle-alert';
+        preview.replaceChildren(icon);
+      }
+      image.addEventListener('load', async () => {
+        try {
+          await image.decode();
+          preview.classList.remove('skeleton-placeholder');
+          preview.classList.add('has-image');
+        } catch (_) {
+          unavailable();
+        }
+      }, { once: true });
+      image.addEventListener('error', unavailable, { once: true });
       preview.appendChild(image);
+      if (eager) loadPreviewImage(image);
       return preview;
     }
 
@@ -19343,19 +19375,23 @@ ${selector} .arrowheadPath {
       selectionCount.textContent = selection.size ? translateUiString(`${selection.size} selected`) : '';
       selectionHint.hidden = selection.size > 0;
       selectionTray.hidden = selection.size === 0;
-      selectionTray.textContent = '';
+      chipCache.forEach((chip, name) => {
+        if (!selection.has(name)) { chip.remove(); chipCache.delete(name); }
+      });
       selection.forEach(({ entry, shortcode }) => {
+        if (chipCache.has(entry.name)) return;
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'emoji-selection-chip';
         chip.dataset.name = entry.name;
         chip.title = shortcode;
         chip.setAttribute('aria-label', translateUiString(`Remove ${shortcode}`));
-        chip.appendChild(createPreview(entry));
+        chip.appendChild(createPreview(entry, true));
         const removeIcon = document.createElement('i');
         removeIcon.className = 'lucide lucide-x';
         removeIcon.setAttribute('aria-hidden', 'true');
         chip.appendChild(removeIcon);
+        chipCache.set(entry.name, chip);
         selectionTray.appendChild(chip);
       });
       Array.from(grid.children).forEach((item, index) => {
@@ -19389,27 +19425,34 @@ ${selector} .arrowheadPath {
         ? entry.aliases.includes(aliasQuery) || terms.every(term => entry.search.includes(term))
         : entry.category === activeCategory);
       if (rawQuery) visibleEntries.sort((a, b) => Number(b.aliases.includes(aliasQuery)) - Number(a.aliases.includes(aliasQuery)));
-      grid.textContent = '';
+      imageObserver.disconnect();
       grid.scrollTop = 0;
       activeIndex = 0;
       const fragment = document.createDocumentFragment();
       visibleEntries.forEach((entry, index) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'emoji-item';
-        item.setAttribute('role', 'option');
+        let item = itemCache.get(entry.name);
+        if (!item) {
+          item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'emoji-item';
+          item.setAttribute('role', 'option');
+          item.dataset.name = entry.name;
+          item.dataset.i18nSkip = 'true';
+          item.appendChild(createPreview(entry));
+          itemCache.set(entry.name, item);
+        }
         item.dataset.shortcode = shortcodeFor(entry);
-        item.dataset.name = entry.name;
-        item.dataset.i18nSkip = 'true';
         item.setAttribute('aria-label', `${entry.description} ${item.dataset.shortcode}`);
         item.title = item.dataset.shortcode;
         item.tabIndex = index === 0 ? 0 : -1;
-        item.appendChild(createPreview(entry));
         fragment.appendChild(item);
       });
-      grid.appendChild(fragment);
+      grid.replaceChildren(fragment);
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
       grid.setAttribute('aria-busy', String(loading));
       emptyState.hidden = visibleEntries.length > 0;
+      loadingSpinner.hidden = !loading;
+      emptyState.querySelector('.lucide').hidden = loading;
       retryBtn.hidden = !failed;
       status.textContent = loading ? 'Loading emojis...' : failed ? 'Unable to load emojis.' : 'No emojis found.';
       updateSelection();
@@ -19529,6 +19572,7 @@ ${selector} .arrowheadPath {
       if (closed) return;
       closed = true;
       listeners.abort();
+      imageObserver.disconnect();
       clearTimeout(copyBtn.copyTimeout);
       closeAppModal(modal);
     }
@@ -19560,6 +19604,7 @@ ${selector} .arrowheadPath {
       load();
     });
     searchInput.value = '';
+    selectionTray.replaceChildren();
     copyBtn.classList.remove('is-copied');
     copyBtn.querySelector('i').className = 'lucide lucide-copy';
     categoryBar.scrollLeft = 0;
