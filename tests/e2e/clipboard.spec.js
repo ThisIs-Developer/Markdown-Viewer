@@ -87,13 +87,13 @@ test('preview Copy includes rich HTML and readable text without preview controls
   await expect.poll(() => page.evaluate(() => Object.keys(window.__clipboard || {}))).toContain('text/html');
   const copied = await page.evaluate(() => window.__clipboard);
   expect(copied['text/html']).toMatch(/<h1[^>]*>Clipboard document<\/h1>/);
-  expect(copied['text/html']).toContain('<strong>bold phrase</strong>');
-  expect(copied['text/html']).toContain('<em>italic text</em>');
+  expect(copied['text/html']).toMatch(/<strong[^>]*>bold phrase<\/strong>/);
+  expect(copied['text/html']).toMatch(/<em[^>]*>italic text<\/em>/);
   expect(copied['text/html']).toContain('href="https://example.com"');
-  expect(copied['text/html']).toMatch(/<ul>[\s\S]*<li>First item<\/li>/);
-  expect(copied['text/html']).toContain('<blockquote>');
-  expect(copied['text/html']).toContain('<table>');
-  expect(copied['text/html']).toContain('<pre>');
+  expect(copied['text/html']).toMatch(/<ul[^>]*>[\s\S]*<li[^>]*>First item<\/li>/);
+  expect(copied['text/html']).toMatch(/<blockquote[^>]*>/);
+  expect(copied['text/html']).toMatch(/<table[^>]*>/);
+  expect(copied['text/html']).toMatch(/<pre[^>]*>/);
   expect(copied['text/html']).not.toMatch(/<button|code-preview-toolbar|data-review-/);
   expect(copied['text/plain']).toContain('Clipboard document\n');
   expect(copied['text/plain']).toContain('A bold phrase, italic text, and a link.');
@@ -140,7 +140,7 @@ test('preview Select All closes the menu and focuses a native selection of only 
   await expect(menu.getByRole('menuitem', { name: 'Paste', exact: true })).toBeDisabled();
   await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
   await expect(menu).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>bold phrase<\/strong>/);
   const text = await page.evaluate(() => window.__clipboard['text/plain']);
   expect(text).toContain('Clipboard document');
   expect(text).toContain('const answer = 42;');
@@ -151,7 +151,7 @@ test('copying part of a bold phrase preserves formatting without copying surroun
   await selectPreview(page, '#markdown-preview strong', 5, 11);
   const menu = await openSurfaceMenu(page, '#markdown-preview');
   await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>phrase</strong>');
+  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>phrase<\/strong>/);
   expect(await page.evaluate(() => window.__clipboard['text/plain'])).toBe('phrase');
   expect(await page.evaluate(() => window.__clipboard['text/html'])).not.toMatch(/Clipboard document|italic text|bold /);
 });
@@ -164,7 +164,9 @@ test('native preview Copy supplies rich data and leaves editor Copy untouched', 
     document.querySelector('#markdown-preview strong').dispatchEvent(event);
     return { html: event.clipboardData.getData('text/html'), text: event.clipboardData.getData('text/plain'), prevented: event.defaultPrevented };
   });
-  expect(copied).toEqual({ html: '<p><strong>bold phrase</strong></p>', text: 'bold phrase', prevented: true });
+  expect(copied.prevented).toBe(true);
+  expect(copied.text).toBe('bold phrase');
+  expect(copied.html).toMatch(/<p[^>]*><strong[^>]*>bold phrase<\/strong><\/p>/);
   const editorCopy = await page.locator('#markdown-editor').evaluate(editor => {
     editor.focus();
     editor.select();
@@ -207,7 +209,7 @@ test('Ctrl/Cmd+A follows the focused editor or preview without selecting the app
   await expect(editor).toHaveValue(markdown);
   const menu = await openSurfaceMenu(page, '#markdown-preview');
   await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>bold phrase<\/strong>/);
   expect(await page.evaluate(() => window.__clipboard['text/plain'])).not.toMatch(/Explorer|Select All|New file/);
 });
 
@@ -308,7 +310,7 @@ test('Select All and Copy are scoped to the secondary editor and preview', async
   await page.keyboard.press('ControlOrMeta+A');
   menu = await openSurfaceMenu(page, '#document-split-preview');
   await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>শিক্ষা</strong>');
+  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>শিক্ষা<\/strong>/);
   expect(await page.evaluate(() => window.__clipboard['text/plain'])).not.toContain('Clipboard document');
 });
 
@@ -481,7 +483,7 @@ test.describe('Android-sized touch layout', () => {
       await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
       await expect(menu).toHaveCount(0);
       if (pane === 'preview') {
-        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>bold phrase<\/strong>/);
       } else {
         await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
       }
@@ -513,7 +515,7 @@ test.describe('Android-sized touch layout', () => {
       await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
       await expect(menu).toHaveCount(0);
       if (pane === 'preview') {
-        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>bold phrase<\/strong>/);
         expect(await page.evaluate(() => window.__clipboard['text/plain'])).toContain('Clipboard document');
       } else {
         await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
@@ -564,7 +566,7 @@ test.describe('Android-sized touch layout', () => {
     await page.touchscreen.tap(point.x, point.y);
     await expect(menu).toBeVisible();
     await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
-    await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>phrase</strong>');
+    await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>phrase<\/strong>/);
     expect(await page.evaluate(() => window.__clipboard['text/plain'])).toBe('phrase');
     await page.locator('#markdown-preview h1').tap();
     await expect(menu).toHaveCount(0);
@@ -588,7 +590,7 @@ test.describe('Android-sized touch layout', () => {
       await expect(menu).toBeVisible();
       await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
       if (pane === 'preview') {
-        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>Secondary content</strong>');
+        await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>Secondary content<\/strong>/);
         expect(await page.evaluate(() => window.__clipboard['text/plain'])).not.toContain('Clipboard document');
       } else {
         await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': secondary });
@@ -635,7 +637,7 @@ test.describe('Android-sized touch layout', () => {
     expect(await page.evaluate(() => window.getSelection().toString())).toContain('Clipboard document');
     await menu.getByRole('menuitem', { name: 'Copy', exact: true }).tap();
     await expect(menu).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('<strong>bold phrase</strong>');
+    await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toMatch(/<strong[^>]*>bold phrase<\/strong>/);
   });
 
   test('mobile Copy Markdown copies the entire raw document from a preview selection', async ({ page }) => {

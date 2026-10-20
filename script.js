@@ -6226,6 +6226,44 @@ document.addEventListener("DOMContentLoaded", async function () {
     return true;
   }
 
+  // CSS properties worth preserving when copying preview content as rich
+  // text.  These cover the visual cues that distinguish code blocks from
+  // prose, preserve table borders, blockquote indentation, list styling,
+  // and heading/paragraph spacing that rich-text targets rely on.
+  var CLIPBOARD_INLINE_STYLE_PROPERTIES = [
+    'background-color', 'border', 'border-collapse', 'border-spacing',
+    'color', 'display', 'font-family', 'font-size', 'font-style',
+    'font-weight', 'line-height', 'list-style-type', 'margin',
+    'overflow-wrap', 'padding', 'text-align', 'text-decoration',
+    'vertical-align', 'white-space', 'word-break'
+  ];
+
+  // Block and structural elements whose computed styles should be inlined
+  // so that pasted rich text retains visual formatting (code backgrounds,
+  // table borders, etc.).  Semantic inline elements like <strong>, <em>,
+  // and <a> are intentionally excluded — rich-text targets already
+  // understand their meaning, and adding redundant inline styles can cause
+  // paste handlers to flatten them into styled <span> elements.
+  var CLIPBOARD_INLINE_STYLE_SELECTOR =
+    'pre, code, blockquote, table, thead, tbody, tr, td, th, ' +
+    'h1, h2, h3, h4, h5, h6, p, li, ul, ol, hr, ' +
+    'dd, dt, dl, figcaption, figure';
+
+  function inlineComputedStylesForClipboard(root) {
+    var elements = root.querySelectorAll(CLIPBOARD_INLINE_STYLE_SELECTOR);
+    for (var i = 0; i < elements.length; i++) {
+      var element = elements[i];
+      var computed = window.getComputedStyle(element);
+      var parts = [];
+      for (var j = 0; j < CLIPBOARD_INLINE_STYLE_PROPERTIES.length; j++) {
+        var prop = CLIPBOARD_INLINE_STYLE_PROPERTIES[j];
+        var value = computed.getPropertyValue(prop);
+        if (value) parts.push(prop + ':' + value);
+      }
+      if (parts.length) element.setAttribute('style', parts.join(';'));
+    }
+  }
+
   function getPreviewSelectionClipboardContent(surface, selection) {
     if (!selectionBelongsToElement(selection, surface) || selection.isCollapsed || !selection.rangeCount) return null;
     const range = selection.getRangeAt(0);
@@ -6247,18 +6285,21 @@ document.addEventListener("DOMContentLoaded", async function () {
       '.code-preview-toolbar, .review-pins-layer, button, [role="toolbar"], ' +
       'script, style, mjx-assistive-mml'
     ).forEach(function(element) { element.remove(); });
-    const html = DOMPurify.sanitize(container.innerHTML, {
-      ALLOW_DATA_ATTR: false,
-      FORBID_ATTR: ['id', 'class', 'contenteditable', 'tabindex'],
-      ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
-    });
-    container.innerHTML = html;
-    // innerText needs a rendered node to retain paragraph, table, and code line
-    // breaks. Keep this temporary copy out of view and the accessibility tree.
+    // Render the fragment off-screen so getComputedStyle can resolve the
+    // inherited preview styles, then bake them into inline style attributes.
+    // This preserves code-block backgrounds, table borders, monospace fonts,
+    // and paragraph spacing when pasting into rich-text targets.
     container.setAttribute('aria-hidden', 'true');
     container.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;';
     document.body.appendChild(container);
     try {
+      inlineComputedStylesForClipboard(container);
+      const html = DOMPurify.sanitize(container.innerHTML, {
+        ALLOW_DATA_ATTR: false,
+        FORBID_ATTR: ['id', 'class', 'contenteditable', 'tabindex'],
+        ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
+      });
+      container.innerHTML = html;
       return { text: container.innerText, html: html };
     } finally {
       container.remove();
