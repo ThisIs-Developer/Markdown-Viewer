@@ -9,6 +9,8 @@ const assetBodyCache = new Map();
 let appVersionPromise;
 
 const localBrowserAssets = [
+  ['https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js', 'node_modules/emoji-toolkit/lib/js/joypixels.min.js', 'application/javascript'],
+  ['https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css', 'node_modules/emoji-toolkit/extras/css/joypixels.min.css', 'text/css'],
   ['https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css', 'node_modules/bootstrap/dist/css/bootstrap.min.css', 'text/css'],
   ['https://cdn.jsdelivr.net/npm/github-markdown-css@5.3.0/github-markdown.css', 'node_modules/github-markdown-css/github-markdown.css', 'text/css'],
   ['https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js', 'node_modules/marked/marked.min.js', 'application/javascript'],

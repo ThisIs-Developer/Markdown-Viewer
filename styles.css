@@ -14799,6 +14799,11 @@ body.release-notes-active .mobile-stats-container {
   font-size: 18px;
 }
 
+.emoji-preview.is-unicode {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 26px;
+}
+
 .emoji-preview img {
   position: absolute;
   inset: 0;

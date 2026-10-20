@@ -19313,11 +19313,13 @@ ${selector} .arrowheadPath {
     ];
     let activeCategory = 'smileys';
     let pickerEntries = [];
+    let entriesByName = new Map();
     let visibleEntries = [];
     let activeIndex = 0;
     let closed = false;
     let loading = true;
     let failed = false;
+    let skinToneRequest = 0;
 
     function listen(element, event, handler) {
       element.addEventListener(event, handler, { signal: listeners.signal });
@@ -19329,17 +19331,35 @@ ${selector} .arrowheadPath {
       delete image.dataset.src;
     }
 
+    function previewSource(entry) {
+      return window.visualSettingsAdapters?.resolveEmojiImage?.(entry.name, entry.url) || { url: entry.url, unicode: '' };
+    }
+
+    async function ensureSkinToneLibrary() {
+      const tone = window.visualSettingsStore?.getSettings().emojiSkinTone;
+      if (tone && tone !== 'default' && !window.joypixels) await loadScript(CDN.joypixels);
+    }
+
     function createPreview(entry, eager = false) {
+      const source = previewSource(entry);
       const preview = document.createElement('span');
       preview.className = 'emoji-preview skeleton-placeholder';
       preview.setAttribute('aria-hidden', 'true');
       preview.dataset.i18nSkip = 'true';
+      preview.dataset.url = source.url;
       const image = document.createElement('img');
-      image.dataset.src = entry.url;
+      image.dataset.src = preview.dataset.url;
       image.alt = '';
       image.decoding = 'async';
       function unavailable() {
         preview.classList.remove('skeleton-placeholder');
+        // Some GitHub tone variants have no artwork. This is the final fallback,
+        // never temporary content shown ahead of a successfully loaded image.
+        if (source.unicode && source.url !== entry.url) {
+          preview.classList.add('is-unicode');
+          preview.textContent = source.unicode;
+          return;
+        }
         preview.classList.add('is-unavailable');
         preview.title = translateUiString('Unable to load emojis.');
         const icon = document.createElement('i');
@@ -19359,6 +19379,20 @@ ${selector} .arrowheadPath {
       preview.appendChild(image);
       if (eager) loadPreviewImage(image);
       return preview;
+    }
+
+    function refreshPreviewImages() {
+      imageObserver.disconnect();
+      for (const [cache, eager] of [[itemCache, false], [chipCache, true]]) {
+        cache.forEach((item, name) => {
+          const entry = entriesByName.get(name);
+          const preview = item.querySelector('.emoji-preview');
+          if (entry && preview.dataset.url !== previewSource(entry).url) {
+            preview.replaceWith(createPreview(entry, eager));
+          }
+        });
+      }
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
     }
 
     function shortcodeFor(entry) {
@@ -19450,7 +19484,8 @@ ${selector} .arrowheadPath {
       grid.replaceChildren(fragment);
       grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
       grid.setAttribute('aria-busy', String(loading));
-      emptyState.hidden = visibleEntries.length > 0;
+      grid.hidden = failed;
+      emptyState.hidden = visibleEntries.length > 0 && !failed;
       loadingSpinner.hidden = !loading;
       emptyState.querySelector('.lucide').hidden = loading;
       retryBtn.hidden = !failed;
@@ -19567,11 +19602,24 @@ ${selector} .arrowheadPath {
       renderEntries();
       searchInput.focus();
     });
+    const unsubscribeSettings = window.visualSettingsStore?.onSettingsChange(async (_, changedKey) => {
+      if (changedKey !== 'emojiSkinTone' && changedKey !== '*') return;
+      const request = ++skinToneRequest;
+      try {
+        await ensureSkinToneLibrary();
+        if (closed || request !== skinToneRequest) return;
+        if (failed) load();
+        else refreshPreviewImages();
+      } catch (error) {
+        if (!closed && request === skinToneRequest) { failed = true; renderEntries(); }
+      }
+    });
 
     function closeModal() {
       if (closed) return;
       closed = true;
       listeners.abort();
+      unsubscribeSettings?.();
       imageObserver.disconnect();
       clearTimeout(copyBtn.copyTimeout);
       closeAppModal(modal);
@@ -19588,10 +19636,14 @@ ${selector} .arrowheadPath {
       failed = false;
       renderEntries();
       try {
-        const [entries, catalog] = await Promise.all([loadEmojiEntries(), loadEmojiCatalog()]);
+        const [entries, catalog] = await Promise.all([loadEmojiEntries(), loadEmojiCatalog(), ensureSkinToneLibrary()]);
+        // The preference can change while the catalog is still downloading.
+        await ensureSkinToneLibrary();
         if (closed) return;
         if (!entries.length) throw new Error('Empty emoji response');
         pickerEntries = buildEmojiPickerEntries(entries, catalog);
+        entriesByName = new Map(pickerEntries.map(entry => [entry.name, entry]));
+        refreshPreviewImages();
       } catch (error) {
         if (closed) return;
         failed = true;

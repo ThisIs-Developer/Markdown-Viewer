@@ -536,6 +536,8 @@
   /**
    * Resolves a shortcode to JoyPixels' canonical shortcode name (e.g. '+1' -> 'thumbsup', 'runner' -> 'person_running').
    */
+  const emojiShortnameIndexes = new WeakMap();
+
   function getCanonicalEmojiShortcode(code, joy) {
     if (!code) return code;
     const clean = code.replace(/^:|:$/g, '');
@@ -555,15 +557,21 @@
       }
     }
 
-    // 3. Fallback: scan emojiList if altShortNames is not populated
+    // 3. Index fallback aliases once; picker grids resolve hundreds of names.
     if (joy.emojiList) {
-      for (const [key, val] of Object.entries(joy.emojiList)) {
-        if (val && Array.isArray(val.shortnames)) {
-          if (val.shortnames.includes(colonCode) || val.shortnames.includes(clean)) {
-            return key.replace(/^:|:$/g, '');
+      let aliases = emojiShortnameIndexes.get(joy.emojiList);
+      if (!aliases) {
+        aliases = new Map();
+        for (const [key, val] of Object.entries(joy.emojiList)) {
+          if (!val || !Array.isArray(val.shortnames)) continue;
+          for (const alias of val.shortnames) {
+            const normalized = alias.replace(/^:|:$/g, '');
+            if (!aliases.has(normalized)) aliases.set(normalized, key.replace(/^:|:$/g, ''));
           }
         }
+        emojiShortnameIndexes.set(joy.emojiList, aliases);
       }
+      if (aliases.has(clean)) return aliases.get(clean);
     }
 
     return clean;
@@ -605,6 +613,29 @@
     }
 
     return toneCandidate;
+  }
+
+  /**
+   * Resolve picker artwork through the same aliases and tone support as the preview.
+   * GitHub image filenames omit Unicode joiners and emoji presentation selectors.
+   */
+  function resolveEmojiImage(shortcode, imageUrl) {
+    const original = { url: imageUrl, unicode: '' };
+    if (!shortcode || !imageUrl) return original;
+    const joy = typeof joypixels !== 'undefined' ? joypixels : (typeof window !== 'undefined' ? window.joypixels : undefined);
+    if (!joy || typeof joy.shortnameToUnicode !== 'function') return original;
+    const resolved = resolveEmojiShortcode(shortcode).replace(/^:|:$/g, '');
+    if (!/_tone[1-5]$/.test(resolved)) return original;
+    const unicode = joy.shortnameToUnicode(`:${resolved}:`);
+    if (!/[\u{1f3fb}-\u{1f3ff}]/u.test(unicode)) return original;
+    const filename = Array.from(unicode)
+      .filter(character => character !== '\u200d' && character !== '\ufe0f')
+      .map(character => character.codePointAt(0).toString(16))
+      .join('-');
+    return {
+      url: imageUrl.replace(/(\/unicode\/)[0-9a-f-]+(?=\.png(?:\?|$))/i, `$1${filename}`),
+      unicode
+    };
   }
 
   /**
@@ -737,6 +768,7 @@
     apply,
     getCanonicalEmojiShortcode: (code) => getCanonicalEmojiShortcode(code, typeof joypixels !== 'undefined' ? joypixels : (typeof window !== 'undefined' ? window.joypixels : undefined)),
     resolveEmojiShortcode,
+    resolveEmojiImage,
     applyHighlightTheme,
     applyMathFont,
     applyMermaid,

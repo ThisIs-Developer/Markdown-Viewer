@@ -24,6 +24,139 @@ async function openPicker(page) {
 function category(page, name) { return page.getByRole('toolbar', { name: 'Emoji categories' }).getByRole('button', { name, exact: true }); }
 function emoji(page, shortcode) { return page.locator('#emoji-modal-grid').locator(`[data-shortcode="${shortcode}"]`); }
 
+const toneImageUrl = filename => `https://github.githubassets.com/images/icons/emoji/unicode/${filename}.png?v8`;
+const toneApi = Object.fromEntries(Object.entries({
+  wave: '1f44b', '+1': '1f44d', thumbsup: '1f44d', runner: '1f3c3',
+  woman_technologist: '1f469-1f4bb', people_holding_hands: '1f9d1-1f91d-1f9d1', smile: '1f604'
+}).map(([name, filename]) => [name, toneImageUrl(filename)]));
+
+async function setSkinTone(page, tone) {
+  await page.locator('#workspaceSettingsDropdown').click();
+  await page.locator('#menu-visual-settings-button').click();
+  await page.locator('#visual-setting-emoji-skin-tone').selectOption(tone);
+  await page.locator('#visual-settings-close-btn').click();
+}
+
+test('skin tones update picker tiles and selections live, survive reloads, and match inserted previews', async ({ page }) => {
+  test.slow();
+  await page.route('https://github.githubassets.com/images/icons/emoji/**', route => route.fulfill({
+    contentType: 'image/svg+xml', body: decodeURIComponent(imageUrl.split(',')[1])
+  }));
+  await prepare(page, toneApi);
+  // Start with an unused emoji runtime, as in a document containing no shortcodes.
+  await page.evaluate(() => { delete window.joypixels; });
+  await setEditorContent(page, '');
+  await setSkinTone(page, 'tone3');
+  await openPicker(page);
+  await category(page, 'People & body').click();
+  const wave = emoji(page, ':wave:');
+  await expect(wave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3fd'));
+  await wave.click();
+  const selectedWave = page.getByRole('button', { name: 'Remove :wave:', exact: true });
+  for (const [tone, modifier] of [['tone1', '1f3fb'], ['tone2', '1f3fc'], ['tone3', '1f3fd'], ['tone4', '1f3fe'], ['tone5', '1f3ff']]) {
+    await page.evaluate(tone => window.visualSettingsStore.updateSetting('emojiSkinTone', tone), tone);
+    await expect(wave.locator('.has-image img')).toHaveAttribute('src', toneImageUrl(`1f44b-${modifier}`));
+    await expect(selectedWave.locator('.has-image img')).toHaveAttribute('src', toneImageUrl(`1f44b-${modifier}`));
+    await expect(wave).toHaveAttribute('aria-selected', 'true');
+  }
+  await page.evaluate(() => window.visualSettingsStore.resetSettings());
+  await expect(wave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b'));
+  await expect(selectedWave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b'));
+  await category(page, 'Smileys & emotion').click();
+  await expect(emoji(page, ':smile:').locator('img')).toHaveAttribute('src', toneImageUrl('1f604'));
+  await page.evaluate(() => window.visualSettingsStore.updateSetting('emojiSkinTone', 'tone5'));
+  await category(page, 'People & body').click();
+  await expect(wave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3ff'));
+  await page.locator('#emoji-modal-search').fill(':thumbsup:');
+  await expect(emoji(page, ':thumbsup:').locator('img')).toHaveAttribute('src', toneImageUrl('1f44d-1f3ff'));
+  await emoji(page, ':thumbsup:').click();
+  await page.locator('#emoji-modal-insert').click();
+  await expect(page.locator('#markdown-editor')).toHaveValue(':wave: :thumbsup:');
+  await expect(page.locator('#markdown-preview')).toContainText('👋🏿 👍🏿');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
+  await page.evaluate(() => { delete window.joypixels; });
+  await openPicker(page);
+  await category(page, 'People & body').click();
+  await expect(wave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3ff'));
+  await expect(page.locator('#emoji-modal-selection')).toBeHidden();
+});
+
+test('skin tone changes ignore old image loads and stop updating a closed picker', async ({ page }) => {
+  let releaseOldTone;
+  const oldTonePending = new Promise(resolve => { releaseOldTone = resolve; });
+  const requests = [];
+  await page.route('https://github.githubassets.com/images/icons/emoji/**', async route => {
+    requests.push(route.request().url());
+    if (route.request().url().includes('1f3fb')) await oldTonePending;
+    await route.fulfill({ contentType: 'image/svg+xml', body: decodeURIComponent(imageUrl.split(',')[1]) });
+  });
+  await prepare(page, toneApi);
+  await page.evaluate(() => { delete window.joypixels; });
+  await setSkinTone(page, 'tone1');
+  await openPicker(page);
+  await page.locator('#emoji-modal-search').fill('wave');
+  const wave = emoji(page, ':wave:');
+  await expect(wave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3fb'));
+  await wave.click();
+  try {
+    await page.evaluate(() => window.visualSettingsStore.updateSetting('emojiSkinTone', 'tone5'));
+    await expect(wave.locator('.has-image img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3ff'));
+    releaseOldTone();
+    await expect(page.locator('#emoji-modal-selection img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3ff'));
+    await expect(page.locator('#emoji-modal-search')).toHaveValue('wave');
+    await expect(page.locator('#emoji-modal-selection-count')).toHaveText('1 selected');
+  } finally {
+    releaseOldTone();
+  }
+  await page.keyboard.press('Escape');
+  const countBefore = requests.length;
+  await setSkinTone(page, 'tone2');
+  expect(requests.length).toBe(countBefore);
+  await openPicker(page);
+  await category(page, 'People & body').click();
+  await expect(wave.locator('img')).toHaveAttribute('src', toneImageUrl('1f44b-1f3fc'));
+});
+
+test('skin tones use a final native fallback for missing artwork without flashing placeholder emojis', async ({ page }) => {
+  let releaseImage;
+  const imagePending = new Promise(resolve => { releaseImage = resolve; });
+  await page.route('https://github.githubassets.com/images/icons/emoji/**', async route => {
+    if (route.request().url().includes('/1faf7-')) {
+      await imagePending;
+      return route.fulfill({ status: 404, body: '' });
+    }
+    return route.fulfill({ contentType: 'image/svg+xml', body: decodeURIComponent(imageUrl.split(',')[1]) });
+  });
+  await prepare(page, { ...toneApi, leftwards_pushing_hand: toneImageUrl('1faf7') });
+  await page.evaluate(() => { delete window.joypixels; });
+  await setSkinTone(page, 'tone3');
+  await openPicker(page);
+  await page.locator('#emoji-modal-search').fill('leftwards_pushing_hand');
+  const hand = emoji(page, ':leftwards_pushing_hand:');
+  const preview = hand.locator('.emoji-preview');
+  try {
+    await expect(preview.locator('img')).toHaveAttribute('src', toneImageUrl('1faf7-1f3fd'));
+    await expect(hand.locator('.skeleton-placeholder')).toBeVisible();
+    await expect(preview).toHaveText('');
+  } finally {
+    releaseImage();
+  }
+  await expect(hand.locator('.is-unicode')).toHaveText('🫷🏽');
+  await expect(preview.locator('img')).toHaveCount(0);
+  await expect(hand.locator('.skeleton-placeholder')).toHaveCount(0);
+  await hand.click();
+  const selected = page.getByRole('button', { name: 'Remove :leftwards_pushing_hand:', exact: true });
+  await expect(selected.locator('.is-unicode')).toHaveText('🫷🏽');
+  await page.evaluate(() => window.visualSettingsStore.updateSetting('emojiSkinTone', 'tone5'));
+  await expect(hand.locator('.is-unicode')).toHaveText('🫷🏿');
+  await expect(selected.locator('.is-unicode')).toHaveText('🫷🏿');
+  await page.evaluate(() => window.visualSettingsStore.resetSettings());
+  await expect(hand.locator('.has-image img')).toHaveAttribute('src', toneImageUrl('1faf7'));
+  await expect(selected.locator('.has-image img')).toHaveAttribute('src', toneImageUrl('1faf7'));
+  await expect(hand.locator('.is-unicode')).toHaveCount(0);
+});
+
 test('groups every standard emoji, collapses aliases, and preserves GitHub extras', async ({ page }) => {
   // This traverses all ten groups in the complete bundled catalog.
   test.slow();
