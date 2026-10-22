@@ -21,7 +21,7 @@ function addHarness(save) {
     getLinkedLocation: id => organization.linkedLocations.find(x => x.id === id),
     reconcileLinkedLocation: async () => { events.push('scan'); },
     refreshLinkedSourceMonitoring: async () => { events.push('watch'); } };
-  vm.runInNewContext(functionSource('  async function withLinkedLocationMutation(', '\n  async function reconcileLinkedLocation(') + functionSource('  async function addLinkedFolderPath(', '\n  async function addLinkedFilePath(') + '\nthis.add = addLinkedFolderPath;', context);
+  vm.runInNewContext(functionSource('  function getOverlappingLinkedLocationIds(', '\n  function addLinkedSourceExclusions(') + functionSource('  async function withLinkedLocationMutation(', '\n  async function reconcileLinkedLocation(') + functionSource('  async function addLinkedFolderPath(', '\n  async function addLinkedFilePath(') + '\nthis.add = addLinkedFolderPath;', context);
   return { context, events, organization };
 }
 

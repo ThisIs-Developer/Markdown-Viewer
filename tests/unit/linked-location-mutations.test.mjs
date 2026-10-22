@@ -47,3 +47,24 @@ test('failed mutation releases its root and does not poison the queued operation
   assert.equal(state.linkedLocationMutationChains.size, 0);
   assert.equal(await state.run(null, async () => 'loose file'), 'loose file');
 });
+
+test('overlapping root sets serialize without deadlocks and release all scan guards', async () => {
+  const state = coordinator();
+  const events = [];
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  state.linkedLocationScanTokens.set('parent', {});
+  state.linkedLocationScanTokens.set('child', {});
+  const first = state.run(['parent', 'child'], async () => { events.push('first'); await gate; });
+  const second = state.run(['child', 'parent'], async () => { events.push('second'); });
+  await state.run('unrelated', async () => events.push('unrelated'));
+  assert.deepEqual(events, ['first', 'unrelated']);
+  assert.equal(state.linkedLocationScanTokens.size, 0);
+  assert.equal(state.linkedLocationMutations.get('parent'), 2);
+  assert.equal(state.linkedLocationMutations.get('child'), 2);
+  release();
+  await Promise.all([first, second]);
+  assert.deepEqual(events, ['first', 'unrelated', 'second']);
+  assert.equal(state.linkedLocationMutations.size, 0);
+  assert.equal(state.linkedLocationMutationChains.size, 0);
+});

@@ -11,14 +11,14 @@ const REVIEWED_IDENTICAL_TRANSLATIONS = {
 };
 const ALLOWED_IDENTICAL_TRANSLATIONS = {
   bg: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'Git Graph', 'GitHub', 'GitHub URL', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'Shift', 'SVG', 'ThisIs-Developer'],
-  de: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Explorer', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Name', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer', 'Version', 'Wrap'],
-  es: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG'],
-  fr: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Actions', 'Ctrl', 'Description', 'Destination', 'Documents', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'Image (.png)', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Menu', 'Notifications', 'Participants', 'PDF', 'PNG', 'Session active', 'suggestion.', 'SVG', 'Version'],
-  it: ['{{0}} file', '{{0}}m', '{{0}}m {{1}}s', '{{0}}s', '1 file', 'Ab', 'Backup', 'file', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown file', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer', 'Wireframe'],
+  de: ['Neutral', '{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Explorer', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Name', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer', 'Version', 'Wrap'],
+  es: ['Base', '{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG'],
+  fr: ['Base', '{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Actions', 'Ctrl', 'Description', 'Destination', 'Documents', 'FAQ', 'h1, h2, h3, h4, h5, h6', 'HTML', 'Image (.png)', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'Menu', 'Notifications', 'Participants', 'PDF', 'PNG', 'Session active', 'suggestion.', 'SVG', 'Version'],
+  it: ['Base', '{{0}} file', '{{0}}m', '{{0}}m {{1}}s', '{{0}}s', '1 file', 'Ab', 'Backup', 'file', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown file', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer', 'Wireframe'],
   ja: ['Ctrl', 'GitHub URL', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG'],
   ko: ['Ab', 'Ctrl', 'FAQ', 'GitHub URL', 'h1, h2, h3, h4, h5, h6', 'HTML', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG'],
   pl: ['{{0}}m', '{{0}}m {{1}}s', 'Ab', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown alert', 'Markdown Viewer', 'Menu', 'PDF', 'PNG', 'SVG'],
-  pt: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Backup', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'item', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown Viewer', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer'],
+  pt: ['Base', '{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Backup', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'item', 'JavaScript', 'Link', 'Markdown (.md)', 'Markdown Viewer', 'PDF', 'PNG', 'SVG', 'ThisIs-Developer'],
   ru: ['Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'PDF', 'PNG', 'SVG'],
   tr: ['{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'Shift', 'SVG'],
   tw: ['Ab', 'Ctrl', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'SVG'],
@@ -83,7 +83,9 @@ for (const locale of files) {
     || (key.includes('Markdown') && !catalog[key].includes('Markdown'))
   ));
   if (locale !== 'en') {
-    const allowed = new Set([...SHARED_TECHNICAL_LITERALS, ...(ALLOWED_IDENTICAL_TRANSLATIONS[locale] || []), ...(REVIEWED_IDENTICAL_TRANSLATIONS[locale] || [])]);
+    const allowed = new Set(['GitHub', ...SHARED_TECHNICAL_LITERALS, ...(ALLOWED_IDENTICAL_TRANSLATIONS[locale] || []), ...(REVIEWED_IDENTICAL_TRANSLATIONS[locale] || [])]);
+    if (locale === 'de') allowed.add('Smileys');
+    if (locale === 'fr') allowed.add('Nature');
     addFailures(failures, locale, 'unexpected English fallback', keys.filter(key =>
       catalog[key] === key && !allowed.has(key)
     ));

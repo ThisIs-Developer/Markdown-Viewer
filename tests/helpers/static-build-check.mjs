@@ -14,6 +14,8 @@ const requiredFiles = [
   'index.html',
   '404.html',
   'workspace-storage.js',
+  'visual-settings-adapters.js',
+  'visual-settings-store.js',
   'script.js',
   'preview-worker.js',
   'styles.css',
@@ -23,6 +25,8 @@ const requiredFiles = [
   'assets/seo-metadata.mjs',
   'assets/document-toc.js',
   'assets/document-toc.LICENSE.txt',
+  'assets/emoji/catalog.json',
+  'assets/emoji/LICENSE',
   'seo/locales.mjs',
   'seo/welcome-content.mjs',
   'seo/server-render.mjs',
@@ -49,12 +53,16 @@ const syntaxCheckedFiles = [
   'workspace-storage.js',
   'preview-worker.js',
   'sw.js',
+  ...(fs.existsSync(path.join(rootDir, 'visual-settings-store.js')) ? ['visual-settings-store.js'] : []),
+  ...(fs.existsSync(path.join(rootDir, 'visual-settings-adapters.js')) ? ['visual-settings-adapters.js'] : []),
   'assets/seo-metadata.mjs',
   'seo/welcome-content.mjs',
   'desktop-app/resources/js/main.js',
   'desktop-app/resources/js/script.js',
   'desktop-app/resources/js/workspace-storage.js',
   'desktop-app/resources/js/preview-worker.js',
+  ...(fs.existsSync(path.join(rootDir, 'desktop-app/resources/js/visual-settings-store.js')) ? ['desktop-app/resources/js/visual-settings-store.js'] : []),
+  ...(fs.existsSync(path.join(rootDir, 'desktop-app/resources/js/visual-settings-adapters.js')) ? ['desktop-app/resources/js/visual-settings-adapters.js'] : []),
   'assets/i18n/generate-ui-locales.mjs',
   'assets/i18n/audit-ui-locales.mjs'
 ];
@@ -66,12 +74,20 @@ for (const relativePath of syntaxCheckedFiles) {
   });
 }
 
-for (const [sourcePath, desktopPath] of [
+const syncedDesktopFiles = [
   ['script.js', 'desktop-app/resources/js/script.js'],
   ['workspace-storage.js', 'desktop-app/resources/js/workspace-storage.js'],
   ['preview-worker.js', 'desktop-app/resources/js/preview-worker.js'],
   ['styles.css', 'desktop-app/resources/styles.css']
-]) {
+];
+if (fs.existsSync(path.join(rootDir, 'visual-settings-store.js'))) {
+  syncedDesktopFiles.push(['visual-settings-store.js', 'desktop-app/resources/js/visual-settings-store.js']);
+}
+if (fs.existsSync(path.join(rootDir, 'visual-settings-adapters.js'))) {
+  syncedDesktopFiles.push(['visual-settings-adapters.js', 'desktop-app/resources/js/visual-settings-adapters.js']);
+}
+
+for (const [sourcePath, desktopPath] of syncedDesktopFiles) {
   const source = fs.readFileSync(path.join(rootDir, sourcePath));
   const desktopCopy = fs.readFileSync(path.join(rootDir, desktopPath));
   if (!source.equals(desktopCopy)) {
@@ -111,7 +127,7 @@ if (SEO_LOCALES.length !== 15) {
   throw new Error(`Expected 15 supported SEO locales, found ${SEO_LOCALES.length}.`);
 }
 
-if (sitemapXml !== buildSitemap()) {
+if (sitemapXml.replace(/\r\n/g, '\n') !== buildSitemap().replace(/\r\n/g, '\n')) {
   throw new Error('sitemap.xml does not match the canonical locale configuration. Run npm run seo:sitemap.');
 }
 

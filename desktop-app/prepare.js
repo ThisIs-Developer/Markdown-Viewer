@@ -50,6 +50,15 @@ fs.copyFileSync(path.join(ROOT_DIR, "workspace-storage.js"), path.join(jsDest, "
 fs.copyFileSync(path.join(ROOT_DIR, "native-markdown-source.js"), path.join(jsDest, "native-markdown-source.js"));
 console.log("✓ Copied workspace-storage.js → resources/js/workspace-storage.js");
 
+if (fs.existsSync(path.join(ROOT_DIR, "visual-settings-store.js"))) {
+  fs.copyFileSync(path.join(ROOT_DIR, "visual-settings-store.js"), path.join(jsDest, "visual-settings-store.js"));
+  console.log("✓ Copied visual-settings-store.js → resources/js/visual-settings-store.js");
+}
+if (fs.existsSync(path.join(ROOT_DIR, "visual-settings-adapters.js"))) {
+  fs.copyFileSync(path.join(ROOT_DIR, "visual-settings-adapters.js"), path.join(jsDest, "visual-settings-adapters.js"));
+  console.log("✓ Copied visual-settings-adapters.js → resources/js/visual-settings-adapters.js");
+}
+
 fs.copyFileSync(path.join(ROOT_DIR, "preview-worker.js"), path.join(jsDest, "preview-worker.js"));
 console.log("Copied preview-worker.js to resources/js/preview-worker.js");
 
@@ -263,9 +272,9 @@ async function prepareOfflineDependencies() {
       hash: null
     },
     {
-      url: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js",
-      dest: path.join(LIBS_DIR, "tex-mml-chtml.min.js"),
-      hash: null
+      url: "https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js",
+      dest: path.join(LIBS_DIR, "tex-mml-chtml.js"),
+      hash: "sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab"
     },
     {
       url: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
@@ -306,6 +315,12 @@ async function prepareOfflineDependencies() {
   // Wait for all downloads and cryptographic validations to finish
   try {
     await Promise.all(downloads);
+    // Keep backwards-compatible copy for tex-mml-chtml.min.js
+    const mathjaxDest = path.join(LIBS_DIR, "tex-mml-chtml.js");
+    const mathjaxMinDest = path.join(LIBS_DIR, "tex-mml-chtml.min.js");
+    if (fs.existsSync(mathjaxDest)) {
+      fs.copyFileSync(mathjaxDest, mathjaxMinDest);
+    }
     console.log("✓ All offline libraries successfully downloaded and cryptographically validated.");
   } catch (err) {
     console.error("✗ Critical Security Error: Dependency integrity check failed!", err.message);
@@ -321,6 +336,8 @@ async function prepareOfflineDependencies() {
   html = html.replace(/href="assets\//g, 'href="/assets/');
   html = html.replace(/href="styles\.css"/g, 'href="/styles.css"');
   html = html.replace(/href="workspace-storage\.js"/g, 'href="/js/workspace-storage.js"');
+  html = html.replace(/href="visual-settings-adapters\.js"/g, 'href="/js/visual-settings-adapters.js"');
+  html = html.replace(/href="visual-settings-store\.js"/g, 'href="/js/visual-settings-store.js"');
   html = html.replace(/href="script\.js"/g, 'href="/js/script.js"');
   
   // PERF-034: Strip web-specific SEO tags, canonical, hreflang, preconnect, manifest and JSON-LD structured data for desktop build
@@ -336,8 +353,18 @@ async function prepareOfflineDependencies() {
 
   // Inject Neutralino script tags
   html = html.replace(
-    /<script\s+src="workspace-storage\.js"[^>]*><\/script>\s*<script\s+src="script\.js"[^>]*><\/script>/i,
-    '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/workspace-storage.js"></script>\n    <script src="/js/script.js"></script>',
+    /<script\s+src="workspace-storage\.js"[^>]*><\/script>(?:\s*<script\s+src="visual-settings-adapters\.js"[^>]*><\/script>)?(?:\s*<script\s+src="visual-settings-store\.js"[^>]*><\/script>)?\s*<script\s+src="script\.js"[^>]*><\/script>/i,
+    (match) => {
+      let tags = '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/workspace-storage.js"></script>';
+      if (match.includes('visual-settings-adapters.js')) {
+        tags += '\n    <script src="/js/visual-settings-adapters.js"></script>';
+      }
+      if (match.includes('visual-settings-store.js')) {
+        tags += '\n    <script src="/js/visual-settings-store.js"></script>';
+      }
+      tags += '\n    <script src="/js/script.js"></script>';
+      return tags;
+    }
   );
 
   // Inject app-info element

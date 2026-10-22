@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // PERF-002: Lazy script loader for optional heavy libraries
   const CDN_INTEGRITY = Object.freeze({
     'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js': 'sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF',
+    'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js': 'sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab',
     'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js': 'sha384-M5jmNxKC9EVnuqeMwRHvFuYUE8Hhp0TgBruj/GZRkYtiMrCRgH7yvv5KY+Owi7TW',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
@@ -216,7 +217,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // CDN URLs for lazy-loaded libraries
   const CDN = {
     mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
-    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
+    mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js',
     jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
@@ -239,7 +240,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Resolve local paths for desktop (Neutralinojs) offline support
   if (typeof Neutralino !== 'undefined') {
     CDN.mermaid = '/libs/mermaid.min.js';
-    CDN.mathjax = '/libs/tex-mml-chtml.min.js';
+    CDN.mathjax = '/libs/tex-mml-chtml.js';
     CDN.jspdf = '/libs/jspdf.umd.min.js';
     CDN.html2canvas = '/libs/html2canvas.min.js';
     CDN.pako = '/libs/pako.min.js';
@@ -973,6 +974,17 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutVersion = document.getElementById("about-version");
   const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
+  const menuVisualSettingsButton = document.getElementById("menu-visual-settings-button");
+  const mobileVisualSettingsButton = document.getElementById("mobile-visual-settings-button");
+  const visualSettingsModal = document.getElementById("visual-settings-modal");
+  const visualSettingsCloseBtn = document.getElementById("visual-settings-close-btn");
+  const visualSettingsCloseIcon = document.getElementById("visual-settings-close-icon");
+  const visualSettingsResetBtn = document.getElementById("visual-settings-reset-btn");
+  const selectHljsTheme = document.getElementById("visual-setting-hljs-theme");
+  const selectMathFont = document.getElementById("visual-setting-math-font");
+  const selectMermaidTheme = document.getElementById("visual-setting-mermaid-theme");
+  const selectMermaidLook = document.getElementById("visual-setting-mermaid-look");
+  const selectEmojiSkinTone = document.getElementById("visual-setting-emoji-skin-tone");
   const storageSettingsButton = document.getElementById("storage-settings-button");
   const trashSettingsButton = document.getElementById("trash-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
@@ -1043,8 +1055,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let emojiUrlMap = new Map();
   let emojiLookupLoaded = false;
   let emojiRenderScheduled = false;
-  let emojiItems = [];
-  const emojiSelection = new Set();
+  let emojiCatalogPromise = null;
   let symbolItems = [];
   const symbolSelection = new Set();
   const SYMBOL_SECTIONS = [
@@ -2268,22 +2279,28 @@ document.addEventListener("DOMContentLoaded", async function () {
   applyDirectionToContent(initialDirection);
   updateDirectionToggleUI(initialDirection);
 
-  // Track last Mermaid theme to avoid redundant re-initialization (PERF-005)
+  // Track last Mermaid theme and look to avoid redundant re-initialization (PERF-005)
   let _lastMermaidTheme = null;
   let _mermaidThemeReinitTimeout = null;
   let _themeTransitionTimeout = null;
   const initMermaid = (forceReinit, themeOverride) => {
     if (typeof mermaid === 'undefined') return; // PERF-002: Not loaded yet
     const currentTheme = themeOverride || document.documentElement.getAttribute("data-theme");
-    const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
+    const config = window.visualSettingsAdapters
+      ? window.visualSettingsAdapters.getMermaidConfig(currentTheme)
+      : { theme: currentTheme === "dark" ? "dark" : "default", look: "classic" };
+    const mermaidTheme = config.theme;
+    const mermaidLook = config.look || "classic";
     
-    // Skip re-initialization if theme hasn't changed (PERF-005)
-    if (!forceReinit && _lastMermaidTheme === mermaidTheme) return;
-    _lastMermaidTheme = mermaidTheme;
+    // Skip re-initialization if theme & look haven't changed (PERF-005)
+    const configKey = `${mermaidTheme}:${mermaidLook}`;
+    if (!forceReinit && _lastMermaidTheme === configKey) return;
+    _lastMermaidTheme = configKey;
     
     mermaid.initialize({
       startOnLoad: false,
       theme: mermaidTheme,
+      look: mermaidLook,
       securityLevel: 'strict',
       flowchart: { useMaxWidth: true, htmlLabels: true },
       fontSize: 16,
@@ -4138,14 +4155,20 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function configureMathJax() {
-    if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
-    if (window.MathJax && MathJax.loader && MathJax.tex) return;
+    // A partially initialized runtime keeps its configuration under config.
+    // Never replace it while an edit or another preview requests math.
+    if (window.MathJax && (MathJax._ || typeof MathJax.typesetPromise === 'function')) return;
     window.MathJax = {
       startup: {
         typeset: false
       },
       options: {
         a11y: { inTabOrder: false }
+      },
+      output: {
+        // The combined bundle includes Modern. Load optional fonts only after
+        // startup so an unavailable font cannot leave startup.promise pending.
+        font: 'mathjax-modern'
       },
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
@@ -4156,6 +4179,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function ensureMathJaxReady() {
+    if (mathJaxLoadPromise) return mathJaxLoadPromise;
     if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
       return MathJax.startup && MathJax.startup.promise
         ? MathJax.startup.promise
@@ -4163,31 +4187,38 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     configureMathJax();
-    if (!mathJaxLoadPromise) {
-      mathJaxLoadPromise = loadScript(CDN.mathjax)
-        .then(function() {
-          return MathJax.startup && MathJax.startup.promise
-            ? MathJax.startup.promise
-            : Promise.resolve();
-        })
-        .then(function() {
-          if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') {
-            throw new Error('MathJax typesetPromise API is unavailable.');
+    mathJaxLoadPromise = loadScript(CDN.mathjax)
+      .then(function() {
+        return MathJax.startup && MathJax.startup.promise
+          ? MathJax.startup.promise
+          : Promise.resolve();
+      })
+      .then(function() {
+        if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') {
+          throw new Error('MathJax typesetPromise API is unavailable.');
+        }
+        // Keep math usable in Modern while the saved font downloads. The
+        // adapter rerenders when the latest selection is ready or falls back.
+        if (window.visualSettingsAdapters) {
+          window.visualSettingsAdapters.applyMathFont(
+            window.visualSettingsAdapters.getCurrentMathFont()
+          ).catch(function(error) {
+            console.warn('Failed to apply MathJax font:', error);
+          });
+        }
+      })
+      .catch(function(error) {
+        mathJaxLoadPromise = null;
+        _loadedScripts.delete(CDN.mathjax);
+        if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
+          try {
+            delete window.MathJax;
+          } catch (_) {
+            window.MathJax = undefined;
           }
-        })
-        .catch(function(error) {
-          mathJaxLoadPromise = null;
-          _loadedScripts.delete(CDN.mathjax);
-          if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
-            try {
-              delete window.MathJax;
-            } catch (_) {
-              window.MathJax = undefined;
-            }
-          }
-          throw error;
-        });
-    }
+        }
+        throw error;
+      });
     return mathJaxLoadPromise;
   }
 
@@ -12155,6 +12186,37 @@ document.addEventListener("DOMContentLoaded", async function () {
     return String(value || '').replace(/\\/g, '/').replace(/^\/+/, '');
   }
 
+  function getOverlappingLinkedLocationIds(sourcePath) {
+    const source = normalizeLinkedSourcePath(sourcePath);
+    if (!source) return [];
+    return (documentOrganization.linkedLocations || []).filter(function(location) {
+      const root = normalizeLinkedSourcePath(location.path);
+      return root && (source === root || source.startsWith(root + '\\') || root.startsWith(source + '\\'));
+    }).map(function(location) { return location.id; });
+  }
+
+  function addLinkedSourceExclusions(sourcePath) {
+    const source = normalizeLinkedSourcePath(sourcePath);
+    const added = [];
+    (documentOrganization.linkedLocations || []).forEach(function(location) {
+      const root = normalizeLinkedSourcePath(location.path);
+      if (!root || !source.startsWith(root + '\\')) return;
+      const relativePath = normalizeLinkedRelativePath(String(sourcePath).trim().slice(root.length + 1));
+      const excluded = location.excludedPaths || [];
+      if (excluded.some(function(path) { return normalizeLinkedSourcePath(location.path + '/' + path) === source; })) return;
+      location.excludedPaths = excluded.concat(relativePath);
+      added.push({ locationId: location.id, path: relativePath });
+    });
+    return added;
+  }
+
+  function rollbackLinkedSourceExclusions(added) {
+    added.forEach(function(item) {
+      const location = getLinkedLocation(item.locationId);
+      if (location) location.excludedPaths = (location.excludedPaths || []).filter(function(path) { return path !== item.path; });
+    });
+  }
+
   const LINKED_FOLDER_SCAN_LIMITS = Object.freeze({
     files: 10000, entries: 40000, directories: 2000, depth: 32,
     fileBytes: 20 * 1024 * 1024, totalBytes: 200 * 1024 * 1024, milliseconds: 60000
@@ -12331,26 +12393,27 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function withLinkedLocationMutation(locationId, operation) {
     if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
-    if (!locationId) {
-      const current = Promise.resolve().then(operation);
-      linkedMutationOperations.add(current);
-      try { return await current; }
-      finally { linkedMutationOperations.delete(current); }
-    }
-    linkedLocationScanTokens.delete(locationId);
-    linkedLocationMutations.set(locationId, (linkedLocationMutations.get(locationId) || 0) + 1);
-    const previous = linkedLocationMutationChains.get(locationId) || Promise.resolve();
-    const current = previous.catch(function() {}).then(operation);
+    const locationIds = Array.from(new Set(Array.isArray(locationId) ? locationId : locationId ? [locationId] : []));
+    const previous = locationIds.map(function(id) {
+      linkedLocationScanTokens.delete(id);
+      linkedLocationMutations.set(id, (linkedLocationMutations.get(id) || 0) + 1);
+      return (linkedLocationMutationChains.get(id) || Promise.resolve()).catch(function() {});
+    });
+    // Reserve all roots synchronously, so overlapping operations cannot acquire
+    // them in opposite orders or let another root scan a half-removed link.
+    const current = Promise.all(previous).then(operation);
     linkedMutationOperations.add(current);
-    linkedLocationMutationChains.set(locationId, current);
+    locationIds.forEach(function(id) { linkedLocationMutationChains.set(id, current); });
     try { return await current; }
     finally {
       linkedMutationOperations.delete(current);
-      linkedLocationScanTokens.delete(locationId);
-      const pending = linkedLocationMutations.get(locationId) - 1;
-      if (pending) linkedLocationMutations.set(locationId, pending);
-      else linkedLocationMutations.delete(locationId);
-      if (linkedLocationMutationChains.get(locationId) === current) linkedLocationMutationChains.delete(locationId);
+      locationIds.forEach(function(id) {
+        linkedLocationScanTokens.delete(id);
+        const pending = linkedLocationMutations.get(id) - 1;
+        if (pending) linkedLocationMutations.set(id, pending);
+        else linkedLocationMutations.delete(id);
+        if (linkedLocationMutationChains.get(id) === current) linkedLocationMutationChains.delete(id);
+      });
     }
   }
 
@@ -12408,7 +12471,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     try {
       files = await collectMarkdownFilesFromFolder(location.path, canApply, function(relativePath) {
         return settings.restoreExcluded || !(getLinkedLocation(locationId).excludedPaths || []).some(function(path) {
-          return normalizeLinkedRelativePath(path) === relativePath;
+          return normalizeLinkedSourcePath(location.path + '/' + path) === normalizeLinkedSourcePath(location.path + '/' + relativePath);
         });
       });
       if (!canApply()) return 0;
@@ -12432,7 +12495,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     for (const file of files) {
       if (!canApply()) return 0;
       const excluded = getLinkedLocation(locationId).excludedPaths || [];
-      if (excluded.some(function(path) { return normalizeLinkedRelativePath(path) === file.relativePath; })) continue;
+      if (excluded.some(function(path) { return normalizeLinkedSourcePath(location.path + '/' + path) === normalizeLinkedSourcePath(file.path); })) continue;
       discoveredPaths.add(normalizeLinkedSourcePath(file.path));
       let existing = findTabBySourcePath(file.path);
       try {
@@ -12529,7 +12592,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const previousParent = { linkedParentId: location.linkedParentId, linkedParentPath: location.linkedParentPath };
     if (parent) assignLinkedSidebarParent(Object.assign({}, location), parent);
     if (isNewRoot) documentOrganization.linkedLocations.push(location);
-    const committed = await withLinkedLocationMutation(location.id, async function() {
+    const committed = await withLinkedLocationMutation(getOverlappingLinkedLocationIds(location.path), async function() {
       if (readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return false;
       if (!isNewRoot && !parent) return true;
       if (parent) {
@@ -12627,7 +12690,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function convertLinkedDocumentToVault(tabId, destination) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
-    return withLinkedLocationMutation(tab && tab.linkedRootId, function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(tab && tab.sourcePath), function() {
       return convertLinkedDocumentToVaultSnapshot(tabId, destination);
     });
   }
@@ -12647,14 +12710,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       return Object.prototype.hasOwnProperty.call(tab, key);
     }).map(function(key) { return [key, tab[key]]; }));
     const sourcePath = tab.sourcePath;
-    const location = tab.linkedRootId ? getLinkedLocation(tab.linkedRootId) : null;
-    const previousExcluded = location ? (location.excludedPaths || []).slice() : null;
-    if (location && tab.sourceRelativePath) {
-      location.excludedPaths = Array.from(new Set((location.excludedPaths || []).concat(normalizeLinkedRelativePath(tab.sourceRelativePath))));
+    const addedExclusions = addLinkedSourceExclusions(sourcePath);
+    if (addedExclusions.length) {
       if (!(await saveDocumentOrganization())) {
-        const current = getLinkedLocation(location.id);
-        const path = normalizeLinkedRelativePath(tab.sourceRelativePath);
-        if (current && !previousExcluded.includes(path)) current.excludedPaths = (current.excludedPaths || []).filter(function(item) { return item !== path; });
+        rollbackLinkedSourceExclusions(addedExclusions);
         await saveDocumentOrganization({ silent: true });
         showAppToast('The folder exclusion could not be saved. The linked draft was kept; nothing was converted.', { tone: 'error', title: 'Conversion failed' });
         return false;
@@ -12683,13 +12742,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (journalState !== true) persistEditWithoutDurableJournal(tab, tab.content);
         saveTabsToStorage(tabs, [tab.id]);
       }
-      const currentLocation = location && getLinkedLocation(location.id);
-      if (currentLocation && previous.sourceRelativePath) {
-        const excludedPath = normalizeLinkedRelativePath(previous.sourceRelativePath);
-        if (!previousExcluded.includes(excludedPath)) {
-          currentLocation.excludedPaths = (currentLocation.excludedPaths || []).filter(function(path) { return path !== excludedPath; });
-        }
-      }
+      rollbackLinkedSourceExclusions(addedExclusions);
       saveDocumentOrganization();
       renderTabBar(tabs, activeTabId);
       renderDocumentSidebar();
@@ -12721,7 +12774,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { title: 'Convert linked folder', confirmLabel: 'Convert to Workspace copy', dedupeKey: 'convert-folder:' + locationId + ':' + prefix }
     );
     if (!confirmed) return false;
-    return withLinkedLocationMutation(locationId, async function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(location.path), async function() {
       const root = getLinkedLocation(locationId);
       if (!root || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress) {
         showAppToast('Wait for the current Save to finish, then retry.', { tone: 'warning', title: 'Conversion deferred' });
@@ -12825,7 +12878,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function removeLinkedDocument(tabId, options) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
-    return withLinkedLocationMutation(tab && tab.linkedRootId, function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(tab && tab.sourcePath), function() {
       return removeLinkedDocumentSnapshot(tabId, options);
     });
   }
@@ -12834,18 +12887,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     const settings = options || {};
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || !tab.sourcePath) return false;
-    const location = tab.linkedRootId ? getLinkedLocation(tab.linkedRootId) : null;
-    const excludedPath = location && tab.sourceRelativePath ? normalizeLinkedRelativePath(tab.sourceRelativePath) : null;
-    const addedExclusion = excludedPath && !(location.excludedPaths || []).includes(excludedPath);
+    const addedExclusions = addLinkedSourceExclusions(tab.sourcePath);
     const rollbackExclusion = async function() {
-      const current = location && getLinkedLocation(location.id);
-      if (addedExclusion && current) {
-        current.excludedPaths = (current.excludedPaths || []).filter(function(path) { return path !== excludedPath; });
+      if (addedExclusions.length) {
+        rollbackLinkedSourceExclusions(addedExclusions);
         await saveDocumentOrganization({ silent: settings.silent });
       }
     };
-    if (location && tab.sourceRelativePath) {
-      location.excludedPaths = Array.from(new Set((location.excludedPaths || []).concat(normalizeLinkedRelativePath(tab.sourceRelativePath))));
+    if (addedExclusions.length) {
       if (!(await saveDocumentOrganization({ silent: settings.silent }))) {
         await rollbackExclusion();
         return false;
@@ -12869,7 +12918,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { title: 'Remove linked folder', confirmLabel: 'Remove link', dedupeKey: 'remove-linked-folder:' + location.id }
     );
     if (!confirmed) return;
-    return withLinkedLocationMutation(locationId, async function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(location.path), async function() {
       // Include links discovered while the confirmation was open. Once the
       // mutation begins, pending scans cannot add further root associations.
       const currentLinkedTabs = tabs.filter(function(tab) { return tab.linkedRootId === locationId; });
@@ -16894,6 +16943,7 @@ ${selector} .arrowheadPath {
   }
 
   function renderMarkdown(options) {
+    window.renderMarkdown = renderMarkdown;
     stopActiveAbcPlayback();
     options = options || {};
     const rawVal = markdownEditor.value;
@@ -19019,7 +19069,10 @@ ${selector} .arrowheadPath {
       
       while ((match = emojiRegex.exec(text)) !== null) {
         const shortcode = match[1];
-        const emoji = joypixels.shortnameToUnicode(`:${shortcode}:`);
+        const effectiveShortcode = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.resolveEmojiShortcode === 'function')
+          ? window.visualSettingsAdapters.resolveEmojiShortcode(shortcode)
+          : shortcode;
+        const emoji = joypixels.shortnameToUnicode(`:${effectiveShortcode}:`);
         
         if (emoji !== `:${shortcode}:`) { // If conversion was successful
           hasEmoji = true;
@@ -21042,12 +21095,14 @@ ${selector} .arrowheadPath {
             shortcode: `:${name}:`,
             search: `${name} :${name}:`.toLowerCase(),
           }));
+        if (!emojiEntries.length) throw new Error('Empty emoji response');
         emojiUrlMap = new Map(emojiEntries.map((entry) => [entry.name, entry.url]));
         emojiLookupLoaded = true;
         return emojiEntries;
       })
       .catch((error) => {
         console.error('Failed to load GitHub emojis:', error);
+        emojiLoadPromise = null;
         emojiEntries = [];
         emojiUrlMap = new Map();
         emojiLookupLoaded = true;
@@ -21153,193 +21208,440 @@ ${selector} .arrowheadPath {
     columnInput.select();
   }
 
-  function openEmojiModal() {
+  function loadEmojiCatalog() {
+    if (!emojiCatalogPromise) {
+      emojiCatalogPromise = fetch('assets/emoji/catalog.json')
+        .then(response => {
+          if (!response.ok) throw new Error(`Emoji catalog request failed (${response.status})`);
+          return response.json();
+        })
+        .then(catalog => {
+          if (!Array.isArray(catalog) || !catalog.length) throw new Error('Empty emoji catalog');
+          return catalog;
+        })
+        .catch(error => {
+          emojiCatalogPromise = null;
+          throw error;
+        });
+    }
+    return emojiCatalogPromise;
+  }
+
+  function buildEmojiPickerEntries(entries, catalog) {
+    const available = new Map(entries.map(entry => [entry.name, entry]));
+    const grouped = [];
+    catalog.forEach(record => {
+      const aliases = record.aliases.filter(alias => available.has(alias));
+      if (!aliases.length) return;
+      const entry = available.get(aliases[0]);
+      grouped.push({ ...entry, ...record, name: entry.name, aliases,
+        search: [record.emoji, record.description, ...record.tags, ...aliases].join(' ').toLowerCase().replace(/[_-]/g, ' ') });
+      aliases.forEach(alias => available.delete(alias));
+    });
+    available.forEach(entry => grouped.push({ ...entry, category: 'github', aliases: [entry.name],
+      search: entry.search.replace(/[_-]/g, ' '), emoji: '', description: entry.name.replace(/_/g, ' ') }));
+    return grouped;
+  }
+
+  function openEmojiModal(trigger) {
     const modal = document.getElementById('emoji-modal');
     const grid = document.getElementById('emoji-modal-grid');
-    const emptyMessage = document.getElementById('emoji-modal-empty');
+    const emptyState = document.getElementById('emoji-modal-empty');
+    const status = document.getElementById('emoji-modal-status');
+    const loadingSpinner = document.getElementById('emoji-modal-spinner');
     const searchInput = document.getElementById('emoji-modal-search');
+    const clearSearch = document.getElementById('emoji-modal-clear-search');
+    const categoryBar = document.getElementById('emoji-modal-categories');
+    const heading = document.getElementById('emoji-modal-category-title');
+    const shortcodePreview = document.getElementById('emoji-modal-shortcode');
+    const selectionTray = document.getElementById('emoji-modal-selection');
+    const selectionHint = document.getElementById('emoji-modal-selection-hint');
+    const selectionCount = document.getElementById('emoji-modal-selection-count');
+    const copyBtn = document.getElementById('emoji-modal-copy');
+    const retryBtn = document.getElementById('emoji-modal-retry');
     const confirmBtn = document.getElementById('emoji-modal-insert');
     const cancelBtn = document.getElementById('emoji-modal-cancel');
-    if (!modal || !grid || !emptyMessage || !searchInput || !confirmBtn || !cancelBtn) return;
+    if (!modal || !grid) return;
     const start = markdownEditor.selectionStart;
     const end = markdownEditor.selectionEnd;
-    modal.style.display = 'flex';
-    confirmBtn.disabled = true;
-
-    // Localized and accessible announcements for loading
-    const loadingText = I18N_DICTS[activeLang].loadingEmojis || "Loading emojis...";
-    emptyMessage.textContent = loadingText;
-    emptyMessage.style.display = 'block';
-    announceToScreenReader(loadingText);
-
-    searchInput.value = '';
-    emojiSelection.clear();
-    // PERF-007: Clear elements using textContent
-    grid.textContent = '';
-    grid.scrollTop = 0;
-    emojiItems = [];
-
-    // Render visual placeholders during active requests
-    if (!emojiLookupLoaded) {
-      renderEmojiSkeletons();
-    }
-
-    let currentFilteredEntries = [];
-    let renderedCount = 0;
-    const CHUNK_SIZE = 120;
-
-    function updateInsertState() {
-      confirmBtn.disabled = emojiSelection.size === 0;
-    }
-
-    function toggleSelection(shortcode, element) {
-      if (emojiSelection.has(shortcode)) {
-        emojiSelection.delete(shortcode);
-        element.classList.remove('is-selected');
-      } else {
-        emojiSelection.add(shortcode);
-        element.classList.add('is-selected');
-      }
-      element.setAttribute('aria-pressed', emojiSelection.has(shortcode).toString());
-      updateInsertState();
-    }
-
-    function renderEmojiChunk(clear = false) {
-      if (clear) {
-        // PERF-007: Clear elements using textContent
-        grid.textContent = '';
-        emojiItems = [];
-        renderedCount = 0;
-      }
-
-      const nextBatch = currentFilteredEntries.slice(renderedCount, renderedCount + CHUNK_SIZE);
-      if (nextBatch.length === 0) {
-        emptyMessage.style.display = emojiItems.length ? 'none' : 'block';
-        return;
-      }
-
-      const fragment = document.createDocumentFragment();
-      const newItems = nextBatch.map((entry) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'emoji-item';
-
-        const isSelected = emojiSelection.has(entry.shortcode);
-        if (isSelected) {
-          item.classList.add('is-selected');
-        }
-        item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-        item.dataset.search = entry.search;
-        item.dataset.shortcode = entry.shortcode;
-
-        const preview = document.createElement('span');
-        preview.className = 'emoji-preview';
-        const image = document.createElement('img');
-        image.src = entry.url;
-        image.alt = entry.shortcode;
-        image.loading = 'lazy';
-        preview.appendChild(image);
-
-        const shortcodeRow = document.createElement('div');
-        shortcodeRow.className = 'emoji-shortcode';
-        const code = document.createElement('span');
-        code.textContent = entry.shortcode;
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.className = 'emoji-copy-btn';
-        copyBtn.setAttribute('aria-label', `Copy ${entry.shortcode}`);
-        copyBtn.innerHTML = '<i class="lucide lucide-copy"></i>';
-        copyBtn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          copyTextToClipboard(entry.shortcode)
-            .then(() => flashCopyButton(copyBtn))
-            .catch((error) => console.error('Copy failed:', error));
-        });
-        shortcodeRow.appendChild(code);
-        shortcodeRow.appendChild(copyBtn);
-
-        item.appendChild(preview);
-        item.appendChild(shortcodeRow);
-        item.addEventListener('click', () => toggleSelection(entry.shortcode, item));
-        fragment.appendChild(item);
-        return { element: item, search: entry.search, shortcode: entry.shortcode };
+    const selection = new Map();
+    const itemCache = new Map();
+    const chipCache = new Map();
+    const listeners = new AbortController();
+    // Load only the visible rows and one row ahead, rather than competing with
+    // hundreds of offscreen downloads when a category is opened.
+    const imageObserver = new IntersectionObserver(entries => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (!isIntersecting || !grid.contains(target)) return;
+        loadPreviewImage(target);
+        imageObserver.unobserve(target);
       });
+    }, { root: grid, rootMargin: '50px 0px' });
+    const categories = [
+      { id: 'smileys', label: 'Smileys', title: 'Smileys & emotion', icon: 'smile' },
+      { id: 'people', label: 'People', title: 'People & body', icon: 'hand' },
+      { id: 'nature', label: 'Nature', title: 'Animals & nature', icon: 'leaf' },
+      { id: 'food', label: 'Food', title: 'Food & drink', icon: 'coffee' },
+      { id: 'travel', label: 'Travel', title: 'Travel & places', icon: 'plane' },
+      { id: 'activities', label: 'Activities', title: 'Activities', icon: 'trophy' },
+      { id: 'objects', label: 'Objects', title: 'Objects', icon: 'lightbulb' },
+      { id: 'symbols', label: 'Symbols', title: 'Symbols', icon: 'heart' },
+      { id: 'flags', label: 'Flags', title: 'Flags', icon: 'flag' },
+      { id: 'github', label: 'GitHub', title: 'GitHub', icon: 'code-2' }
+    ];
+    let activeCategory = 'smileys';
+    let pickerEntries = [];
+    let entriesByName = new Map();
+    let visibleEntries = [];
+    let activeIndex = 0;
+    let closed = false;
+    let loading = true;
+    let failed = false;
+    let skinToneRequest = 0;
 
-      emojiItems = emojiItems.concat(newItems);
-      grid.appendChild(fragment);
-      renderedCount += nextBatch.length;
-      emptyMessage.style.display = emojiItems.length ? 'none' : 'block';
+    function listen(element, event, handler) {
+      element.addEventListener(event, handler, { signal: listeners.signal });
     }
 
-    function applyFilter() {
-      const query = searchInput.value.trim().toLowerCase();
-      currentFilteredEntries = emojiEntries.filter(entry => !query || entry.search.includes(query));
-      renderEmojiChunk(true);
+    function loadPreviewImage(image) {
+      if (!image.dataset.src) return;
+      image.src = image.dataset.src;
+      delete image.dataset.src;
     }
 
-    function handleScroll() {
-      if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 60) {
-        renderEmojiChunk(false);
+    function previewSource(entry) {
+      return window.visualSettingsAdapters?.resolveEmojiImage?.(entry.name, entry.url) || { url: entry.url, unicode: '' };
+    }
+
+    async function ensureSkinToneLibrary() {
+      const tone = window.visualSettingsStore?.getSettings().emojiSkinTone;
+      if (tone && tone !== 'default' && !window.joypixels) await loadScript(CDN.joypixels);
+    }
+
+    function createPreview(entry, eager = false) {
+      const source = previewSource(entry);
+      const preview = document.createElement('span');
+      preview.className = 'emoji-preview skeleton-placeholder';
+      preview.setAttribute('aria-hidden', 'true');
+      preview.dataset.i18nSkip = 'true';
+      preview.dataset.url = source.url;
+      const image = document.createElement('img');
+      image.dataset.src = preview.dataset.url;
+      image.alt = '';
+      image.decoding = 'async';
+      function unavailable() {
+        preview.classList.remove('skeleton-placeholder');
+        // Some GitHub tone variants have no artwork. This is the final fallback,
+        // never temporary content shown ahead of a successfully loaded image.
+        if (source.unicode && source.url !== entry.url) {
+          preview.classList.add('is-unicode');
+          preview.textContent = source.unicode;
+          return;
+        }
+        preview.classList.add('is-unavailable');
+        preview.title = translateUiString('Unable to load emojis.');
+        const icon = document.createElement('i');
+        icon.className = 'lucide lucide-circle-alert';
+        preview.replaceChildren(icon);
       }
+      image.addEventListener('load', async () => {
+        try {
+          await image.decode();
+          preview.classList.remove('skeleton-placeholder');
+          preview.classList.add('has-image');
+        } catch (_) {
+          unavailable();
+        }
+      }, { once: true });
+      image.addEventListener('error', unavailable, { once: true });
+      preview.appendChild(image);
+      if (eager) loadPreviewImage(image);
+      return preview;
     }
 
-    function insertEmojis() {
-      if (!emojiSelection.size) return;
-      // Retain the modal's visual/definition order of emojis, consistent with the Symbols modal
-      const ordered = emojiItems
-        .filter(item => emojiSelection.has(item.shortcode))
-        .map(item => item.shortcode);
-      const insertion = ordered.join(' ');
-      modal.style.display = 'none';
-      cleanup();
-      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
-    }
-
-    function closeModal() {
-      modal.style.display = 'none';
-      cleanup();
-    }
-
-    function onKey(e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeModal();
+    function refreshPreviewImages() {
+      imageObserver.disconnect();
+      for (const [cache, eager] of [[itemCache, false], [chipCache, true]]) {
+        cache.forEach((item, name) => {
+          const entry = entriesByName.get(name);
+          const preview = item.querySelector('.emoji-preview');
+          if (entry && preview.dataset.url !== previewSource(entry).url) {
+            preview.replaceWith(createPreview(entry, eager));
+          }
+        });
       }
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
     }
 
-    function cleanup() {
-      confirmBtn.removeEventListener('click', insertEmojis);
-      cancelBtn.removeEventListener('click', closeModal);
-      searchInput.removeEventListener('input', applyFilter);
-      searchInput.removeEventListener('keydown', onKey);
-      grid.removeEventListener('scroll', handleScroll);
+    function shortcodeFor(entry) {
+      const alias = searchInput.value.trim().toLowerCase().replace(/^:|:$/g, '');
+      return entry.aliases.includes(alias) ? `:${alias}:` : entry.shortcode;
     }
 
-    loadEmojiEntries().then((entries) => {
-      if (!entries.length) {
-        emptyMessage.textContent = 'Unable to load emojis.';
-        emptyMessage.style.display = 'block';
-        // PERF-007: Clear elements using textContent
-        grid.textContent = '';
-        emojiItems = [];
-        announceToScreenReader("Failed to load emojis.");
-        return;
-      }
-      currentFilteredEntries = entries;
-      renderEmojiChunk(true);
-      emptyMessage.textContent = 'No emojis found.';
-      announceToScreenReader("Emojis loaded. " + entries.length + " items available.");
-      updateInsertState();
+    function selectedText() {
+      return Array.from(selection.values(), item => item.shortcode).join(' ');
+    }
+
+    function updateSelection() {
+      confirmBtn.disabled = copyBtn.disabled = selection.size === 0;
+      selectionCount.textContent = selection.size ? translateUiString(`${selection.size} selected`) : '';
+      selectionHint.hidden = selection.size > 0;
+      selectionTray.hidden = selection.size === 0;
+      chipCache.forEach((chip, name) => {
+        if (!selection.has(name)) { chip.remove(); chipCache.delete(name); }
+      });
+      selection.forEach(({ entry, shortcode }) => {
+        if (chipCache.has(entry.name)) return;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'emoji-selection-chip';
+        chip.dataset.name = entry.name;
+        chip.title = shortcode;
+        chip.setAttribute('aria-label', translateUiString(`Remove ${shortcode}`));
+        chip.appendChild(createPreview(entry, true));
+        const removeIcon = document.createElement('i');
+        removeIcon.className = 'lucide lucide-x';
+        removeIcon.setAttribute('aria-hidden', 'true');
+        chip.appendChild(removeIcon);
+        chipCache.set(entry.name, chip);
+        selectionTray.appendChild(chip);
+      });
+      Array.from(grid.children).forEach((item, index) => {
+        const selected = selection.has(visibleEntries[index].name);
+        item.setAttribute('aria-selected', String(selected));
+        item.classList.toggle('is-selected', selected);
+      });
+    }
+
+    function focusEmoji(index) {
+      if (!visibleEntries.length) return;
+      grid.children[activeIndex]?.setAttribute('tabindex', '-1');
+      activeIndex = Math.max(0, Math.min(index, visibleEntries.length - 1));
+      const item = grid.children[activeIndex];
+      item.tabIndex = 0;
+      item.focus({ preventScroll: true });
+      item.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function renderEntries() {
+      const rawQuery = searchInput.value.trim().toLowerCase();
+      const aliasQuery = rawQuery.replace(/^:|:$/g, '');
+      const terms = rawQuery.replace(/[:_-]/g, ' ').split(/\s+/).filter(Boolean);
+      clearSearch.hidden = !searchInput.value;
+      shortcodePreview.textContent = '';
+      heading.textContent = rawQuery ? 'Search results' : categories.find(category => category.id === activeCategory).title;
+      categoryBar.querySelectorAll('button').forEach(button => {
+        button.setAttribute('aria-pressed', String(!rawQuery && button.dataset.category === activeCategory));
+      });
+      visibleEntries = pickerEntries.filter(entry => rawQuery
+        ? entry.aliases.includes(aliasQuery) || terms.every(term => entry.search.includes(term))
+        : entry.category === activeCategory);
+      if (rawQuery) visibleEntries.sort((a, b) => Number(b.aliases.includes(aliasQuery)) - Number(a.aliases.includes(aliasQuery)));
+      imageObserver.disconnect();
+      grid.scrollTop = 0;
+      activeIndex = 0;
+      const fragment = document.createDocumentFragment();
+      visibleEntries.forEach((entry, index) => {
+        let item = itemCache.get(entry.name);
+        if (!item) {
+          item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'emoji-item';
+          item.setAttribute('role', 'option');
+          item.dataset.name = entry.name;
+          item.dataset.i18nSkip = 'true';
+          item.appendChild(createPreview(entry));
+          itemCache.set(entry.name, item);
+        }
+        item.dataset.shortcode = shortcodeFor(entry);
+        item.setAttribute('aria-label', `${entry.description} ${item.dataset.shortcode}`);
+        item.title = item.dataset.shortcode;
+        item.tabIndex = index === 0 ? 0 : -1;
+        fragment.appendChild(item);
+      });
+      grid.replaceChildren(fragment);
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
+      grid.setAttribute('aria-busy', String(loading));
+      grid.hidden = failed;
+      emptyState.hidden = visibleEntries.length > 0 && !failed;
+      loadingSpinner.hidden = !loading;
+      emptyState.querySelector('.lucide').hidden = loading;
+      retryBtn.hidden = !failed;
+      status.textContent = loading ? 'Loading emojis...' : failed ? 'Unable to load emojis.' : 'No emojis found.';
+      updateSelection();
+    }
+
+    function chooseCategory(button) {
+      activeCategory = button.dataset.category;
+      searchInput.value = '';
+      categoryBar.querySelectorAll('button').forEach(item => { item.tabIndex = item === button ? 0 : -1; });
+      renderEntries();
+      button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    categoryBar.textContent = '';
+    categories.forEach((category, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'emoji-category';
+      button.dataset.category = category.id;
+      button.tabIndex = index === 0 ? 0 : -1;
+      button.title = category.title;
+      button.setAttribute('aria-label', category.title);
+      button.setAttribute('aria-controls', 'emoji-modal-grid');
+      const icon = document.createElement('i');
+      icon.className = `lucide lucide-${category.icon}`;
+      icon.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = category.label;
+      button.append(icon, label);
+      categoryBar.appendChild(button);
     });
 
-    confirmBtn.addEventListener('click', insertEmojis);
-    cancelBtn.addEventListener('click', closeModal);
-    searchInput.addEventListener('input', applyFilter);
-    searchInput.addEventListener('keydown', onKey);
-    grid.addEventListener('scroll', handleScroll);
+    listen(categoryBar, 'click', event => {
+      const button = event.target.closest('button');
+      if (button) chooseCategory(button);
+    });
+    listen(categoryBar, 'keydown', event => {
+      const buttons = Array.from(categoryBar.children);
+      const index = buttons.indexOf(event.target);
+      const rtl = getComputedStyle(categoryBar).direction === 'rtl';
+      let next;
+      if (event.key === 'ArrowRight') next = index + (rtl ? -1 : 1);
+      if (event.key === 'ArrowLeft') next = index + (rtl ? 1 : -1);
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = buttons.length - 1;
+      if (event.key === 'ArrowDown') { event.preventDefault(); focusEmoji(0); }
+      if (next === undefined) return;
+      event.preventDefault();
+      const button = buttons[(next + buttons.length) % buttons.length];
+      chooseCategory(button);
+      button.focus({ preventScroll: true });
+    });
+    listen(grid, 'click', event => {
+      const item = event.target.closest('.emoji-item');
+      if (!item) return;
+      const entry = visibleEntries.find(entry => entry.name === item.dataset.name);
+      if (selection.has(entry.name)) selection.delete(entry.name);
+      else selection.set(entry.name, { entry, shortcode: item.dataset.shortcode });
+      updateSelection();
+    });
+    function previewItem(event) {
+      const item = event.target.closest('.emoji-item');
+      if (!item) return;
+      shortcodePreview.textContent = item.dataset.shortcode;
+      if (event.type === 'focusin') {
+        grid.children[activeIndex]?.setAttribute('tabindex', '-1');
+        activeIndex = Array.from(grid.children).indexOf(item);
+        item.tabIndex = 0;
+      }
+    }
+    listen(grid, 'mouseover', previewItem);
+    listen(grid, 'focusin', previewItem);
+    listen(grid, 'keydown', event => {
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+      const rtl = getComputedStyle(grid).direction === 'rtl';
+      let next;
+      if (event.key === 'ArrowRight') next = activeIndex + (rtl ? -1 : 1);
+      if (event.key === 'ArrowLeft') next = activeIndex + (rtl ? 1 : -1);
+      if (event.key === 'ArrowDown') next = activeIndex + columns;
+      if (event.key === 'ArrowUp') next = activeIndex - columns;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = visibleEntries.length - 1;
+      if (next === undefined) return;
+      event.preventDefault();
+      focusEmoji(next);
+    });
+    listen(selectionTray, 'click', event => {
+      const chip = event.target.closest('button');
+      if (!chip) return;
+      const index = Array.from(selectionTray.children).indexOf(chip);
+      selection.delete(chip.dataset.name);
+      updateSelection();
+      (selectionTray.children[Math.min(index, selection.size - 1)] || searchInput).focus();
+    });
+    listen(copyBtn, 'click', async () => {
+      try {
+        await copyTextToClipboard(selectedText());
+        if (!closed) {
+          flashCopyButton(copyBtn);
+          announceToScreenReader(translateUiString('Copied!'));
+        }
+      } catch (error) {
+        if (!closed) showAppToast(translateUiString('Copy failed. Please try again.'));
+      }
+    });
+    listen(searchInput, 'input', renderEntries);
+    listen(searchInput, 'keydown', event => {
+      if (event.key === 'ArrowDown') { event.preventDefault(); focusEmoji(0); }
+    });
+    listen(clearSearch, 'click', () => {
+      searchInput.value = '';
+      renderEntries();
+      searchInput.focus();
+    });
+    const unsubscribeSettings = window.visualSettingsStore?.onSettingsChange(async (_, changedKey) => {
+      if (changedKey !== 'emojiSkinTone' && changedKey !== '*') return;
+      const request = ++skinToneRequest;
+      try {
+        await ensureSkinToneLibrary();
+        if (closed || request !== skinToneRequest) return;
+        if (failed) load();
+        else refreshPreviewImages();
+      } catch (error) {
+        if (!closed && request === skinToneRequest) { failed = true; renderEntries(); }
+      }
+    });
 
-    requestAnimationFrame(() => searchInput.focus());
+    function closeModal() {
+      if (closed) return;
+      closed = true;
+      listeners.abort();
+      unsubscribeSettings?.();
+      imageObserver.disconnect();
+      clearTimeout(copyBtn.copyTimeout);
+      closeAppModal(modal);
+    }
+    listen(confirmBtn, 'click', () => {
+      if (!selection.size) return;
+      const insertion = selectedText();
+      closeModal();
+      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
+    });
+    listen(cancelBtn, 'click', closeModal);
+    async function load() {
+      loading = true;
+      failed = false;
+      renderEntries();
+      try {
+        const [entries, catalog] = await Promise.all([loadEmojiEntries(), loadEmojiCatalog(), ensureSkinToneLibrary()]);
+        // The preference can change while the catalog is still downloading.
+        await ensureSkinToneLibrary();
+        if (closed) return;
+        if (!entries.length) throw new Error('Empty emoji response');
+        pickerEntries = buildEmojiPickerEntries(entries, catalog);
+        entriesByName = new Map(pickerEntries.map(entry => [entry.name, entry]));
+        refreshPreviewImages();
+      } catch (error) {
+        if (closed) return;
+        failed = true;
+      }
+      loading = false;
+      renderEntries();
+    }
+    listen(retryBtn, 'click', () => {
+      searchInput.focus();
+      load();
+    });
+    searchInput.value = '';
+    selectionTray.replaceChildren();
+    copyBtn.classList.remove('is-copied');
+    copyBtn.querySelector('i').className = 'lucide lucide-copy';
+    categoryBar.scrollLeft = 0;
+    openAppModal(modal, { focusTarget: searchInput, returnFocus: trigger, onClose: closeModal });
+    load();
   }
+
 
   function openSymbolsModal() {
     const modal = document.getElementById('symbols-modal');
@@ -25393,7 +25695,7 @@ ${selector} .arrowheadPath {
       const timestamp = formatMarkdownDateTime();
       replaceEditorRange(markdownEditor.selectionStart, markdownEditor.selectionEnd, timestamp, markdownEditor.selectionStart + timestamp.length, markdownEditor.selectionStart + timestamp.length);
     } else if (action === 'emoji') {
-      openEmojiModal();
+      openEmojiModal(button);
     }
     else if (action === 'symbols') openSymbolsModal();
     else if (action === 'alert') openAlertModal();
@@ -26030,6 +26332,13 @@ ${selector} .arrowheadPath {
     });
   }
 
+  if (mobileVisualSettingsButton) {
+    mobileVisualSettingsButton.addEventListener('click', function() {
+      closeMobileMenu();
+      openVisualSettingsModal(mobileMenuToggle);
+    });
+  }
+
   if (mobileStorageSettingsButton) {
     mobileStorageSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
@@ -26041,6 +26350,243 @@ ${selector} .arrowheadPath {
     mobileTrashSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
       openTrashModal(mobileTrashSettingsButton);
+    });
+  }
+
+  // Preview Styling settings
+  function populateVisualSettingsOptions() {
+    const options = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.getOptions === 'function')
+      ? window.visualSettingsAdapters.getOptions()
+      : (window.visualSettingsStore ? window.visualSettingsStore.DEFAULT_OPTIONS : null);
+
+    if (!options) return;
+
+    const list = [
+      { el: selectHljsTheme, opts: options.hljsTheme, namedOptions: true },
+      { el: selectMathFont, opts: options.mathFont, namedOptions: true },
+      { el: selectMermaidTheme, opts: options.mermaidTheme },
+      { el: selectMermaidLook, opts: options.mermaidLook },
+      { el: selectEmojiSkinTone, opts: options.emojiSkinTone }
+    ];
+
+    list.forEach(function(item) {
+      if (!item.el || !item.opts) return;
+      const currentVal = item.el.value;
+      item.el.innerHTML = '';
+      item.opts.forEach(function(opt) {
+        const val = typeof opt === 'object' && opt !== null ? opt.value : opt;
+        const label = typeof opt === 'object' && opt !== null ? opt.label : opt;
+        const optEl = document.createElement('option');
+        optEl.value = val;
+        optEl.textContent = label;
+        if (item.namedOptions && val !== 'auto' && val !== 'default') {
+          optEl.setAttribute('data-i18n-skip', '');
+        }
+        item.el.appendChild(optEl);
+      });
+      if (currentVal) item.el.value = currentVal;
+    });
+  }
+
+  function syncVisualSettingsUI() {
+    if (!window.visualSettingsStore) return;
+    const settings = window.visualSettingsStore.getSettings();
+    if (selectHljsTheme && settings.hljsTheme) selectHljsTheme.value = settings.hljsTheme;
+    if (selectMathFont && settings.mathFont) selectMathFont.value = settings.mathFont;
+    if (selectMermaidTheme && settings.mermaidTheme) selectMermaidTheme.value = settings.mermaidTheme;
+    if (selectMermaidLook && settings.mermaidLook) selectMermaidLook.value = settings.mermaidLook;
+    if (selectEmojiSkinTone && settings.emojiSkinTone) selectEmojiSkinTone.value = settings.emojiSkinTone;
+  }
+
+  const visualSettingHints = [];
+
+  function hideVisualSettingHints() {
+    visualSettingHints.forEach(hint => hint.hide());
+  }
+
+  function initializeVisualSettingHints() {
+    if (visualSettingHints.length || !window.bootstrap?.Tooltip) return;
+    visualSettingsModal.querySelectorAll('[data-setting-help]').forEach(button => {
+      const help = document.getElementById(button.dataset.settingHelp);
+      const tooltip = new bootstrap.Tooltip(button, {
+        title: () => help.textContent.trim(),
+        container: visualSettingsModal,
+        customClass: 'visual-setting-tooltip',
+        placement: 'top',
+        trigger: 'manual',
+        animation: false
+      });
+      let hideTimer;
+      const hide = () => {
+        clearTimeout(hideTimer);
+        tooltip.hide();
+      };
+      const show = () => {
+        clearTimeout(hideTimer);
+        if (button.hasAttribute('aria-describedby')) return;
+        hideVisualSettingHints();
+        tooltip.show();
+      };
+      const scheduleHide = () => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          const tip = document.getElementById(button.getAttribute('aria-describedby'));
+          if (document.activeElement !== button && !button.matches(':hover') && !tip?.matches(':hover')) hide();
+        }, 120);
+      };
+      visualSettingHints.push({ hide });
+      button.addEventListener('mouseenter', show);
+      button.addEventListener('mouseleave', scheduleHide);
+      button.addEventListener('focus', show);
+      button.addEventListener('blur', scheduleHide);
+      button.addEventListener('click', () => {
+        button.focus();
+        show();
+      });
+      button.addEventListener('inserted.bs.tooltip', () => {
+        const tip = document.getElementById(button.getAttribute('aria-describedby'));
+        tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        tip.addEventListener('mouseleave', scheduleHide);
+      });
+    });
+    visualSettingsModal.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && visualSettingsModal.querySelector('.visual-setting-tooltip.show')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        hideVisualSettingHints();
+      }
+    }, true);
+    visualSettingsModal.addEventListener('pointerdown', event => {
+      if (!event.target.closest('.visual-setting-info, .visual-setting-tooltip')) hideVisualSettingHints();
+    });
+    visualSettingsModal.querySelector('.visual-settings-body').addEventListener('scroll', hideVisualSettingHints);
+  }
+
+  function openVisualSettingsModal(opener) {
+    if (!visualSettingsModal) return;
+    hideVisualSettingHints();
+    populateVisualSettingsOptions();
+    syncVisualSettingsUI();
+    initializeVisualSettingHints();
+    openAppModal(visualSettingsModal, {
+      focusTarget: selectHljsTheme,
+      returnFocus: opener || document.activeElement,
+      onClose: closeVisualSettingsModal
+    });
+  }
+
+  function closeVisualSettingsModal() {
+    hideVisualSettingHints();
+    if (visualSettingsModal) closeAppModal(visualSettingsModal);
+  }
+
+  let _visualSettingsDebounceTimer = null;
+
+  async function applyVisualSettings(settings, changedKey) {
+    if (window.visualSettingsAdapters) {
+      try {
+        if (changedKey === 'hljsTheme') {
+          await window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme);
+        } else if (changedKey === 'mathFont') {
+          await window.visualSettingsAdapters.applyMathFont(settings.mathFont);
+        } else if (changedKey === 'mermaidTheme' || changedKey === 'mermaidLook') {
+          await window.visualSettingsAdapters.applyMermaid({
+            theme: settings.mermaidTheme,
+            look: settings.mermaidLook
+          });
+        } else if (changedKey === 'emojiSkinTone') {
+          await window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone);
+        } else {
+          if (typeof window.visualSettingsAdapters.applyAll === 'function') {
+            await window.visualSettingsAdapters.applyAll(settings);
+          } else {
+            await Promise.all([
+              window.visualSettingsAdapters.applyHighlightTheme && window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme),
+              window.visualSettingsAdapters.applyMathFont && window.visualSettingsAdapters.applyMathFont(settings.mathFont),
+              window.visualSettingsAdapters.applyMermaid && window.visualSettingsAdapters.applyMermaid({ theme: settings.mermaidTheme, look: settings.mermaidLook }),
+              window.visualSettingsAdapters.applyEmojiSkinTone && window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone)
+            ]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error applying visual setting via adapter:', err);
+      }
+    }
+
+    // Invalidate secondary split document preview cache (P6)
+    documentSplitPreviewContent = null;
+    if (secondarySplitTabId && typeof renderDocumentSplitView === 'function') {
+      renderDocumentSplitView();
+    }
+
+    // Check if re-render is needed according to adapter contract (e.g. hljsTheme does not need markdown AST re-render)
+    const needsRender = !window.visualSettingsAdapters ||
+      typeof window.visualSettingsAdapters.needsRerender !== 'function' ||
+      window.visualSettingsAdapters.needsRerender(changedKey);
+
+    if (needsRender) {
+      if (_visualSettingsDebounceTimer) {
+        clearTimeout(_visualSettingsDebounceTimer);
+      }
+      _visualSettingsDebounceTimer = setTimeout(function() {
+        _visualSettingsDebounceTimer = null;
+        renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+      }, 50);
+    }
+  }
+
+  if (menuVisualSettingsButton) {
+    menuVisualSettingsButton.addEventListener('click', function() {
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
+        bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
+      }
+      openVisualSettingsModal(settingsToggle);
+    });
+  }
+
+  if (visualSettingsCloseBtn) visualSettingsCloseBtn.addEventListener('click', closeVisualSettingsModal);
+  if (visualSettingsCloseIcon) visualSettingsCloseIcon.addEventListener('click', closeVisualSettingsModal);
+
+  if (selectHljsTheme) {
+    selectHljsTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('hljsTheme', selectHljsTheme.value);
+    });
+  }
+  if (selectMathFont) {
+    selectMathFont.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mathFont', selectMathFont.value);
+    });
+  }
+  if (selectMermaidTheme) {
+    selectMermaidTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidTheme', selectMermaidTheme.value);
+    });
+  }
+  if (selectMermaidLook) {
+    selectMermaidLook.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidLook', selectMermaidLook.value);
+    });
+  }
+  if (selectEmojiSkinTone) {
+    selectEmojiSkinTone.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('emojiSkinTone', selectEmojiSkinTone.value);
+    });
+  }
+
+  if (visualSettingsResetBtn) {
+    visualSettingsResetBtn.addEventListener('click', function() {
+      if (window.visualSettingsStore) {
+        window.visualSettingsStore.resetSettings();
+        syncVisualSettingsUI();
+      }
+    });
+  }
+
+  if (window.visualSettingsStore) {
+    window.visualSettingsStore.onSettingsChange(function(settings, changedKey) {
+      syncVisualSettingsUI();
+      applyVisualSettings(settings, changedKey);
     });
   }
 
@@ -26524,8 +27070,19 @@ ${selector} .arrowheadPath {
       }
     }
 
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      window.visualSettingsAdapters.onAppThemeChange(theme);
+    }
+
     updateMapThemes();
     updateStlThemes();
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      try {
+        window.visualSettingsAdapters.onAppThemeChange(theme);
+      } catch (err) {
+        console.warn('Error in visualSettingsAdapters.onAppThemeChange:', err);
+      }
+    }
   });
 
   async function readLinkedSourceForSave(sourcePath) {
@@ -34451,42 +35008,6 @@ ${selector} .arrowheadPath {
     }, 50);
   }
 
-  // Visual skeleton loader generator for emoji list
-  function renderEmojiSkeletons() {
-    const grid = document.getElementById('emoji-modal-grid');
-    if (!grid) return;
-    // PERF-007: Clear elements using textContent
-    grid.textContent = '';
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < 18; i++) {
-      const item = document.createElement('div');
-      item.className = 'emoji-item skeleton-placeholder';
-      item.setAttribute('aria-hidden', 'true');
-      item.style.border = '1px solid var(--border-color)';
-      item.style.borderRadius = '10px';
-      item.style.padding = '10px';
-      item.style.display = 'flex';
-      item.style.flexDirection = 'column';
-      item.style.alignItems = 'center';
-      item.style.gap = '8px';
-
-      const preview = document.createElement('span');
-      preview.className = 'emoji-preview skeleton-circle';
-      item.appendChild(preview);
-
-      const shortcodeRow = document.createElement('div');
-      shortcodeRow.className = 'emoji-shortcode';
-      const code = document.createElement('span');
-      code.className = 'skeleton-text';
-      code.style.width = '60px';
-      shortcodeRow.appendChild(code);
-      item.appendChild(shortcodeRow);
-
-      fragment.appendChild(item);
-    }
-    grid.appendChild(fragment);
-  }
-
   // Visual skeleton loader generator for GitHub file list tree
   function renderGitHubImportTreeSkeleton() {
     if (!githubImportTree) return;
@@ -34641,6 +35162,17 @@ ${selector} .arrowheadPath {
       activate: releaseNotesLaunch.activate
     });
   }
+
+  // Initialize Visual Library Settings (Issue #129)
+  window.renderMarkdown = renderMarkdown;
+  populateVisualSettingsOptions();
+  syncVisualSettingsUI();
+  if (window.visualSettingsStore) {
+    const initialVisualSettings = window.visualSettingsStore.getSettings();
+    // Optional theme/font downloads must not delay workspace readiness.
+    applyVisualSettings(initialVisualSettings, '*');
+  }
+
   document.documentElement.dataset.appReady = 'true';
   window.dispatchEvent(new Event('markdown-viewer:ready'));
 });

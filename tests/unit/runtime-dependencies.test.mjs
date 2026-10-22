@@ -12,7 +12,7 @@ const html = read('index.html').toString();
 const fixtures = read('tests/helpers/app.js').toString();
 
 for (const [name, version, url, asset] of [
-  ['dompurify', '3.4.16', 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js', 'dist/purify.min.js'],
+  ['dompurify', '3.4.17', 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js', 'dist/purify.min.js'],
   ['js-yaml', '4.3.2', 'https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js', 'dist/js-yaml.min.js']
 ]) {
   test(`${name}: package, lockfile, browser URL and SRI agree`, () => {

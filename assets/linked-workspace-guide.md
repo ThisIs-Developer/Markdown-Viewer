@@ -50,6 +50,8 @@ Hover over the warning icon to see the source status. **Reload from disk** repla
 
 **Rescan folder** discovers new files and restores links previously removed or converted, if the originals still exist. Re-linking the same folder does the same. Automatic background refreshes respect removed links instead of restoring them.
 
+When linked folders overlap, removing or converting a file excludes it from every covering folder. A background refresh of another linked folder will not bring it back.
+
 ## Closing and removing
 
 Closing a tab keeps its document in the workspace. **Remove linked file** or **Remove linked folder** removes links from the application, not the originals from disk.

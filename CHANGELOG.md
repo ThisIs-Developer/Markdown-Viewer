@@ -5,6 +5,12 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- Fixed the emoji picker and selection tray to follow the skin tone selected in Preview Styling, including live changes, saved preferences, and resetting to default yellow. Shortcode insertion and unsupported emojis retain their existing behavior.
+- Redesigned the emoji picker with a compact grid, nine familiar categories plus GitHub extras, search across categories, and a removable selection tray. Selections now survive searches and category changes, with keyboard navigation, copying, and retry support. Images load near the visible rows with a neutral shimmer and are reused when revisiting categories, without flashing a different emoji style first.
+- Added compact info hints for the Mermaid diagram controls and emoji skin tones in Preview Styling, available on hover, keyboard focus, and tap.
+- Simplified **Preview Styling** into five compact controls under Workspace settings and removed its separate navbar shortcut.
+- Kept math rendering available during font downloads, prevented older requests from overriding the latest font selection, and restored fallback, retry, and Reset after font-loading failures.
+
 ---
 
 ## v3.10.4

@@ -1327,12 +1327,29 @@
       }
     }
 
+    async _desktopPathsShareCaseAlias(source, destination) {
+      const from = normalizePathSeparators(source).split('/');
+      const to = normalizePathSeparators(destination).split('/');
+      if (from.length !== to.length || from.join('/').toLowerCase() !== to.join('/').toLowerCase()) return false;
+      // A case-sensitive directory may contain both spellings. Check each changed
+      // component rather than assuming Windows (or macOS) is case-insensitive.
+      for (let index = 0; index < from.length; index++) {
+        if (from[index] === to[index]) continue;
+        const entries = await Neutralino.filesystem.readDirectory(from.slice(0, index).join('/') || '/');
+        const matches = entries.filter(function(entry) {
+          return String(entry.entry).toLowerCase() === from[index].toLowerCase();
+        });
+        if (matches.length !== 1) return false;
+      }
+      return true;
+    }
+
     async _desktopCheckMovePaths(source, destination) {
       const stats = await this._desktopInspectMovePath(source);
       if (!stats || stats.isDirectory || stats.isFile === false) {
         throw Object.assign(new Error('Move cancelled: the source is missing or is not a file at ' + source + '. No replacement was created.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
       }
-      if (await this._desktopInspectMovePath(destination)) {
+      if (await this._desktopInspectMovePath(destination) && !(await this._desktopPathsShareCaseAlias(source, destination))) {
         throw Object.assign(new Error('Move cancelled: the destination already exists at ' + destination + '. Both files were left unchanged.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
       }
     }

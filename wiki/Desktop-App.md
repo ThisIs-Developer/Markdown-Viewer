@@ -46,6 +46,8 @@ grouped links remain available if their parent source folder is removed or conve
   Vault folder to a new external directory, preserves Vault documents and links the result.
 - Removing linked files/folders removes application references, not originals. Automatic
   scans respect removed links; explicit Rescan or re-linking the same folder restores them.
+  Removal and conversion exclusions apply to every covering linked root, including
+  separately linked parent and child folders.
 - External changes refresh unmodified drafts. Conflicts, missing sources and incomplete
   scans retain drafts and show distinct hover indicators rather than repeated alerts.
   Reload, overwrite and recreation decisions use application confirmations.

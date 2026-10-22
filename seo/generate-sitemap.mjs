@@ -32,8 +32,9 @@ export function buildSitemap() {
 if (process.argv[1] && path.resolve(process.argv[1]) === modulePath) {
   const expected = buildSitemap();
   if (process.argv.includes('--check')) {
-    const actual = fs.readFileSync(sitemapPath, 'utf8');
-    if (actual !== expected) {
+    const actual = fs.readFileSync(sitemapPath, 'utf8').replace(/\r\n/g, '\n');
+    const normalizedExpected = expected.replace(/\r\n/g, '\n');
+    if (actual !== normalizedExpected) {
       throw new Error('sitemap.xml is stale. Run: npm run seo:sitemap');
     }
     console.log('SEO sitemap is current.');
