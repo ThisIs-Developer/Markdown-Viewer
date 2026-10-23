@@ -33,7 +33,7 @@ async function link(page, target, kind, path) {
     Neutralino.os.showFolderDialog = async () => path;
   }, { kind, path });
   await target.dispatchEvent('contextmenu', { clientX: 130, clientY: 170 });
-  await page.getByRole('menuitem', { name: 'Link Markdown ' + kind, exact: true }).click();
+  await page.getByRole('menuitem', { name: kind === 'files' ? 'Link file' : 'Link folder', exact: true }).click();
 }
 
 async function state(page) {
@@ -145,8 +145,8 @@ for (const [width, theme] of [[1280, 'light'], [390, 'dark']]) test(`nested link
   if (width < 768) await expect(page.locator('body')).toHaveClass(/document-sidebar-mobile-open/);
   await location(page, 'Other').dispatchEvent('contextmenu', { clientX: 150, clientY: 200 });
   const menu = page.locator('.document-menu-dropdown.open');
-  await expect(menu.getByRole('menuitem', { name: 'Link Markdown files', exact: true })).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'Link Markdown folder', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Link file', exact: true })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Link folder', exact: true })).toBeVisible();
   await expect(menu).toHaveCSS('opacity', '1');
   const box = await menu.boundingBox();
   expect(box.x).toBeGreaterThanOrEqual(0);

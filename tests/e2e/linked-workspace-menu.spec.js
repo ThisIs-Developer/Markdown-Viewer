@@ -20,7 +20,7 @@ for (const theme of ['light', 'dark']) {
     await expect(page.locator('#sidebar-new-document > .lucide-file-plus-2')).toHaveCount(1);
     await root(page).dispatchEvent('contextmenu', { clientX: 120, clientY: 160 });
     await expect(menu(page).getByRole('menuitem', { name: /Create new linked/ })).toHaveCount(0);
-    for (const [id, name, icon] of [['sidebar-link-files', 'Link Markdown files', 'file-symlink'], ['sidebar-link-folder', 'Link Markdown folder', 'folder-symlink']]) {
+    for (const [id, name, icon] of [['sidebar-link-files', 'Link file', 'file-symlink'], ['sidebar-link-folder', 'Link folder', 'folder-symlink']]) {
       for (const control of [page.locator('#' + id), menu(page).getByRole('menuitem', { name, exact: true })]) {
         const glyph = control.locator('.lucide-' + icon);
         await expect(glyph).toHaveAttribute('aria-hidden', 'true');
@@ -42,7 +42,7 @@ for (const os of ['Windows', 'Darwin']) {
       await expect(menu(page).getByRole('menuitem')).toHaveCount(2);
       await expect(menu(page).getByRole('separator')).toHaveCount(0);
       expect(await menu(page).evaluate(node => Array.from(node.children).map(child => child.getAttribute('role')))).toEqual(['menuitem', 'menuitem']);
-      for (const [name, icon] of [['Link Markdown files', 'file-symlink'], ['Link Markdown folder', 'folder-symlink']]) {
+      for (const [name, icon] of [['Link file', 'file-symlink'], ['Link folder', 'folder-symlink']]) {
         const item = menu(page).getByRole('menuitem', { name, exact: true });
         await expect(item).toBeVisible();
         expect(await item.locator('.lucide-' + icon).evaluate(node => getComputedStyle(node).maskImage)).not.toBe('none');
@@ -50,7 +50,7 @@ for (const os of ['Windows', 'Darwin']) {
       await expect(root(page)).toHaveAttribute('aria-expanded', expanded);
       await page.keyboard.press('Escape');
     }
-    await expect(root(page).locator('.document-tree-main > .lucide-link-2')).toHaveCount(1);
+    await expect(root(page).locator('.document-tree-main > .linked-workspace-icon')).toHaveCount(1);
     await expect(page.locator('#sidebar-linked-separator')).toBeVisible();
     expect(await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).filter(child => !child.hidden).map(child => child.id).slice(0, 5))).toEqual([
       'sidebar-link-files', 'sidebar-link-folder', 'sidebar-linked-separator', 'sidebar-new-document', 'sidebar-new-folder'
@@ -62,7 +62,7 @@ for (const os of ['Windows', 'Darwin']) {
   });
 }
 
-test('root Link Markdown files reuses the multi-file picker without modifying originals', async ({ page }) => {
+test('root Link file reuses the multi-file picker without modifying originals', async ({ page }) => {
   await openDesktop(page);
   await page.evaluate(() => {
     window.__desktopFiles.set('C:/Original/one.md', '# One');
@@ -73,16 +73,16 @@ test('root Link Markdown files reuses the multi-file picker without modifying or
     };
   });
   await root(page).dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
-  await menu(page).getByRole('menuitem', { name: 'Link Markdown files', exact: true }).click();
+  await menu(page).getByRole('menuitem', { name: 'Link file', exact: true }).click();
   await expect(page.locator('#document-tree .is-linked-document')).toHaveCount(2);
   expect(await page.evaluate(() => window.__picker)).toEqual({
-    title: 'Link Markdown files',
+    title: 'Link file',
     options: { filters: [{ name: 'Markdown files (*.md, *.markdown)', extensions: ['md', 'markdown'] }], multiSelections: true }
   });
   expect(await page.evaluate(() => [window.__desktopFiles.get('C:/Original/one.md'), window.__desktopFiles.get('C:/Original/two.markdown')])).toEqual(['# One', '# Two']);
 });
 
-test('root Link Markdown folder reuses recursive folder linking', async ({ page }) => {
+test('root Link folder reuses recursive folder linking', async ({ page }) => {
   await openDesktop(page);
   await page.evaluate(async () => {
     await Neutralino.filesystem.createDirectory('C:/Original');
@@ -92,10 +92,10 @@ test('root Link Markdown folder reuses recursive folder linking', async ({ page 
     Neutralino.os.showFolderDialog = async title => { window.__pickerTitle = title; return 'C:/Original'; };
   });
   await root(page).locator('.document-menu-btn').click();
-  await menu(page).getByRole('menuitem', { name: 'Link Markdown folder', exact: true }).click();
+  await menu(page).getByRole('menuitem', { name: 'Link folder', exact: true }).click();
   await expect(page.locator('#document-tree [data-tree-type="linked-location"]')).toHaveCount(1);
   await expect(page.locator('#document-tree .is-linked-document')).toHaveCount(2);
-  expect(await page.evaluate(() => window.__pickerTitle)).toBe('Link Markdown folder');
+  expect(await page.evaluate(() => window.__pickerTitle)).toBe('Link folder');
   expect(await page.evaluate(() => window.__desktopFiles.get('C:/Original/Nested/two.md'))).toBe('# Two');
 });
 
@@ -106,7 +106,7 @@ test('cancelling either root picker preserves workspace and shows no success toa
     Neutralino.os.showFolderDialog = async () => '';
   });
   const count = await page.locator('#document-tree [data-tree-type="document"]').count();
-  for (const name of ['Link Markdown files', 'Link Markdown folder']) {
+  for (const name of ['Link file', 'Link folder']) {
     await root(page).dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
     await menu(page).getByRole('menuitem', { name, exact: true }).click();
     await expect(menu(page)).toHaveCount(0);
@@ -127,6 +127,6 @@ for (const partialRuntime of [false, true]) {
     await expect(page.locator('#sidebar-linked-separator')).toBeHidden();
     expect(await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).filter(child => !child.hidden).map(child => child.id).slice(0, 2))).toEqual(['sidebar-new-document', 'sidebar-new-folder']);
     await page.locator('#document-tree [data-tree-type="workspace"]').first().dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
-    await expect(menu(page).getByRole('menuitem', { name: /^(Link Markdown|Create new linked)/ })).toHaveCount(0);
+    await expect(menu(page).getByRole('menuitem', { name: /^(Link file|Link folder|Create new linked)/ })).toHaveCount(0);
   });
 }

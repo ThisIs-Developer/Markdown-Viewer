@@ -392,8 +392,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   const themeSwitchIcon = document.getElementById("theme-switch-icon");
   const directionToggle = document.getElementById("direction-toggle");
   const importFromFileButton = document.getElementById("import-from-file");
-  const linkFromFileButton = document.getElementById("link-from-file");
-  const linkFromFolderButton = document.getElementById("link-from-folder");
   const importFromGithubButton = document.getElementById("import-from-github");
   const fileInput = document.getElementById("file-input");
   const exportDropdown = document.getElementById("exportDropdown");
@@ -6970,7 +6968,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (options.favorite) row.classList.add('is-favorite');
     if (options.temporary) row.classList.add('document-tree-temporary');
     if (options.locked) row.classList.add('is-secret-locked');
-    if (options.currentLocation) row.classList.add('is-current-location');
     if (typeof options.expanded === 'boolean') row.setAttribute('aria-expanded', options.expanded ? 'true' : 'false');
     row.setAttribute('aria-label', options.ariaLabel || options.label);
 
@@ -7248,8 +7245,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getLinkedWorkspaceMenuActions(parent) {
     if (!hasDesktopFileAccess()) return [];
     return [
-      { id: 'link-files', icon: 'lucide-file-symlink', label: 'Link Markdown files', run: function() { void nativeLinkMarkdownFiles(parent); } },
-      { id: 'link-folder', icon: 'lucide-folder-symlink', label: 'Link Markdown folder', run: function() { void nativeLinkMarkdownFolder(parent); } }
+      { id: 'link-files', icon: 'lucide-file-symlink', label: 'Link file', run: function() { void nativeLinkMarkdownFiles(parent); } },
+      { id: 'link-folder', icon: 'lucide-folder-symlink', label: 'Link folder', run: function() { void nativeLinkMarkdownFolder(parent); } }
     ];
   }
 
@@ -7278,7 +7275,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
     const locations = Array.isArray(documentOrganization.linkedLocations) ? documentOrganization.linkedLocations : [];
     let renderedDocuments = 0;
-    const activeDocument = tabs.find(function(tab) { return tab.id === activeTabId; });
     const workspaceExpanded = documentSidebarSearch ? true : documentOrganization.ui.linkedWorkspaceExpanded !== false;
     const toggleWorkspace = function() {
       documentOrganization.ui.linkedWorkspaceExpanded = !workspaceExpanded;
@@ -7290,10 +7286,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       id: 'linked-workspace',
       label: 'Linked Workspace',
       ariaLabel: 'Linked Workspace, original files remain on disk',
-      icon: 'lucide-link-2',
+      icon: 'linked-workspace-icon',
       depth: 0,
       expanded: workspaceExpanded,
-      currentLocation: isLinkedWorkspaceDocument(activeDocument),
       meta: String(linkedTabs.length),
       menuActions: getLinkedWorkspaceMenuActions(),
       onToggle: toggleWorkspace,
@@ -7365,7 +7360,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         ariaLabel: 'Linked folder, ' + location.path + (location.unavailable ? ', unavailable' : ''),
         icon: location.unavailable ? 'lucide-triangle-alert' : 'lucide-folder-symlink',
         depth: depth,
-        currentLocation: Boolean(activeDocument && activeDocument.linkedRootId === location.id),
         expanded: expanded,
         meta: location.unavailable ? 'Unavailable' : String(documentCount(rootNode)),
         menuActions: getLinkedLocationMenuActions(location),
@@ -7494,7 +7488,6 @@ document.addEventListener("DOMContentLoaded", async function () {
           ? (secretLocked ? 'lucide-shield' : 'lucide-shield-check')
           : 'lucide-briefcase-business',
         depth: 0,
-        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !isLinkedWorkspaceDocument(tab) && tab.workspaceId === workspace.id; }),
         expanded: expanded,
         meta: secretLocked ? 'Locked' : String(workspaceDocuments.length),
         locked: secretLocked,
@@ -12654,7 +12647,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function nativeLinkMarkdownFiles(parent) {
     if (!hasDesktopFileAccess()) return 0;
     try {
-      const paths = await Neutralino.os.showOpenDialog('Link Markdown files', {
+      const paths = await Neutralino.os.showOpenDialog('Link file', {
         filters: [{ name: 'Markdown files (*.md, *.markdown)', extensions: ['md', 'markdown'] }],
         multiSelections: true
       });
@@ -12675,7 +12668,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function nativeLinkMarkdownFolder(parent) {
     if (!hasDesktopFileAccess()) return;
     try {
-      const folderPath = await Neutralino.os.showFolderDialog('Link Markdown folder');
+      const folderPath = await Neutralino.os.showFolderDialog('Link folder');
       if (folderPath) await addLinkedFolderPath(folderPath, { parent: parent });
     } catch (error) {
       console.warn('Could not link Markdown folder:', error);
@@ -14824,7 +14817,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!tabs.some(function(tab) { return tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) {
         const response = await fetch('assets/linked-workspace-guide.md');
         if (!response.ok) throw new Error('Unable to load the Linked Workspace guide.');
-        const guide = createTab(await response.text(), 'Welcome to Linked Workspace', 'preview', {
+        const guide = createTab(await response.text(), 'Welcome to Linked Workspace', 'split', {
           workspaceId: DEFAULT_WORKSPACE_ID, folderId: null
         });
         guide.kind = LINKED_WORKSPACE_GUIDE_KIND;
@@ -27504,20 +27497,6 @@ ${selector} .arrowheadPath {
     });
   }
 
-  if (linkFromFileButton) {
-    linkFromFileButton.addEventListener('click', function(event) {
-      event.preventDefault();
-      void nativeLinkMarkdownFiles();
-    });
-  }
-
-  if (linkFromFolderButton) {
-    linkFromFolderButton.addEventListener('click', function(event) {
-      event.preventDefault();
-      void nativeLinkMarkdownFolder();
-    });
-  }
-
   if (importFromGithubButton) {
     importFromGithubButton.addEventListener("click", function (e) {
       e.preventDefault();
@@ -33934,7 +33913,7 @@ ${selector} .arrowheadPath {
       syncOff: "Sync Off",
       syncOn: "Sync On",
       import: "Import",
-      importFile: "Import copies",
+      importFile: "From files",
       importGithub: "From GitHub",
       export: "Export",
       exportMd: "Markdown (.md)",
@@ -34794,12 +34773,12 @@ ${selector} .arrowheadPath {
       if (importText) importText.textContent = translateUiString('New');
     }
     const importFileEl = document.getElementById('import-from-file');
-    if (importFileEl) updateMenuLabel(importFileEl, translateUiString('Import copies'));
+    if (importFileEl) updateMenuLabel(importFileEl, translateUiString('From files'));
     const importGithubEl = document.getElementById('import-from-github');
     if (importGithubEl) updateMenuLabel(importGithubEl, translateUiString('From GitHub'));
 
     const mImportFileEl = document.getElementById('mobile-import-button');
-    if (mImportFileEl) mImportFileEl.innerHTML = `<i class="lucide lucide-upload"></i>${translateUiString('Import copies')}`;
+    if (mImportFileEl) mImportFileEl.innerHTML = `<i class="lucide lucide-upload"></i>${translateUiString('From files')}`;
     const mImportGithubEl = document.getElementById('mobile-import-github-button');
     if (mImportGithubEl) mImportGithubEl.innerHTML = `<i class="bi bi-github" aria-hidden="true"></i>${translateUiString('From GitHub')}`;
 

@@ -22,7 +22,10 @@ PlantUML and D2 contain an optional local-command code path, but it requires `os
 
 Linked Workspace keeps references to external Markdown files separate from independent
 Workspace (Vault) documents. Use the Explorer toolbar or Linked Workspace context menu
-to link existing files/folders. Linking the same normalized
+and choose **Link file** or **Link folder** to link existing files/folders. The header's
+plus menu stays the same as the web app: **New document**, **From files**, and **From GitHub**.
+Workspace and folder icons turn blue when expanded, independently of the active document.
+Linking the same normalized
 source path reuses its existing document. Folder linking includes nested Markdown files.
 
 Right-click a linked folder or subfolder to group existing links inside it. This sidebar
@@ -51,7 +54,8 @@ grouped links remain available if their parent source folder is removed or conve
 - External changes refresh unmodified drafts. Conflicts, missing sources and incomplete
   scans retain drafts and show distinct hover indicators rather than repeated alerts.
   Reload, overwrite and recreation decisions use application confirmations.
-- A built-in editable guide explains these workflows. Both guides use the normal Markdown
+- A built-in editable quick-start guide opens in Split view and explains these workflows
+  with a save-flow diagram, action tables, and expandable details. Both guides use the normal Markdown
   file icon; guide identity still comes from metadata, not an arbitrary document's title.
 - Workspace backups include normal and linked recovery documents. Imported backups
   recover drafts but do not reconnect external paths or authorize writes to originals.

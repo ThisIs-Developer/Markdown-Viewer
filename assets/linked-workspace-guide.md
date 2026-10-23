@@ -1,65 +1,67 @@
 # Welcome to Linked Workspace
 
-Linked Workspace lets you edit Markdown files where they already live on your computer.
+**Work on Markdown files already on your computer, without moving them.** A link is a shortcut to an existing file or folder, not a new copy.
 
-## Link a file or folder
+## Start in three steps
 
-Use **Link Markdown files** or **Link Markdown folder** in the Explorer toolbar or the Linked Workspace menu. A linked folder includes Markdown files in its subfolders.
+1. **Link:** In Explorer, open the menu beside **Linked Workspace**. Choose **Link file** for one or more Markdown files, or **Link folder** to include Markdown files in a folder and its subfolders.
+2. **Edit:** Click a file in the sidebar. Your work is kept as a local recovery draft in the app.
+3. **Save:** Press **Ctrl+S** (or **Cmd+S** on Mac) to update the original file.
 
-Right-click a linked folder or subfolder to add existing file or folder links inside it. This only groups links in the sidebar: originals stay in their current locations. Grouping survives reopening the app and does not change which source a folder scans. Removing or converting the parent source folder keeps independently grouped links available outside that group.
+```text
+Your file on disk
+       |
+      Link
+       v
+Edit in Markdown Viewer
+       |
+      Save
+       v
+Your file on disk is updated
+```
 
-Dropping an external Markdown file imports an independent Vault copy. Use the explicit linking actions when you want to keep an original file linked.
+> Editing keeps a draft. **Only Save updates the linked original.** Closing a tab does not remove its link.
 
-Linked documents use a file-with-arrow icon; linked folders use a folder-with-arrow icon. Hover over a linked document to see its original path.
+## Link or import?
 
-## Drafts and saving
+| You want to... | Choose |
+| --- | --- |
+| Work on the original file where it already lives | **Link file** or **Link folder** in Linked Workspace |
+| Work on a separate copy inside the app | **+ > From files** (or drag a file into the app) |
+| Start a new document inside the app | **+ > New document** |
 
-Editing automatically stores a recovery draft inside the application's **Linked Workspace** storage folder. It does **not** automatically overwrite your original file.
+The app's regular **Workspace**, also called the **Vault**, holds independent documents. Linked Workspace points to originals outside it. Hover over a linked file to see its location on your computer.
 
-Linked-folder recovery drafts mirror the source subfolders under a separate recovery root. ID suffixes distinguish roots and documents with identical names. These are internal recovery copies, not the original files; do not manually reorganize this storage.
+## Everyday actions
 
-- **Ctrl+S** or **Save** updates the original linked file.
-- **Save As** creates a new external file and a separate link. The previous document and original remain unchanged.
-- Saving a Vault document externally keeps its independent Vault copy and activates the new linked document.
+Right-click a linked file or folder to see its actions.
 
-The Save shortcut works across keyboard layouts, including Greek. Ordinary Save updates the original directly and reports success. Conflict and missing-original warnings still require confirmation.
+| Action | What happens |
+| --- | --- |
+| **Save As** | Creates another file and link. Leaves the previous original unchanged. |
+| **Remove linked file / folder** | Removes the link from the app. Does **not** delete the original. |
+| **Convert to Workspace copy** | Keeps an independent copy of your draft in the Vault. Leaves the original unchanged. |
+| **Rescan folder** | Finds new files and restores removed or converted links whose originals still exist. |
+| **Reload from disk** | Replaces your draft with the original file. Asks before discarding unsaved changes. |
 
-## Independent Vault copies
+**Group your links:** Right-click a linked folder and choose **Link file** or **Link folder**. This only groups links in the sidebar; it never moves originals. Grouping is remembered when you reopen the app. If you remove the parent folder's link, separately added links remain available outside that group.
 
-**Convert to Workspace copy** turns a linked draft into an independent Vault document without changing the original. You can also drag a linked document into the Vault or one of its folders.
+## See a warning?
 
-Linked documents cannot move directly into Secret Workspace. Convert to an independent Vault copy first, then move that copy into Secret Workspace.
+Hover over the warning icon for details. If another app changed the original, your draft is kept. Choose **Reload from disk** to use the disk version, or **Save** to keep your edits after confirming. If the original is missing or unavailable, use **Save As** to keep your work in a new file.
 
-Reopening the original creates or activates its link; it never replaces the independent Vault copy.
+> Keep backups of important originals. Workspace backups keep recovery drafts; they are not a backup of every external file.
 
-You can also **Convert to Workspace copy** on a linked folder or subfolder, or drag it into the Vault or one of its folders. This converts the currently linked drafts and preserves their subfolder structure. Excluded files are not included. A complete root conversion removes the folder link; a subfolder conversion keeps the root linked.
+<details>
+<summary>More about folders, copies, and recovery</summary>
 
-If a conversion stops partway through, completed copies remain in the Vault and the remaining drafts stay linked. The notification reports partial completion. Retrying uses the remembered destination when it is still available. Existing destination folders are not silently merged; a separate copy name is used when needed.
+- **Folder copies:** Convert a linked folder or drag it into the Vault to copy its current drafts and subfolders. Previously removed links are not included. Converting the whole folder removes its link; converting a subfolder keeps the parent linked. Reopening an original never replaces its independent Vault copy.
+- **Export a Vault folder:** **Save As linked folder...** creates a new external folder and link. The Vault copy stays unchanged. Existing destination names get a copy suffix. Only Markdown documents are exported, not images or other assets.
+- **Interrupted operations:** Folder copies and exports are not all-or-nothing. A partial completion message means some files were copied; completed copies and remaining drafts are kept. Read the destination in the message before retrying.
+- **Removed links:** Background refreshes respect removals, even when linked folders overlap. **Rescan folder** or linking the same folder again can restore those links.
+- **Recovery:** The app stores recovery drafts separately from originals. Do not reorganize this internal storage manually. Restoring a backup recovers drafts without reconnecting their original paths. Link the originals explicitly to reconnect.
+- **Secret Workspace:** Convert a linked file to a Vault copy before moving that copy into Secret Workspace.
 
-## Save a Vault folder externally
+</details>
 
-On a normal Vault folder, **Save As linked folder…** lets you choose an external parent directory. It creates a new folder inside that directory, preserves the subfolder structure, adds the new linked folder, and activates a linked copy. The Vault folder and documents remain independent and unchanged.
-
-Existing destination names get a copy suffix rather than being overwritten. This exports Markdown documents, not a complete archive of images or other assets. If writing or linking stops partway through, the notification identifies the destination; partial external copies are kept, and Vault drafts remain available.
-
-## External changes and rescanning
-
-The application checks linked sources for external changes. If your local draft conflicts with a changed original, it keeps the draft and shows a warning.
-
-Hover over the warning icon to see the source status. **Reload from disk** replaces your draft with the original and asks before discarding unsaved changes. Saving over a conflicting original also requires confirmation. If the original is missing or unreadable, your draft is retained; do not assume the source was deleted just because access failed.
-
-**Rescan folder** discovers new files and restores links previously removed or converted, if the originals still exist. Re-linking the same folder does the same. Automatic background refreshes respect removed links instead of restoring them.
-
-When linked folders overlap, removing or converting a file excludes it from every covering folder. A background refresh of another linked folder will not bring it back.
-
-## Closing and removing
-
-Closing a tab keeps its document in the workspace. **Remove linked file** or **Remove linked folder** removes links from the application, not the originals from disk.
-
-## Backups and safety
-
-Workspace backups include internal recovery drafts, not copies taken from external originals. Restoring a backup keeps linked drafts as recovered documents without reconnecting their original paths or enabling writes to those originals. Link originals explicitly when you want to reconnect them.
-
-Multi-file conversion and external folder saving are not all-or-nothing operations. The application validates drafts and destinations and verifies writes, but the desktop filesystem APIs cannot make a whole folder write atomic or eliminate every race with another program. Keep backups of important originals, and review any incomplete-operation message before retrying.
-
-This guide is an internal, editable document, not a link to an external file. You can delete it without deleting any source file; it will not reappear on every launch.
+This guide opens in Split view: edit on one side, read on the other. It is an editable guide inside the app, not an external file. You can edit or delete it without affecting your originals.

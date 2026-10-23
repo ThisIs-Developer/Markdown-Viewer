@@ -758,7 +758,11 @@ body {
   text-align: center;
 }
 
-.document-tree-row.is-current-location > .document-tree-main > i:first-child {
+.linked-workspace-icon {
+  --lucide-icon: url('assets/linked-workspace.svg');
+}
+
+.document-tree-row[aria-expanded="true"] > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 

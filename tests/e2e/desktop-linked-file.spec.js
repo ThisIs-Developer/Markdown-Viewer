@@ -196,7 +196,7 @@ test('groups linked files under Workspaces and persists independent nested folde
   const roots = tree.locator('.document-tree-row[data-tree-depth="0"]');
   await expect(roots.locator('.document-tree-label')).toHaveText(['Workspace (Vault)', 'Linked Workspace', 'Secret Workspace']);
   await expect(tree).not.toContainText('Linked Locations');
-  await expect(tree.locator('[data-tree-type="linked-workspace"] > .document-tree-main > i')).toHaveClass('lucide lucide-link-2');
+  await expect(tree.locator('[data-tree-type="linked-workspace"] > .document-tree-main > i')).toHaveClass('lucide linked-workspace-icon');
   await expect(tree.locator('[data-tree-type="linked-location"] > .document-tree-main > i')).toHaveClass('lucide lucide-folder-symlink');
   const symlinkMasks = await tree.locator('[data-tree-type="linked-virtual-folder"] > .document-tree-main > i').evaluateAll(icons => icons.map(icon => ({ className: icon.className, mask: getComputedStyle(icon).maskImage })));
   expect(symlinkMasks.length).toBeGreaterThan(0);
