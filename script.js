@@ -13975,7 +13975,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
     if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
-    if (contentChanged) renderDocumentSidebar();
+    if (contentChanged) {
+      // A delayed draft save must not remove the menu the user just opened.
+      if (document.querySelector('.document-menu-dropdown.open, .tab-menu-dropdown.open, [data-tab-context-menu="true"]')) {
+        linkedBackgroundUIRefreshPending = true;
+      } else renderDocumentSidebar();
+    }
   }
 
   function saveSecondarySplitState() {
