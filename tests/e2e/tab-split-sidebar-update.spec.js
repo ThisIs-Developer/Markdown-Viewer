@@ -61,7 +61,7 @@ async function createPreviewDocuments(page, documents) {
 
 test('tab bar uses standard file, menu, and close controls', async ({ page }) => {
   const tab = page.locator('#tab-list .tab-item.active');
-  await expect(tab.locator('.tab-file-icon')).toHaveClass(/lucide-file-text/);
+  await expect(tab.locator('.tab-file-icon')).toHaveClass(/lucide-book-open/);
   await expect(tab.locator('.tab-menu-btn i')).toHaveClass(/lucide-ellipsis/);
   await expect(tab.locator('.tab-close-btn')).toBeVisible();
   await expect(page.locator('#document-sidebar-open i')).toHaveClass(/lucide-panel-left-close/);

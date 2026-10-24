@@ -55,8 +55,8 @@ grouped links remain available if their parent source folder is removed or conve
   scans retain drafts and show distinct hover indicators rather than repeated alerts.
   Reload, overwrite and recreation decisions use application confirmations.
 - A built-in editable quick-start guide opens in Split view and explains these workflows
-  with a save-flow diagram, action tables, and expandable details. Both guides use the normal Markdown
-  file icon; guide identity still comes from metadata, not an arbitrary document's title.
+  with a step-by-step diagram, quick-start instructions, and action tables. Both welcome guides use
+  the `book-open` icon; guide identity comes from metadata, not an arbitrary document's title.
 - Workspace backups include normal and linked recovery documents. Imported backups
   recover drafts but do not reconnect external paths or authorize writes to originals.
 - Linked documents cannot move directly into Secret Workspace. Convert to a Vault copy

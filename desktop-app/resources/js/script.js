@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentFileIcon(tab) {
+    if (getBuiltInGuideLabel(tab)) return 'lucide-book-open';
     return isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file-text';
   }
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
