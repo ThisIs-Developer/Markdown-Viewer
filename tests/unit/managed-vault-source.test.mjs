@@ -38,3 +38,19 @@ test('only an IndexedDB backend can omit a physical Vault root', async () => {
   c.workspaceStorage.desktop = true;
   await assert.rejects(c.check('C:/external/a.md'), /not ready/);
 });
+
+test('desktop permissions allow path safety checks for both linked files and folders', async () => {
+  const config = JSON.parse(fs.readFileSync(new URL('../../desktop-app/neutralino.config.json', import.meta.url), 'utf8'));
+  const normalizedPaths = [];
+  const c = setup('Windows', { getNormalizedPath: async path => {
+    assert.ok(config.nativeAllowList.includes('filesystem.getNormalizedPath'),
+      'The packaged desktop app must allow filesystem.getNormalizedPath');
+    normalizedPaths.push(path);
+    return path;
+  } });
+  await c.check('C:/Original/notes.md');
+  await c.check('C:/Original/Folder');
+  assert.ok(normalizedPaths.includes('C:/Original/notes.md'));
+  assert.ok(normalizedPaths.includes('C:/Original/Folder'));
+  await assert.rejects(c.check('C:/Documents/Vault/Workspace/notes.md'), /outside/);
+});

@@ -33,6 +33,7 @@
     "filesystem.writeBinaryFile",
     "filesystem.getStats",
     "filesystem.getJoinedPath",
+    "filesystem.getNormalizedPath",
     "filesystem.copy",
     "filesystem.move",
     "filesystem.remove",
