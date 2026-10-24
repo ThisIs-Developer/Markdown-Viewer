@@ -758,12 +758,6 @@ body {
   text-align: center;
 }
 
-.linked-workspace-icon {
-  /* Resolve the relative URL here, not in assets/lucide-icons.css. */
-  -webkit-mask-image: url('assets/linked-workspace.svg');
-  mask-image: url('assets/linked-workspace.svg');
-}
-
 .document-tree-row[aria-expanded="true"] > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }

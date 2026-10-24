@@ -7286,7 +7286,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       id: 'linked-workspace',
       label: 'Linked Workspace',
       ariaLabel: 'Linked Workspace, original files remain on disk',
-      icon: 'linked-workspace-icon',
+      icon: 'lucide-link-2',
       depth: 0,
       expanded: workspaceExpanded,
       meta: String(linkedTabs.length),

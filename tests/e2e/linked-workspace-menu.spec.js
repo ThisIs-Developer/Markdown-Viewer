@@ -13,6 +13,70 @@ const root = page => page.locator('#document-tree [data-tree-type="linked-worksp
 const menu = page => page.locator('.document-menu-dropdown.open');
 
 for (const theme of ['light', 'dark']) {
+  test(`workspace icons share Vault expansion effects in ${theme} theme`, async ({ page }) => {
+    await openDesktop(page);
+    await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
+    const vault = page.locator('#document-tree [data-tree-id="workspace_default"]');
+    const secret = page.locator('#document-tree [data-tree-id="workspace_secret"]');
+    const linked = root(page);
+    const icon = row => row.locator('.document-tree-main > i').first();
+    const setExpanded = async (row, expanded) => {
+      if (await row.getAttribute('aria-expanded') !== String(expanded)) await row.locator('.document-tree-main').click();
+      await expect(row).toHaveAttribute('aria-expanded', String(expanded));
+    };
+
+    await page.locator('#tab-list .tab-item.active .tab-close-btn').click();
+    await expect(page.locator('#tab-list .tab-item')).toHaveCount(0);
+    await setExpanded(vault, false);
+    const neutral = await icon(vault).evaluate(node => getComputedStyle(node).color);
+    await expect(secret).toHaveClass(/is-secret-locked/);
+    await expect(secret).toHaveAttribute('aria-expanded', 'false');
+    await expect(icon(secret)).toHaveCSS('color', neutral);
+
+    await secret.locator('.document-tree-main').click();
+    await page.locator('#secret-workspace-key').fill('test-icon-password');
+    await page.locator('#secret-workspace-key-confirm').fill('test-icon-password');
+    await page.locator('#secret-workspace-modal-confirm').click();
+    await expect(page.locator('#secret-workspace-modal')).toBeHidden();
+    await expect(icon(secret)).toHaveClass('lucide lucide-shield-check');
+    await expect(icon(linked)).toHaveClass('lucide lucide-link-2');
+
+    let active;
+    for (const expanded of [false, true]) {
+      for (const row of [vault, linked, secret]) await setExpanded(row, expanded);
+      const reference = await icon(vault).evaluate(node => {
+        const style = getComputedStyle(node);
+        return { color: style.color, width: style.width, height: style.height, 'font-size': style.fontSize };
+      });
+      if (expanded) {
+        active = reference.color;
+        expect(active).not.toBe(neutral);
+      }
+      for (const row of [linked, secret]) {
+        for (const [property, value] of Object.entries(reference)) await expect(icon(row)).toHaveCSS(property, value);
+        expect(await icon(row).evaluate(async node => {
+          const url = getComputedStyle(node).maskImage.match(/^url\("([^"]+)"\)$/)?.[1];
+          if (!url) return false;
+          const image = new Image();
+          image.src = url;
+          await image.decode();
+          return image.naturalWidth > 0 && image.naturalHeight > 0;
+        })).toBe(true);
+      }
+    }
+    await page.locator('#document-tree [data-tree-type="document"]').filter({ hasText: 'Welcome to Linked Workspace' }).locator('.document-tree-main').click();
+    for (const row of [vault, linked, secret]) await expect(icon(row)).toHaveCSS('color', active);
+    await page.locator('#document-tree').screenshot({ path: `test-results/workspace-icons-${theme}.png` });
+    await setExpanded(linked, false);
+    await expect(icon(linked)).toHaveCSS('color', neutral);
+    await secret.dispatchEvent('contextmenu', { clientX: 120, clientY: 160 });
+    await menu(page).getByRole('menuitem', { name: 'Lock workspace', exact: true }).click();
+    await expect(secret).toHaveAttribute('aria-expanded', 'false');
+    await expect(icon(secret)).toHaveClass('lucide lucide-shield');
+    await expect(icon(secret)).toHaveCSS('color', neutral);
+    await expect(icon(vault)).toHaveCSS('color', active);
+  });
+
   test(`linking controls retain their icons without a creation action in ${theme} theme`, async ({ page }) => {
     await openDesktop(page);
     await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
@@ -50,7 +114,7 @@ for (const os of ['Windows', 'Darwin']) {
       await expect(root(page)).toHaveAttribute('aria-expanded', expanded);
       await page.keyboard.press('Escape');
     }
-    await expect(root(page).locator('.document-tree-main > .linked-workspace-icon')).toHaveCount(1);
+    await expect(root(page).locator('.document-tree-main > .lucide-link-2')).toHaveCount(1);
     await expect(page.locator('#sidebar-linked-separator')).toBeVisible();
     expect(await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).filter(child => !child.hidden).map(child => child.id).slice(0, 5))).toEqual([
       'sidebar-link-files', 'sidebar-link-folder', 'sidebar-linked-separator', 'sidebar-new-document', 'sidebar-new-folder'

@@ -196,7 +196,7 @@ test('groups linked files under Workspaces and persists independent nested folde
   const roots = tree.locator('.document-tree-row[data-tree-depth="0"]');
   await expect(roots.locator('.document-tree-label')).toHaveText(['Workspace (Vault)', 'Linked Workspace', 'Secret Workspace']);
   await expect(tree).not.toContainText('Linked Locations');
-  await expect(tree.locator('[data-tree-type="linked-workspace"] > .document-tree-main > i')).toHaveClass('lucide linked-workspace-icon');
+  await expect(tree.locator('[data-tree-type="linked-workspace"] > .document-tree-main > i')).toHaveClass('lucide lucide-link-2');
   await expect(tree.locator('[data-tree-type="linked-location"] > .document-tree-main > i')).toHaveClass('lucide lucide-folder-symlink');
   const symlinkMasks = await tree.locator('[data-tree-type="linked-virtual-folder"] > .document-tree-main > i').evaluateAll(icons => icons.map(icon => ({ className: icon.className, mask: getComputedStyle(icon).maskImage })));
   expect(symlinkMasks.length).toBeGreaterThan(0);
@@ -221,7 +221,7 @@ test('groups linked files under Workspaces and persists independent nested folde
     return {
       active: iconColor(rows.find(row => row.classList.contains('is-active'))),
       inactive: rows.filter(row => !row.classList.contains('is-active')).map(iconColor),
-      folders: Array.from(element.querySelectorAll('[data-tree-type="linked-virtual-folder"]')).map(iconColor),
+      folders: Array.from(element.querySelectorAll('[data-tree-type="linked-virtual-folder"]')).map(row => ({ color: iconColor(row), expanded: row.getAttribute('aria-expanded') === 'true' })),
       root: iconColor(element.querySelector('[data-tree-type="linked-location"]')),
       gray: getComputedStyle(element.querySelector('.document-tree-meta')).color
     };
@@ -229,7 +229,7 @@ test('groups linked files under Workspaces and persists independent nested folde
   expect(colors.active).not.toBe(colors.gray);
   expect(colors.root).toBe(colors.active);
   expect(colors.inactive.every(color => color === colors.gray)).toBe(true);
-  expect(colors.folders.every(color => color === colors.gray)).toBe(true);
+  expect(colors.folders.every(folder => folder.color === (folder.expanded ? colors.active : colors.gray))).toBe(true);
 
   const linkedRoot = tree.locator('[data-tree-type="linked-workspace"]');
   await linkedRoot.locator('.document-tree-toggle').click();
