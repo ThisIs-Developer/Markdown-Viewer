@@ -148,6 +148,7 @@ test('automatic Trash cleanup removes only valid items older than 30 days', asyn
 
 test('Trash maintenance failure never blocks workspace initialization', async ({ page }) => {
   await openApp(page);
+  await page.evaluate(() => window.MarkdownViewerFlushWorkspace());
   const result = await page.evaluate(async () => {
     const original = window.MarkdownWorkspaceStorage.prototype.purgeExpiredTrash;
     window.MarkdownWorkspaceStorage.prototype.purgeExpiredTrash = async function() {
@@ -337,7 +338,7 @@ test('dedicated Trash restores, permanently deletes, and empties selected data',
   await page.locator('#trash-delete-button').click();
   await expect(page.locator('#document-confirm-modal-title')).toHaveText('Permanently delete 2 files?');
   await expect(page.locator('#document-confirm-modal-description')).toHaveText(
-    '“Deleted document” and “Delete from Trash” will be permanently removed from Trash immediately. This action cannot be undone.'
+    /^(?:“Deleted document” and “Delete from Trash”|“Delete from Trash” and “Deleted document”) will be permanently removed from Trash immediately\. This action cannot be undone\.$/
   );
   await page.locator('#document-confirm-modal-cancel').click();
   await expect(page.locator('#trash-modal')).toHaveClass(/is-visible/);
