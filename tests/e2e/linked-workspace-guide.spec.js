@@ -156,8 +156,8 @@ test('guide metadata survives edits and reloads, while names alone never identif
     const row = id => page.locator(`#document-tree [data-document-id="${id}"]`);
     await expect(row('guide').locator('.lucide-book-open')).toHaveCount(1);
     await expect(row('guide').locator('.document-tree-main')).toHaveAttribute('title','Built-in Workspace guide');
-    await expect(row('ordinary').locator('.lucide-file-text')).toHaveCount(1);
-    await expect(row('ordinary-linked-name').locator('.lucide-file-text')).toHaveCount(1);
+    await expect(row('ordinary').locator('.lucide-file')).toHaveCount(1);
+    await expect(row('ordinary-linked-name').locator('.lucide-file')).toHaveCount(1);
   }
   await page.locator('#markdown-editor').fill('# Edited again');
   await page.waitForTimeout(700);
@@ -169,6 +169,6 @@ test('guide metadata survives edits and reloads, while names alone never identif
   await page.locator('#document-tree [data-document-id="guide"]').dispatchEvent('contextmenu',{clientX:120,clientY:120});
   await page.locator('.document-menu-context.open').getByRole('menuitem',{name:'Duplicate',exact:true}).click();
   const copy = page.locator('#document-tree [data-tree-type="document"]').filter({hasText:'Renamed guide (copy)'});
-  await expect(copy.locator('.lucide-file-text')).toHaveCount(1);
+  await expect(copy.locator('.lucide-file')).toHaveCount(1);
   await expect(copy.locator('.lucide-book-open')).toHaveCount(0);
 });

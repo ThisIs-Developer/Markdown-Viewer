@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getDocumentFileIcon(tab) {
     if (getBuiltInGuideLabel(tab)) return 'lucide-book-open';
-    return isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file-text';
+    return isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file';
   }
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
   const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
@@ -1457,7 +1457,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       input.addEventListener('change', updateTrashSelectionState);
 
       const icon = document.createElement('i');
-      icon.className = 'lucide trash-item-icon lucide-file-text';
+      icon.className = 'lucide trash-item-icon lucide-file';
       icon.setAttribute('aria-hidden', 'true');
 
       const title = document.createElement('span');
@@ -6829,7 +6829,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const page = document.createElement('span');
     page.className = 'document-drag-preview-page';
     const icon = document.createElement('i');
-    icon.className = 'lucide ' + (folder ? 'lucide-folder-symlink' : fileCount > 1 ? 'lucide-files' : 'lucide-file-text');
+    icon.className = 'lucide ' + (folder ? 'lucide-folder-symlink' : fileCount > 1 ? 'lucide-files' : 'lucide-file');
     icon.setAttribute('aria-hidden', 'true');
     const badge = document.createElement('span');
     badge.className = 'document-drag-preview-badge';
@@ -18673,7 +18673,7 @@ ${selector} .arrowheadPath {
           fileButton.title = file.path;
 
           const fileIcon = document.createElement("i");
-          fileIcon.className = "lucide lucide-file-text github-tree-file-icon";
+          fileIcon.className = "lucide lucide-file github-tree-file-icon";
           fileIcon.setAttribute("aria-hidden", "true");
           const fileName = document.createElement("span");
           fileName.className = "github-import-tree-name";

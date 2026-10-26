@@ -458,7 +458,7 @@ test('dedicated Trash uses the shared application type scale at compact widths',
   await expect(page.locator('.trash-item-type, .trash-item-meta, .trash-item-copy')).toHaveCount(0);
   await expect(page.locator('.trash-item-expiry')).toHaveText('30 days');
   await expect(page.locator('.trash-item-expiry .lucide-clock-3')).toBeVisible();
-  await expect(page.locator('.trash-item-icon')).toHaveClass(/lucide-file-text/);
+  await expect(page.locator('.trash-item-icon')).toHaveClass(/\blucide-file\b/);
   const fileIcon = await page.locator('.trash-item-icon').evaluate(icon => ({
     tagName: icon.tagName,
     parentClass: icon.parentElement.className,

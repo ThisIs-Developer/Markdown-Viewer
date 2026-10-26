@@ -160,7 +160,7 @@ test('links a folder and converts a linked file into a Vault copy', async ({ pag
 
   await expect(page.locator('#document-tree')).toContainText('Workspace (Vault)');
   await expect(linkedRow).not.toHaveClass(/is-linked-document/);
-  await expect(linkedRow.locator('.lucide-file-text')).toHaveCount(1);
+  await expect(linkedRow.locator('.lucide-file')).toHaveCount(1);
   await expect(page.locator('.document-tree-row[data-tree-type="linked-location"]').filter({ hasText: 'Notes' })).toContainText('0');
   await expect.poll(() => page.evaluate(() => window.__linkedWrites)).toEqual([]);
 });

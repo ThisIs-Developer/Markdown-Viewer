@@ -9,6 +9,30 @@ async function openDesktop(page) {
 }
 
 for (const theme of ['light', 'dark']) {
+  test(`ordinary documents render the plain file icon in ${theme} theme`, async ({ page }, testInfo) => {
+    await openDesktop(page);
+    await page.evaluate(value => document.documentElement.setAttribute('data-theme', value), theme);
+    await page.locator('#tab-new-btn').click();
+    const tab = page.locator('#tab-list .tab-item.active');
+    const id = await tab.getAttribute('data-tab-id');
+    const row = page.locator(`#document-tree [data-document-id="${id}"]`);
+    for (const icon of [row.locator('.lucide-file'), tab.locator('.lucide-file')]) {
+      await expect(icon).toBeVisible();
+      await expect(icon).toHaveAttribute('aria-hidden', 'true');
+      const svg = await icon.evaluate(async node => {
+        const mask = getComputedStyle(node).maskImage;
+        const image = new Image();
+        image.src = mask.match(/^url\(["']?(.*?)["']?\)$/)[1];
+        await image.decode();
+        return atob(image.src.split(',')[1]);
+      });
+      expect(svg).toContain('class="lucide lucide-file"');
+      expect(svg).toContain('stroke-width="1.5"');
+    }
+    await expect(page.locator('#document-tree .lucide-book-open')).toHaveCount(2);
+    await page.screenshot({ path: testInfo.outputPath('file-icons.png') });
+  });
+
   test(`linked actions use distinct official icons in ${theme} theme without changing Vault icons`, async ({ page }) => {
     await openDesktop(page);
     await page.evaluate(async theme => {
