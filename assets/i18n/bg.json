@@ -1,4 +1,9 @@
 {
+  "Linking folder": "Свързване на папка",
+  "Scanning folder…": "Сканиране на папката…",
+  "Reading files…": "Четене на файлове…",
+  "Linking files…": "Свързване на файлове…",
+  "Folder linked": "Папката е свързана",
   "Expanded view": "Разширен изглед",
   "Exit expanded view": "Изход от разширения изглед",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Тук целият екран не е наличен. Разширеният изглед оставя контролите на браузъра видими.",

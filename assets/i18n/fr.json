@@ -1,4 +1,9 @@
 {
+  "Linking folder": "Liaison du dossier",
+  "Scanning folder…": "Analyse du dossier…",
+  "Reading files…": "Lecture des fichiers…",
+  "Linking files…": "Liaison des fichiers…",
+  "Folder linked": "Dossier lié",
   "Expanded view": "Vue agrandie",
   "Exit expanded view": "Quitter la vue agrandie",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Le plein écran n'est pas disponible ici. La vue agrandie conserve les commandes du navigateur visibles.",

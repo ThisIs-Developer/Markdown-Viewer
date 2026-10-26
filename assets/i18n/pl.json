@@ -1,4 +1,9 @@
 {
+  "Linking folder": "Łączenie folderu",
+  "Scanning folder…": "Skanowanie folderu…",
+  "Reading files…": "Odczytywanie plików…",
+  "Linking files…": "Łączenie plików…",
+  "Folder linked": "Folder połączony",
   "Expanded view": "Widok rozszerzony",
   "Exit expanded view": "Wyjdź z widoku rozszerzonego",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Pełny ekran jest tutaj niedostępny. Widok rozszerzony pozostawia widoczne elementy sterujące przeglądarki.",

@@ -1,4 +1,9 @@
 {
+  "Linking folder": "Подключение папки",
+  "Scanning folder…": "Сканирование папки…",
+  "Reading files…": "Чтение файлов…",
+  "Linking files…": "Подключение файлов…",
+  "Folder linked": "Папка подключена",
   "Expanded view": "Расширенный вид",
   "Exit expanded view": "Выйти из расширенного вида",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Полноэкранный режим здесь недоступен. В расширенном виде элементы управления браузера остаются видимыми.",

@@ -1,4 +1,9 @@
 {
+  "Linking folder": "Klasör bağlanıyor",
+  "Scanning folder…": "Klasör taranıyor…",
+  "Reading files…": "Dosyalar okunuyor…",
+  "Linking files…": "Dosyalar bağlanıyor…",
+  "Folder linked": "Klasör bağlandı",
   "Expanded view": "Genişletilmiş görünüm",
   "Exit expanded view": "Genişletilmiş görünümden çık",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Tam ekran burada kullanılamıyor. Genişletilmiş görünümde tarayıcı kontrolleri görünür kalır.",

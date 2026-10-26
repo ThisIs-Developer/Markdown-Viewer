@@ -1315,6 +1315,15 @@ body.document-sidebar-collapsed .document-sidebar {
   transition: width 0.18s ease;
 }
 
+.linked-folder-progress-toast[data-indeterminate="true"] .import-progress-value {
+  animation: linked-folder-progress-scan 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes linked-folder-progress-scan {
+  from { transform: translateX(0); }
+  to { transform: translateX(185%); }
+}
+
 .import-progress-toast[data-state="complete"] .import-progress-value {
   background: var(--success-color);
 }
@@ -1493,6 +1502,7 @@ body.document-sidebar-collapsed .document-sidebar {
 @media (prefers-reduced-motion: reduce) {
   .import-progress-toast,
   .import-progress-toast[data-state="loading"] .import-progress-icon,
+  .linked-folder-progress-toast[data-indeterminate="true"] .import-progress-value,
   .import-progress-value,
   .app-toast {
     animation: none;

@@ -1,4 +1,9 @@
 {
+  "Linking folder": "正在链接文件夹",
+  "Scanning folder…": "正在扫描文件夹…",
+  "Reading files…": "正在读取文件…",
+  "Linking files…": "正在链接文件…",
+  "Folder linked": "文件夹已链接",
   "Expanded view": "展开视图",
   "Exit expanded view": "退出展开视图",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "此处无法使用全屏。展开视图会保留浏览器的控件。",

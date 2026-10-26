@@ -1,4 +1,9 @@
 {
+  "Linking folder": "폴더 연결 중",
+  "Scanning folder…": "폴더 검색 중…",
+  "Reading files…": "파일 읽는 중…",
+  "Linking files…": "파일 연결 중…",
+  "Folder linked": "폴더 연결됨",
   "Expanded view": "확장 보기",
   "Exit expanded view": "확장 보기 종료",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "여기에서는 전체 화면을 사용할 수 없습니다. 확장 보기에서는 브라우저의 조작 버튼이 계속 표시됩니다.",

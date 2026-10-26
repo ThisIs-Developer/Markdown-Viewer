@@ -1,4 +1,9 @@
 {
+  "Linking folder": "フォルダーをリンク中",
+  "Scanning folder…": "フォルダーをスキャン中…",
+  "Reading files…": "ファイルを読み込み中…",
+  "Linking files…": "ファイルをリンク中…",
+  "Folder linked": "フォルダーをリンクしました",
   "Expanded view": "拡大表示",
   "Exit expanded view": "拡大表示を終了",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "ここでは全画面表示を利用できません。拡大表示ではブラウザーの操作ボタンは表示されたままです。",

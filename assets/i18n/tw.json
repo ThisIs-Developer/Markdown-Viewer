@@ -1,4 +1,9 @@
 {
+  "Linking folder": "正在連結資料夾",
+  "Scanning folder…": "正在掃描資料夾…",
+  "Reading files…": "正在讀取檔案…",
+  "Linking files…": "正在連結檔案…",
+  "Folder linked": "資料夾已連結",
   "Expanded view": "展開檢視",
   "Exit expanded view": "結束展開檢視",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "此處無法使用全螢幕。展開檢視會保留瀏覽器的控制項。",

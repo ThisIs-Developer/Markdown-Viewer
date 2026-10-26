@@ -1,4 +1,9 @@
 {
+  "Linking folder": "Collegamento della cartella",
+  "Scanning folder…": "Scansione della cartella…",
+  "Reading files…": "Lettura dei file…",
+  "Linking files…": "Collegamento dei file…",
+  "Folder linked": "Cartella collegata",
   "Expanded view": "Vista espansa",
   "Exit expanded view": "Esci dalla vista espansa",
   "Fullscreen is unavailable here. Expanded view keeps browser controls visible.": "Lo schermo intero non è disponibile qui. La vista espansa mantiene visibili i controlli del browser.",

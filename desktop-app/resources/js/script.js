@@ -12226,7 +12226,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return MarkdownNativeSourceReader.read(Neutralino.filesystem, path, knownStats);
   }
 
-  async function collectMarkdownFilesFromFolder(rootPath, canContinue, shouldInclude) {
+  async function collectMarkdownFilesFromFolder(rootPath, canContinue, shouldInclude, onProgress) {
     const files = [];
     const limits = LINKED_FOLDER_SCAN_LIMITS;
     const startedAt = Date.now();
@@ -12246,6 +12246,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (visited.has(identity)) throw linkedFolderScanError('Repeated folder path detected. Check for junctions or links.');
       visited.add(identity);
       if (visited.size > limits.directories) throw linkedFolderScanError('Folder scan exceeds 2,000 directories. Link a smaller folder instead.');
+      if (onProgress) onProgress({ phase: 'scan', path: relativePrefix });
       const entries = await Neutralino.filesystem.readDirectory(folderPath);
       checkpoint();
       entriesSeen += entries.length;
@@ -12276,14 +12277,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     // Stage bounded reads before applying any document changes. A failed scan
     // must not clear exclusions, mark sources missing or replace existing drafts.
     totalBytes = 0;
+    let processed = 0;
     for (const file of files) {
       checkpoint();
+      if (onProgress) onProgress({ phase: 'read', processed: processed, total: files.length, path: file.relativePath });
       file.content = await readNativeMarkdownSource(file.path);
       checkpoint();
       const byteLength = new TextEncoder().encode(file.content).byteLength;
       if (byteLength > limits.fileBytes) throw linkedFolderScanError('A Markdown file grew beyond 20 MiB during the scan: ' + file.relativePath);
       totalBytes += byteLength;
       if (totalBytes > limits.totalBytes) throw linkedFolderScanError('Markdown files grew beyond 200 MiB during the scan.');
+      processed++;
     }
     return files;
   }
@@ -12467,7 +12471,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         return settings.restoreExcluded || !(getLinkedLocation(locationId).excludedPaths || []).some(function(path) {
           return normalizeLinkedSourcePath(location.path + '/' + path) === normalizeLinkedSourcePath(location.path + '/' + relativePath);
         });
-      });
+      }, settings.onProgress);
       if (!canApply()) return 0;
       getLinkedLocation(locationId).unavailable = false;
       linkedFolderScanErrors.delete(locationId);
@@ -12486,11 +12490,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     const discoveredPaths = new Set();
     let added = 0;
     let applyFailure = null;
+    let processed = 0;
     for (const file of files) {
       if (!canApply()) return 0;
       const excluded = getLinkedLocation(locationId).excludedPaths || [];
       if (excluded.some(function(path) { return normalizeLinkedSourcePath(location.path + '/' + path) === normalizeLinkedSourcePath(file.path); })) continue;
       discoveredPaths.add(normalizeLinkedSourcePath(file.path));
+      if (settings.onProgress) settings.onProgress({ phase: 'link', processed: processed, total: files.length, path: file.relativePath });
       let existing = findTabBySourcePath(file.path);
       try {
         const content = file.content;
@@ -12512,12 +12518,14 @@ document.addEventListener("DOMContentLoaded", async function () {
         console.warn('Could not read linked Markdown file:', file.path, error);
         applyFailure = applyFailure || error;
       }
+      processed++;
     }
     if (!canApply()) return 0;
     tabs.filter(function(tab) { return tab.linkedRootId === location.id; }).forEach(function(tab) {
       if (!discoveredPaths.has(normalizeLinkedSourcePath(tab.sourcePath))) tab.sourceMissing = true;
     });
     const appliedExclusions = getLinkedLocation(locationId).excludedPaths;
+    if (settings.onProgress) settings.onProgress({ phase: 'save', processed: processed, total: files.length });
     const documentsSaved = await _flushTabsToStorage(tabs, {
       changedIds: tabs.filter(function(tab) { return tab.linkedRootId === locationId; }).map(function(tab) { return tab.id; }),
       requireExactCommit: true
@@ -12553,9 +12561,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     saveTabsToStorage(tabs);
     refreshUI();
+    if (!applyFailure && settings.onProgress) settings.onProgress({ phase: 'complete', total: files.length });
     if (settings.notify) {
       if (applyFailure) showAppToast('Some files could not be refreshed. Existing drafts were kept; rescan to retry.', { tone: 'warning', title: 'Folder scan incomplete', dedupeKey: 'linked-scan-stopped-' + locationId });
-      else showAppToast('Linked folder scanned. ' + added + ' new Markdown file' + (added === 1 ? '' : 's') + ' found.', { tone: 'success', title: location.name });
+      else if (!settings.onProgress) showAppToast('Linked folder scanned. ' + added + ' new Markdown file' + (added === 1 ? '' : 's') + ' found.', { tone: 'success', title: location.name });
     }
     return added;
   }
@@ -12616,7 +12625,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
     if (!committed || readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return null;
-    await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true });
+    await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true, onProgress: options && options.onProgress });
     await refreshLinkedSourceMonitoring();
     return getLinkedLocation(location.id);
   }
@@ -12670,10 +12679,91 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!hasDesktopFileAccess()) return;
     try {
       const folderPath = await Neutralino.os.showFolderDialog('Link folder');
-      if (folderPath) await addLinkedFolderPath(folderPath, { parent: parent });
+      if (folderPath) await linkMarkdownFolderWithProgress(folderPath, { parent: parent });
     } catch (error) {
       console.warn('Could not link Markdown folder:', error);
       showAppToast(error.message || 'The selected folder could not be linked.', { tone: 'error', title: 'Link failed' });
+    }
+  }
+
+  function createLinkedFolderProgress(folderPath) {
+    const template = document.getElementById('import-progress-toast');
+    if (!template) return null;
+    // Reuse the GitHub import card, with independent state so simultaneous
+    // folder links and imports cannot overwrite or dismiss each other's progress.
+    const toast = template.cloneNode(true);
+    const title = toast.querySelector('#import-progress-title');
+    const count = toast.querySelector('#import-progress-count');
+    const detail = toast.querySelector('#import-progress-detail');
+    const icon = toast.querySelector('#import-progress-icon');
+    const bar = toast.querySelector('#import-progress-bar');
+    const value = toast.querySelector('#import-progress-value');
+    toast.removeAttribute('id');
+    toast.querySelectorAll('[id]').forEach(function(node) { node.removeAttribute('id'); });
+    toast.classList.add('linked-folder-progress-toast');
+    toast.dataset.state = 'loading';
+    toast.dataset.indeterminate = 'true';
+    toast.dataset.phase = 'scan';
+    title.textContent = translateUiString('Linking folder');
+    count.textContent = translateUiString('Preparing');
+    detail.textContent = translateUiString('Scanning folder…') + ' ' + getNativePathName(folderPath);
+    icon.className = 'lucide lucide-refresh-cw import-progress-icon';
+    bar.setAttribute('aria-label', translateUiString('Linking folder'));
+    bar.removeAttribute('aria-valuenow');
+    value.style.width = '35%';
+    toast.hidden = false;
+    template.parentNode.appendChild(toast);
+    let total = 0;
+    return {
+      update: function(event) {
+        toast.dataset.phase = event.phase;
+        const labels = { scan: 'Scanning folder…', read: 'Reading files…', link: 'Linking files…', save: 'Saving...' };
+        detail.textContent = translateUiString(labels[event.phase]) + (event.path ? ' ' + event.path : '');
+        if (event.phase === 'scan') return;
+        total = event.total;
+        count.textContent = translateUiString(event.processed + ' of ' + total);
+        // Discovery has no known total. Reading and linking then cover equal
+        // portions of the bar; reserve the end for durable document/metadata saves.
+        const fraction = total ? event.processed / total : 0;
+        const percent = event.phase === 'save' ? 95 : Math.round((event.phase === 'read' ? 0 : 45) + fraction * 45);
+        toast.dataset.indeterminate = 'false';
+        value.style.width = percent + '%';
+        bar.setAttribute('aria-valuenow', String(percent));
+      },
+      finish: function(success, error) {
+        toast.dataset.state = success ? 'complete' : 'partial';
+        toast.dataset.indeterminate = 'false';
+        title.textContent = translateUiString(success ? 'Folder linked' : 'Link failed');
+        icon.className = 'lucide ' + (success ? 'lucide-check' : 'lucide-triangle-alert') + ' import-progress-icon';
+        if (success) {
+          count.textContent = translateUiString(total === 1 ? '1 file' : total + ' files');
+          value.style.width = '100%';
+          bar.setAttribute('aria-valuenow', '100');
+          detail.textContent = folderPath;
+        } else {
+          count.textContent = '';
+          detail.textContent = translateUiString(error || 'The selected folder could not be linked.');
+        }
+        setTimeout(function() { toast.remove(); }, success ? 4200 : 7000);
+      }
+    };
+  }
+
+  async function linkMarkdownFolderWithProgress(folderPath, options) {
+    const progress = createLinkedFolderProgress(folderPath);
+    let completed = false;
+    try {
+      const location = await addLinkedFolderPath(folderPath, Object.assign({}, options, {
+        onProgress: function(event) {
+          if (event.phase === 'complete') completed = true;
+          else if (progress) progress.update(event);
+        }
+      }));
+      if (progress) progress.finish(completed && Boolean(location), location && linkedFolderScanErrors.get(location.id));
+      return location;
+    } catch (error) {
+      if (progress) progress.finish(false, error.message);
+      throw error;
     }
   }
 
@@ -13067,7 +13157,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Native-drop integration, when available, can reuse the same folder workflow.
   window.NL_LINK_MARKDOWN_FOLDER_PATH = function(folderPath) {
     if (typeof folderPath !== 'string' || !folderPath) return Promise.resolve(null);
-    return addLinkedFolderPath(folderPath, { silent: true });
+    return linkMarkdownFolderWithProgress(folderPath, { silent: true });
   };
 
   function isTabOpen(tab) {
