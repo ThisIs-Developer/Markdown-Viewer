@@ -26,7 +26,14 @@ function setup() {
     getTabsForStorage: tabs => tabs, isPrivateStorageMode: () => false,
     evictInactiveDocumentContent() {}, updateSaveStatus() {},
     preserveWorkspaceConflict: async () => false, showAppToast() {},
-    console: { warn() {} }, saved: [], journals: new Map()
+    console: { warn() {} }, saved: [], journals: new Map(),
+    recoveredDocumentJournalSources: new WeakMap(),
+    readDirtyDocumentJournals: async () => [],
+    normalizeReviewThreads: threads => threads || [],
+    DEFAULT_WORKSPACE_ID: 'workspace_default',
+    createTab: (content, title, viewMode, location) => ({
+      id: 'recovered-copy', content, contentLoaded: true, title, viewMode, ...location
+    })
   };
   target.workspaceStorage = {
     async saveDocuments(tabs) { target.saved.push(tabs[0].content); },
@@ -38,7 +45,7 @@ function setup() {
       }
     }
   };
-  const names = ['getDirtyDocumentJournalKey', 'clearDirtyDocumentJournal', '_flushTabsToStorage'];
+  const names = ['getDirtyDocumentJournalKey', 'clearDirtyDocumentJournal', '_flushTabsToStorage', 'recoverDirtyDocumentJournals'];
   if (source.includes('function captureDirtyDocumentJournalSnapshot(')) names.unshift('captureDirtyDocumentJournalSnapshot');
   vm.createContext(target);
   vm.runInContext(names.map(productionFunction).join('\n'), target);
@@ -140,4 +147,46 @@ test('a newer journal survives an old save, then is cleared by its own successfu
   await target._flushTabsToStorage([tab], { changedIds: [tab.id] });
   assert.equal(target.localStorage.getItem(key), null);
   assert.equal(target.saved.at(-1), 'NEW');
+});
+
+for (const location of ['localStorage', 'sessionStorage', 'indexeddb']) {
+  for (const scenario of ['saved', 'failed', 'metadata-only', 'newer-before-save', 'newer-during-save']) {
+    test(`recovered copy ${scenario}: ${location} source journal is consumed only by its matching successful save`, async () => {
+      const { target, tab, key } = setup();
+      tab._storageRevision = 2;
+      const source = { ...journal('RECOVERED'), expectedRevision: 1, metadata: { reviewThreads: [] } };
+      const write = value => location === 'indexeddb'
+        ? target.journals.set(key, { ...value, journalId: key })
+        : target[location].setItem(key, JSON.stringify(value));
+      const read = () => location === 'indexeddb' ? target.journals.get(key) : JSON.parse(target[location].getItem(key));
+      write(source);
+      target.readDirtyDocumentJournals = async () => [{ key, value: source }];
+      const ids = await target.recoverDirtyDocumentJournals();
+      const recovered = target.tabs.find(item => item.id === ids[0]);
+      assert.notEqual(recovered.id, source.documentId);
+
+      const newer = { ...source, savedAt: 2, metadata: { reviewThreads: [{ body: 'NEW COMMENT' }] } };
+      if (scenario === 'newer-before-save') write(newer);
+      if (scenario === 'metadata-only') { recovered.contentLoaded = false; recovered.content = undefined; }
+      target.workspaceStorage.saveDocuments = async () => {
+        if (scenario === 'failed') throw Error('disk full');
+        if (scenario === 'newer-during-save') write(newer);
+      };
+      const result = await target._flushTabsToStorage(target.tabs, { changedIds: ids });
+      assert.equal(result, scenario !== 'failed');
+      if (scenario === 'saved') assert.ok(!read(), 'saved recovery copy must consume its source journal');
+      else if (scenario.startsWith('newer')) assert.equal(read().metadata.reviewThreads[0].body, 'NEW COMMENT');
+      else assert.equal(read().content, source.content);
+    });
+  }
+}
+
+test('a tracked key alone cannot authorize cleanup of another document journal', async () => {
+  const { target, tab, key } = setup();
+  const unrelated = { documentId: 'unrelated', content: tab.content };
+  target.localStorage.setItem(key, JSON.stringify(unrelated));
+  target.journals.set(key, { ...unrelated, journalId: key });
+  await target._flushTabsToStorage([tab], { changedIds: [tab.id] });
+  assert.equal(JSON.parse(target.localStorage.getItem(key)).documentId, 'unrelated');
+  assert.equal(target.journals.get(key).documentId, 'unrelated');
 });
