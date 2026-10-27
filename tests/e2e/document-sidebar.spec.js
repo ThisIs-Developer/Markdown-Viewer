@@ -95,7 +95,8 @@ test('documents open on a single click and collapse all is available', async ({ 
   await expect(workspaceRow).toHaveAttribute('aria-expanded', 'false');
   await expect(workspaceIcon).toHaveCount(1);
   const collapsedColor = await workspaceIcon.evaluate(icon => getComputedStyle(icon).color);
-  expect(collapsedColor).not.toBe(expandedColor);
+  // Expansion does not change which workspace contains the active document.
+  expect(collapsedColor).toBe(expandedColor);
   await expect(page.locator('#document-sidebar-collapse-all')).toHaveAttribute('aria-label', 'Expand all folders');
   await expect(page.locator('#document-sidebar-collapse-all i')).toHaveClass(/lucide-unfold-vertical/);
   await page.locator('#document-sidebar-collapse-all').click();
@@ -224,7 +225,7 @@ test('Explorer opens and moves multiple selected documents', async ({ page }) =>
   await secondRow.click({ modifiers: ['Control'] });
   await secondRow.click({ button: 'right' });
   await page.locator('.document-menu-context.open').getByRole('menuitem', { name: 'Move to…' }).click();
-  await page.locator('#document-move-destination').selectOption({ label: 'Workspace / Bulk destination' });
+  await page.locator('#document-move-destination').selectOption({ label: 'Workspace (Vault) / Bulk destination' });
   await page.locator('#document-move-modal-confirm').click();
   await expect(firstRow).toHaveAttribute('data-tree-depth', '2');
   await expect(secondRow).toHaveAttribute('data-tree-depth', '2');

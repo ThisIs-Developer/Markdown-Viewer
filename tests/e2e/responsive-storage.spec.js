@@ -40,8 +40,8 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   await expect(themeSwitch).toHaveCSS('width', await privateModeSwitch.evaluate(element => getComputedStyle(element).width));
   await expect(themeSwitch).toHaveCSS('height', await privateModeSwitch.evaluate(element => getComputedStyle(element).height));
   await expect(themeSwitch.locator(':scope > span')).toHaveCSS('border-radius', '50%');
-  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
-  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await resolveCssColor(page, '--bg-color'));
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await resolveCssColor(page, '--text-color'));
 
   await themeToggle.click();
   const toggledTheme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
@@ -49,8 +49,14 @@ test('theme switching stores and restores the selected theme', async ({ page }) 
   expect(toggledTheme).not.toBe(initialTheme);
   await expect(themeToggle).toHaveAttribute('aria-pressed', String(toggledTheme === 'dark'));
   await expect(page.locator('#theme-switch-icon')).toHaveClass(new RegExp(`\\b${toggledThemeIcon}\\b`));
-  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', await page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor));
-  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', await page.locator('body').evaluate(element => getComputedStyle(element).color));
+  // Assert the target theme color, not a one-time snapshot halfway through
+  // the body's transition. Playwright still waits for the icon to reach it.
+  const backgroundColor = await resolveCssColor(page, '--bg-color');
+  const textColor = await resolveCssColor(page, '--text-color');
+  await expect(page.locator('body')).toHaveCSS('background-color', backgroundColor);
+  await expect(page.locator('body')).toHaveCSS('color', textColor);
+  await expect(themeSwitch.locator(':scope > span')).toHaveCSS('background-color', backgroundColor);
+  await expect(page.locator('#theme-switch-icon')).toHaveCSS('color', textColor);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('markdownViewerGlobalState') || '{}').theme)).toBe(toggledTheme);
 
   await page.reload();
@@ -452,7 +458,7 @@ test('dedicated Trash uses the shared application type scale at compact widths',
   await expect(page.locator('.trash-item-type, .trash-item-meta, .trash-item-copy')).toHaveCount(0);
   await expect(page.locator('.trash-item-expiry')).toHaveText('30 days');
   await expect(page.locator('.trash-item-expiry .lucide-clock-3')).toBeVisible();
-  await expect(page.locator('.trash-item-icon')).toHaveClass(/lucide-file-text/);
+  await expect(page.locator('.trash-item-icon')).toHaveClass(/\blucide-file\b/);
   const fileIcon = await page.locator('.trash-item-icon').evaluate(icon => ({
     tagName: icon.tagName,
     parentClass: icon.parentElement.className,
@@ -632,7 +638,7 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch')).toBeVisible();
   await expect(page.locator('#mobile-private-mode-toggle .settings-switch .lucide')).toHaveCount(0);
   const settingsOrder = await page.locator('#mobile-menu-settings-panel > *').evaluateAll(elements =>
-    elements.filter(element => element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
+    elements.filter(element => !element.hidden && element.matches('button, .mobile-menu-language')).map(element => element.id || element.className)
   );
   expect(settingsOrder[0]).toBe('mobile-theme-toggle');
   expect(settingsOrder[1]).toContain('mobile-menu-language');

@@ -131,6 +131,14 @@ if (isNeutralinoRuntime()) {
     // TODO: Fix https://github.com/neutralinojs/neutralinojs/issues/615
     setTray();
   }
+
+  window.addEventListener('markdown-viewer:ready', function() {
+    if (typeof window.NL_START_LINKED_MONITORING === 'function') {
+      window.NL_START_LINKED_MONITORING().catch(function(error) {
+        console.warn('Linked source monitoring initialization failed:', error);
+      });
+    }
+  }, { once: true });
 }
 
 // Open file passed as command-line argument (e.g. when double-clicking a .md file)
@@ -141,17 +149,22 @@ if (isNeutralinoRuntime()) {
   if (!filePath) return;
 
   try {
-    const content = await Neutralino.filesystem.readFile(filePath);
+    if (typeof window.NL_OPEN_EXTERNAL_MARKDOWN_FILE === 'function') {
+      await window.NL_OPEN_EXTERNAL_MARKDOWN_FILE(filePath);
+      return;
+    }
+    const content = await MarkdownNativeSourceReader.read(Neutralino.filesystem, filePath);
     const fileName = filePath.split(/[/\\]/).pop().replace(/\.(md|markdown)$/i, '');
     
     window.NL_INITIAL_FILE_CONTENT = {
       name: fileName,
-      content: content
+      content: content,
+      sourcePath: filePath
     };
 
     // Callback hook in case script.js loaded first
     if (window.NL_IMPORT_EXTERNAL_FILE) {
-      window.NL_IMPORT_EXTERNAL_FILE(content, fileName);
+      await window.NL_IMPORT_EXTERNAL_FILE(content, fileName, filePath);
     }
   } catch (e) {
     console.warn('Could not open initial file:', e);

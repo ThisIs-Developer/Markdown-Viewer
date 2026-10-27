@@ -91,6 +91,27 @@
     }).join('');
   }
 
+  function validatedRecoveryFolderSegments(value) {
+    if (value === undefined) return [];
+    if (!Array.isArray(value) || value.length > 100 || value.some(function(segment) {
+      return typeof segment !== 'string' || !segment || segment.length > 160 ||
+        segment === '.' || segment === '..' || /[<>:"/\\|?*\u0000-\u001f]/.test(segment) ||
+        /[. ]$/.test(segment) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(segment);
+    })) throw new TypeError('Invalid Linked Workspace recovery hierarchy.');
+    return value.slice();
+  }
+
+  function recoveryFoldersFromStoredPath(value) {
+    if (!value) return [];
+    const normalized = normalizePathSeparators(value);
+    if (!normalized.startsWith('Linked Workspace/')) return [];
+    const parts = normalized.split('/');
+    parts.shift();
+    const filename = parts.pop();
+    validatedRecoveryFolderSegments([filename]);
+    return validatedRecoveryFolderSegments(parts);
+  }
+
   function requestToPromise(request) {
     return new Promise(function (resolve, reject) {
       request.onsuccess = function () { resolve(request.result); };
@@ -278,6 +299,7 @@
 
     mergeCollection('workspaces');
     mergeCollection('folders');
+    mergeCollection('linkedLocations');
     merged.ui = mergeObjectChanges(base.ui || {}, local.ui || {}, remote.ui || {});
     return merged;
   }
@@ -352,6 +374,7 @@
       if (this.desktop) await this._initDesktop();
       else await this._initBrowser();
       await this._migrateLegacyNormalDocuments();
+      if (this.desktop) await this._migrateLinkedRecoveryDocuments();
       this.ready = true;
       try {
         await this.purgeExpiredTrash();
@@ -521,6 +544,7 @@
       const journalPath = await this._pathJoin(internalPath, 'journal');
       await this._ensureDirectory(vaultPath);
       await this._ensureDirectory(workspacePath);
+      await this._ensureDirectory(await this._pathJoin(vaultPath, 'Linked Workspace'));
       await this._ensureDirectory(await this._pathJoin(vaultPath, 'Secret Workspace'));
       await this._ensureDirectory(secretPath);
       await this._ensureDirectory(internalPath);
@@ -576,6 +600,26 @@
       }
     }
 
+    async _migrateLinkedRecoveryDocuments() {
+      const drafts = [];
+      for (const item of this.vaultIndex.documents) {
+        if (!item.sourcePath) continue;
+        if (item.vaultRelativePath === await this._desktopDocumentRelativePath(item, this.vaultOrganization)) continue;
+        drafts.push(Object.assign({}, item, {
+          contentLoaded: false,
+          _storageRevision: normalizedStorageRevision(item.storageRevision)
+        }));
+      }
+      // Validate all existing bodies before moving any file. Missing recovery
+      // content must stop migration rather than creating an empty replacement.
+      for (const draft of drafts) await this.loadDocumentContent(draft.id);
+      if (drafts.length) {
+        await this.saveDocuments(drafts, this.vaultOrganization, {
+          changedIds: drafts.map(function(item) { return item.id; })
+        });
+      }
+    }
+
     async _rebuildDesktopIndex(workspacePath) {
       const organization = this.vaultOrganization && typeof this.vaultOrganization === 'object'
         ? cloneJson(this.vaultOrganization, null)
@@ -605,7 +649,7 @@
         return folder;
       };
 
-      const walk = async (currentPath, relativeSegments, parentFolderId) => {
+      const walk = async (currentPath, relativeSegments, parentFolderId, storageRoot) => {
         let entries = [];
         try {
           entries = await Neutralino.filesystem.readDirectory(currentPath);
@@ -619,8 +663,8 @@
           if (!entry || !entry.entry) continue;
           const entryPath = await this._pathJoin(currentPath, entry.entry);
           if (entry.type === 'DIRECTORY') {
-            const folder = findOrCreateFolder(entry.entry, parentFolderId);
-            await walk(entryPath, relativeSegments.concat(entry.entry), folder.id);
+            const folder = storageRoot === 'Workspace' ? findOrCreateFolder(entry.entry, parentFolderId) : null;
+            await walk(entryPath, relativeSegments.concat(entry.entry), folder ? folder.id : null, storageRoot);
             continue;
           }
           if (entry.type !== 'FILE' || !/\.md$/i.test(entry.entry)) continue;
@@ -645,13 +689,18 @@
             lastOpenedAt: timestamp,
             lastEditedAt: timestamp,
             contentSize: Number(stats && stats.size) || 0,
-            vaultRelativePath: normalizePathSeparators(['Workspace'].concat(relativeSegments, entry.entry).join('/')),
+            vaultRelativePath: normalizePathSeparators([storageRoot].concat(relativeSegments, entry.entry).join('/')),
+            // A lost index cannot safely tell us the original source path.
+            // Preserve these bodies as recovery documents, not invented links.
+            kind: storageRoot === 'Linked Workspace' ? 'linked-recovery' : undefined,
+            recoveryFolderSegments: storageRoot === 'Linked Workspace' ? validatedRecoveryFolderSegments(relativeSegments) : undefined,
             contentLoaded: false
           });
         }
       };
 
-      await walk(workspacePath, [], null);
+      await walk(workspacePath, [], null, 'Workspace');
+      await walk(await this._pathJoin(this.vaultPath, 'Linked Workspace'), [], null, 'Linked Workspace');
       if (documents.length) documents[0].isOpen = true;
       this.vaultOrganization = organization;
       return {
@@ -1053,8 +1102,9 @@
       }
     }
 
-    async loadDocumentContent(id) {
+    async loadDocumentContent(id, options) {
       requireDocumentId(id);
+      if (options && options.fresh) this._normalContentCache.delete(id);
       if (this._normalContentCache.has(id)) {
         const content = this._normalContentCache.get(id);
         this._cacheContent(id, content);
@@ -1095,7 +1145,34 @@
     }
 
     async _desktopDocumentRelativePath(tab, organization) {
-      const segments = ['Workspace'].concat(await this._desktopFolderSegments(tab, organization));
+      const linked = Boolean(tab.sourcePath) || tab.kind === 'linked-recovery' || tab.kind === 'linked-workspace-guide';
+      const segments = linked ? ['Linked Workspace'] : ['Workspace'].concat(await this._desktopFolderSegments(tab, organization));
+      if (tab.kind === 'linked-recovery' && !tab.sourcePath) {
+        segments.push.apply(segments, validatedRecoveryFolderSegments(tab.recoveryFolderSegments));
+      } else if (tab.sourcePath && tab.linkedRootId) {
+        const location = organization && Array.isArray(organization.linkedLocations)
+          ? organization.linkedLocations.find(function(root) { return root.id === tab.linkedRootId; }) : null;
+        if (location) {
+          const relative = String(tab.sourceRelativePath || '').replace(/\\/g, '/');
+          const parts = relative.split('/');
+          if (!relative || /^[\/]|^[a-z]:/i.test(relative) || parts.some(function(part) { return !part || part === '.' || part === '..'; })) {
+            throw new TypeError('Invalid linked source relative path.');
+          }
+          const source = normalizePathSeparators(tab.sourcePath);
+          const expectedSource = normalizePathSeparators(String(location.path || '').replace(/[\\/]+$/, '') + '/' + relative);
+          const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+          if (windows ? source.toLowerCase() !== expectedSource.toLowerCase() : source !== expectedSource) {
+            throw new TypeError('The linked source does not belong to its recovery root.');
+          }
+          const rootSuffix = await stableDocumentIdSuffix(location.id);
+          const rootName = sanitizePathSegment(location.name, 'Linked folder');
+          segments.push(rootName + '--' + rootSuffix);
+          parts.pop();
+          const folderParts = parts.map(function(part) { return sanitizePathSegment(part, 'Folder'); });
+          segments.push.apply(segments, validatedRecoveryFolderSegments(folderParts));
+          validatedRecoveryFolderSegments(segments.slice(1));
+        }
+      }
       requireDocumentId(tab && tab.id);
       const suffix = await stableDocumentIdSuffix(tab.id);
       segments.push(sanitizePathSegment(tab.title, 'Untitled') + '--' + suffix + '.md');
@@ -1103,10 +1180,10 @@
     }
 
     async _backupDocumentRelativePath(tab, organization) {
-      const storedPath = normalizePathSeparators(tab && (tab.vaultRelativePath || tab._vaultRelativePath));
+      const storedPath = normalizePathSeparators(tab && (tab._vaultRelativePath || tab.vaultRelativePath));
       if (
         storedPath &&
-        storedPath.startsWith('Workspace/') &&
+        (storedPath.startsWith('Workspace/') || storedPath.startsWith('Linked Workspace/')) &&
         !storedPath.split('/').some(function(segment) { return segment === '.' || segment === '..'; })
       ) {
         return storedPath;
@@ -1229,6 +1306,54 @@
       tab._storageContentJournalPaths = Array.from(new Set((tab._storageContentJournalPaths || []).concat(journalPath)));
     }
 
+    async _desktopInspectMovePath(path) {
+      try { return await Neutralino.filesystem.getStats(path); }
+      catch (error) {
+        if (!error || error.code !== 'NE_FS_NOPATHE') throw error;
+        // Native stat can report missing for an inaccessible entry. Confirm
+        // absence using its parent; never turn permission errors into absence.
+        const normalized = normalizePathSeparators(path);
+        const separator = normalized.lastIndexOf('/');
+        if (separator < 0) throw error;
+        const entries = await Neutralino.filesystem.readDirectory(normalized.slice(0, separator));
+        const name = normalized.slice(separator + 1);
+        const insensitive = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+        if (entries.some(function(entry) {
+          return insensitive ? String(entry.entry).toLowerCase() === name.toLowerCase() : entry.entry === name;
+        })) {
+          throw Object.assign(new Error('Move cancelled: a file exists but cannot be inspected at ' + path + '. No existing file was replaced.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
+        }
+        return null;
+      }
+    }
+
+    async _desktopPathsShareCaseAlias(source, destination) {
+      const from = normalizePathSeparators(source).split('/');
+      const to = normalizePathSeparators(destination).split('/');
+      if (from.length !== to.length || from.join('/').toLowerCase() !== to.join('/').toLowerCase()) return false;
+      // A case-sensitive directory may contain both spellings. Check each changed
+      // component rather than assuming Windows (or macOS) is case-insensitive.
+      for (let index = 0; index < from.length; index++) {
+        if (from[index] === to[index]) continue;
+        const entries = await Neutralino.filesystem.readDirectory(from.slice(0, index).join('/') || '/');
+        const matches = entries.filter(function(entry) {
+          return String(entry.entry).toLowerCase() === from[index].toLowerCase();
+        });
+        if (matches.length !== 1) return false;
+      }
+      return true;
+    }
+
+    async _desktopCheckMovePaths(source, destination) {
+      const stats = await this._desktopInspectMovePath(source);
+      if (!stats || stats.isDirectory || stats.isFile === false) {
+        throw Object.assign(new Error('Move cancelled: the source is missing or is not a file at ' + source + '. No replacement was created.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
+      }
+      if (await this._desktopInspectMovePath(destination) && !(await this._desktopPathsShareCaseAlias(source, destination))) {
+        throw Object.assign(new Error('Move cancelled: the destination already exists at ' + destination + '. Both files were left unchanged.'), { code: 'WORKSPACE_MOVE_BLOCKED' });
+      }
+    }
+
     async _desktopSaveDocument(tab, organization, forceContent) {
       requireDocumentId(tab && tab.id);
       const existing = this.vaultIndex.documents.find(function (item) { return item.id === tab.id; });
@@ -1254,6 +1379,7 @@
 
       if (existing && existing.vaultRelativePath && existing.vaultRelativePath !== relativePath) {
         const oldPath = await this._desktopResolveVaultRelativePath(existing.vaultRelativePath);
+        await this._desktopCheckMovePaths(oldPath, fullPath);
         const journalDirectory = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal');
         const moveJournalPath = await this._pathJoin(journalDirectory, sanitizePathSegment(tab.id, 'document') + '.move.json');
         await this._writeJsonFile(moveJournalPath, {
@@ -1266,14 +1392,10 @@
           startedAt: Date.now()
         });
         tab._storageMoveJournalPath = moveJournalPath;
-        if (await this._pathExists(oldPath)) {
-          if (await this._pathExists(fullPath)) {
-            await Neutralino.filesystem.writeFile(fullPath, typeof tab.content === 'string' ? tab.content : await Neutralino.filesystem.readFile(oldPath));
-            await Neutralino.filesystem.remove(oldPath);
-          } else {
-            await Neutralino.filesystem.move(oldPath, fullPath);
-          }
-        }
+        // Recheck after asynchronous journal writing. Do not overwrite a
+        // collision, delete the source or fall back to a destructive copy.
+        await this._desktopCheckMovePaths(oldPath, fullPath);
+        await Neutralino.filesystem.move(oldPath, fullPath);
       }
       if (forceContent || tab.contentLoaded !== false) {
         const content = typeof tab.content === 'string' ? tab.content : '';
@@ -1290,7 +1412,8 @@
       metadata.contentSize = typeof tab.content === 'string'
         ? new TextEncoder().encode(tab.content).byteLength
         : Number(existing && existing.contentSize) || 0;
-      if (existing) Object.assign(existing, metadata);
+      // Conversion removes source fields: merging would retain them on restart.
+      if (existing) this.vaultIndex.documents[this.vaultIndex.documents.indexOf(existing)] = metadata;
       else this.vaultIndex.documents.push(metadata);
       tab._vaultRelativePath = relativePath;
       tab._pendingStorageRevision = metadata.storageRevision;
@@ -1497,6 +1620,10 @@
     async deleteDocument(id, options) {
       requireDocumentId(id);
       const settings = options || {};
+      if (settings.discardAfterSecretMove) {
+        const encrypted = (await this.listSecretRecords()).find(function(record) { return record.id === id && validateEncryptedEnvelope(record.envelope); });
+        if (!encrypted) throw new Error('Cannot remove the Vault copy before its encrypted record is saved.');
+      }
       this._normalContentCache.delete(id);
       if (this.desktop) {
         const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
@@ -1531,6 +1658,17 @@
           }
           throw error;
         }
+        if (settings.discardAfterSecretMove) {
+          if (trashRecord) await this.permanentlyDeleteTrashItem(trashRecord.trashId);
+          const historyPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'history', sanitizePathSegment(id, 'document'));
+          if (await this._pathExists(historyPath)) {
+            for (const entry of await Neutralino.filesystem.readDirectory(historyPath)) {
+              if (entry.type === 'FILE' && /^\d+\.md$/.test(entry.entry || '')) {
+                await Neutralino.filesystem.remove(await this._pathJoin(historyPath, entry.entry));
+              }
+            }
+          }
+        }
         return;
       }
       const transaction = this.db.transaction(['documents', 'contents', 'trash'], 'readwrite');
@@ -1543,7 +1681,7 @@
         transaction.abort();
         throw new WorkspaceConflictError(id, null, metadata, content && content.content);
       }
-      if (metadata || content) {
+      if ((metadata || content) && !settings.discardAfterSecretMove) {
         transaction.objectStore('trash').put({
           trashId: randomId('trash'),
           documentId: id,
@@ -1861,14 +1999,28 @@
       return records;
     }
 
-    async deleteDirtyJournals(journalIds) {
+    async deleteDirtyJournals(journalIds, options) {
       if (this.desktop) return;
       const ids = Array.isArray(journalIds) ? journalIds.filter(Boolean) : [];
       if (!ids.length) return;
       const transaction = this.db.transaction('journals', 'readwrite');
+      const completion = transactionToPromise(transaction);
       const store = transaction.objectStore('journals');
-      ids.forEach(function(id) { store.delete(id); });
-      await transactionToPromise(transaction);
+      const expected = options && options.expectedJournals;
+      ids.forEach(function(id) {
+        if (!expected) {
+          store.delete(id);
+          return;
+        }
+        if (!Object.prototype.hasOwnProperty.call(expected, id)) return;
+        const request = store.get(id);
+        request.onsuccess = function() {
+          // The read and conditional delete share a readwrite transaction,
+          // so a concurrent replacement cannot be deleted between them.
+          if (JSON.stringify(request.result) === JSON.stringify(expected[id])) store.delete(id);
+        };
+      });
+      await completion;
     }
 
     async restoreTrashItem(trashId) {
@@ -1940,9 +2092,15 @@
         metadata.storageWriterId = this.writerId;
         metadata.workspaceId = metadata.workspaceId === 'workspace_secret' ? 'workspace_default' : (metadata.workspaceId || 'workspace_default');
         metadata.folderId = null;
-        const relativePath = await this._desktopDocumentRelativePath(metadata, { folders: [] });
+        const relativePath = await this._desktopDocumentRelativePath(metadata, this.vaultOrganization);
         metadata.vaultRelativePath = relativePath;
         const destination = await this._desktopResolveVaultRelativePath(relativePath);
+        let parent = this.vaultPath;
+        for (const segment of relativePath.split('/').slice(0, -1)) {
+          parent = await this._pathJoin(parent, segment);
+          await this._ensureDirectory(parent);
+        }
+        await this._desktopCheckMovePaths(item.contentPath, destination);
         const restoringTrashRecord = Object.assign({}, cloneJson(item, {}) || {}, {
           restoreInProgress: {
             destination: destination,
@@ -1953,6 +2111,7 @@
         delete restoringTrashRecord.metadataPath;
         delete restoringTrashRecord.restorable;
         await this._writeJsonFileRecoverably(item.metadataPath, restoringTrashRecord);
+        await this._desktopCheckMovePaths(item.contentPath, destination);
         await Neutralino.filesystem.move(item.contentPath, destination);
         this.vaultIndex.documents.push(metadata);
         try {
@@ -2617,7 +2776,7 @@
       };
     }
 
-    _normalizeBackupForRestore(backup) {
+    _normalizeBackupForRestore(backup, preserveLocalLinks) {
       const source = backup && typeof backup === 'object' ? backup : {};
       const organization = cloneJson(source.organization, {
         version: 1,
@@ -2628,10 +2787,40 @@
       const documents = Array.isArray(source.documents) ? source.documents : [];
       const secretRecords = Array.isArray(source.secretRecords) ? source.secretRecords : [];
       const seenDocumentIds = new Set();
+      let recoveredLinkedDocumentCount = 0;
+      const detachedLinkedLocationCount = !preserveLocalLinks && Array.isArray(organization.linkedLocations)
+        ? organization.linkedLocations.length : 0;
+      if (!preserveLocalLinks) organization.linkedLocations = [];
       const tabs = documents.map(function(item) {
-        const metadata = item && item.metadata && typeof item.metadata === 'object'
+        const importedMetadata = item && item.metadata && typeof item.metadata === 'object'
           ? cloneJson(item.metadata, {})
           : {};
+        // Backup data is not authority to watch/read/write machine-local paths.
+        // Only private rollback snapshots created inside restore keep live links.
+        const metadata = preserveLocalLinks ? importedMetadata : {};
+        if (!preserveLocalLinks) {
+          ['id', 'title', 'workspaceId', 'folderId', 'favorite', 'isOpen', 'viewMode',
+            'reviewThreads', 'createdAt', 'lastOpenedAt', 'lastEditedAt',
+            'scrollPos', 'previewScrollPos', 'previewScrollLeft'].forEach(function(key) {
+              if (Object.prototype.hasOwnProperty.call(importedMetadata, key)) metadata[key] = importedMetadata[key];
+            });
+          const linked = Boolean(importedMetadata.sourcePath || importedMetadata.linkedRootId ||
+            importedMetadata.sourceKind || importedMetadata.kind === 'linked-recovery');
+          if (linked) {
+            metadata.kind = 'linked-recovery';
+            metadata.workspaceId = 'workspace_default';
+            metadata.folderId = null;
+            const storedPath = importedMetadata.vaultRelativePath || importedMetadata._vaultRelativePath;
+            metadata.recoveryFolderSegments = storedPath
+              ? recoveryFoldersFromStoredPath(storedPath)
+              : importedMetadata.recoveryFolderSegments !== undefined
+                ? validatedRecoveryFolderSegments(importedMetadata.recoveryFolderSegments)
+                : recoveryFoldersFromStoredPath(item.path);
+            recoveredLinkedDocumentCount += 1;
+          } else if (importedMetadata.kind === 'linked-workspace-guide' || importedMetadata.kind === 'workspace-guide') {
+            metadata.kind = importedMetadata.kind;
+          }
+        }
         requireDocumentId(metadata.id);
         if (seenDocumentIds.has(metadata.id)) throw new TypeError('Duplicate document ID: ' + metadata.id);
         seenDocumentIds.add(metadata.id);
@@ -2664,7 +2853,9 @@
         documents: documents,
         tabs: tabs,
         secretRecords: secretRecords,
-        secretManifest: secretManifest
+        secretManifest: secretManifest,
+        recoveredLinkedDocumentCount: recoveredLinkedDocumentCount,
+        detachedLinkedLocationCount: detachedLinkedLocationCount
       };
     }
 
@@ -2813,7 +3004,7 @@
           includeSecure: true,
           organization: this.vaultOrganization
         });
-        const rollback = this._normalizeBackupForRestore(rollbackData);
+        const rollback = this._normalizeBackupForRestore(rollbackData, true);
         try {
           await this._restoreDesktopBackupData(normalized, onProgress);
         } catch (error) {
@@ -2827,7 +3018,9 @@
       }
       return {
         normalDocumentCount: normalized.tabs.length,
-        secretRecordCount: normalized.secretRecords.length
+        secretRecordCount: normalized.secretRecords.length,
+        recoveredLinkedDocumentCount: normalized.recoveredLinkedDocumentCount,
+        detachedLinkedLocationCount: normalized.detachedLinkedLocationCount
       };
     }
 
@@ -2841,6 +3034,7 @@
         }
         const ownedPaths = [
           await this._pathJoin(this.vaultPath, 'Workspace'),
+          await this._pathJoin(this.vaultPath, 'Linked Workspace'),
           await this._pathJoin(this.vaultPath, 'Secret Workspace'),
           await this._pathJoin(this.vaultPath, INTERNAL_DIR)
         ];

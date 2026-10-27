@@ -265,6 +265,14 @@ body {
   gap: 1px;
 }
 
+.document-sidebar-actions-separator:not([hidden]) {
+  display: block;
+  flex: 0 0 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--border-color);
+}
+
 .document-sidebar-heading h2 {
   margin: 0;
   color: var(--text-color);
@@ -613,16 +621,18 @@ body {
   background: color-mix(in srgb, var(--accent-color) 7%, transparent);
 }
 
-.document-tree-row[data-tree-type="document"].is-selected > .document-tree-main > i:first-child,
 .document-tree-row[data-tree-type="document"].is-active > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
-.document-tree-row[draggable="true"] {
+.document-tree-row[draggable="true"],
+.document-tree-row[data-pointer-draggable="true"] {
   cursor: grab;
+  user-select: none;
 }
 
-.document-tree-row[draggable="true"].is-dragging {
+.document-tree-row[draggable="true"].is-dragging,
+.document-tree-row[data-pointer-draggable="true"].is-dragging {
   cursor: grabbing;
   opacity: 0.45;
 }
@@ -748,8 +758,7 @@ body {
   text-align: center;
 }
 
-.document-tree-main > .lucide-folder-open,
-.document-tree-row[aria-expanded="true"] > .document-tree-main > .lucide-briefcase-business {
+.document-tree-row[aria-expanded="true"] > .document-tree-main > i:first-child {
   color: var(--accent-color);
 }
 
@@ -772,6 +781,27 @@ body {
   flex: 0 0 auto;
   color: var(--text-secondary);
   font-size: var(--ui-font-xs);
+}
+
+.document-source-missing-indicator,
+.document-source-conflict-indicator {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 2px;
+  color: #bf8700;
+  cursor: help;
+}
+
+.document-source-missing-indicator {
+  color: var(--color-danger-fg);
+}
+
+.document-source-missing-indicator:focus-visible,
+.document-source-conflict-indicator:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 .document-tree-main > .document-favorite-indicator {
@@ -1285,6 +1315,15 @@ body.document-sidebar-collapsed .document-sidebar {
   transition: width 0.18s ease;
 }
 
+.linked-folder-progress-toast[data-indeterminate="true"] .import-progress-value {
+  animation: linked-folder-progress-scan 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes linked-folder-progress-scan {
+  from { transform: translateX(0); }
+  to { transform: translateX(185%); }
+}
+
 .import-progress-toast[data-state="complete"] .import-progress-value {
   background: var(--success-color);
 }
@@ -1348,7 +1387,8 @@ body.document-sidebar-collapsed .document-sidebar {
   color: var(--accent-color);
 }
 
-.app-toast-icon-shell > .bi {
+.app-toast-icon-shell > .bi,
+.app-toast-icon-shell > .lucide {
   font-size: var(--ui-icon-size-lg);
   line-height: 1;
 }
@@ -1418,6 +1458,28 @@ body.document-sidebar-collapsed .document-sidebar {
   margin-block-start: 1px;
 }
 
+.app-toast-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.app-toast-message--full {
+  display: block;
+  -webkit-line-clamp: unset;
+  max-height: min(40vh, 240px);
+  overflow: auto;
+}
+
+.app-toast-checkbox input {
+  flex: none;
+  margin-top: 2px;
+  accent-color: var(--color-accent-fg);
+}
+
 .app-toast-action {
   min-height: 34px;
   padding: 6px 12px;
@@ -1440,6 +1502,7 @@ body.document-sidebar-collapsed .document-sidebar {
 @media (prefers-reduced-motion: reduce) {
   .import-progress-toast,
   .import-progress-toast[data-state="loading"] .import-progress-icon,
+  .linked-folder-progress-toast[data-indeterminate="true"] .import-progress-value,
   .import-progress-value,
   .app-toast {
     animation: none;
@@ -4281,6 +4344,10 @@ html:not([data-custom-syntax-theme]) .hljs-deletion {
   color: var(--color-danger-fg);
 }
 
+.app-save-status.is-linked-conflict {
+  color: #bf8700;
+}
+
 @keyframes save-status-spin {
   to { transform: rotate(360deg); }
 }
@@ -6645,6 +6712,55 @@ html:not([data-custom-syntax-theme]) .hljs-deletion {
 .reset-modal-btn:disabled {
   cursor: not-allowed;
   opacity: 0.48;
+}
+
+.linked-confirm-modal-box {
+  width: min(540px, calc(100vw - 32px));
+  max-width: 540px;
+}
+
+#linked-confirm-modal-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: min(40vh, 320px);
+  overflow: auto;
+}
+
+#linked-confirm-modal-checkbox-label[hidden] { display: none; }
+
+.linked-confirm-primary {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+.linked-confirm-primary:hover { filter: brightness(0.9); background: var(--accent-color); }
+
+/* Dark-theme accent text is too light for white labels on filled buttons. */
+[data-theme="dark"] .linked-confirm-primary {
+  background: #1f6feb;
+  border-color: #1f6feb;
+}
+
+[data-theme="dark"] .linked-confirm-primary:hover {
+  filter: none;
+  background: #1a5fce;
+  border-color: #1a5fce;
+}
+
+/* Only actions that explicitly discard/replace content are destructive. */
+.linked-confirm-primary.linked-confirm-danger,
+[data-theme="dark"] .linked-confirm-primary.linked-confirm-danger {
+  background: #b62324;
+  border-color: #b62324;
+  color: #fff;
+}
+
+.linked-confirm-primary.linked-confirm-danger:hover,
+[data-theme="dark"] .linked-confirm-primary.linked-confirm-danger:hover {
+  filter: none;
+  background: #a11f20;
+  border-color: #a11f20;
 }
 
 .reset-modal-confirm {
