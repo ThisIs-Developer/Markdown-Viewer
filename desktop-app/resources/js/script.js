@@ -11207,6 +11207,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   let dirtyJournalWarningShown = false;
+  // Recovery copies have new IDs. Keep their source identity in memory rather
+  // than trusting persisted tab metadata to authorize another journal's cleanup.
+  const recoveredDocumentJournalSources = new WeakMap();
   let emergencySavePendingCount = 0;
   let secretJournalPendingCount = 0;
 
@@ -11469,18 +11472,23 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function captureDirtyDocumentJournalSnapshot(storageTabs, changedIds) {
     const snapshots = new Map();
+    const recoveredSnapshots = new Map();
     changedIds.forEach(function(id) {
       const tab = storageTabs.find(function(item) { return item.id === id; });
       // Metadata-only writes do not commit a document body.
       if (!tab || tab.contentLoaded === false || typeof tab.content !== 'string') return;
       const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(id))));
-      const snapshot = { content: tab.content, reviewThreads: JSON.stringify(tab.reviewThreads || []), local: {}, session: {}, indexed: {} };
+      const source = recoveredDocumentJournalSources.get(tab);
+      const snapshot = { content: tab.content, reviewThreads: JSON.stringify(tab.reviewThreads || []), source: source, local: {}, session: {}, indexed: {} };
+      if (source) recoveredSnapshots.set(source.key, snapshot);
       [[localStorage, snapshot.local], [sessionStorage, snapshot.session]].forEach(function(pair) {
         keys.forEach(function(key) {
           try {
             const raw = pair[0].getItem(key);
             const value = raw && JSON.parse(raw);
-            if (value && value.documentId === id && value.content === snapshot.content &&
+            const ownsJournal = value && (value.documentId === id ||
+              (source && source.key === key && source.documentId === value.documentId));
+            if (ownsJournal && value.content === snapshot.content &&
                 (!value.metadata || !Array.isArray(value.metadata.reviewThreads) || JSON.stringify(value.metadata.reviewThreads) === snapshot.reviewThreads)) pair[1][key] = raw;
           } catch (_) { /* Unknown recovery data must be retained. */ }
         });
@@ -11490,11 +11498,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (workspaceStorage && typeof workspaceStorage.listDirtyJournals === 'function') {
       try {
         (await workspaceStorage.listDirtyJournals()).forEach(function(record) {
-          const snapshot = snapshots.get(record.documentId);
-          if (snapshot && record.journalId && record.content === snapshot.content &&
-              (!record.metadata || !Array.isArray(record.metadata.reviewThreads) || JSON.stringify(record.metadata.reviewThreads) === snapshot.reviewThreads)) {
-            snapshot.indexed[record.journalId] = record;
-          }
+          if (!record.journalId) return;
+          const recovered = recoveredSnapshots.get(record.journalId);
+          const candidates = [snapshots.get(record.documentId)];
+          if (recovered && recovered.source.documentId === record.documentId) candidates.push(recovered);
+          candidates.forEach(function(snapshot) {
+            if (snapshot && record.content === snapshot.content &&
+                (!record.metadata || !Array.isArray(record.metadata.reviewThreads) || JSON.stringify(record.metadata.reviewThreads) === snapshot.reviewThreads)) {
+              snapshot.indexed[record.journalId] = record;
+            }
+          });
         });
       } catch (error) {
         console.warn('Unable to snapshot recovery journals; retaining them:', error);
@@ -11615,6 +11628,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       recovered.lastEditedAt = Number(journal.savedAt) || Date.now();
       recovered._dirtyJournalKeys = [entry.key];
       recovered._dirtyIndexedDbJournalIds = [entry.key];
+      recoveredDocumentJournalSources.set(recovered, { key: entry.key, documentId: journal.documentId });
       tabs.push(recovered);
       recoveredIds.push(recovered.id);
     });
