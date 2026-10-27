@@ -12,7 +12,7 @@ Most work happens in the browser or desktop webview. Markdown parsing, syntax hi
 
 The app opens with a header, Files sidebar, document tab bar, formatting toolbar, editor pane, resize divider, preview pane, and bottom status bar.
 
-- The left **Files** sidebar organizes Markdown files into fixed **Workspace** and **Secret Workspace** roots with nested folders, All files, Recent, Favorites, and search views.
+- The left **Files** sidebar organizes Markdown files into fixed **Workspace** and **Secret Workspace** roots with nested folders, All files, Recent, Favorites, and search views. The desktop build also exposes **Linked Workspace** for explicitly selected external Markdown files and folders.
 - The sidebar is resizable and collapsible on desktop, narrower on tablet, and becomes a full-height drawer on mobile.
 - Editor mode shows only the textarea.
 - Split view shows the Editor and Preview side by side.
@@ -40,7 +40,7 @@ Release-note tabs are temporary and excluded from document storage. Document-onl
 
 Users can work with multiple documents at once.
 
-- Every existing saved document is migrated into **Workspace**, identified by the briefcase icon. The two workspace roots are fixed, but users can create nested folders inside either root.
+- Every existing saved document is migrated into **Workspace**, identified by the briefcase icon. Workspace and Secret Workspace are fixed roots, while the desktop build adds a Linked Workspace root for external sources. Users can create nested folders inside the managed roots.
 - Secret Workspace encrypts its files and folder names locally with a password-derived AES-GCM key. It remains locked after reload, the key stays in memory only while unlocked, and a forgotten password cannot be recovered. Resetting Secret Workspace permanently deletes its encrypted payload.
 - The sidebar has explicit **New file** and **New folder** actions for the selected location. Files can be dragged onto another folder or workspace; the Move dialog remains available for keyboard and touch workflows.
 - Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.
@@ -75,7 +75,7 @@ Storage used by the current implementation includes:
 | `app-lang` | Selected interface language. |
 | `find-replace-docked` | Whether the Find and Replace panel is docked. |
 
-On the web, document data lives in IndexedDB while small preferences remain in `localStorage`. Existing monolithic `markdownViewerTabs` data is migrated once. On desktop, normal content is stored as individual Markdown files in `Documents/Markdown Viewer Vault/Workspace` by default; metadata, history, trash, journals, settings, and encrypted Secret Workspace objects live under the same durable vault.
+On the web, document data lives in IndexedDB while small preferences remain in `localStorage`. Existing monolithic `markdownViewerTabs` data is migrated once. On desktop, normal content is stored as individual Markdown files in `Documents/Markdown Viewer Vault/Workspace` by default; metadata, history, trash, journals, settings, linked recovery drafts, and encrypted Secret Workspace objects live under the same durable vault. Linked originals remain at their user-selected external paths and are written only by explicit save workflows.
 
 Workspace settings includes **Private mode**, which pauses document-state writes for the current page session without clearing existing documents or Secret Workspace. A visible incognito status remains while active, but the mode resets on reload or exit so a later session resumes normal persistence. **Trash** has its own searchable, responsive window with separate or contiguous multi-selection, restore, confirmed permanent deletion, and confirmed emptying. Valid records expire after 30 days; missing, corrupt, or unknown record shapes are preserved instead of automatically deleted. **Storage and Backup** reports usage, separate normal and secret document counts, a logical browser storage location or fixed desktop vault path, exports/imports ZIP backups, and can include unchanged encrypted Secret Workspace records. Import permanently replaces the current workspace after confirmation. Backups exclude trash, desktop history, and recovery journals. Browser storage is best-effort by default and is shown as read-only status. **Reset workspace** permanently clears all local workspace data, including folders and recovery records, after confirmation; **Reset Secret Workspace** remains available for deleting only the encrypted area.
 
@@ -223,6 +223,12 @@ Limitations:
 - The first math render in the web build may require downloading MathJax unless it is already cached.
 - Invalid LaTeX is shown according to MathJax behavior and may produce warnings or unrendered source.
 - A literal dollar sign should be escaped as `\$` when it is not intended to start math.
+
+## Preview Styling
+
+Open **Workspace settings → Preview Styling** on desktop-sized layouts or **Menu → Settings → Preview Styling** on mobile to choose a code theme, math font, Mermaid theme, Mermaid style, and emoji skin tone. Changes apply automatically, persist locally under `mdv.visualSettings.v1`, and can be reset without changing document content.
+
+Optional code-theme and math-font assets can require a network connection, including in the desktop app. Math stays available in the bundled Computer Modern style while another font downloads; only the latest selection can replace it. Failed downloads fall back safely and can be retried. Mermaid controls affect Mermaid only, while emoji skin tone affects supported unqualified shortcodes and the picker without rewriting existing explicitly toned emoji.
 
 ## Insert Diagrams, Charts, Maps, Models, and Music
 
@@ -550,6 +556,8 @@ Desktop-specific behavior:
 - `prepare.js` copies root assets, rewrites paths for `/resources/`, strips web-only SEO metadata, and downloads/bundles external libraries into `/resources/libs/`.
 - Downloaded desktop dependencies are checked against SHA-384 integrity values when SRI is available.
 - The desktop build points dynamic libraries to local `/libs/...` paths, so prepared desktop resources do not need CDN-hosted renderer libraries after setup.
+- **Linked Workspace** can link explicitly selected `.md` and `.markdown` files or recursively scan selected folders. It keeps external sources separate from Vault copies, mirrors draft recovery under the app vault, writes originals only through Save, and supports Save As, conversion to independent Vault copies, linked-folder export, rescan, grouping, removal without source deletion, and conflict or missing-source recovery.
+- Linked scans and source reads are bounded. Backups may carry recoverable linked drafts, but restored drafts have no external write authority until the user links a source again. See [Desktop Application](Desktop-App.md#linked-workspace) for the complete workflow and limits.
 
 Privacy:
 
@@ -601,6 +609,7 @@ Security limitations:
 | Stored Share Snapshot | Yes | Cloudflare KV for 90 days | Content, mode, title, createdAt, and size. |
 | Live Share | Yes | Client/WebSocket relay state plus Durable Object capability storage | Markdown and Review content are not persisted server-side; role capabilities and `createdAt` are stored without an application TTL. |
 | Desktop native storage | No | `Documents/Markdown Viewer Vault` by default | Ordinary `.md` files plus internal metadata, encrypted records, up to 20 recent history copies per document, trash, and crash journal. |
+| Desktop linked sources | No, unless the user later shares or remotely renders their content | User-selected external paths plus recovery drafts inside the vault | Originals are updated only through explicit Save; imported backups do not restore source authority. |
 
 ## Known Technical Limits
 
@@ -614,6 +623,7 @@ Security limitations:
 - The current Share Snapshot UI does not expose its API deletion token, so UI-created stored snapshots normally remain until their 90-day expiry.
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.
 - The desktop vault retains up to 20 recent history copies per document.
+- Desktop linked-folder scans stop at 10,000 Markdown files, 40,000 entries, 2,000 directories, 32 levels, 20 MiB per Markdown source, 200 MiB staged content, or 60 seconds. Filesystem verification reduces accidental overwrites but is not an atomic lock against other programs.
 - Legacy raster PDF and PNG exports can fail on extremely tall documents because canvas size and memory are browser-limited.
 - Remote renderer availability depends on third-party services and network conditions.
 - The service worker cannot cache assets that have never been successfully fetched.

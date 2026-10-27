@@ -28,9 +28,11 @@ Desktop-only files:
 
 - Local editing, preview, document tabs, exports, and settings stay on the local machine.
 - Slash commands, natural Explorer sorting, middle-click tab closing, pane-scoped Select All, rich Preview copying, smooth paging, and fullscreen/Expanded view behavior use the same shared application code as the web build.
+- Preview Styling and the categorized GitHub emoji picker share the web controls, saved preferences, responsive loading, keyboard behavior, skin-tone handling, and safe math-font fallback. Optional theme, font, emoji-list, and emoji-image requests can still require the network.
 - Document Outline and Copy TOC run locally from the current Markdown AST, use the bundled TOC generator offline, and do not create separate persisted data or alter the document.
 - Selection-anchored comments and threaded replies stay with normal local tabs and are excluded from document exports and Share Snapshot links.
 - Normal documents are stored as individual `.md` files in the fixed `Documents/Markdown Viewer Vault/Workspace` path. Metadata, up to 20 recent history copies per document, trash, crash-recovery journals, and encrypted Secret Workspace objects live under the same vault.
+- **Linked Workspace** references explicitly selected external Markdown files and folders without importing them. Autosave writes separate recovery drafts; Save updates an original after source checks, Save As creates a new linked file, conversion creates an independent Vault copy, and removing a link preserves its source. Imported backups recover drafts without restoring external write authority. See the [complete Linked Workspace guide](../wiki/Desktop-App.md#linked-workspace).
 - The vault is outside the executable, and every binary checks the same fixed location at startup, so replacing or deleting the binary does not delete documents.
 - Document metadata loads at startup; Markdown content loads only when a document is opened and is kept in a bounded in-memory cache.
 - Native Markdown/HTML save and Markdown open flows use Neutralino dialogs and filesystem APIs.

@@ -52,8 +52,8 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 
 | Area | Implemented behavior |
 | :--- | :--- |
-| Workspace | No application document-count limit, naturally sorted nested Folders and Documents, Recent, Favorites, search, tabs with middle-click closing, bulk actions, encrypted Secret Workspace, and 30-day recoverable Trash |
-| Editing | Editor, Split view, Preview, line-start slash commands, formatting toolbar with an 8×8 quick table selector, custom undo/redo, pane-scoped selection and rich Preview copying, Find and Replace, LTR/RTL, a resizable Document Outline, configurable Copy TOC, and large-Document rendering paths |
+| Workspace | No application document-count limit, naturally sorted nested Folders and Documents, Recent, Favorites, search, tabs with middle-click closing, bulk actions, encrypted Secret Workspace, 30-day recoverable Trash, and desktop-only linking of external Markdown files and folders with separate recovery drafts |
+| Editing | Editor, Split view, Preview, line-start slash commands, a categorized emoji picker, formatting toolbar with an 8×8 quick table selector, custom undo/redo, pane-scoped selection and rich Preview copying, Find and Replace, LTR/RTL, Preview Styling, a resizable Document Outline, configurable Copy TOC, and large-Document rendering paths |
 | Markdown | CommonMark-style parsing, GFM, tables, tasks, alerts, footnotes, definitions, highlighting, sanitized HTML, and math |
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
 | Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown plus remembered Light/Dark HTML, Browser Print, legacy raster PDF, and PNG export, with complete rich-content preparation for PDF and PNG |
@@ -65,6 +65,7 @@ The public root and 14 translated `?lang=` URLs serve language-matched initial c
 ## Privacy at a Glance
 
 - Web documents are local per-document IndexedDB records; desktop documents are ordinary `.md` files in a durable vault.
+- Desktop linked originals change only through explicit Save workflows. Autosave keeps separate recovery drafts, and imported backups do not regain authority over recorded external paths.
 - Private mode pauses new Document-state persistence for the current page session while keeping existing normal and Secret Workspace data; reload or exit resets it.
 - Deleted normal and encrypted files remain in Trash for 30 days unless restored or permanently deleted sooner.
 - **Storage and Backup** exports or restores a folder-preserving ZIP and can retain Secret Workspace ciphertext.

@@ -5,11 +5,19 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
-- Fixed the emoji picker and selection tray to follow the skin tone selected in Preview Styling, including live changes, saved preferences, and resetting to default yellow. Shortcode insertion and unsupported emojis retain their existing behavior.
-- Redesigned the emoji picker with a compact grid, nine familiar categories plus GitHub extras, search across categories, and a removable selection tray. Selections now survive searches and category changes, with keyboard navigation, copying, and retry support. Images load near the visible rows with a neutral shimmer and are reused when revisiting categories, without flashing a different emoji style first.
-- Added compact info hints for the Mermaid diagram controls and emoji skin tones in Preview Styling, available on hover, keyboard focus, and tap.
-- Simplified **Preview Styling** into five compact controls under Workspace settings and removed its separate navbar shortcut.
-- Kept math rendering available during font downloads, prevented older requests from overriding the latest font selection, and restored fallback, retry, and Reset after font-loading failures.
+---
+
+## v3.10.5
+
+- **Description:** Added a safety-focused desktop Linked Workspace, configurable Preview Styling, and a categorized emoji browser, while strengthening recovery, storage coordination, startup feedback, and editor polish.
+  - **Desktop Linked Workspace:** Added explicit linking for external Markdown files and folders beside independent Vault documents, with bounded folder scans, source-path identity, sidebar grouping, progress, conflict and missing-source handling, Save/Save As, conversion to Vault copies, linked-folder export, removals that preserve originals, and a built-in workflow guide. Automatic persistence writes separate recovery drafts; imported backups restore drafts without restoring authority over external paths.
+  - **Preview Styling & Emoji:** Added five saved controls for code theme, math font, Mermaid theme and style, and emoji skin tone. Rebuilt the emoji picker around ten categorized groups, cross-category name/alias/keyword search, persistent ordered selection, copy/insert actions, keyboard navigation, responsive loading, retry handling, viewport-aware image requests, cached tiles, and live skin-tone updates.
+  - **Recovery & Storage Safety:** Coordinated queued saves, deletes, document moves, folder registration, backup replacement, and Secret Workspace transitions; retained newer edits and comments during stale writes; rejected unsafe Vault source/destination paths; and made successful saves of recovered copies consume only the matching journal so recovery documents no longer reappear on every launch.
+  - **Editor & Interface Polish:** Matched Preview and Explorer startup skeletons, aligned slash commands with shared dropdown styling, completed chooser actions, kept the menu clear of the typing line, normalized split-document spacing and empty states, prevented delayed choosers from stealing input, and kept optional math-font failures from blocking rendering.
+  - **Distribution, Localization & Quality:** Synchronized web, PWA, Docker, and Neutralino assets; updated sanitizer and YAML dependencies; retained complete 15-locale catalogs; added community and security guidance; and expanded unit, Chromium, Firefox, WebKit, desktop-filesystem, recovery, linked-workspace, emoji, and visual-renderer coverage.
+- **Date:** 2026-10-27
+- **Commits:** `f9af1dc7ec9d0957cb17f46e033cccc0d96456e9` through `7581bb002e963f063fe87c66afafb5e7e3070090`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.5
 
 ---
 

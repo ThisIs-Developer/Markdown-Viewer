@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer",
-  "version": "3.10.4",
+  "version": "3.10.5",
   "private": true,
   "description": "Development and automated testing tools for Markdown Viewer.",
   "engines": {

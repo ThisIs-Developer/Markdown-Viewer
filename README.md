@@ -56,10 +56,10 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 ## Highlights
 
-- **Workspace and documents:** organize naturally sorted documents and folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, an encrypted Secret Workspace, and a 30-day Trash for recoverable normal and encrypted files. Middle-click a tab to close it without deleting its saved document.
-- **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash and desktop history stay outside the backup.
-- **Editing and review:** switch among Editor, Split view, and Preview; type `/` at the start of a line for searchable block commands; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, smooth Page Up/Down navigation, pane-scoped Select All, rich Preview copying, selection-anchored comments, and threaded replies.
-- **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax.
+- **Workspace and documents:** organize naturally sorted documents and folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, an encrypted Secret Workspace, and a 30-day Trash. The desktop app can also link external Markdown files and folders beside independent Vault copies, keeping automatic recovery drafts separate from explicit writes to originals. Middle-click a tab to close it without deleting its saved document.
+- **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash, desktop history, and recovery journals stay outside the backup. Desktop backups can recover linked drafts but never silently restore write access to external paths.
+- **Editing and review:** switch among Editor, Split view, and Preview; type `/` at the start of a line for searchable block commands; browse categorized GitHub emojis; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, smooth Page Up/Down navigation, pane-scoped Select All, rich Preview copying, selection-anchored comments, and threaded replies.
+- **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax. Preview Styling controls the code theme, math font, Mermaid theme and style, and supported emoji skin tone.
 - **Document Outline:** use the book-text button after Emoji, Find & Replace, and Full Screen to open a resizable right sidebar with collapsible heading branches, a Collapse/Expand All control, and section navigation in Editor, Preview, and Split modes. Copy a GitHub-compatible Markdown TOC with configurable heading depth, bulleted/numbered links or plain text, optional level normalization, and a collapsible wrapper. The outline follows the current document and shares Find & Replace's width and header styling.
 - **Localized discovery:** open any of 15 language URLs with translated initial content and a localized starter document before JavaScript runs; changing the interface language preserves user-authored Markdown and Preview typography.
 - **Visual content:** render Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC notation.
@@ -167,6 +167,7 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - Live Share allows up to 64 WebSocket participants and 8 MB per live message.
 - STL source is limited to 2 MiB and rendered geometry to 300,000 vertices.
 - The desktop vault retains up to 20 recent history copies per document.
+- Desktop linked-folder scans are bounded to 10,000 Markdown files, 40,000 entries, 2,000 directories, 32 levels, 20 MiB per source, 200 MiB staged content, and 60 seconds. Recovery drafts are not independent backups, and native filesystem checks cannot eliminate every race with another program.
 - Raster PDF and PNG exports remain subject to browser memory, canvas, and cross-origin resource limits.
 
 See [Features: Known Technical Limits](wiki/Features.md#known-technical-limits) for context.
