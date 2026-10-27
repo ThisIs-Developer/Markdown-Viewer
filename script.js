@@ -8044,6 +8044,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     }
 
+    const sidebarHeader = sidebar && sidebar.querySelector('.document-sidebar-header');
+    if (sidebarHeader) sidebarHeader.addEventListener('contextmenu', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDocumentSidebarMenus();
+    });
     if (sidebar) sidebar.addEventListener('contextmenu', function(event) {
       if (event.defaultPrevented || event.target.closest('.document-tree-row, input, button, a, textarea, select, [role="menu"]')) return;
       openDocumentTreeBackgroundContextMenu(event);

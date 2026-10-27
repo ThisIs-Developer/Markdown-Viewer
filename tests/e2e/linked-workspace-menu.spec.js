@@ -117,12 +117,22 @@ for (const os of ['Windows', 'Darwin']) {
     await expect(root(page).locator('.document-tree-main > .lucide-link-2')).toHaveCount(1);
     await expect(page.locator('#sidebar-linked-separator')).toBeVisible();
     expect(await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).filter(child => !child.hidden).map(child => child.id).slice(0, 5))).toEqual([
-      'sidebar-link-files', 'sidebar-link-folder', 'sidebar-linked-separator', 'sidebar-new-document', 'sidebar-new-folder'
+      'sidebar-new-document', 'sidebar-new-folder', 'sidebar-linked-separator', 'sidebar-link-files', 'sidebar-link-folder'
     ]);
     const positions = await page.locator('.document-sidebar-actions').evaluate(node => Array.from(node.children).slice(0, 4).map(child => child.getBoundingClientRect().left));
     expect(positions[0]).toBeLessThan(positions[1]);
     expect(positions[1]).toBeLessThan(positions[2]);
     expect(positions[2]).toBeLessThan(positions[3]);
+    for (const selector of ['.document-sidebar-header', '#document-sidebar-title', '.document-sidebar-actions', '#sidebar-linked-separator', '#sidebar-new-document', '#sidebar-new-document > i']) {
+      await root(page).locator('.document-menu-btn').click();
+      await expect(menu(page)).toBeVisible();
+      const allowsNativeMenu = await page.locator(selector).evaluate(node => node.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })));
+      expect(allowsNativeMenu).toBe(false);
+      await expect(menu(page)).toHaveCount(0);
+    }
+    const tabsBefore = await page.locator('#tab-list .tab-item').count();
+    await page.locator('#sidebar-new-document').click();
+    await expect(page.locator('#tab-list .tab-item')).toHaveCount(tabsBefore + 1);
   });
 }
 
