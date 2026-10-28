@@ -171,7 +171,6 @@ const desktopAppReady = new Promise(function(resolve) {
   window.addEventListener('markdown-viewer:ready', resolve, { once: true });
 });
 let secondInstanceQueue = Promise.resolve();
-let nativeDropQueue = Promise.resolve();
 
 async function resolveLaunchMarkdownPaths(args, cwd) {
   const paths = [];
@@ -231,16 +230,17 @@ function onDesktopFilesDropped(event) {
     return '';
   }).filter(Boolean);
   if (!paths.length) return Promise.resolve();
-  nativeDropQueue = nativeDropQueue.then(async function() {
-    await desktopAppReady;
+  return desktopAppReady.then(async function() {
     await initialFileLoad;
     if (typeof window.NL_HANDLE_NATIVE_DROP !== 'function') return;
-    await focusDesktopWindow();
-    await window.NL_HANDLE_NATIVE_DROP(paths);
+    // The application captures document/maintenance state and owns the drop
+    // queue. A second bridge queue would defer that capture until older dialogs
+    // finish, potentially applying a drop to a different document/workspace.
+    const operation = window.NL_HANDLE_NATIVE_DROP(paths);
+    await Promise.all([operation, focusDesktopWindow()]);
   }).catch(function(error) {
     console.warn('Could not process native file drop:', error);
   });
-  return nativeDropQueue;
 }
 
 // Initialize Neutralino if in native environment

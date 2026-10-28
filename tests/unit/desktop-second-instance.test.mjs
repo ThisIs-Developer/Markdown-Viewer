@@ -111,7 +111,7 @@ test('equivalent launch paths are deduplicated within a request', async () => {
   assert.deepEqual(Array.from(paths), ['C:/Folder/one.md']);
 });
 
-test('native drops wait for startup and serialize dialogs without losing later drops after failure', async () => {
+test('native drops wait for startup then reach the application queue without delaying state capture', async () => {
   const h = harness({ nativeDrop: true });
   const dropped = [];
   let release;
@@ -125,7 +125,7 @@ test('native drops wait for startup and serialize dialogs without losing later d
   assert.deepEqual(dropped, []);
   h.listeners.get('markdown-viewer:ready')();
   await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(dropped, [['C:/one.md']]);
+  assert.deepEqual(dropped, [['C:/one.md'], ['C:/two.md', 'C:/three.md']]);
   release();
   await Promise.all([first, second]);
   assert.deepEqual(dropped, [['C:/one.md'], ['C:/two.md', 'C:/three.md']]);
