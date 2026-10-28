@@ -37,17 +37,17 @@ jobs:
         with:
           repository: Kechos23/neutralinojs
           ref: 3c307cba7c6de5eb10db614ae8daad99bf44e51d
-          path: desktop-app/.tmp/neutralino-source
+          path: desktop-app/.native-runtime
           persist-credentials: false
       - name: Apply Windows drop patch
-        working-directory: desktop-app/.tmp/neutralino-source
-        run: git apply --check ../../experimental/native-drop-windows.patch; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git apply ../../experimental/native-drop-windows.patch
+        working-directory: desktop-app/.native-runtime
+        run: git apply --check ../experimental/native-drop-windows.patch; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git apply ../experimental/native-drop-windows.patch
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Compile reviewed Windows runtime
         run: |
-          cmake -S desktop-app/.tmp/neutralino-source -B desktop-app/.tmp/neutralino-source/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S desktop-app/.native-runtime -B desktop-app/.native-runtime/build -G Ninja -DCMAKE_BUILD_TYPE=Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cmake --build desktop-app/.tmp/neutralino-source/build --parallel 4
+          cmake --build desktop-app/.native-runtime/build --parallel 4
       - name: Prepare desktop dependencies
         run: npm --prefix desktop-app run setup
       - name: Package isolated native demo

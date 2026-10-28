@@ -44,11 +44,11 @@ On Windows with Node 24, Git, CMake, Ninja and the MSVC developer environment:
 
 ```powershell
 npm ci
-git clone https://github.com/Kechos23/neutralinojs.git desktop-app/.tmp/neutralino-source
-git -C desktop-app/.tmp/neutralino-source checkout 3c307cba7c6de5eb10db614ae8daad99bf44e51d
-git -C desktop-app/.tmp/neutralino-source apply ../../experimental/native-drop-windows.patch
-cmake -S desktop-app/.tmp/neutralino-source -B desktop-app/.tmp/neutralino-source/build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build desktop-app/.tmp/neutralino-source/build --parallel 4
+git clone https://github.com/Kechos23/neutralinojs.git desktop-app/.native-runtime
+git -C desktop-app/.native-runtime checkout 3c307cba7c6de5eb10db614ae8daad99bf44e51d
+git -C desktop-app/.native-runtime apply ../experimental/native-drop-windows.patch
+cmake -S desktop-app/.native-runtime -B desktop-app/.native-runtime/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build desktop-app/.native-runtime/build --parallel 4
 npm --prefix desktop-app run setup
 node desktop-app/build-native-demo.js
 ```

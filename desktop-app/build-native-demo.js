@@ -9,7 +9,7 @@ const { spawnSync, execFileSync } = require('node:child_process');
 const appDir = __dirname;
 const root = path.resolve(appDir, '..');
 const runtimeCommit = '3c307cba7c6de5eb10db614ae8daad99bf44e51d';
-const runtimeSource = path.resolve(process.argv[2] || path.join(appDir, '.tmp/neutralino-source'));
+const runtimeSource = path.resolve(process.argv[2] || path.join(appDir, '.native-runtime'));
 const runtime = path.join(runtimeSource, 'bin/neutralino-win_x64.exe');
 const patch = path.join(appDir, 'experimental/native-drop-windows.patch');
 const hash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
