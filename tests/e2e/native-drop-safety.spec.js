@@ -104,6 +104,31 @@ test('rapid drops are queued and cancelling the first leaves the next usable', a
   await expect(tree.filter({ hasText: 'second' })).toHaveCount(1);
 });
 
+test('a previous close animation cannot hide a reopened chooser while frames are delayed', async ({ page }) => {
+  await page.evaluate(() => {
+    __desktopFiles.set('C:/one.md', '# one'); __desktopFiles.set('C:/two.md', '# two');
+    window.__first = NL_HANDLE_NATIVE_DROP(['C:/one.md']);
+    window.__second = NL_HANDLE_NATIVE_DROP(['C:/two.md']);
+  });
+  await expect(page.locator('#desktop-drop-modal')).toBeVisible();
+  await page.evaluate(() => {
+    window.__originalRaf = requestAnimationFrame;
+    window.__pendingFrames = [];
+    window.requestAnimationFrame = callback => { __pendingFrames.push(callback); return 0; };
+    document.getElementById('desktop-drop-modal-cancel').click();
+  });
+  await expect(page.locator('#desktop-drop-file-summary')).toContainText('two.md');
+  // Background native windows can run timers before the next animation frame.
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    window.requestAnimationFrame = __originalRaf;
+    __pendingFrames.splice(0).forEach(callback => __originalRaf(callback));
+  });
+  await expect(page.locator('#desktop-drop-modal')).toBeVisible();
+  await page.locator('#desktop-drop-modal-cancel').click();
+  expect(await page.evaluate(async () => [await __first, await __second])).toEqual([0, 0]);
+});
+
 test('replacing the chooser cancels it instead of blocking subsequent drops', async ({ page }) => {
   await page.evaluate(() => {
     __desktopFiles.set('C:/replace.md', '# replace');

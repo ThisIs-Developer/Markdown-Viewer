@@ -23893,6 +23893,7 @@ ${selector} .arrowheadPath {
     if (activeModal && activeModal !== modal) {
       closeAppModal(activeModal);
     }
+    const transition = modal._modalTransition = (modal._modalTransition || 0) + 1;
     lastFocusedElement = options.returnFocus || document.activeElement;
     modal._returnFocus = lastFocusedElement;
     modal.style.display = 'flex';
@@ -23900,10 +23901,11 @@ ${selector} .arrowheadPath {
     activeModal = modal;
     const focusTarget = options.focusTarget || getFocusableElements(modal)[0];
     requestAnimationFrame(function() {
+      if (modal._modalTransition !== transition || activeModal !== modal) return;
       modal.classList.add('is-visible');
       const focusDelay = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 210;
       window.setTimeout(function() {
-        if (activeModal === modal && focusTarget) focusTarget.focus({ preventScroll: true });
+        if (modal._modalTransition === transition && activeModal === modal && focusTarget) focusTarget.focus({ preventScroll: true });
       }, focusDelay);
     });
     const handleKeydown = function(event) {
@@ -23934,6 +23936,7 @@ ${selector} .arrowheadPath {
 
   function closeAppModal(modal) {
     if (!modal) return;
+    const transition = modal._modalTransition = (modal._modalTransition || 0) + 1;
     // Opt-in asynchronous confirmations must resolve safely when another modal
     // closes/replaces them, not leave a native save permanently pending.
     const cancelConfirmation = modal._confirmationCancel;
@@ -23946,7 +23949,7 @@ ${selector} .arrowheadPath {
     if (handlers.handlePointerDown) modal.removeEventListener('mousedown', handlers.handlePointerDown);
     if (activeModal === modal) activeModal = null;
     window.setTimeout(function() {
-      if (!modal.classList.contains('is-visible')) {
+      if (modal._modalTransition === transition && !modal.classList.contains('is-visible')) {
         modal.style.display = 'none';
       }
     }, 200);
