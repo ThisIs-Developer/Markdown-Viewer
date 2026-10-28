@@ -7,7 +7,8 @@ const EXPECTED_LOCALES = ['bg', 'de', 'en', 'es', 'fr', 'it', 'ja', 'ko', 'pl', 
 const SHARED_TECHNICAL_LITERALS = ['Alt', 'Tab', 'Cmd', 'F11', 'F3', '10 MB.', '20 MiB.'];
 const REVIEWED_IDENTICAL_TRANSLATIONS = {
   de: ['Option'],
-  it: ['$$ formula $$', ...Array.from({ length: 6 }, (_, index) => `Desktop: Ctrl/Cmd+${index + 1}`)]
+  it: ['File', '$$ formula $$', ...Array.from({ length: 6 }, (_, index) => `Desktop: Ctrl/Cmd+${index + 1}`)],
+  pl: ['Folder']
 };
 const ALLOWED_IDENTICAL_TRANSLATIONS = {
   bg: ['{{0}}m', '{{0}}m {{1}}s', '{{0}}s', 'Ab', 'Ctrl', 'Git Graph', 'GitHub', 'GitHub URL', 'h1, h2, h3, h4, h5, h6', 'HTML', 'JavaScript', 'Markdown (.md)', 'Markdown Viewer', 'MD', 'PDF', 'PNG', 'Shift', 'SVG', 'ThisIs-Developer'],

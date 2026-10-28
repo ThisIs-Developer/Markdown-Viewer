@@ -41,6 +41,30 @@ test('registers secondInstance before init, only in opt-in Windows desktop', () 
   assert.equal(source.includes('startSingleInstanceInbox'), false);
 });
 
+test('native drag lifecycle is opt-in and preserves coordinate/type information', () => {
+  const h = harness({nativeDrop:true});
+  const received = [];
+  h.context.window.NL_HANDLE_NATIVE_DRAG = detail => received.push(detail);
+  const detail = {phase:'enter',files:['C:/Folder'],directories:[true],x:140,y:80,width:1280,height:720};
+  h.listeners.get('filesDragged')({detail});
+  assert.equal(received[0],detail);
+  assert.ok(h.calls.indexOf('filesDragged') < h.calls.indexOf('init'));
+  for(const options of [{nativeDrop:false},{nativeDrop:true,os:'Linux'},{nativeDrop:true,native:false}]) {
+    assert.equal(harness(options).listeners.has('filesDragged'),false);
+  }
+});
+
+test('native drop passes the final pointer coordinates rather than stale hover state', async () => {
+  const h = harness({nativeDrop:true});
+  const received=[];
+  h.context.window.NL_HANDLE_NATIVE_DROP = (paths,detail) => { received.push({paths,detail}); };
+  h.listeners.get('markdown-viewer:ready')();
+  const detail={files:['C:/notes.md'],x:20,y:220,width:1280,height:720};
+  await h.listeners.get('filesDropped')({detail});
+  assert.equal(received[0].detail,detail);
+  assert.deepEqual(Array.from(received[0].paths),['C:/notes.md']);
+});
+
 test('queues startup launches, resolves cwd, filters options and preserves file order', async () => {
   const h = harness();
   const first = h.listeners.get('secondInstance')({ detail: {

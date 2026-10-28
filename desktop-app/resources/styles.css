@@ -3513,6 +3513,28 @@ body {
   pointer-events: none;
 }
 
+.drag-overlay.is-drop-invalid .drag-overlay-inner,
+#document-tree .is-drop-invalid {
+  border-color: var(--danger-color, #dc3545);
+  background: color-mix(in srgb, var(--danger-color, #dc3545) 10%, var(--header-bg));
+}
+
+#document-tree .is-drop-invalid {
+  outline: 1px dashed var(--danger-color, #dc3545);
+  outline-offset: -1px;
+}
+
+.desktop-drop-items {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.desktop-drop-items > .lucide { font-size: 28px; color: var(--accent-color); }
+#desktop-drop-item-kind { color: var(--text-secondary); font-size: 12px; }
+.desktop-drop-items .desktop-drop-file-summary { margin: 4px 0 0; overflow-wrap: anywhere; }
+
 .drag-overlay-inner {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);

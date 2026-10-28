@@ -14,6 +14,16 @@ revisions, checksums and the separate demo Vault.
   files are ready, and resolve relative paths against the sender's cwd.
 - Neutralino #1845: `filesDropped` with real paths over WebView2. Offer Linked / Vault
   copy without another picker. Folder drops use #262's linked-folder workflow.
+- The reviewed Windows patch adds `filesDragged` enter/over/leave events and final
+  drop coordinates. CSS viewport mapping preserves targets under DPI scaling/zoom;
+  the Windows shell helper restores native drag imagery. The app reuses its compact
+  drag notice, Lucide file/folder icons, target highlights and expansion timers.
+- Explorer targets are authoritative. Vault drops use the selected folder (or a
+  file row's parent); Linked drops reuse sidebar-only parent grouping, retaining
+  the original disk path. An untargeted drop offers Vault first, then Linked.
+- The separate trial package brands the Windows executable as Markdown Viewer and
+  includes an optional per-user Open With registration helper. Registration never
+  writes Windows UserChoice or changes an existing default application.
 - Mixed drops ask before linking folders, copying Markdown or importing media.
   Cancelling the chooser adds nothing. Media uses bounded reads and the existing
   validation/consent flow. Queued drops are invalidated by workspace maintenance;
@@ -32,7 +42,8 @@ unsupported; fully qualified and ordinary relative paths are supported.
 2. Build Neutralino PR #1852 (tested commit
    `3c307cba7c6de5eb10db614ae8daad99bf44e51d`) with the isolated #1845 WebView fix,
    following Neutralino's CMake/MSVC instructions. This is 6.10.0 development source,
-   not a stable release. Do not import unrelated changes from #1845's broader diff.
+   not a stable release. The local patch also includes the Windows-only drag
+   lifecycle bridge. Do not import unrelated changes from #1845's broader diff.
 3. For an unpackaged developer run only, place the binary in
    `desktop-app/bin/neutralino-win_x64.exe`. Stock setup may replace it. Prefer
    `build-native-demo.js` for a self-contained trial with an isolated Vault.

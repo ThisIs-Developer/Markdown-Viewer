@@ -20,14 +20,14 @@ function run(command, args, cwd) {
   if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
 }
 
-function main() {
+async function main() {
   if (process.platform !== 'win32') throw new Error('Build the native demo on Windows.');
   if (!fs.existsSync(runtime)) throw new Error(`Compile the reviewed runtime first: ${runtime}`);
   if (git(runtimeSource, 'rev-parse', 'HEAD') !== runtimeCommit) throw new Error('Unexpected runtime source revision.');
-  // A reverse check proves the pinned patch is present; require only this source
-  // file to be changed so unrelated upstream experiments cannot enter the demo.
+  // Require the reviewed Windows WebView and event-bridge patch, excluding
+  // unrelated upstream authentication, server and other-platform experiments.
   execFileSync('git', ['apply', '--reverse', '--check', patch], { cwd: runtimeSource, stdio: 'inherit' });
-  if (git(runtimeSource, 'diff', '--name-only', 'HEAD') !== 'lib/webview/webview.h') throw new Error('Unexpected runtime source changes.');
+  if (git(runtimeSource, 'diff', '--name-only', 'HEAD') !== 'api/window/window.cpp\nlib/webview/webview.h') throw new Error('Unexpected runtime source changes.');
   const appCommit = git(root, 'rev-parse', 'HEAD');
   fs.mkdirSync(path.join(appDir, '.tmp'), { recursive: true });
   const stage = fs.mkdtempSync(path.join(appDir, '.tmp/native-demo-'));
@@ -38,6 +38,9 @@ function main() {
     fs.cpSync(path.join(appDir, 'resources'), path.join(stage, 'resources'), { recursive: true });
     const config = JSON.parse(fs.readFileSync(path.join(appDir, 'neutralino.experimental.config.json'), 'utf8'));
     config.applicationId = 'com.markdownviewer.desktop.native-demo';
+    config.applicationName = 'Markdown Viewer';
+    config.description = 'Markdown Viewer';
+    config.author = 'Markdown Viewer contributors';
     config.modes.window.title = 'Markdown Viewer - Native Runtime Demo';
     config.cli.binaryName = 'markdown-viewer-native-demo';
     config.cli.binaryVersion = '6.10.0';
@@ -53,16 +56,20 @@ function main() {
     const name = `Markdown-Viewer-PR269-${appCommit.slice(0, 8)}-win_x64.exe`;
     const output = path.join(outputDir, name);
     fs.copyFileSync(path.join(stage, 'dist/markdown-viewer-native-demo/markdown-viewer-native-demo-win_x64.exe'), output);
+    await require('./experimental/windows/brand-executable').brandExecutable(output);
+    const helperName = 'MarkdownViewer-WindowsIntegration.exe';
+    const helper = require('./experimental/windows/build-integration').buildWindowsIntegration(path.join(outputDir, helperName));
     const manifest = {
       applicationCommit: appCommit, applicationId: config.applicationId,
       vault: 'Markdown Viewer Native Demo Vault',
       runtimeRepository: 'https://github.com/Kechos23/neutralinojs', runtimeCommit,
       runtimeVersion: config.cli.binaryVersion, clientVersion: config.cli.clientVersion,
       windowsDropPatchSha256: hash(patch), runtimeSha256: hash(runtime),
-      executable: name, executableSha256: hash(output)
+      executable: name, executableSha256: hash(output),
+      integrationHelper: helperName, integrationHelperSha256: hash(helper)
     };
     fs.writeFileSync(path.join(outputDir, 'provenance.json'), JSON.stringify(manifest, null, 2) + '\n');
-    fs.writeFileSync(path.join(outputDir, 'SHA256SUMS'), `${manifest.executableSha256}  ${name}\n`);
+    fs.writeFileSync(path.join(outputDir, 'SHA256SUMS'), `${manifest.executableSha256}  ${name}\n${manifest.integrationHelperSha256}  ${helperName}\n`);
     console.log(`Native demo: ${output}`);
   } finally {
     run(process.execPath, ['prepare.js'], appDir);
@@ -72,4 +79,4 @@ function main() {
     fs.rmSync(stage, { recursive: true, force: true });
   }
 }
-try { main(); } catch (error) { console.error(error); process.exitCode = 1; }
+main().catch(error => { console.error(error); process.exitCode = 1; });

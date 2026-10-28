@@ -236,11 +236,17 @@ function onDesktopFilesDropped(event) {
     // The application captures document/maintenance state and owns the drop
     // queue. A second bridge queue would defer that capture until older dialogs
     // finish, potentially applying a drop to a different document/workspace.
-    const operation = window.NL_HANDLE_NATIVE_DROP(paths);
+    const operation = window.NL_HANDLE_NATIVE_DROP(paths, detail && !Array.isArray(detail) ? detail : null);
     await Promise.all([operation, focusDesktopWindow()]);
   }).catch(function(error) {
     console.warn('Could not process native file drop:', error);
   });
+}
+
+function onDesktopFilesDragged(event) {
+  if (typeof window.NL_HANDLE_NATIVE_DRAG === 'function') {
+    window.NL_HANDLE_NATIVE_DRAG(event && event.detail);
+  }
 }
 
 // Initialize Neutralino if in native environment
@@ -252,6 +258,7 @@ if (isNeutralinoRuntime()) {
   if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows' &&
       window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeFileDrop === true) {
     Neutralino.events.on("filesDropped", onDesktopFilesDropped);
+    Neutralino.events.on("filesDragged", onDesktopFilesDragged);
   }
   Neutralino.init();
 

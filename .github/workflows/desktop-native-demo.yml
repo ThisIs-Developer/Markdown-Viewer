@@ -29,6 +29,7 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: npm ci --prefix desktop-app
       - run: npm run build
       - run: npm run test:unit
       - run: node assets/i18n/audit-ui-locales.mjs
