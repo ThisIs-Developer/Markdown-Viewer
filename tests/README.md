@@ -43,6 +43,8 @@ npm run test:e2e:report
 
 The Playwright configuration starts a cross-platform Node static server automatically. Core browser libraries are fulfilled from locked npm packages during tests. External renderer, GitHub, and Live Share calls are mocked in the specifications that exercise those integrations.
 
+Math font lifecycle tests use the real MathJax bundle, Modern, STIX Two, and Asana components from locked development dependencies. Controlled response timing and failures cover editing during a saved-font download, overlapping selections, fallback, Reset, and retry without depending on CDN availability for those resources.
+
 ## Coverage
 
 - Static validation and application startup
@@ -52,6 +54,7 @@ The Playwright configuration starts a cross-platform Node static server automati
 - Markdown, HTML, PNG, and browser-print PDF export paths
 - Workspace storage, migration, backup/restore, Private mode, and responsive behavior
 - Explorer, toolbar, dialogs, keyboard interaction, accessible names, and focus management
+- Emoji category coverage, alias search, selection across filters, copying/insertion, loading retries, delayed/failed image loading without temporary emojis, viewport image requests, tile reuse, live/persisted skin tones, missing tone artwork and reset behavior, keyboard navigation, and narrow layouts (`emoji-picker.spec.js`, using bundled metadata, the locked JoyPixels runtime, and local image/API responses)
 
 Live Share tests use a local WebSocket/Yjs substitute and do not replace a Cloudflare Durable Object integration test. Production CDN availability and deployed Cloudflare bindings should be monitored separately from the deterministic local suite.
 

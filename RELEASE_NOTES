@@ -1,81 +1,97 @@
-![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.4`
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.5`
 
-# Welcome to Markdown Viewer 3.10.4
+# Welcome to Markdown Viewer 3.10.5
 
-_Released October 9, 2026_
+_Released October 27, 2026_
 
-This release makes Markdown authoring faster from the keyboard, preserves the right content and formatting when you copy, and strengthens navigation and fullscreen behavior across desktop and mobile browsers.
+This release connects the desktop app safely to existing Markdown files and folders, adds direct control over Preview libraries and emoji appearance, and makes local recovery more dependable when saves, moves, imports, or external edits overlap.
 
-Everything here ships with the web, PWA, Docker, and desktop editions. **Happy coding!**
+Everything here ships with the web, PWA, Docker, and desktop editions unless a feature is explicitly marked desktop-only. **Happy coding!**
 
-[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.4) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.5) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
 
 ---
 
 ## Highlights
 
-- **Insert blocks without leaving the Editor.** Type `/` at the start of a line, search common Markdown commands, and run one with the keyboard or pointer.
-- **Copy the format you intend.** Copy Markdown always returns the full raw document, while Preview Copy supplies sanitized rich HTML plus a readable plain-text alternative.
-- **Select confidently on desktop and touch.** Select All stays inside the focused Editor or Preview, works in either document pane, and keeps touch selections available when menus close or reopen.
-- **Navigate without layout jumps.** Page Up/Down no longer shifts the workspace sideways and keeps native caret movement, Shift selection, smooth paging, reduced motion, and synchronized panes aligned.
-- **Use fullscreen where the browser allows it.** Older Safari APIs are supported, while browsers without page fullscreen receive a clearly named Expanded view with a dependable exit path.
+- **Work with existing files in the desktop app.** Link a Markdown file or folder without importing or moving it, keep automatic recovery drafts separate, and decide explicitly when to write an original.
+- **Tune the Preview to your work.** Choose the code theme, math font, Mermaid theme and style, and supported emoji skin tone from one compact settings dialog.
+- **Find emoji by meaning instead of alphabet.** Browse ten familiar groups, search names, aliases, keywords, or emoji, collect several choices, and copy or insert them in order.
+- **Recover once, then continue normally.** A successfully saved recovered document now consumes only its matching journal, preventing the same recovery copy from returning on every launch.
+- **Keep destructive operations coordinated.** Saves, deletes, moves, workspace replacement, linked scans, and Secret Workspace transitions preserve newer drafts and report partial or failed work accurately.
 
 > [!TIP]
-> Place the cursor at the beginning of an empty or existing Editor line and type `/`. Filter for a heading, list, quote, code block, table, alert, diagram, image, or another block, then press **Enter**.
+> In the desktop app, open the **Linked Workspace** menu and choose **Link file** or **Link folder**. Editing saves a recovery draft inside the Markdown Viewer vault; press **Ctrl+S** only when you want to update the external original.
 
-## Write faster with slash commands
+## Link desktop files and folders without importing them
 
-The new **Insert block** menu opens for a literal `/` at column zero. Keep typing to filter commands, move with the arrow keys, press **Enter** to run the current command, or press **Escape** to close. Mouse and touch selection work too.
+The new desktop-only **Linked Workspace** sits beside the managed Vault and Secret Workspace. Link one `.md` or `.markdown` file or scan a folder recursively while keeping each original at its existing path. Source paths appear on hover, nested folder structure is retained, linking progress is visible, and normalized path identity avoids accidental duplicate links, including Windows UNC paths.
 
-The menu includes headings, paragraphs, bulleted and numbered lists, task lists, quotes, horizontal rules, fenced code, terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Commands that need more detail open the same focused chooser used by the formatting toolbar.
+Autosave writes a recovery draft under the app's separate Linked Workspace storage instead of changing the original. **Save / Ctrl+S** captures current Editor input, verifies the draft and source, and then writes explicitly. External changes, missing files, and conflicts keep the draft and ask what to do. **Save As…** creates another linked file, while **Convert to Workspace copy** preserves the current draft as an independent Vault document without changing its source.
 
-Normal Markdown stays normal: slashes after indentation or existing text, inside URLs, or during IME composition do not open the menu. The menu follows the active primary or secondary Editor, closes when its document or focus context changes, positions for RTL text, and exposes accessible listbox state.
+Folder links support rescanning, sidebar-only grouping, removal that never deletes originals, drag conversion to Vault, and export of a Vault folder as a separate linked folder. Removed or converted paths stay excluded from automatic scans across overlapping roots but can return through an explicit rescan or relink. Browser and Docker builds hide native linking controls.
 
-## Copy and select the right document
+Scans are deliberately bounded by file size, staged content, entry, file, directory, depth, and time limits. Workspace backups can retain recoverable linked drafts, but imported paths are treated as data rather than permission: a restored draft must be linked again before it can write an external file. Recovery remains a safety net, not an independent backup.
 
-**Copy Markdown** in the navbar or mobile menu, plus **Ctrl/Cmd+Shift+C**, now always copies the complete raw source of the intended document in Editor, Preview, or Split mode. In the two-Document view, the last-focused Editor or Preview remains the target even after clicking the toolbar.
+## Customize Preview rendering
 
-Ordinary Editor Copy still returns selected raw Markdown. Preview Copy now writes sanitized HTML and plain text, retaining supported headings, emphasis, links, lists, tables, and code when pasted into rich-text applications such as Google Docs. Partial selections and native browser Copy use the same rich-content path, while Preview controls stay out of the result. Browsers without asynchronous rich clipboard support use a copy-event fallback and then plain text when necessary.
+Open **Workspace settings → Preview Styling** to manage five saved preferences:
 
-**Select All** and **Ctrl/Cmd+A** are scoped to the focused pane, including secondary and read-only documents. Mouse and keyboard menus close and return focus after selection; touch menus keep Copy available. Dismissing a touch menu preserves the selection, tapping highlighted text reopens it, swipes continue to scroll, and selected text no longer starts an unwanted native drag.
+- **Code theme** for highlighted code blocks.
+- **Math font** for MathJax output.
+- **Diagram theme** and **Diagram style** for Mermaid.
+- **Emoji skin tone** for supported unqualified shortcodes and picker artwork.
 
-## Dependable navigation and fullscreen
+Changes apply automatically in normal and split Preview. Compact info buttons explain the Mermaid and emoji controls on hover, keyboard focus, or tap. **Reset defaults** changes only these preferences, not document content.
 
-Closed Settings menus no longer add hidden horizontal overflow, fixing the Edge case where Page Up/Down shifted the workspace left and left a blank strip. Paging keeps the browser's caret and Shift-selection semantics. When a browser jumps instantly, Markdown Viewer animates that same destination without interrupting native smooth scrolling; reduced-motion preferences, the secondary Editor, and synchronized panes are respected.
+Math stays available in the bundled Computer Modern style while an optional font downloads. Shared downloads are reused, only the newest selection can update the renderer, and failed or superseded requests cannot strand MathJax or block Reset. Code-theme and font assets may still require the network, including in the desktop app.
 
-Fullscreen uses the standard API where available and older Safari's prefixed API when required. Requests and exits wait for completion, browser-initiated exits stay synchronized with the button, overlapping requests are prevented, and failed exits remain retryable. The exit control remains usable in Release Notes and after every document tab is closed.
+## Browse a categorized emoji picker
 
-When native page fullscreen is missing or denied, including on iPhone Safari, **Expanded view** hides the app header and fits the workspace to the visible viewport while explaining that browser controls remain visible. Escape closes dialogs first, then exits the expanded layout; printing and document contents are unchanged.
+**GitHub Emojis** now opens a compact grid grouped into smileys, people, nature, food, travel, activities, objects, symbols, flags, and GitHub extras. Search spans all groups using English names, aliases, keywords, or an emoji. Aliases share a tile, while an exact alias search preserves that shortcode.
 
-## Explorer, tabs, and desktop polish
+Selections remain in an ordered tray while you search or change categories. Remove individual choices, copy the complete selection, or insert every shortcode in order. Arrow keys navigate categories and tiles, Space or Enter selects, Escape closes, and narrow layouts provide a swipeable category strip.
 
-Document titles, folder names, and Move-dialog paths now use natural numeric ordering, so `Untitled 2` appears before `Untitled 10`. Workspace rows use the bundled briefcase-business icon consistently across collapsed, expanded, and drag-expanded states.
+The picker shows clear catalog, tile-loading, failure, and retry states without briefly switching to a mismatched native emoji style. Images are requested only near visible rows and reused when revisited. The picker and selection tray follow live and saved skin-tone changes without clearing the search or selection; unsupported or unavailable artwork retains a usable fallback.
 
-Pressing a mouse's scroll-wheel button on a tab now closes that tab like a browser tab. It does not activate an inactive tab first, delete its saved Workspace document, or interfere with ordinary wheel scrolling, left-click activation, and right-click menus.
+## Stronger recovery and storage safety
 
-Windows executables and the Neutralino desktop window now use the Markdown Viewer artwork instead of the default runtime icon. The shared slash, sorting, tab, navigation, fullscreen, clipboard, selection, and Workspace-icon changes are synchronized in the prepared desktop resources.
+Normal saves now retain newer content or comment journals that arrive while an older write is completing. Successful saves of recovered copies track and consume only the exact source journal they committed, so reopened recovery documents do not multiply indefinitely. Failed saves, metadata-only saves, and newer replacement records remain recoverable.
 
-## Quality and compatibility
+Document deletion coordinates with queued writes, desktop moves reject occupied destinations, case-only Vault renames remain possible, and workspace reset or backup restore blocks new editing while pending operations settle. Folder registration, linked exclusions, source refresh, Save As watchers, and conversion commits use durable metadata before reporting success. Moving a Vault document to Secret Workspace preserves the encrypted record before plaintext cleanup.
 
-Focused regression coverage now exercises slash-command lifecycle and accessibility, natural ordering, middle-click behavior, Page Up/Down and synchronized scrolling, Safari and fallback fullscreen paths, rich and plain clipboard writes, pane-scoped selection, touch-menu reopening, drag prevention, read-only documents, and two-Document targeting. All 15 locale catalogs retain matching keys and translated release-note labels.
+Chooser focus is also safer: delayed reference, media, and table dialogs no longer redirect typing after the originating document or selection changes. Review recovery keeps newer replies instead of restoring stale comment metadata.
+
+## Interface, startup, and authoring polish
+
+Preview and Explorer now use matching startup placeholders. The slash-command menu shares the app's compact dropdown styling, stays clear of the typing line, completes chooser-based commands, preserves the correct upload target, and aligns primary and secondary Editors. Split documents use consistent spacing and empty-state hints, and inactive panes no longer receive a misleading focus border.
+
+The Linked Workspace guide opens in Split view with concise steps and diagrams. Explorer actions distinguish linking from Trash, header context menus stay disabled, plain file icons keep managed documents visually quiet, and workspace expansion colors remain consistent.
+
+## Quality, localization, and distribution
+
+All 15 locale catalogs include the Linked Workspace, Preview Styling, emoji, recovery, and v3.10.5 release-note labels with matching placeholders. Web, service-worker, Docker, and Neutralino resources include the new stores, adapters, native-source bridge, emoji catalog, icons, styles, and tests. DOMPurify and YAML dependencies include their current security fixes for this release line.
+
+Coverage now includes linked file/folder workflows, scan boundaries and races, source conflicts, Save As watchers, conversion and removal failures, backup trust boundaries, recovered-journal cleanup, desktop filesystem moves, Preview Styling lifecycle, MathJax resources, syntax themes, emoji categories and lazy loading, startup placeholders, slash commands, localization, and web/desktop isolation.
 
 ## Thank you
 
 ### Contributors
 
-- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Rich copy and Select All, Page Up/Down navigation, Safari fullscreen and Expanded view, Workspace icon updates, testing, documentation, and release work.
-- **[Ioannis Kechagias (@Kechos23)](https://github.com/Kechos23)** — Slash commands, middle-click tab closing, Windows executable icon packaging, accessibility hardening, and regression coverage.
-- **[Mike Hoang (@mikah13)](https://github.com/mikah13)** — Natural numeric ordering for document titles, folders, move destinations, and synchronized desktop resources.
+- **[Ioannis Kechagias (@Kechos23)](https://github.com/Kechos23)** — Designed and implemented Linked Workspace, recovery and destructive-operation hardening, locale completion, desktop safety coverage, and supporting documentation.
+- **[Itznan (@itznan)](https://github.com/itznan)** — Added Preview Styling and its library adapters, MathJax lifecycle fixes, syntax-theme isolation, emoji-tone handling, distribution updates, and regression coverage.
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Refined Linked Workspace and Preview Styling, rebuilt the emoji picker, fixed recovered-journal cleanup, polished startup and authoring behavior, and completed integration, documentation, and release work.
 
 ### Changes included
 
-- [#261 — Add the line-start slash command menu](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/261)
-- [#266 — Sort untitled documents in natural numeric order](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/266)
-- [#267 — Close document tabs with middle-click](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/267)
-- [#268 — Embed the project icon in Windows executables](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/268)
-- [#271 — Restore smooth Page Up/Down navigation](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/271)
-- [#272 — Support Safari fullscreen and improve the mobile fallback](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/272)
-- [#273 — Preserve rich copy, add Select All, and update the Workspace icon](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/273)
+- [#275 — Match Preview and Explorer startup loading states](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/275)
+- [#276 — Polish slash commands and align split documents](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/276)
+- [#278 — Add Preview Styling for Highlight.js, MathJax, Mermaid, and JoyPixels](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/278)
+- [#281 — Simplify Preview Styling and stabilize math fonts](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/281)
+- [#282 — Redesign the emoji picker with categories and smoother loading](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/282)
+- [#262 — Link Markdown files and folders alongside Vault copies](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/262)
+- [#279 — Preserve recovery drafts and coordinate destructive workspace operations](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/279)
+- [#285 — Stop recovered documents duplicating after reopening](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/285)
 
 Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
 

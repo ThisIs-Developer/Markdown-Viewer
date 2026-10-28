@@ -21,7 +21,7 @@ for (const partialRuntime of [false, true]) {
       await page.locator(`[data-document-filter="${filter}"]`).click();
       await expect(row).toBeVisible();
       await expect(row).not.toHaveClass(/is-linked-document|is-source-missing|is-source-conflict/);
-      await expect(row.locator('.lucide-file-text')).toHaveCount(1);
+      await expect(row.locator('.lucide-file')).toHaveCount(1);
       await expect(row.locator('.document-tree-main')).toHaveAttribute('title','Recovered');
       await expect(row).toHaveAttribute('draggable','true');
       await expect(row).not.toHaveAttribute('data-pointer-draggable','true');

@@ -65,7 +65,7 @@ test('first file-association launch seeds Welcome in the Vault without replacing
   await openApp(page);
   const welcome = page.locator('#document-tree [data-tree-type="document"]').filter({ hasText: 'Welcome to Markdown' });
   await expect(welcome).toHaveCount(1);
-  await expect(welcome.locator('.lucide-book-open-text')).toHaveCount(1);
+  await expect(welcome.locator('.lucide-book-open')).toHaveCount(1);
   await expect(welcome).not.toHaveClass(/is-linked-document/);
   await expect(welcome).toHaveAttribute('data-tree-depth', '1');
   await expect.poll(() => editorValue(page)).toBe('# Initial original');
@@ -160,7 +160,7 @@ test('links a folder and converts a linked file into a Vault copy', async ({ pag
 
   await expect(page.locator('#document-tree')).toContainText('Workspace (Vault)');
   await expect(linkedRow).not.toHaveClass(/is-linked-document/);
-  await expect(linkedRow.locator('.lucide-file-text')).toHaveCount(1);
+  await expect(linkedRow.locator('.lucide-file')).toHaveCount(1);
   await expect(page.locator('.document-tree-row[data-tree-type="linked-location"]').filter({ hasText: 'Notes' })).toContainText('0');
   await expect.poll(() => page.evaluate(() => window.__linkedWrites)).toEqual([]);
 });
@@ -221,7 +221,7 @@ test('groups linked files under Workspaces and persists independent nested folde
     return {
       active: iconColor(rows.find(row => row.classList.contains('is-active'))),
       inactive: rows.filter(row => !row.classList.contains('is-active')).map(iconColor),
-      folders: Array.from(element.querySelectorAll('[data-tree-type="linked-virtual-folder"]')).map(iconColor),
+      folders: Array.from(element.querySelectorAll('[data-tree-type="linked-virtual-folder"]')).map(row => ({ color: iconColor(row), expanded: row.getAttribute('aria-expanded') === 'true' })),
       root: iconColor(element.querySelector('[data-tree-type="linked-location"]')),
       gray: getComputedStyle(element.querySelector('.document-tree-meta')).color
     };
@@ -229,7 +229,7 @@ test('groups linked files under Workspaces and persists independent nested folde
   expect(colors.active).not.toBe(colors.gray);
   expect(colors.root).toBe(colors.active);
   expect(colors.inactive.every(color => color === colors.gray)).toBe(true);
-  expect(colors.folders.every(color => color === colors.gray)).toBe(true);
+  expect(colors.folders.every(folder => folder.color === (folder.expanded ? colors.active : colors.gray))).toBe(true);
 
   const linkedRoot = tree.locator('[data-tree-type="linked-workspace"]');
   await linkedRoot.locator('.document-tree-toggle').click();

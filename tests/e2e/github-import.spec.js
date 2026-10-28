@@ -103,7 +103,7 @@ test('shows every Markdown file returned by a large repository tree', async ({ p
   await expect(page.locator('#github-import-total-count')).toHaveCount(0);
   await expect(page.locator('#github-import-selected-count')).toHaveText('1 selected');
   await expect(page.locator('.github-tree-folder-icon').first()).toHaveClass(/lucide-folder-open/);
-  await expect(page.locator('.github-tree-file-icon').first()).toHaveClass(/lucide-file-text/);
+  await expect(page.locator('.github-tree-file-icon').first()).toHaveClass(/\blucide-file\b/);
   await expect(page.locator('.github-tree-folder-icon').first()).toHaveCSS('width', '14px');
   await expect(page.locator('.github-tree-folder-icon').first()).toHaveCSS('height', '14px');
   await expect(page.locator('.github-tree-file-icon').first()).toHaveCSS('width', '14px');

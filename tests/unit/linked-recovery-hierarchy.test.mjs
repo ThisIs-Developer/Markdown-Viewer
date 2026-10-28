@@ -87,6 +87,23 @@ test('untrusted backup hierarchy cannot escape the internal recovery root',async
  const {storage}=await setup();assert.throws(()=>storage._normalizeBackupForRestore({documents:[{metadata:{id:'bad',sourcePath:'C:/Other.md',vaultRelativePath:'Linked Workspace/../Other.md'},content:'draft'}]}),/Invalid Linked Workspace/);
 });
 
+test('browser re-export preserves validated recovery folders when no desktop path is present',async()=>{
+ const {storage,organization}=await setup();const tab=draft();
+ await storage.saveDocuments([tab],organization,{forceContent:true});
+ const first=storage._normalizeBackupForRestore(await storage.createBackupData());
+ const recovered=first.tabs[0];
+ const browserBackup={organization:first.organization,documents:[{metadata:recovered,content:recovered.content}]};
+ const second=storage._normalizeBackupForRestore(browserBackup);
+ assert.deepEqual(second.tabs[0].recoveryFolderSegments,recovered.recoveryFolderSegments);
+ assert.equal(await storage._desktopDocumentRelativePath(second.tabs[0],second.organization),tab._vaultRelativePath);
+ assert.equal(second.tabs[0].sourcePath,undefined);
+});
+
+for(const segments of [['..'],['/absolute'],['C:'],['sub/escape']])test('browser recovery segments remain untrusted: '+JSON.stringify(segments),async()=>{
+ const {storage}=await setup();
+ assert.throws(()=>storage._normalizeBackupForRestore({documents:[{metadata:{id:'bad',kind:'linked-recovery',recoveryFolderSegments:segments},content:'draft'}]}),/Invalid Linked Workspace/);
+});
+
 test('a mismatched root association cannot redirect recovery storage',async()=>{
  const {storage,organization}=await setup();const tab=draft();tab.sourcePath='C:/Other/notes.md';
  await assert.rejects(storage._desktopDocumentRelativePath(tab,organization),/does not belong/);

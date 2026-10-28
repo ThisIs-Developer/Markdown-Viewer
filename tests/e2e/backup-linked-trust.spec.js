@@ -2,6 +2,24 @@ const {test,expect}=require('@playwright/test');
 const {openApp}=require('../helpers/app');
 const JSZip=require('jszip');
 const {installDesktopFilesystem}=require('../helpers/desktop-filesystem');
+
+test('browser backup roundtrip retains the desktop linked recovery hierarchy',async({page})=>{
+  await openApp(page);
+  const result=await page.evaluate(async()=>{
+    const storage=new MarkdownWorkspaceStorage();await storage.init();
+    await storage.restoreBackupData({documents:[{metadata:{id:'nested',title:'Nested',sourcePath:'C:/Private/sub/notes.md',vaultRelativePath:'Linked Workspace/Project--123/sub/deep/Nested.md'},content:'# nested recovery'}]});
+    const backup=await storage.createBackupData();
+    const first=backup.documents.find(item=>item.metadata.id==='nested');
+    await storage.restoreBackupData(backup);
+    const reopened=new MarkdownWorkspaceStorage();await reopened.init();
+    return {first:first.metadata,second:(await reopened.listDocumentMetadata()).find(item=>item.id==='nested'),body:await reopened.loadDocumentContent('nested')};
+  });
+  expect(result.first.vaultRelativePath).toBeUndefined();
+  expect(result.first.recoveryFolderSegments).toEqual(['Project--123','sub','deep']);
+  expect(result.second.recoveryFolderSegments).toEqual(result.first.recoveryFolderSegments);
+  expect(result.second.sourcePath).toBeUndefined();
+  expect(result.body).toBe('# nested recovery');
+});
 test('browser restore drops active source authority before future desktop use',async({page})=>{
   await openApp(page);
   const result=await page.evaluate(async()=>{

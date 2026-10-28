@@ -60,6 +60,32 @@ async function state(page) {
   });
 }
 
+test('an open paused in the managed-Vault guard cannot replace a later successful save', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => {
+    let paused = false;
+    Neutralino.filesystem.getNormalizedPath = async path => {
+      if (!paused) {
+        paused = true;
+        window.__guardPaused = true;
+        await new Promise(resolve => { window.__releaseGuard = resolve; });
+      }
+      return path;
+    };
+    window.__pendingOpen = NL_OPEN_EXTERNAL_MARKDOWN_FILE('C:/Original/notes.md');
+  });
+  await expect.poll(() => page.evaluate(() => window.__guardPaused)).toBe(true);
+  await page.locator('#markdown-editor').fill('# saved while guard waited');
+  await page.locator('#markdown-editor').press('Control+s');
+  await expect(page.getByText('Original file updated', { exact: true })).toBeVisible();
+  await page.evaluate(async () => { window.__releaseGuard(); await window.__pendingOpen; });
+  await expect(page.locator('#markdown-editor')).toHaveValue('# saved while guard waited');
+  const saved = await state(page);
+  expect(saved.original).toBe('# saved while guard waited');
+  expect(saved.bodies).toEqual(['# saved while guard waited']);
+  expect(saved.docs.find(item => item.title === 'notes').sourceConflict).toBe(false);
+});
+
 for (const phase of ['read', 'hash']) {
   test(`a scan paused during ${phase} cannot roll back a later successful Ctrl+S`, async ({ page }) => {
     await setup(page);

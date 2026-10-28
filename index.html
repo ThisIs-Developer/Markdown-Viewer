@@ -14,6 +14,8 @@
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
     <link rel="preload" href="styles.css" as="style">
     <link rel="preload" href="workspace-storage.js" as="script">
+    <link rel="preload" href="visual-settings-adapters.js" as="script">
+    <link rel="preload" href="visual-settings-store.js" as="script">
     <link rel="preload" href="script.js" as="script">
 
     <!-- Canonical Link -->
@@ -132,7 +134,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js" integrity="sha384-LWJZQx0dgGhEK7snfNYrQs5K+QKD1sOmE02sOQCz4br9UmqSJDvPLoUVFaUyFnjq" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js" integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx" crossorigin="anonymous" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy" crossorigin="anonymous" defer></script>
     <!-- PERF-002: MathJax, Mermaid, JoyPixels, jsPDF, html2canvas, pako are now lazy-loaded by script.js on first use -->
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js" integrity="sha384-uwLg6oO8ZhFG2SuQfgmkMtosjtrFYlkPspa/cXS+b3D8GLRTHMDl/mTwqImdlKQO" crossorigin="anonymous" defer></script>
@@ -174,9 +176,7 @@
                         </button>
                         <ul class="dropdown-menu app-command-menu header-command-menu header-new-menu" aria-labelledby="importDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="header-new-document"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i><span class="app-menu-label">New document</span></a></li>
-                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-files" aria-hidden="true"></i><span class="app-menu-label">Import copies</span></a></li>
-                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-file"><i class="lucide lucide-file-symlink" aria-hidden="true"></i><span class="app-menu-label">Link files…</span></a></li>
-                            <li class="desktop-linked-command" hidden><a class="dropdown-item app-menu-item" href="#" id="link-from-folder"><i class="lucide lucide-folder-symlink" aria-hidden="true"></i><span class="app-menu-label">Link folder…</span></a></li>
+                            <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-upload" aria-hidden="true"></i><span class="app-menu-label">From files</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-github"><i class="bi bi-github" aria-hidden="true"></i><span class="app-menu-label">From GitHub</span></a></li>
                         </ul>
                     </div>
@@ -231,6 +231,9 @@
                             <button id="theme-toggle" class="settings-menu-item app-menu-item settings-menu-item--toggle" type="button" aria-pressed="false" title="Toggle appearance">
                                 <i id="theme-toggle-icon" class="lucide lucide-sun" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Appearance</span><span id="theme-toggle-description" class="app-menu-description">Switch to dark appearance</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span><i id="theme-switch-icon" class="lucide lucide-sun settings-switch-icon"></i></span></span>
                             </button>
+                            <button id="menu-visual-settings-button" class="settings-menu-item app-menu-item" type="button" aria-haspopup="dialog" aria-controls="visual-settings-modal">
+                                <i class="lucide lucide-wand-sparkles" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Preview Styling</span><span class="app-menu-description">Customize preview elements.</span></span>
+                            </button>
                             <div class="dropdown dropstart settings-language-dropdown">
                                 <button class="settings-menu-item app-menu-item dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Switch language">
                                     <i class="lucide lucide-languages" aria-hidden="true"></i><span class="app-menu-copy"><span id="current-lang-label" class="app-menu-label">English</span><span class="app-menu-description">Application language</span></span>
@@ -259,9 +262,6 @@
                             </button>
                             <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and backup">
                                 <i class="lucide lucide-box" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage and Backup</span><span class="app-menu-description">Back up or restore your workspace</span></span>
-                            </button>
-                            <button class="settings-menu-item app-menu-item settings-menu-item--toggle desktop-linked-command" data-original-save-warning-toggle type="button" aria-pressed="true" hidden>
-                                <i class="lucide lucide-save" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Confirm saving to original</span><span class="app-menu-description" data-original-save-warning-description>Ask before updating linked originals</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                             </button>
                             <button id="trash-settings-button" class="settings-menu-item app-menu-item" type="button" title="Open Trash">
                                 <i class="lucide lucide-trash-2" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Trash</span><span class="app-menu-description">Restore or permanently delete files</span></span>
@@ -418,11 +418,11 @@
                                         <button id="mobile-private-mode-toggle" class="mobile-menu-item mobile-settings-item mobile-settings-toggle" type="button" aria-pressed="false" title="Turn private mode on">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-hat-glasses" aria-hidden="true"></i><span>Private mode</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                                         </button>
+                                        <button id="mobile-visual-settings-button" class="mobile-menu-item mobile-settings-item" type="button" aria-haspopup="dialog" aria-controls="visual-settings-modal">
+                                            <span class="mobile-menu-item-label"><i class="lucide lucide-wand-sparkles" aria-hidden="true"></i><span>Preview Styling</span></span>
+                                        </button>
                                         <button id="mobile-storage-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Storage and backup">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-box" aria-hidden="true"></i><span>Storage and Backup</span></span>
-                                        </button>
-                                        <button class="mobile-menu-item mobile-settings-item mobile-settings-toggle desktop-linked-command" data-original-save-warning-toggle type="button" aria-pressed="true" hidden>
-                                            <span class="mobile-menu-item-label"><i class="lucide lucide-save" aria-hidden="true"></i><span>Confirm saving to original</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                                         </button>
                                         <button id="mobile-trash-settings-button" class="mobile-menu-item mobile-settings-item" type="button" title="Open Trash">
                                             <span class="mobile-menu-item-label"><i class="lucide lucide-trash-2" aria-hidden="true"></i><span>Trash</span></span>
@@ -450,22 +450,20 @@
                 <h2 id="document-sidebar-title">Explorer</h2>
               </div>
               <div class="document-sidebar-actions" role="toolbar" aria-label="File actions">
-                <button id="sidebar-create-linked-file" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Create new linked file…" title="Create new linked file…" hidden>
-                  <i class="lucide lucide-file-plus" aria-hidden="true"></i>
-                </button>
-                <button id="sidebar-link-files" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link Markdown files" title="Link Markdown files" hidden>
-                  <i class="lucide lucide-file-symlink" aria-hidden="true"></i>
-                </button>
-                <button id="sidebar-link-folder" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link a Markdown folder" title="Link a Markdown folder" hidden>
-                  <i class="lucide lucide-folder-symlink" aria-hidden="true"></i>
-                </button>
-                <span id="sidebar-linked-separator" class="document-sidebar-actions-separator desktop-linked-command" role="separator" aria-orientation="vertical" hidden></span>
                 <button id="sidebar-new-document" class="document-sidebar-icon-btn" type="button" aria-label="Create a Markdown file" title="New Markdown file">
                   <i class="lucide lucide-file-plus-2" aria-hidden="true"></i>
                 </button>
                 <button id="sidebar-new-folder" class="document-sidebar-icon-btn" type="button" aria-label="Create a folder" title="New folder">
                   <i class="lucide lucide-folder-plus" aria-hidden="true"></i>
                 </button>
+                <span id="sidebar-linked-separator" class="document-sidebar-actions-separator desktop-linked-command" role="separator" aria-orientation="vertical" hidden></span>
+                <button id="sidebar-link-files" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link file" title="Link file" hidden>
+                  <i class="lucide lucide-file-symlink" aria-hidden="true"></i>
+                </button>
+                <button id="sidebar-link-folder" class="document-sidebar-icon-btn desktop-linked-command" type="button" aria-label="Link folder" title="Link folder" hidden>
+                  <i class="lucide lucide-folder-symlink" aria-hidden="true"></i>
+                </button>
+                <span id="sidebar-linked-end-separator" class="document-sidebar-actions-separator desktop-linked-command" role="separator" aria-orientation="vertical" hidden></span>
                 <button id="sidebar-trash-button" class="document-sidebar-icon-btn" type="button" aria-label="Open Trash" title="Trash">
                   <i class="lucide lucide-trash-2" aria-hidden="true"></i>
                 </button>
@@ -673,6 +671,57 @@
           </div>
         </div>
         <input id="storage-backup-file-input" type="file" accept=".zip,application/zip" hidden>
+
+        <!-- Preview Styling -->
+        <div id="visual-settings-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="visual-settings-title" aria-describedby="visual-settings-description" aria-hidden="true" style="display:none;">
+          <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box visual-settings-box">
+            <div class="modal-header">
+              <p id="visual-settings-title" class="reset-modal-message">Preview Styling</p>
+              <button type="button" class="modal-close-btn" id="visual-settings-close-icon" aria-label="Close Preview Styling">
+                <i class="lucide lucide-x" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="modal-body visual-settings-body">
+              <p id="visual-settings-description" class="visual-setting-desc">Changes apply automatically.</p>
+              <div class="visual-setting-group">
+                <label for="visual-setting-hljs-theme" class="visual-setting-label">Code theme</label>
+                <select id="visual-setting-hljs-theme" class="form-select visual-setting-select"></select>
+              </div>
+              <div class="visual-setting-group">
+                <label for="visual-setting-math-font" class="visual-setting-label">Math font</label>
+                <select id="visual-setting-math-font" class="form-select visual-setting-select"></select>
+              </div>
+              <div class="visual-setting-group">
+                <div class="visual-setting-label-row">
+                  <label for="visual-setting-mermaid-theme" class="visual-setting-label">Diagram theme</label>
+                  <button type="button" class="visual-setting-info" data-setting-help="visual-setting-mermaid-theme-help" aria-label="About diagram theme"><i class="lucide lucide-info" aria-hidden="true"></i></button>
+                  <span id="visual-setting-mermaid-theme-help" hidden>Only applies to Mermaid diagrams.</span>
+                </div>
+                <select id="visual-setting-mermaid-theme" class="form-select visual-setting-select" aria-describedby="visual-setting-mermaid-theme-help"></select>
+              </div>
+              <div class="visual-setting-group">
+                <div class="visual-setting-label-row">
+                  <label for="visual-setting-mermaid-look" class="visual-setting-label">Diagram style</label>
+                  <button type="button" class="visual-setting-info" data-setting-help="visual-setting-mermaid-look-help" aria-label="About diagram style"><i class="lucide lucide-info" aria-hidden="true"></i></button>
+                  <span id="visual-setting-mermaid-look-help" hidden>Only applies to Mermaid diagrams.</span>
+                </div>
+                <select id="visual-setting-mermaid-look" class="form-select visual-setting-select" aria-describedby="visual-setting-mermaid-look-help"></select>
+              </div>
+              <div class="visual-setting-group">
+                <div class="visual-setting-label-row">
+                  <label for="visual-setting-emoji-skin-tone" class="visual-setting-label">Emoji skin tone</label>
+                  <button type="button" class="visual-setting-info" data-setting-help="visual-setting-emoji-skin-tone-help" aria-label="About emoji skin tone"><i class="lucide lucide-info" aria-hidden="true"></i></button>
+                  <span id="visual-setting-emoji-skin-tone-help" hidden>Only applies to supported emoji shortcodes, such as :wave:, without an explicit skin tone.</span>
+                </div>
+                <select id="visual-setting-emoji-skin-tone" class="form-select visual-setting-select" aria-describedby="visual-setting-emoji-skin-tone-help"></select>
+              </div>
+            </div>
+            <div class="reset-modal-actions visual-settings-actions">
+              <button type="button" class="reset-modal-btn reset-modal-confirm" id="visual-settings-reset-btn">Reset defaults</button>
+              <button type="button" class="reset-modal-btn" id="visual-settings-close-btn">Done</button>
+            </div>
+          </div>
+        </div>
 
         <!-- Trash Modal -->
         <div id="trash-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="trash-modal-title" aria-describedby="trash-modal-description" aria-hidden="true" style="display:none;">
@@ -1473,22 +1522,42 @@
 
         <!-- Emoji Modal -->
         <div id="emoji-modal" class="reset-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="emoji-modal-title" aria-hidden="true" style="display:none;">
-          <div class="reset-modal-box reset-modal-box--wide reset-modal-box--xl app-modal-box">
+          <div class="reset-modal-box reset-modal-box--wide reset-modal-box--xl app-modal-box emoji-modal-box">
             <div class="modal-header">
               <p id="emoji-modal-title" class="reset-modal-message">GitHub Emojis</p>
               <button type="button" class="modal-close-btn" data-modal-cancel="emoji-modal-cancel" aria-label="Close GitHub Emojis dialog"><i class="lucide lucide-x" aria-hidden="true"></i></button>
             </div>
-            <div class="modal-body">
-              <div class="reset-modal-field">
-                <label class="reset-modal-label" for="emoji-modal-search">Search</label>
-                <input type="text" id="emoji-modal-search" class="rename-modal-input" placeholder="Search emojis" />
+            <div class="modal-body emoji-picker-body">
+              <div class="emoji-search-field">
+                <i class="lucide lucide-search" aria-hidden="true"></i>
+                <input type="text" id="emoji-modal-search" class="rename-modal-input" placeholder="Search all emojis" aria-label="Search all emojis" autocomplete="off" spellcheck="false" />
+                <button type="button" id="emoji-modal-clear-search" class="emoji-icon-button" aria-label="Clear search" title="Clear search" hidden><i class="lucide lucide-x" aria-hidden="true"></i></button>
               </div>
-              <div id="emoji-modal-grid" class="emoji-grid" role="listbox" aria-label="Emoji list"></div>
-              <p id="emoji-modal-empty" class="modal-empty" style="display:none;">No emojis found.</p>
+              <div id="emoji-modal-categories" class="emoji-categories" role="toolbar" aria-label="Emoji categories"></div>
+              <div class="emoji-section-heading">
+                <p id="emoji-modal-category-title">Smileys &amp; emotion</p>
+                <span id="emoji-modal-shortcode" data-i18n-skip="true"></span>
+              </div>
+              <div class="emoji-results">
+                <div id="emoji-modal-grid" class="emoji-grid" role="listbox" aria-label="Emoji list" aria-multiselectable="true" aria-describedby="emoji-modal-keyboard-help"></div>
+                <div id="emoji-modal-empty" class="emoji-empty-state" role="status">
+                  <span id="emoji-modal-spinner" class="diagram-status-spinner" aria-hidden="true"></span>
+                  <i class="lucide lucide-search" aria-hidden="true"></i>
+                  <p id="emoji-modal-status">Loading emojis...</p>
+                  <button type="button" id="emoji-modal-retry" class="reset-modal-btn" hidden>Try again</button>
+                </div>
+              </div>
+              <p id="emoji-modal-keyboard-help" class="visually-hidden">Use arrow keys to browse and Space or Enter to select emojis.</p>
+              <div class="emoji-selection-bar">
+                <p id="emoji-modal-selection-hint">Select emojis to insert</p>
+                <div id="emoji-modal-selection" class="emoji-selection" role="group" aria-label="Selected emojis" hidden></div>
+                <button type="button" id="emoji-modal-copy" class="emoji-icon-button" aria-label="Copy selected emojis" title="Copy selected emojis" disabled><i class="lucide lucide-copy" aria-hidden="true"></i></button>
+              </div>
             </div>
             <div class="reset-modal-actions">
+              <span id="emoji-modal-selection-count" class="emoji-selection-count" role="status"></span>
               <button class="reset-modal-btn reset-modal-cancel" id="emoji-modal-cancel">Cancel</button>
-              <button class="reset-modal-btn" id="emoji-modal-insert">Insert</button>
+              <button class="reset-modal-btn" id="emoji-modal-insert" disabled>Insert</button>
             </div>
           </div>
         </div>
@@ -2380,6 +2449,8 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="assets/document-toc.js" defer></script>
     <script src="native-markdown-source.js" defer></script>
     <script src="workspace-storage.js" defer></script>
+    <script src="visual-settings-adapters.js" defer></script>
+    <script src="visual-settings-store.js" defer></script>
     <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->
     <div id="app-accessibility-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>

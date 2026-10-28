@@ -12,17 +12,17 @@ test('desktop guide is stored separately, editable, and does not take startup fo
   const guide = page.locator('#document-tree [data-tree-type="document"]').filter({hasText:'Welcome to Linked Workspace'});
   await expect(guide).toHaveCount(1);
   await expect(guide).not.toHaveClass(/is-linked-document/);
-  await expect(guide.locator('.lucide-book-open-text')).toHaveCount(1);
+  await expect(guide.locator('.lucide-book-open')).toHaveCount(1);
   await expect(guide.locator('.document-tree-main')).toHaveAttribute('title', 'Built-in Linked Workspace guide');
   const vaultGuide = page.locator('#document-tree [data-tree-type="document"]').filter({hasText:'Welcome to Markdown'});
-  await expect(vaultGuide.locator('.lucide-book-open-text')).toHaveCount(1);
+  await expect(vaultGuide.locator('.lucide-book-open')).toHaveCount(1);
   await expect(vaultGuide.locator('.document-tree-main')).toHaveAttribute('title', 'Built-in Workspace guide');
   await expect(page.locator('#tab-list .tab-item.active .tab-title')).toHaveText('Welcome to Markdown');
   expect(await page.evaluate(() => Array.from(window.__desktopFiles.keys()).some(path => path.includes('/Linked Workspace/Welcome to Linked Workspace--')))).toBe(true);
   await guide.locator('.document-tree-main').click();
-  await expect(page.locator('#tab-list .tab-item.active .lucide-book-open-text')).toHaveCount(1);
+  await expect(page.locator('#tab-list .tab-item.active .lucide-book-open')).toHaveCount(1);
   await expect(page.locator('#markdown-editor')).toHaveValue(/# Welcome to Linked Workspace/);
-  for (const topic of ['Save As linked folder', 'Confirm saving to original', 'not all-or-nothing', 'partial completion', 'without reconnecting their original paths']) {
+  for (const topic of ['Ctrl \\+ S', 'local recovery draft', 'without moving files on your computer', 'Your link stays in Linked Workspace']) {
     await expect(page.locator('#markdown-editor')).toHaveValue(new RegExp(topic));
   }
   await expect(page.locator('#markdown-preview')).toContainText('Welcome to Linked Workspace');
@@ -38,7 +38,7 @@ test('desktop guide is stored separately, editable, and does not take startup fo
   await expect.poll(() => page.evaluate(() => Array.from(window.__desktopFiles.entries())
     .find(([path]) => path.includes('/Linked Workspace/Welcome to Linked Workspace--'))?.[1]
   )).toBe('# Edited internal guide');
-  await expect(guide.locator('.lucide-book-open-text')).toHaveCount(1);
+  await expect(guide.locator('.lucide-book-open')).toHaveCount(1);
 });
 
 for (const scenario of [
@@ -54,12 +54,12 @@ for (const scenario of [
       localStorage.setItem('markdownViewerActiveTab','legacy');
     },scenario.documents);
     await openApp(page);
-    await expect(page.locator('#document-tree .lucide-book-open-text')).toHaveCount(scenario.expected);
+    await expect(page.locator('#document-tree .document-tree-main[title="Built-in Workspace guide"]')).toHaveCount(scenario.expected);
     await expect(page.locator('#markdown-editor')).toHaveValue(scenario.documents[0].content);
     await page.waitForTimeout(700);
     await page.reload();
     await page.waitForFunction(()=>document.documentElement.dataset.appReady==='true');
-    await expect(page.locator('#document-tree .lucide-book-open-text')).toHaveCount(scenario.expected);
+    await expect(page.locator('#document-tree .document-tree-main[title="Built-in Workspace guide"]')).toHaveCount(scenario.expected);
     await expect(page.locator('#markdown-editor')).toHaveValue(scenario.documents[0].content);
   });
 }
@@ -71,7 +71,7 @@ test('legacy desktop guide receives persisted metadata without changing its Mark
     localStorage.setItem('markdownViewerActiveTab','legacy');
   },defaultGuide);
   await openApp(page);
-  await expect(page.locator('#document-tree [data-document-id="legacy"] .lucide-book-open-text')).toHaveCount(1);
+  await expect(page.locator('#document-tree [data-document-id="legacy"] .lucide-book-open')).toHaveCount(1);
   await expect.poll(()=>page.evaluate(()=>{
     const entry=Array.from(window.__desktopFiles.entries()).find(([path])=>path.endsWith('/index.json'));
     return entry ? JSON.parse(entry[1]).documents.find(tab=>tab.id==='legacy')?.kind : null;
@@ -111,9 +111,34 @@ test('web does not seed a desktop Linked Workspace guide', async ({ page }) => {
   await openApp(page);
   await expect(page.locator('#document-tree [data-tree-type="linked-workspace"]')).toHaveCount(0);
   await expect(page.locator('#document-tree')).not.toContainText('Welcome to Linked Workspace');
-  await expect(page.locator('#document-tree .lucide-book-open-text')).toHaveCount(1);
-  await expect(page.locator('#tab-list .tab-item.active .lucide-book-open-text')).toHaveCount(1);
+  await expect(page.locator('#document-tree .lucide-book-open')).toHaveCount(1);
+  await expect(page.locator('#tab-list .tab-item.active .lucide-book-open')).toHaveCount(1);
 });
+
+for (const theme of ['light', 'dark']) {
+  test(`both welcome guides render the book-open icon in ${theme} theme`, async ({ page }) => {
+    await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window);');
+    await openApp(page);
+    if (theme === 'dark') await page.locator('#theme-toggle').evaluate(node => node.click());
+    for (const title of ['Welcome to Markdown', 'Welcome to Linked Workspace']) {
+      const row = page.locator('#document-tree [data-tree-type="document"]').filter({ hasText: title });
+      await row.locator('.document-tree-main').click();
+      for (const icon of [row.locator('.lucide-book-open'), page.locator('#tab-list .tab-item.active .lucide-book-open')]) {
+        await expect(icon).toBeVisible();
+        const rendered = await icon.evaluate(async node => {
+          const mask = getComputedStyle(node).maskImage;
+          const match = mask.match(/^url\(["']?(.*?)["']?\)$/);
+          if (!match) return false;
+          const image = new Image();
+          image.src = match[1];
+          await image.decode();
+          return image.naturalWidth > 0 && image.naturalHeight > 0;
+        });
+        expect(rendered).toBe(true);
+      }
+    }
+  });
+}
 
 test('guide metadata survives edits and reloads, while names alone never identify guides', async ({ page }) => {
   await page.addInitScript(() => {
@@ -129,21 +154,21 @@ test('guide metadata survives edits and reloads, while names alone never identif
   for (const filter of ['all','recent','favorites']) {
     await page.locator(`[data-document-filter="${filter}"]`).click();
     const row = id => page.locator(`#document-tree [data-document-id="${id}"]`);
-    await expect(row('guide').locator('.lucide-book-open-text')).toHaveCount(1);
+    await expect(row('guide').locator('.lucide-book-open')).toHaveCount(1);
     await expect(row('guide').locator('.document-tree-main')).toHaveAttribute('title','Built-in Workspace guide');
-    await expect(row('ordinary').locator('.lucide-file-text')).toHaveCount(1);
-    await expect(row('ordinary-linked-name').locator('.lucide-file-text')).toHaveCount(1);
+    await expect(row('ordinary').locator('.lucide-file')).toHaveCount(1);
+    await expect(row('ordinary-linked-name').locator('.lucide-file')).toHaveCount(1);
   }
   await page.locator('#markdown-editor').fill('# Edited again');
   await page.waitForTimeout(700);
   await page.reload();
   await page.waitForFunction(() => document.documentElement.dataset.appReady === 'true');
-  await expect(page.locator('#tab-list .tab-item.active .lucide-book-open-text')).toHaveCount(1);
+  await expect(page.locator('#tab-list .tab-item.active .lucide-book-open')).toHaveCount(1);
   await expect(page.locator('#markdown-editor')).toHaveValue('# Edited again');
   await page.locator('[data-document-filter="all"]').click();
   await page.locator('#document-tree [data-document-id="guide"]').dispatchEvent('contextmenu',{clientX:120,clientY:120});
   await page.locator('.document-menu-context.open').getByRole('menuitem',{name:'Duplicate',exact:true}).click();
   const copy = page.locator('#document-tree [data-tree-type="document"]').filter({hasText:'Renamed guide (copy)'});
-  await expect(copy.locator('.lucide-file-text')).toHaveCount(1);
-  await expect(copy.locator('.lucide-book-open-text')).toHaveCount(0);
+  await expect(copy.locator('.lucide-file')).toHaveCount(1);
+  await expect(copy.locator('.lucide-book-open')).toHaveCount(0);
 });

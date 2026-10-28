@@ -95,12 +95,13 @@ test('documents open on a single click and collapse all is available', async ({ 
   await expect(workspaceRow).toHaveAttribute('aria-expanded', 'false');
   await expect(workspaceIcon).toHaveCount(1);
   const collapsedColor = await workspaceIcon.evaluate(icon => getComputedStyle(icon).color);
-  // Expansion does not change which workspace contains the active document.
-  expect(collapsedColor).toBe(expandedColor);
+  // Workspace icons use the shared expansion color independently of active-document state.
+  expect(collapsedColor).not.toBe(expandedColor);
   await expect(page.locator('#document-sidebar-collapse-all')).toHaveAttribute('aria-label', 'Expand all folders');
   await expect(page.locator('#document-sidebar-collapse-all i')).toHaveClass(/lucide-unfold-vertical/);
   await page.locator('#document-sidebar-collapse-all').click();
   await expect(workspaceRow).toHaveAttribute('aria-expanded', 'true');
+  expect(await workspaceIcon.evaluate(icon => getComputedStyle(icon).color)).toBe(expandedColor);
   await expect(page.locator('#document-sidebar-collapse-all')).toHaveAttribute('aria-label', 'Collapse all folders');
 });
 

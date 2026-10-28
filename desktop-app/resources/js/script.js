@@ -1,11 +1,10 @@
 document.addEventListener("DOMContentLoaded", async function () {
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
-  const APP_VERSION = '3.10.4';
+  const APP_VERSION = '3.10.5';
   const RELEASE_NOTES_TAB_KIND = 'release-notes';
   const LINKED_WORKSPACE_GUIDE_KIND = 'linked-workspace-guide';
   const WORKSPACE_GUIDE_KIND = 'workspace-guide';
-  const ORIGINAL_SAVE_WARNING_DISABLED_KEY = 'markdownViewerOriginalSaveWarningDisabled';
 
   function getBuiltInGuideLabel(tab) {
     if (!tab || tab.sourcePath) return '';
@@ -15,8 +14,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function getDocumentFileIcon(tab) {
-    if (getBuiltInGuideLabel(tab)) return 'lucide-book-open-text';
-    return isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file-text';
+    if (getBuiltInGuideLabel(tab)) return 'lucide-book-open';
+    return isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file';
   }
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
   const RELEASE_NOTES_PENDING_VERSION_KEY = 'markdownViewerPendingReleaseNotesVersion';
@@ -100,7 +99,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       'markdownViewerUntitledCounter',
       'markdownViewerDocumentOrganization',
       'markdownViewerSecretWorkspace',
-      ORIGINAL_SAVE_WARNING_DISABLED_KEY,
       RELEASE_NOTES_LAST_VERSION_KEY,
       RELEASE_NOTES_PENDING_VERSION_KEY,
       RELEASE_NOTES_PENDING_MODE_KEY,
@@ -152,6 +150,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // PERF-002: Lazy script loader for optional heavy libraries
   const CDN_INTEGRITY = Object.freeze({
     'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js': 'sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF',
+    'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js': 'sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab',
     'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js': 'sha384-M5jmNxKC9EVnuqeMwRHvFuYUE8Hhp0TgBruj/GZRkYtiMrCRgH7yvv5KY+Owi7TW',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
@@ -229,7 +228,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // CDN URLs for lazy-loaded libraries
   const CDN = {
     mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
-    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js',
+    mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js',
     jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
@@ -252,7 +251,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Resolve local paths for desktop (Neutralinojs) offline support
   if (typeof Neutralino !== 'undefined') {
     CDN.mermaid = '/libs/mermaid.min.js';
-    CDN.mathjax = '/libs/tex-mml-chtml.min.js';
+    CDN.mathjax = '/libs/tex-mml-chtml.js';
     CDN.jspdf = '/libs/jspdf.umd.min.js';
     CDN.html2canvas = '/libs/html2canvas.min.js';
     CDN.pako = '/libs/pako.min.js';
@@ -404,8 +403,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   const themeSwitchIcon = document.getElementById("theme-switch-icon");
   const directionToggle = document.getElementById("direction-toggle");
   const importFromFileButton = document.getElementById("import-from-file");
-  const linkFromFileButton = document.getElementById("link-from-file");
-  const linkFromFolderButton = document.getElementById("link-from-folder");
   const importFromGithubButton = document.getElementById("import-from-github");
   const fileInput = document.getElementById("file-input");
   const exportDropdown = document.getElementById("exportDropdown");
@@ -986,6 +983,17 @@ document.addEventListener("DOMContentLoaded", async function () {
   const aboutVersion = document.getElementById("about-version");
   const aboutReleaseNotes = document.getElementById("about-release-notes");
   const privateModeToggle = document.getElementById("private-mode-toggle");
+  const menuVisualSettingsButton = document.getElementById("menu-visual-settings-button");
+  const mobileVisualSettingsButton = document.getElementById("mobile-visual-settings-button");
+  const visualSettingsModal = document.getElementById("visual-settings-modal");
+  const visualSettingsCloseBtn = document.getElementById("visual-settings-close-btn");
+  const visualSettingsCloseIcon = document.getElementById("visual-settings-close-icon");
+  const visualSettingsResetBtn = document.getElementById("visual-settings-reset-btn");
+  const selectHljsTheme = document.getElementById("visual-setting-hljs-theme");
+  const selectMathFont = document.getElementById("visual-setting-math-font");
+  const selectMermaidTheme = document.getElementById("visual-setting-mermaid-theme");
+  const selectMermaidLook = document.getElementById("visual-setting-mermaid-look");
+  const selectEmojiSkinTone = document.getElementById("visual-setting-emoji-skin-tone");
   const storageSettingsButton = document.getElementById("storage-settings-button");
   const trashSettingsButton = document.getElementById("trash-settings-button");
   const storageSettingsModal = document.getElementById("storage-settings-modal");
@@ -1056,8 +1064,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let emojiUrlMap = new Map();
   let emojiLookupLoaded = false;
   let emojiRenderScheduled = false;
-  let emojiItems = [];
-  const emojiSelection = new Set();
+  let emojiCatalogPromise = null;
   let symbolItems = [];
   const symbolSelection = new Set();
   const SYMBOL_SECTIONS = [
@@ -1460,7 +1467,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       input.addEventListener('change', updateTrashSelectionState);
 
       const icon = document.createElement('i');
-      icon.className = 'lucide trash-item-icon lucide-file-text';
+      icon.className = 'lucide trash-item-icon lucide-file';
       icon.setAttribute('aria-hidden', 'true');
 
       const title = document.createElement('span');
@@ -2111,7 +2118,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function clearLegacyWorkspaceStateForReset() {
     const resetKeys = new Set(DOCUMENT_STORAGE_KEYS);
-    resetKeys.add(ORIGINAL_SAVE_WARNING_DISABLED_KEY);
     const storageAreas = [localStorage, sessionStorage];
     storageAreas.forEach(function(storage) {
       try {
@@ -2282,22 +2288,28 @@ document.addEventListener("DOMContentLoaded", async function () {
   applyDirectionToContent(initialDirection);
   updateDirectionToggleUI(initialDirection);
 
-  // Track last Mermaid theme to avoid redundant re-initialization (PERF-005)
+  // Track last Mermaid theme and look to avoid redundant re-initialization (PERF-005)
   let _lastMermaidTheme = null;
   let _mermaidThemeReinitTimeout = null;
   let _themeTransitionTimeout = null;
   const initMermaid = (forceReinit, themeOverride) => {
     if (typeof mermaid === 'undefined') return; // PERF-002: Not loaded yet
     const currentTheme = themeOverride || document.documentElement.getAttribute("data-theme");
-    const mermaidTheme = currentTheme === "dark" ? "dark" : "default";
+    const config = window.visualSettingsAdapters
+      ? window.visualSettingsAdapters.getMermaidConfig(currentTheme)
+      : { theme: currentTheme === "dark" ? "dark" : "default", look: "classic" };
+    const mermaidTheme = config.theme;
+    const mermaidLook = config.look || "classic";
     
-    // Skip re-initialization if theme hasn't changed (PERF-005)
-    if (!forceReinit && _lastMermaidTheme === mermaidTheme) return;
-    _lastMermaidTheme = mermaidTheme;
+    // Skip re-initialization if theme & look haven't changed (PERF-005)
+    const configKey = `${mermaidTheme}:${mermaidLook}`;
+    if (!forceReinit && _lastMermaidTheme === configKey) return;
+    _lastMermaidTheme = configKey;
     
     mermaid.initialize({
       startOnLoad: false,
       theme: mermaidTheme,
+      look: mermaidLook,
       securityLevel: 'strict',
       flowchart: { useMaxWidth: true, htmlLabels: true },
       fontSize: 16,
@@ -4152,14 +4164,20 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function configureMathJax() {
-    if (window.MathJax && typeof MathJax.typesetPromise === 'function') return;
-    if (window.MathJax && MathJax.loader && MathJax.tex) return;
+    // A partially initialized runtime keeps its configuration under config.
+    // Never replace it while an edit or another preview requests math.
+    if (window.MathJax && (MathJax._ || typeof MathJax.typesetPromise === 'function')) return;
     window.MathJax = {
       startup: {
         typeset: false
       },
       options: {
         a11y: { inTabOrder: false }
+      },
+      output: {
+        // The combined bundle includes Modern. Load optional fonts only after
+        // startup so an unavailable font cannot leave startup.promise pending.
+        font: 'mathjax-modern'
       },
       tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']],
@@ -4170,6 +4188,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function ensureMathJaxReady() {
+    if (mathJaxLoadPromise) return mathJaxLoadPromise;
     if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
       return MathJax.startup && MathJax.startup.promise
         ? MathJax.startup.promise
@@ -4177,31 +4196,38 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     configureMathJax();
-    if (!mathJaxLoadPromise) {
-      mathJaxLoadPromise = loadScript(CDN.mathjax)
-        .then(function() {
-          return MathJax.startup && MathJax.startup.promise
-            ? MathJax.startup.promise
-            : Promise.resolve();
-        })
-        .then(function() {
-          if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') {
-            throw new Error('MathJax typesetPromise API is unavailable.');
+    mathJaxLoadPromise = loadScript(CDN.mathjax)
+      .then(function() {
+        return MathJax.startup && MathJax.startup.promise
+          ? MathJax.startup.promise
+          : Promise.resolve();
+      })
+      .then(function() {
+        if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') {
+          throw new Error('MathJax typesetPromise API is unavailable.');
+        }
+        // Keep math usable in Modern while the saved font downloads. The
+        // adapter rerenders when the latest selection is ready or falls back.
+        if (window.visualSettingsAdapters) {
+          window.visualSettingsAdapters.applyMathFont(
+            window.visualSettingsAdapters.getCurrentMathFont()
+          ).catch(function(error) {
+            console.warn('Failed to apply MathJax font:', error);
+          });
+        }
+      })
+      .catch(function(error) {
+        mathJaxLoadPromise = null;
+        _loadedScripts.delete(CDN.mathjax);
+        if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
+          try {
+            delete window.MathJax;
+          } catch (_) {
+            window.MathJax = undefined;
           }
-        })
-        .catch(function(error) {
-          mathJaxLoadPromise = null;
-          _loadedScripts.delete(CDN.mathjax);
-          if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
-            try {
-              delete window.MathJax;
-            } catch (_) {
-              window.MathJax = undefined;
-            }
-          }
-          throw error;
-        });
-    }
+        }
+        throw error;
+      });
     return mathJaxLoadPromise;
   }
 
@@ -4428,6 +4454,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         id: id,
         path: path,
         name: String(location.name || '').trim().slice(0, 160) || path.split(/[/\\]/).filter(Boolean).pop() || 'Linked folder',
+        linkedParentId: String(location.linkedParentId || '').slice(0, 120) || null,
+        linkedParentPath: normalizeLinkedSidebarPath(location.linkedParentPath) || '',
         expanded: location.expanded !== false,
         collapsedFolderPaths: Array.from(new Set((Array.isArray(location.collapsedFolderPaths) ? location.collapsedFolderPaths : [])
           .map(function(item) { return String(item || '').replace(/\\/g, '/').replace(/^\/+/, ''); })
@@ -4446,6 +4474,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     }).filter(Boolean);
 
     const ui = source.ui && typeof source.ui === 'object' ? source.ui : {};
+    const linkedById = new Map(linkedLocations.map(function(location) { return [location.id, location]; }));
+    linkedLocations.forEach(function(location) {
+      const visited = new Set([location.id]);
+      let parentId = location.linkedParentId;
+      while (parentId) {
+        const parent = linkedById.get(parentId);
+        if (!parent || visited.has(parentId)) {
+          location.linkedParentId = null;
+          location.linkedParentPath = '';
+          break;
+        }
+        visited.add(parentId);
+        parentId = parent.linkedParentId;
+      }
+    });
     const allowedFilters = new Set(['all', 'recent', 'favorites']);
     const width = Number(ui.width);
     const lastWorkspaceId = ui.lastWorkspaceId === SECRET_WORKSPACE_ID && secretWorkspaceKey
@@ -4523,6 +4566,8 @@ document.addEventListener("DOMContentLoaded", async function () {
           id: location.id,
           path: location.path,
           name: location.name,
+          linkedParentId: location.linkedParentId || null,
+          linkedParentPath: location.linkedParentPath || '',
           expanded: location.expanded !== false,
           collapsedFolderPaths: Array.isArray(location.collapsedFolderPaths) ? location.collapsedFolderPaths.slice() : [],
           excludedPaths: Array.isArray(location.excludedPaths) ? location.excludedPaths.slice() : [],
@@ -5840,10 +5885,10 @@ document.addEventListener("DOMContentLoaded", async function () {
     return JSON.stringify([
       tabs.filter(function(tab) { return tab.sourcePath; }).map(function(tab) {
         return [tab.id, tab.title, tab.sourcePath, Boolean(tab.sourceMissing), Boolean(tab.sourceConflict),
-          tab.workspaceId, tab.folderId, tab.linkedRootId, tab.sourceRelativePath, tab.isOpen, tab.favorite];
+          tab.workspaceId, tab.folderId, tab.linkedRootId, tab.sourceRelativePath, tab.linkedParentId, tab.linkedParentPath, tab.isOpen, tab.favorite];
       }),
       (documentOrganization.linkedLocations || []).map(function(location) {
-        return [location.id, location.name, location.path, Boolean(location.unavailable), linkedFolderScanErrors.get(location.id) || ''];
+        return [location.id, location.name, location.path, location.linkedParentId, location.linkedParentPath, Boolean(location.unavailable), linkedFolderScanErrors.get(location.id) || ''];
       })
     ]);
   }
@@ -6108,9 +6153,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (type === 'linked-virtual-folder') {
       const location = (documentOrganization.linkedLocations || []).find(function(item) { return id.startsWith(item.id + ':'); });
-      return location ? [{ id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() {
-        void convertLinkedFolderToVault(location.id, id.slice(location.id.length + 1));
-      } }] : [];
+      return location ? getLinkedVirtualFolderMenuActions(location, id.slice(location.id.length + 1)) : [];
     }
     return [];
   }
@@ -6258,7 +6301,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         },
         { separator: true }
       );
-      if (getSelectedDocuments().some(function(tab) { return tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) {
+      if (getSelectedDocuments().some(function(tab) { return isLinkedDocument(tab) || tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) {
         const moveIndex = actions.findIndex(function(action) { return action.id === 'move-selected'; });
         if (moveIndex >= 0) actions.splice(moveIndex, 1);
       }
@@ -6587,7 +6630,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const shouldAnnounce = !options || options.announce !== false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || isTemporaryDocument(tab)) return false;
-    if (tab.kind === LINKED_WORKSPACE_GUIDE_KIND) return false;
+    if (isLinkedDocument(tab) || tab.kind === LINKED_WORKSPACE_GUIDE_KIND) return false;
     if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
       withUnlockedSecretWorkspace(function() {
         moveDocumentToLocation(tabId, workspaceId, folderId, options);
@@ -6601,12 +6644,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (shouldAnnounce) announceToScreenReader('File is already in that location.');
       return true;
     }
-    if (!setDocumentLocation(tab, workspaceId, folderId)) return false;
-
+    let encryptedDestinationSaved = false;
     try {
+      if (workspaceId === SECRET_WORKSPACE_ID && previousWorkspaceId !== SECRET_WORKSPACE_ID) {
+        await ensureTabContent(tab);
+        if (!tabs.includes(tab) || tab.id !== tabId || (tab.workspaceId || DEFAULT_WORKSPACE_ID) !== previousWorkspaceId) return false;
+        if (tab.id === activeTabId) saveCurrentTabState();
+        if (tab.id === secondarySplitTabId) saveSecondarySplitState();
+      }
+      if (!setDocumentLocation(tab, workspaceId, folderId)) return false;
       if (workspaceId === SECRET_WORKSPACE_ID) {
-        await flushSecretWorkspaceToStorage();
+        const secretSaved = await flushSecretWorkspaceToStorage();
+        encryptedDestinationSaved = secretSaved === true;
+        if (previousWorkspaceId !== SECRET_WORKSPACE_ID && secretSaved !== true) throw new Error('Secret workspace storage failed.');
         if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Normal workspace storage failed.');
+        if (previousWorkspaceId !== SECRET_WORKSPACE_ID && workspaceStorage) {
+          // Saving the filtered normal list does not delete its old records.
+          // Remove plaintext only after the encrypted destination is durable.
+          workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
+            if (!tabs.includes(tab) || tab.id !== tabId || tab.workspaceId !== SECRET_WORKSPACE_ID ||
+                tab._secretPersistedSnapshot !== JSON.stringify(getSecretDocumentStorageValue(tab))) {
+              throw new Error('The document changed before its encrypted move was committed.');
+            }
+            return workspaceStorage.deleteDocument(tab.id, { expectedRevision: tab._storageRevision, discardAfterSecretMove: true });
+          });
+          await workspacePersistenceChain;
+          await clearDirtyDocumentJournal(tab);
+          delete tab._storageRevision;
+          delete tab._vaultRelativePath;
+          delete tab._persistedContent;
+        }
       } else {
         if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Normal workspace storage failed.');
         if (previousWorkspaceId === SECRET_WORKSPACE_ID) await flushSecretWorkspaceToStorage();
@@ -6615,10 +6682,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       tab.workspaceId = previousWorkspaceId;
       tab.folderId = previousFolderId;
       saveDocumentOrganization();
-      if (isSecretWorkspaceUnlocked()) {
+      const restoredNormal = await _flushTabsToStorage(tabs, { changedIds: [tab.id] });
+      if (!restoredNormal && encryptedDestinationSaved && previousWorkspaceId !== SECRET_WORKSPACE_ID) {
+        // A cleanup failure can occur after removing the Vault record. Keep
+        // the durable encrypted copy if restoring the Vault also fails.
+        tab.workspaceId = SECRET_WORKSPACE_ID;
+        tab.folderId = folderId || null;
+        saveDocumentOrganization();
+      }
+      if (isSecretWorkspaceUnlocked() && (restoredNormal || encryptedDestinationSaved)) {
         await flushSecretWorkspaceToStorage().catch(function() {});
       }
-      _flushTabsToStorage(tabs, { changedIds: [tab.id] });
       renderDocumentSidebar();
       alert('The file could not be moved because the destination could not be saved.');
       return false;
@@ -6635,6 +6709,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return tab && !isTemporaryDocument(tab);
     });
     if (documents.length === 0) return false;
+    if (documents.some(function(tab) { return isLinkedDocument(tab) || tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) return false;
     if (workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
       withUnlockedSecretWorkspace(function() {
         moveDocumentsToLocation(documents.map(function(tab) { return tab.id; }), workspaceId, folderId);
@@ -6764,7 +6839,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const page = document.createElement('span');
     page.className = 'document-drag-preview-page';
     const icon = document.createElement('i');
-    icon.className = 'lucide ' + (folder ? 'lucide-folder-symlink' : fileCount > 1 ? 'lucide-files' : 'lucide-file-text');
+    icon.className = 'lucide ' + (folder ? 'lucide-folder-symlink' : fileCount > 1 ? 'lucide-files' : 'lucide-file');
     icon.setAttribute('aria-hidden', 'true');
     const badge = document.createElement('span');
     badge.className = 'document-drag-preview-badge';
@@ -6866,6 +6941,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function dropSidebarDocuments(tabIds, location) {
     const documents = tabIds.map(function(id) { return tabs.find(function(tab) { return tab.id === id; }); }).filter(Boolean);
+    if (!documents.some(isLinkedDocument)) {
+      return moveDocumentsToLocation(documents.map(function(tab) { return tab.id; }), location.workspaceId, location.folderId || null);
+    }
     if (documents.some(isLinkedDocument) && location.workspaceId !== DEFAULT_WORKSPACE_ID) return;
     for (const tab of documents) {
       if (isLinkedDocument(tab)) await convertLinkedDocumentToVault(tab.id, location);
@@ -6976,7 +7054,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (options.favorite) row.classList.add('is-favorite');
     if (options.temporary) row.classList.add('document-tree-temporary');
     if (options.locked) row.classList.add('is-secret-locked');
-    if (options.currentLocation) row.classList.add('is-current-location');
     if (typeof options.expanded === 'boolean') row.setAttribute('aria-expanded', options.expanded ? 'true' : 'false');
     row.setAttribute('aria-label', options.ariaLabel || options.label);
 
@@ -7183,34 +7260,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     return folder ? getFolderPath(folder.id) + ' / ' + title : title;
   }
 
-  function shouldConfirmOriginalSave() {
-    try { return localStorage.getItem(ORIGINAL_SAVE_WARNING_DISABLED_KEY) !== 'true'; }
-    catch (_) { return true; }
-  }
-
-  function updateOriginalSaveWarningControls() {
-    document.querySelectorAll('[data-original-save-warning-toggle]').forEach(function(button) {
-      const enabled = shouldConfirmOriginalSave();
-      button.setAttribute('aria-pressed', String(enabled));
-      const description = button.querySelector('[data-original-save-warning-description]');
-      if (description) description.textContent = enabled ? 'Ask before updating linked originals' : 'Save confirmation is off';
-    });
-  }
-
   if (hasDesktopFileAccess()) {
     document.querySelectorAll('.desktop-linked-command').forEach(function(element) {
       element.hidden = false;
-    });
-    updateOriginalSaveWarningControls();
-    document.querySelectorAll('[data-original-save-warning-toggle]').forEach(function(button) {
-      button.addEventListener('click', function() {
-        try {
-          saveStorageItem(ORIGINAL_SAVE_WARNING_DISABLED_KEY, shouldConfirmOriginalSave() ? 'true' : 'false');
-          updateOriginalSaveWarningControls();
-        } catch (_) {
-          showAppToast('The save confirmation preference could not be stored.', { tone: 'error', title: 'Setting not saved' });
-        }
-      });
     });
   }
 
@@ -7247,24 +7299,63 @@ document.addEventListener("DOMContentLoaded", async function () {
     return '';
   }
 
-  function getLinkedWorkspaceMenuActions() {
+  function normalizeLinkedSidebarPath(value) {
+    const path = String(value || '').replace(/\\/g, '/');
+    if (path.length > 4096 || path.split('/').some(function(part) {
+      return path && (!part || part === '.' || part === '..' || /[:\x00-\x1f]/.test(part));
+    })) return null;
+    return path;
+  }
+
+  // Sidebar grouping never changes the source root used for scans or writes.
+  function getLinkedSidebarParent(item) {
+    if (!item || !item.linkedParentId) return null;
+    const path = normalizeLinkedSidebarPath(item.linkedParentPath);
+    const parent = getLinkedLocation(item.linkedParentId);
+    if (!parent || path === null) return null;
+    const visited = new Set([item.id]);
+    let ancestor = parent;
+    while (ancestor) {
+      if (visited.has(ancestor.id)) return null;
+      visited.add(ancestor.id);
+      ancestor = getLinkedLocation(ancestor.linkedParentId);
+    }
+    return { locationId: parent.id, path: path };
+  }
+
+  function assignLinkedSidebarParent(item, parent) {
+    if (!parent) return;
+    const candidate = Object.assign({}, item, { linkedParentId: parent.locationId, linkedParentPath: parent.path || '' });
+    const valid = getLinkedSidebarParent(candidate);
+    if (!valid) throw new Error('The linked folder changed. Retry from its current location.');
+    item.linkedParentId = valid.locationId;
+    item.linkedParentPath = valid.path;
+  }
+
+  function getLinkedWorkspaceMenuActions(parent) {
     if (!hasDesktopFileAccess()) return [];
     return [
-      { id: 'new-linked-file', icon: 'lucide-file-plus', label: 'Create new linked file…', run: function() { void nativeCreateLinkedMarkdownFile(); } },
-      { separator: true },
-      { id: 'link-files', icon: 'lucide-file-symlink', label: 'Link Markdown files', run: function() { void nativeLinkMarkdownFiles(); } },
-      { id: 'link-folder', icon: 'lucide-folder-symlink', label: 'Link Markdown folder', run: function() { void nativeLinkMarkdownFolder(); } }
+      { id: 'link-files', icon: 'lucide-file-symlink', label: 'Link file', run: function() { void nativeLinkMarkdownFiles(parent); } },
+      { id: 'link-folder', icon: 'lucide-folder-symlink', label: 'Link folder', run: function() { void nativeLinkMarkdownFolder(parent); } }
     ];
   }
 
   function getLinkedLocationMenuActions(location) {
-    return [
+    return getLinkedWorkspaceMenuActions({ locationId: location.id, path: '' }).concat([
+      { separator: true },
       { id: 'rescan', icon: 'lucide-refresh-cw', label: 'Rescan folder', run: function() { void reconcileLinkedLocation(location.id, { notify: true, restoreExcluded: true }); } },
       { id: 'reveal', icon: 'lucide-folder-input', label: 'Open folder', run: function() { void Neutralino.os.open(location.path); } },
       { separator: true },
       { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedFolderToVault(location.id); } },
       { id: 'unlink', icon: 'lucide-x', label: 'Remove linked folder', danger: true, run: function() { void removeLinkedLocation(location.id); } }
-    ];
+    ]);
+  }
+
+  function getLinkedVirtualFolderMenuActions(location, path) {
+    return getLinkedWorkspaceMenuActions({ locationId: location.id, path: path }).concat([
+      { separator: true },
+      { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedFolderToVault(location.id, path); } }
+    ]);
   }
 
   function renderLinkedLocationsTree(tree) {
@@ -7274,7 +7365,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
     const locations = Array.isArray(documentOrganization.linkedLocations) ? documentOrganization.linkedLocations : [];
     let renderedDocuments = 0;
-    const activeDocument = tabs.find(function(tab) { return tab.id === activeTabId; });
     const workspaceExpanded = documentSidebarSearch ? true : documentOrganization.ui.linkedWorkspaceExpanded !== false;
     const toggleWorkspace = function() {
       documentOrganization.ui.linkedWorkspaceExpanded = !workspaceExpanded;
@@ -7289,7 +7379,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       icon: 'lucide-link-2',
       depth: 0,
       expanded: workspaceExpanded,
-      currentLocation: isLinkedWorkspaceDocument(activeDocument),
       meta: String(linkedTabs.length),
       menuActions: getLinkedWorkspaceMenuActions(),
       onToggle: toggleWorkspace,
@@ -7301,20 +7390,52 @@ document.addEventListener("DOMContentLoaded", async function () {
     workspaceGroup.hidden = !workspaceExpanded;
     tree.appendChild(workspaceGroup);
 
-    const individualTabs = linkedTabs.filter(function(tab) { return !tab.linkedRootId; })
-      .filter(documentMatchesSidebarSearch)
-      .sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
+    const newNode = function() { return { folders: new Map(), documents: [], locations: [] }; };
+    const nodes = new Map(locations.map(function(location) { return [location.id, newNode()]; }));
+    const folderNode = function(root, path) {
+      let node = root;
+      String(path || '').split('/').filter(Boolean).forEach(function(part) {
+        if (!node.folders.has(part)) node.folders.set(part, newNode());
+        node = node.folders.get(part);
+      });
+      return node;
+    };
+    const rootLocations = [];
+    locations.forEach(function(location) {
+      const parent = getLinkedSidebarParent(location);
+      if (parent) folderNode(nodes.get(parent.locationId), parent.path).locations.push(location);
+      else rootLocations.push(location);
+    });
+    const individualTabs = [];
+    linkedTabs.filter(documentMatchesSidebarSearch).forEach(function(tab) {
+      let parent = getLinkedSidebarParent(tab);
+      if (!parent && nodes.has(tab.linkedRootId)) {
+        const parts = String(tab.sourceRelativePath || '').replace(/\\/g, '/').split('/').filter(Boolean);
+        parts.pop();
+        parent = { locationId: tab.linkedRootId, path: parts.join('/') };
+      }
+      if (parent) folderNode(nodes.get(parent.locationId), parent.path).documents.push(tab);
+      else individualTabs.push(tab);
+    });
+    individualTabs.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
     individualTabs.forEach(function(tab) {
       if (appendDocumentTreeItem(workspaceGroup, tab, 1, getLinkedDocumentMeta(tab))) renderedDocuments++;
     });
 
-    locations.slice().sort(function(left, right) {
-      return (left.name || '').localeCompare(right.name || '');
-    }).forEach(function(location) {
-      const locationTabs = linkedTabs.filter(function(tab) { return tab.linkedRootId === location.id; });
-      const matchingTabs = locationTabs.filter(documentMatchesSidebarSearch);
-      const locationMatches = !documentSidebarSearch || (location.name + ' ' + location.path).toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase());
-      if (documentSidebarSearch && !locationMatches && !matchingTabs.length) return;
+    const locationMatchesSearch = function(location) {
+      return !documentSidebarSearch || (location.name + ' ' + location.path).toLocaleLowerCase().includes(documentSidebarSearch.toLocaleLowerCase());
+    };
+    const containsMatches = function(node) {
+      return node.documents.length > 0 || Array.from(node.folders.values()).some(containsMatches) ||
+        node.locations.some(function(location) { return locationMatchesSearch(location) || containsMatches(nodes.get(location.id)); });
+    };
+    const documentCount = function(node) {
+      return node.documents.length + Array.from(node.folders.values()).reduce(function(count, child) { return count + documentCount(child); }, 0) +
+        node.locations.reduce(function(count, child) { return count + documentCount(nodes.get(child.id)); }, 0);
+    };
+    const renderLocation = function(location, parentContainer, depth) {
+      const rootNode = nodes.get(location.id);
+      if (!locationMatchesSearch(location) && !containsMatches(rootNode)) return;
       const expanded = documentSidebarSearch ? true : location.expanded !== false;
       const toggleLocation = function() {
         location.expanded = !expanded;
@@ -7328,10 +7449,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         label: location.name,
         ariaLabel: 'Linked folder, ' + location.path + (location.unavailable ? ', unavailable' : ''),
         icon: location.unavailable ? 'lucide-triangle-alert' : 'lucide-folder-symlink',
-        depth: 1,
-        currentLocation: Boolean(activeDocument && activeDocument.linkedRootId === location.id),
+        depth: depth,
         expanded: expanded,
-        meta: location.unavailable ? 'Unavailable' : String(locationTabs.length),
+        meta: location.unavailable ? 'Unavailable' : String(documentCount(rootNode)),
         menuActions: getLinkedLocationMenuActions(location),
         onToggle: toggleLocation,
         onActivate: toggleLocation
@@ -7346,27 +7466,20 @@ document.addEventListener("DOMContentLoaded", async function () {
         indicator.innerHTML = '<i class="lucide lucide-triangle-alert" aria-hidden="true"></i>';
         rootRow.insertBefore(indicator, rootRow.querySelector('.document-menu-btn'));
       }
-      workspaceGroup.appendChild(rootRow);
+      parentContainer.appendChild(rootRow);
 
       const rootGroup = document.createElement('div');
       rootGroup.className = 'document-tree-group document-tree-group--folder';
       rootGroup.setAttribute('role', 'group');
       rootGroup.hidden = !expanded;
-      const rootNode = { folders: new Map(), documents: [] };
-      matchingTabs.forEach(function(tab) {
-        const parts = String(tab.sourceRelativePath || '').replace(/\\/g, '/').split('/').filter(Boolean);
-        if (parts.length) parts.pop();
-        let node = rootNode;
-        parts.forEach(function(part) {
-          if (!node.folders.has(part)) node.folders.set(part, { folders: new Map(), documents: [] });
-          node = node.folders.get(part);
-        });
-        node.documents.push(tab);
-      });
       const appendVirtualNode = function(node, container, depth, pathParts) {
+        node.locations.slice().sort(function(left, right) { return compareNatural(left.name, right.name); }).forEach(function(child) {
+          renderLocation(child, container, depth);
+        });
         Array.from(node.folders.entries()).sort(function(left, right) { return left[0].localeCompare(right[0]); }).forEach(function(entry) {
           const folderName = entry[0];
           const child = entry[1];
+          if (documentSidebarSearch && !containsMatches(child)) return;
           const folderPath = pathParts.concat(folderName).join('/');
           const collapsedPaths = location.collapsedFolderPaths || [];
           const folderExpanded = documentSidebarSearch ? true : !collapsedPaths.includes(folderPath);
@@ -7387,7 +7500,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             depth: depth,
             expanded: folderExpanded,
             meta: '',
-            menuActions: [{ id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedFolderToVault(location.id, folderPath); } }],
+            menuActions: getLinkedVirtualFolderMenuActions(location, folderPath),
             onToggle: toggleFolder,
             onActivate: toggleFolder
           });
@@ -7403,8 +7516,11 @@ document.addEventListener("DOMContentLoaded", async function () {
           if (appendDocumentTreeItem(container, tab, depth, getLinkedDocumentMeta(tab))) renderedDocuments++;
         });
       };
-      appendVirtualNode(rootNode, rootGroup, 2, []);
-      workspaceGroup.appendChild(rootGroup);
+      appendVirtualNode(rootNode, rootGroup, depth + 1, []);
+      parentContainer.appendChild(rootGroup);
+    };
+    rootLocations.sort(function(left, right) { return compareNatural(left.name, right.name); }).forEach(function(location) {
+      renderLocation(location, workspaceGroup, 1);
     });
     return renderedDocuments;
   }
@@ -7462,7 +7578,6 @@ document.addEventListener("DOMContentLoaded", async function () {
           ? (secretLocked ? 'lucide-shield' : 'lucide-shield-check')
           : 'lucide-briefcase-business',
         depth: 0,
-        currentLocation: tabs.some(function(tab) { return tab.id === activeTabId && !isLinkedWorkspaceDocument(tab) && tab.workspaceId === workspace.id; }),
         expanded: expanded,
         meta: secretLocked ? 'Locked' : String(workspaceDocuments.length),
         locked: secretLocked,
@@ -7761,6 +7876,12 @@ document.addEventListener("DOMContentLoaded", async function () {
           parts.pop();
           parts.forEach(function(_, index) { folderPaths.add(parts.slice(0, index + 1).join('/')); });
         });
+        tabs.concat(documentOrganization.linkedLocations || []).forEach(function(item) {
+          const parent = getLinkedSidebarParent(item);
+          if (!parent || parent.locationId !== location.id) return;
+          const parts = parent.path.split('/').filter(Boolean);
+          parts.forEach(function(_, index) { folderPaths.add(parts.slice(0, index + 1).join('/')); });
+        });
         folderPaths.forEach(function(folderPath) {
           items.push({
             get expanded() { return !(location.collapsedFolderPaths || []).includes(folderPath); },
@@ -7952,8 +8073,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (closeButton) closeButton.addEventListener('click', toggleDocumentSidebarCollapsed);
     if (backdrop) backdrop.addEventListener('click', closeDocumentSidebarOnMobile);
     if (collapseAllButton) collapseAllButton.addEventListener('click', toggleDocumentTreeExpansion);
-    const createLinkedFileButton = document.getElementById('sidebar-create-linked-file');
-    if (createLinkedFileButton) createLinkedFileButton.addEventListener('click', function() { void nativeCreateLinkedMarkdownFile(); });
     if (linkFilesButton) linkFilesButton.addEventListener('click', function() { void nativeLinkMarkdownFiles(); });
     if (linkFolderButton) linkFolderButton.addEventListener('click', function() { void nativeLinkMarkdownFolder(); });
     if (newDocumentButton) newDocumentButton.addEventListener('click', function() {
@@ -8014,6 +8133,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     }
 
+    const sidebarHeader = sidebar && sidebar.querySelector('.document-sidebar-header');
+    if (sidebarHeader) sidebarHeader.addEventListener('contextmenu', function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDocumentSidebarMenus();
+    });
     if (sidebar) sidebar.addEventListener('contextmenu', function(event) {
       if (event.defaultPrevented || event.target.closest('.document-tree-row, input, button, a, textarea, select, [role="menu"]')) return;
       openDocumentTreeBackgroundContextMenu(event);
@@ -11171,6 +11296,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   let dirtyJournalWarningShown = false;
+  // Recovery copies have new IDs. Keep their source identity in memory rather
+  // than trusting persisted tab metadata to authorize another journal's cleanup.
+  const recoveredDocumentJournalSources = new WeakMap();
   let emergencySavePendingCount = 0;
   let secretJournalPendingCount = 0;
 
@@ -11433,18 +11561,23 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function captureDirtyDocumentJournalSnapshot(storageTabs, changedIds) {
     const snapshots = new Map();
+    const recoveredSnapshots = new Map();
     changedIds.forEach(function(id) {
       const tab = storageTabs.find(function(item) { return item.id === id; });
       // Metadata-only writes do not commit a document body.
       if (!tab || tab.contentLoaded === false || typeof tab.content !== 'string') return;
       const keys = Array.from(new Set((tab._dirtyJournalKeys || []).concat(getDirtyDocumentJournalKey(id))));
-      const snapshot = { content: tab.content, reviewThreads: JSON.stringify(tab.reviewThreads || []), local: {}, session: {}, indexed: {} };
+      const source = recoveredDocumentJournalSources.get(tab);
+      const snapshot = { content: tab.content, reviewThreads: JSON.stringify(tab.reviewThreads || []), source: source, local: {}, session: {}, indexed: {} };
+      if (source) recoveredSnapshots.set(source.key, snapshot);
       [[localStorage, snapshot.local], [sessionStorage, snapshot.session]].forEach(function(pair) {
         keys.forEach(function(key) {
           try {
             const raw = pair[0].getItem(key);
             const value = raw && JSON.parse(raw);
-            if (value && value.documentId === id && value.content === snapshot.content &&
+            const ownsJournal = value && (value.documentId === id ||
+              (source && source.key === key && source.documentId === value.documentId));
+            if (ownsJournal && value.content === snapshot.content &&
                 (!value.metadata || !Array.isArray(value.metadata.reviewThreads) || JSON.stringify(value.metadata.reviewThreads) === snapshot.reviewThreads)) pair[1][key] = raw;
           } catch (_) { /* Unknown recovery data must be retained. */ }
         });
@@ -11454,11 +11587,16 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (workspaceStorage && typeof workspaceStorage.listDirtyJournals === 'function') {
       try {
         (await workspaceStorage.listDirtyJournals()).forEach(function(record) {
-          const snapshot = snapshots.get(record.documentId);
-          if (snapshot && record.journalId && record.content === snapshot.content &&
-              (!record.metadata || !Array.isArray(record.metadata.reviewThreads) || JSON.stringify(record.metadata.reviewThreads) === snapshot.reviewThreads)) {
-            snapshot.indexed[record.journalId] = record;
-          }
+          if (!record.journalId) return;
+          const recovered = recoveredSnapshots.get(record.journalId);
+          const candidates = [snapshots.get(record.documentId)];
+          if (recovered && recovered.source.documentId === record.documentId) candidates.push(recovered);
+          candidates.forEach(function(snapshot) {
+            if (snapshot && record.content === snapshot.content &&
+                (!record.metadata || !Array.isArray(record.metadata.reviewThreads) || JSON.stringify(record.metadata.reviewThreads) === snapshot.reviewThreads)) {
+              snapshot.indexed[record.journalId] = record;
+            }
+          });
         });
       } catch (error) {
         console.warn('Unable to snapshot recovery journals; retaining them:', error);
@@ -11579,6 +11717,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       recovered.lastEditedAt = Number(journal.savedAt) || Date.now();
       recovered._dirtyJournalKeys = [entry.key];
       recovered._dirtyIndexedDbJournalIds = [entry.key];
+      recoveredDocumentJournalSources.set(recovered, { key: entry.key, documentId: journal.documentId });
       tabs.push(recovered);
       recoveredIds.push(recovered.id);
     });
@@ -11749,13 +11888,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function _flushTabsToStorage(tabsArr, options) {
+    const settings = options || {};
     clearTimeout(saveTabStateTimeout);
     if (suspendWorkspacePersistence) {
       pendingWorkspacePersistAll = false;
       pendingWorkspacePersistIds.clear();
-      return true;
+      return settings.requireExactCommit !== true;
     }
-    const settings = options || {};
     const hasExplicitIds = Array.isArray(settings.changedIds);
     const changedIds = Array.isArray(settings.changedIds)
       ? settings.changedIds.slice()
@@ -11766,7 +11905,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     pendingWorkspacePersistIds.clear();
     if (isPrivateStorageMode()) {
       updateSaveStatus('saved');
-      return true;
+      return settings.requireExactCommit !== true;
     }
     try {
       const storageTabs = getTabsForStorage(tabsArr);
@@ -11797,7 +11936,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (e) {
       if (await preserveWorkspaceConflict(e)) {
         updateSaveStatus('saved');
-        return true;
+        // Preserving a conflict copy is successful recovery, not the requested
+        // conversion/scan commit. Ordinary autosave can still report recovery.
+        return settings.requireExactCommit !== true;
       }
       console.warn('Failed to save workspace documents:', e);
       updateSaveStatus('error');
@@ -11940,7 +12081,31 @@ document.addEventListener("DOMContentLoaded", async function () {
     const value = String(sourcePath || '').trim();
     if (!value) return '';
     const normalized = value.replace(/\//g, '\\').replace(/\\+$/g, '');
-    return /^[a-z]:\\/i.test(normalized) ? normalized.toLocaleLowerCase('en-US') : normalized;
+    const windowsUnc = typeof window !== 'undefined' && window.NL_OS === 'Windows' && /^\\\\[^\\]+\\[^\\]+/.test(normalized);
+    return /^[a-z]:\\/i.test(normalized) || windowsUnc ? normalized.toLocaleLowerCase('en-US') : normalized;
+  }
+
+  async function assertOutsideManagedVault(sourcePath) {
+    // IndexedDB-only sessions have no managed filesystem Vault to protect.
+    // A real desktop backend with an unknown root must still fail closed.
+    if (workspaceStorage && workspaceStorage.desktop === false && !workspaceStorage.vaultPath) return;
+    if (!workspaceStorage || !workspaceStorage.vaultPath) throw new Error('The managed Vault location is not ready. Retry after startup.');
+    async function identity(path) {
+      const normalized = Neutralino.filesystem.getNormalizedPath
+        ? await Neutralino.filesystem.getNormalizedPath(path) : path;
+      const parts = [];
+      normalizeLinkedSourcePath(normalized).replace(/\\/g, '/').split('/').forEach(function(part) {
+        if (part === '.') return;
+        if (part === '..') parts.pop();
+        else parts.push(part);
+      });
+      return parts.join('/').replace(/\/+$/, '');
+    }
+    const root = await identity(workspaceStorage.vaultPath);
+    const candidate = await identity(sourcePath);
+    if (candidate === root || candidate.startsWith(root + '/')) {
+      throw new Error('Choose a source or destination outside the managed Vault storage.');
+    }
   }
 
   function findTabBySourcePath(sourcePath) {
@@ -12022,6 +12187,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const settings = options || {};
     const readEpoch = linkedReadEpoch;
     const canApply = function() { return !workspaceMaintenancePending && !suspendWorkspacePersistence && readEpoch === linkedReadEpoch && (!settings.canApply || settings.canApply()); };
+    await assertOutsideManagedVault(sourcePath);
     if (!canApply()) return null;
     const normalizedPath = String(sourcePath || '').trim();
     const incomingContent = String(content == null ? '' : content);
@@ -12123,6 +12289,37 @@ document.addEventListener("DOMContentLoaded", async function () {
     return String(value || '').replace(/\\/g, '/').replace(/^\/+/, '');
   }
 
+  function getOverlappingLinkedLocationIds(sourcePath) {
+    const source = normalizeLinkedSourcePath(sourcePath);
+    if (!source) return [];
+    return (documentOrganization.linkedLocations || []).filter(function(location) {
+      const root = normalizeLinkedSourcePath(location.path);
+      return root && (source === root || source.startsWith(root + '\\') || root.startsWith(source + '\\'));
+    }).map(function(location) { return location.id; });
+  }
+
+  function addLinkedSourceExclusions(sourcePath) {
+    const source = normalizeLinkedSourcePath(sourcePath);
+    const added = [];
+    (documentOrganization.linkedLocations || []).forEach(function(location) {
+      const root = normalizeLinkedSourcePath(location.path);
+      if (!root || !source.startsWith(root + '\\')) return;
+      const relativePath = normalizeLinkedRelativePath(String(sourcePath).trim().slice(root.length + 1));
+      const excluded = location.excludedPaths || [];
+      if (excluded.some(function(path) { return normalizeLinkedSourcePath(location.path + '/' + path) === source; })) return;
+      location.excludedPaths = excluded.concat(relativePath);
+      added.push({ locationId: location.id, path: relativePath });
+    });
+    return added;
+  }
+
+  function rollbackLinkedSourceExclusions(added) {
+    added.forEach(function(item) {
+      const location = getLinkedLocation(item.locationId);
+      if (location) location.excludedPaths = (location.excludedPaths || []).filter(function(path) { return path !== item.path; });
+    });
+  }
+
   const LINKED_FOLDER_SCAN_LIMITS = Object.freeze({
     files: 10000, entries: 40000, directories: 2000, depth: 32,
     fileBytes: 20 * 1024 * 1024, totalBytes: 200 * 1024 * 1024, milliseconds: 60000
@@ -12138,7 +12335,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     return MarkdownNativeSourceReader.read(Neutralino.filesystem, path, knownStats);
   }
 
-  async function collectMarkdownFilesFromFolder(rootPath, canContinue, shouldInclude) {
+  async function collectMarkdownFilesFromFolder(rootPath, canContinue, shouldInclude, onProgress) {
     const files = [];
     const limits = LINKED_FOLDER_SCAN_LIMITS;
     const startedAt = Date.now();
@@ -12158,6 +12355,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (visited.has(identity)) throw linkedFolderScanError('Repeated folder path detected. Check for junctions or links.');
       visited.add(identity);
       if (visited.size > limits.directories) throw linkedFolderScanError('Folder scan exceeds 2,000 directories. Link a smaller folder instead.');
+      if (onProgress) onProgress({ phase: 'scan', path: relativePrefix });
       const entries = await Neutralino.filesystem.readDirectory(folderPath);
       checkpoint();
       entriesSeen += entries.length;
@@ -12188,14 +12386,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     // Stage bounded reads before applying any document changes. A failed scan
     // must not clear exclusions, mark sources missing or replace existing drafts.
     totalBytes = 0;
+    let processed = 0;
     for (const file of files) {
       checkpoint();
+      if (onProgress) onProgress({ phase: 'read', processed: processed, total: files.length, path: file.relativePath });
       file.content = await readNativeMarkdownSource(file.path);
       checkpoint();
       const byteLength = new TextEncoder().encode(file.content).byteLength;
       if (byteLength > limits.fileBytes) throw linkedFolderScanError('A Markdown file grew beyond 20 MiB during the scan: ' + file.relativePath);
       totalBytes += byteLength;
       if (totalBytes > limits.totalBytes) throw linkedFolderScanError('Markdown files grew beyond 200 MiB during the scan.');
+      processed++;
     }
     return files;
   }
@@ -12299,26 +12500,27 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function withLinkedLocationMutation(locationId, operation) {
     if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
-    if (!locationId) {
-      const current = Promise.resolve().then(operation);
-      linkedMutationOperations.add(current);
-      try { return await current; }
-      finally { linkedMutationOperations.delete(current); }
-    }
-    linkedLocationScanTokens.delete(locationId);
-    linkedLocationMutations.set(locationId, (linkedLocationMutations.get(locationId) || 0) + 1);
-    const previous = linkedLocationMutationChains.get(locationId) || Promise.resolve();
-    const current = previous.catch(function() {}).then(operation);
+    const locationIds = Array.from(new Set(Array.isArray(locationId) ? locationId : locationId ? [locationId] : []));
+    const previous = locationIds.map(function(id) {
+      linkedLocationScanTokens.delete(id);
+      linkedLocationMutations.set(id, (linkedLocationMutations.get(id) || 0) + 1);
+      return (linkedLocationMutationChains.get(id) || Promise.resolve()).catch(function() {});
+    });
+    // Reserve all roots synchronously, so overlapping operations cannot acquire
+    // them in opposite orders or let another root scan a half-removed link.
+    const current = Promise.all(previous).then(operation);
     linkedMutationOperations.add(current);
-    linkedLocationMutationChains.set(locationId, current);
+    locationIds.forEach(function(id) { linkedLocationMutationChains.set(id, current); });
     try { return await current; }
     finally {
       linkedMutationOperations.delete(current);
-      linkedLocationScanTokens.delete(locationId);
-      const pending = linkedLocationMutations.get(locationId) - 1;
-      if (pending) linkedLocationMutations.set(locationId, pending);
-      else linkedLocationMutations.delete(locationId);
-      if (linkedLocationMutationChains.get(locationId) === current) linkedLocationMutationChains.delete(locationId);
+      locationIds.forEach(function(id) {
+        linkedLocationScanTokens.delete(id);
+        const pending = linkedLocationMutations.get(id) - 1;
+        if (pending) linkedLocationMutations.set(id, pending);
+        else linkedLocationMutations.delete(id);
+        if (linkedLocationMutationChains.get(id) === current) linkedLocationMutationChains.delete(id);
+      });
     }
   }
 
@@ -12350,6 +12552,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function reconcileLinkedLocationSnapshot(locationId, options, token) {
     const location = getLinkedLocation(locationId);
     if (!location) return 0;
+    const previousScanState = {
+      excludedPaths: (location.excludedPaths || []).slice(),
+      lastScanAt: location.lastScanAt,
+      unavailable: location.unavailable
+    };
     const originalPath = normalizeLinkedSourcePath(location.path);
     const readEpoch = linkedReadEpoch;
     const canApply = function() {
@@ -12371,9 +12578,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     try {
       files = await collectMarkdownFilesFromFolder(location.path, canApply, function(relativePath) {
         return settings.restoreExcluded || !(getLinkedLocation(locationId).excludedPaths || []).some(function(path) {
-          return normalizeLinkedRelativePath(path) === relativePath;
+          return normalizeLinkedSourcePath(location.path + '/' + path) === normalizeLinkedSourcePath(location.path + '/' + relativePath);
         });
-      });
+      }, settings.onProgress);
       if (!canApply()) return 0;
       getLinkedLocation(locationId).unavailable = false;
       linkedFolderScanErrors.delete(locationId);
@@ -12392,11 +12599,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     const discoveredPaths = new Set();
     let added = 0;
     let applyFailure = null;
+    let processed = 0;
     for (const file of files) {
       if (!canApply()) return 0;
       const excluded = getLinkedLocation(locationId).excludedPaths || [];
-      if (excluded.some(function(path) { return normalizeLinkedRelativePath(path) === file.relativePath; })) continue;
+      if (excluded.some(function(path) { return normalizeLinkedSourcePath(location.path + '/' + path) === normalizeLinkedSourcePath(file.path); })) continue;
       discoveredPaths.add(normalizeLinkedSourcePath(file.path));
+      if (settings.onProgress) settings.onProgress({ phase: 'link', processed: processed, total: files.length, path: file.relativePath });
       let existing = findTabBySourcePath(file.path);
       try {
         const content = file.content;
@@ -12418,31 +12627,68 @@ document.addEventListener("DOMContentLoaded", async function () {
         console.warn('Could not read linked Markdown file:', file.path, error);
         applyFailure = applyFailure || error;
       }
+      processed++;
     }
     if (!canApply()) return 0;
     tabs.filter(function(tab) { return tab.linkedRootId === location.id; }).forEach(function(tab) {
       if (!discoveredPaths.has(normalizeLinkedSourcePath(tab.sourcePath))) tab.sourceMissing = true;
     });
+    const appliedExclusions = getLinkedLocation(locationId).excludedPaths;
+    if (settings.onProgress) settings.onProgress({ phase: 'save', processed: processed, total: files.length });
+    const documentsSaved = await _flushTabsToStorage(tabs, {
+      changedIds: tabs.filter(function(tab) { return tab.linkedRootId === locationId; }).map(function(tab) { return tab.id; }),
+      requireExactCommit: true
+    });
+    if (!canApply()) return 0;
+    if (documentsSaved !== true) {
+      const current = getLinkedLocation(locationId);
+      if (current.excludedPaths === appliedExclusions) current.excludedPaths = previousScanState.excludedPaths;
+      current.unavailable = previousScanState.unavailable;
+      linkedFolderScanErrors.set(locationId, 'Folder documents could not be saved. Rescan to retry.');
+      refreshUI();
+      if (settings.notify) showAppToast('Folder documents could not be saved. Existing drafts were kept; rescan to retry.', { tone: 'warning', title: 'Folder scan incomplete', dedupeKey: 'linked-scan-stopped-' + locationId });
+      return 0;
+    }
     if (applyFailure) {
       linkedFolderScanErrors.set(locationId, 'Some files could not be refreshed: ' + (applyFailure.message || 'Document inspection failed.'));
     } else getLinkedLocation(locationId).lastScanAt = Date.now();
-    saveDocumentOrganization();
+    const committedExclusions = getLinkedLocation(locationId).excludedPaths;
+    const committedScanAt = getLinkedLocation(locationId).lastScanAt;
+    const saved = await saveDocumentOrganization();
+    if (!canApply()) return 0;
+    if (saved !== true) {
+      const current = getLinkedLocation(locationId);
+      // Retain applied records/drafts, but do not advertise uncommitted scan
+      // metadata. Never undo a newer operation's changes to these fields.
+      if (current.excludedPaths === committedExclusions) current.excludedPaths = previousScanState.excludedPaths;
+      if (current.lastScanAt === committedScanAt) current.lastScanAt = previousScanState.lastScanAt;
+      current.unavailable = previousScanState.unavailable;
+      linkedFolderScanErrors.set(locationId, 'Folder changes could not be saved. Existing stored folders were kept.');
+      saveTabsToStorage(tabs);
+      refreshUI();
+      return 0;
+    }
     saveTabsToStorage(tabs);
     refreshUI();
+    if (!applyFailure && settings.onProgress) settings.onProgress({ phase: 'complete', total: files.length });
     if (settings.notify) {
       if (applyFailure) showAppToast('Some files could not be refreshed. Existing drafts were kept; rescan to retry.', { tone: 'warning', title: 'Folder scan incomplete', dedupeKey: 'linked-scan-stopped-' + locationId });
-      else showAppToast('Linked folder scanned. ' + added + ' new Markdown file' + (added === 1 ? '' : 's') + ' found.', { tone: 'success', title: location.name });
+      else if (!settings.onProgress) showAppToast('Linked folder scanned. ' + added + ' new Markdown file' + (added === 1 ? '' : 's') + ' found.', { tone: 'success', title: location.name });
     }
     return added;
   }
 
   async function addLinkedFolderPath(folderPath, options) {
     if (!hasDesktopFileAccess() || workspaceMaintenancePending || suspendWorkspacePersistence) return null;
+    const readEpoch = linkedReadEpoch;
+    await assertOutsideManagedVault(folderPath);
+    if (readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence) return null;
     const normalized = normalizeLinkedSourcePath(folderPath);
     let location = (documentOrganization.linkedLocations || []).find(function(item) {
       return normalizeLinkedSourcePath(item.path) === normalized;
     });
-    if (!location) {
+    const isNewRoot = !location;
+    if (isNewRoot) {
       location = {
         id: createDocumentEntityId('linked'),
         path: String(folderPath),
@@ -12453,10 +12699,42 @@ document.addEventListener("DOMContentLoaded", async function () {
         lastScanAt: 0,
         unavailable: false
       };
-      documentOrganization.linkedLocations.push(location);
-      saveDocumentOrganization();
     }
-    await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true });
+    const parent = options && options.parent;
+    const previousParent = { linkedParentId: location.linkedParentId, linkedParentPath: location.linkedParentPath };
+    if (parent) assignLinkedSidebarParent(Object.assign({}, location), parent);
+    if (isNewRoot) documentOrganization.linkedLocations.push(location);
+    const committed = await withLinkedLocationMutation(getOverlappingLinkedLocationIds(location.path), async function() {
+      if (readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return false;
+      if (!isNewRoot && !parent) return true;
+      if (parent) {
+        const candidate = Object.assign({}, location, { linkedParentId: parent.locationId, linkedParentPath: parent.path || '' });
+        if (!getLinkedSidebarParent(candidate)) return false;
+        assignLinkedSidebarParent(location, parent);
+      }
+      // Do not create document records/watchers for a root that cannot survive
+      // a restart. Roll back only this insertion, not concurrent folder edits.
+      const saved = await saveDocumentOrganization();
+      if (saved !== true) {
+        Object.assign(location, previousParent);
+        if (isNewRoot) {
+          const index = documentOrganization.linkedLocations.indexOf(location);
+          if (index !== -1) documentOrganization.linkedLocations.splice(index, 1);
+        }
+        renderDocumentSidebar();
+        return false;
+      }
+      return true;
+    });
+    if (!committed && isNewRoot) {
+      const index = documentOrganization.linkedLocations.indexOf(location);
+      if (index !== -1) {
+        documentOrganization.linkedLocations.splice(index, 1);
+        renderDocumentSidebar();
+      }
+    }
+    if (!committed || readEpoch !== linkedReadEpoch || workspaceMaintenancePending || suspendWorkspacePersistence || !getLinkedLocation(location.id)) return null;
+    await reconcileLinkedLocation(location.id, { notify: !(options && options.silent), restoreExcluded: true, onProgress: options && options.onProgress });
     await refreshLinkedSourceMonitoring();
     return getLinkedLocation(location.id);
   }
@@ -12471,21 +12749,31 @@ document.addEventListener("DOMContentLoaded", async function () {
       activate: options && options.activate === true,
       open: options && options.open === true
     });
+    if (tab && options && options.parent) {
+      const previous = { linkedParentId: tab.linkedParentId, linkedParentPath: tab.linkedParentPath };
+      assignLinkedSidebarParent(tab, options.parent);
+      if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id], requireExactCommit: true }))) {
+        Object.assign(tab, previous);
+        renderDocumentSidebar();
+        throw new Error('Folder changes could not be saved. Existing stored folders were kept.');
+      }
+      renderDocumentSidebar();
+    }
     await refreshLinkedSourceMonitoring();
     return tab;
   }
 
-  async function nativeLinkMarkdownFiles() {
+  async function nativeLinkMarkdownFiles(parent) {
     if (!hasDesktopFileAccess()) return 0;
     try {
-      const paths = await Neutralino.os.showOpenDialog('Link Markdown files', {
+      const paths = await Neutralino.os.showOpenDialog('Link file', {
         filters: [{ name: 'Markdown files (*.md, *.markdown)', extensions: ['md', 'markdown'] }],
         multiSelections: true
       });
       if (!paths || !paths.length) return 0;
       let count = 0;
       for (const filePath of paths) {
-        if (await addLinkedFilePath(filePath, { open: false })) count++;
+        if (await addLinkedFilePath(filePath, { open: false, parent: parent })) count++;
       }
       showAppToast(count + ' file' + (count === 1 ? '' : 's') + ' linked. Originals remain on disk.', { tone: 'success', title: 'Linked files' });
       return count;
@@ -12496,14 +12784,95 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
-  async function nativeLinkMarkdownFolder() {
+  async function nativeLinkMarkdownFolder(parent) {
     if (!hasDesktopFileAccess()) return;
     try {
-      const folderPath = await Neutralino.os.showFolderDialog('Link Markdown folder');
-      if (folderPath) await addLinkedFolderPath(folderPath);
+      const folderPath = await Neutralino.os.showFolderDialog('Link folder');
+      if (folderPath) await linkMarkdownFolderWithProgress(folderPath, { parent: parent });
     } catch (error) {
       console.warn('Could not link Markdown folder:', error);
       showAppToast(error.message || 'The selected folder could not be linked.', { tone: 'error', title: 'Link failed' });
+    }
+  }
+
+  function createLinkedFolderProgress(folderPath) {
+    const template = document.getElementById('import-progress-toast');
+    if (!template) return null;
+    // Reuse the GitHub import card, with independent state so simultaneous
+    // folder links and imports cannot overwrite or dismiss each other's progress.
+    const toast = template.cloneNode(true);
+    const title = toast.querySelector('#import-progress-title');
+    const count = toast.querySelector('#import-progress-count');
+    const detail = toast.querySelector('#import-progress-detail');
+    const icon = toast.querySelector('#import-progress-icon');
+    const bar = toast.querySelector('#import-progress-bar');
+    const value = toast.querySelector('#import-progress-value');
+    toast.removeAttribute('id');
+    toast.querySelectorAll('[id]').forEach(function(node) { node.removeAttribute('id'); });
+    toast.classList.add('linked-folder-progress-toast');
+    toast.dataset.state = 'loading';
+    toast.dataset.indeterminate = 'true';
+    toast.dataset.phase = 'scan';
+    title.textContent = translateUiString('Linking folder');
+    count.textContent = translateUiString('Preparing');
+    detail.textContent = translateUiString('Scanning folder…') + ' ' + getNativePathName(folderPath);
+    icon.className = 'lucide lucide-refresh-cw import-progress-icon';
+    bar.setAttribute('aria-label', translateUiString('Linking folder'));
+    bar.removeAttribute('aria-valuenow');
+    value.style.width = '35%';
+    toast.hidden = false;
+    template.parentNode.appendChild(toast);
+    let total = 0;
+    return {
+      update: function(event) {
+        toast.dataset.phase = event.phase;
+        const labels = { scan: 'Scanning folder…', read: 'Reading files…', link: 'Linking files…', save: 'Saving...' };
+        detail.textContent = translateUiString(labels[event.phase]) + (event.path ? ' ' + event.path : '');
+        if (event.phase === 'scan') return;
+        total = event.total;
+        count.textContent = translateUiString(event.processed + ' of ' + total);
+        // Discovery has no known total. Reading and linking then cover equal
+        // portions of the bar; reserve the end for durable document/metadata saves.
+        const fraction = total ? event.processed / total : 0;
+        const percent = event.phase === 'save' ? 95 : Math.round((event.phase === 'read' ? 0 : 45) + fraction * 45);
+        toast.dataset.indeterminate = 'false';
+        value.style.width = percent + '%';
+        bar.setAttribute('aria-valuenow', String(percent));
+      },
+      finish: function(success, error) {
+        toast.dataset.state = success ? 'complete' : 'partial';
+        toast.dataset.indeterminate = 'false';
+        title.textContent = translateUiString(success ? 'Folder linked' : 'Link failed');
+        icon.className = 'lucide ' + (success ? 'lucide-check' : 'lucide-triangle-alert') + ' import-progress-icon';
+        if (success) {
+          count.textContent = translateUiString(total === 1 ? '1 file' : total + ' files');
+          value.style.width = '100%';
+          bar.setAttribute('aria-valuenow', '100');
+          detail.textContent = folderPath;
+        } else {
+          count.textContent = '';
+          detail.textContent = translateUiString(error || 'The selected folder could not be linked.');
+        }
+        setTimeout(function() { toast.remove(); }, success ? 4200 : 7000);
+      }
+    };
+  }
+
+  async function linkMarkdownFolderWithProgress(folderPath, options) {
+    const progress = createLinkedFolderProgress(folderPath);
+    let completed = false;
+    try {
+      const location = await addLinkedFolderPath(folderPath, Object.assign({}, options, {
+        onProgress: function(event) {
+          if (event.phase === 'complete') completed = true;
+          else if (progress) progress.update(event);
+        }
+      }));
+      if (progress) progress.finish(completed && Boolean(location), location && linkedFolderScanErrors.get(location.id));
+      return location;
+    } catch (error) {
+      if (progress) progress.finish(false, error.message);
+      throw error;
     }
   }
 
@@ -12514,7 +12883,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function convertLinkedDocumentToVault(tabId, destination) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
-    return withLinkedLocationMutation(tab && tab.linkedRootId, function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(tab && tab.sourcePath), function() {
       return convertLinkedDocumentToVaultSnapshot(tabId, destination);
     });
   }
@@ -12529,19 +12898,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     // Rollback restores only the conversion's location/link fields, not newer
     // editor input, journal tracking or unrelated document state.
     const conversionFields = ['workspaceId', 'folderId', 'sourcePath', 'sourceContentHash',
-      'sourceKind', 'linkedRootId', 'sourceRelativePath', 'sourceMissing', 'sourceConflict'];
+      'sourceKind', 'linkedRootId', 'sourceRelativePath', 'linkedParentId', 'linkedParentPath', 'sourceMissing', 'sourceConflict'];
     const previous = Object.fromEntries(conversionFields.filter(function(key) {
       return Object.prototype.hasOwnProperty.call(tab, key);
     }).map(function(key) { return [key, tab[key]]; }));
     const sourcePath = tab.sourcePath;
-    const location = tab.linkedRootId ? getLinkedLocation(tab.linkedRootId) : null;
-    const previousExcluded = location ? (location.excludedPaths || []).slice() : null;
-    if (location && tab.sourceRelativePath) {
-      location.excludedPaths = Array.from(new Set((location.excludedPaths || []).concat(normalizeLinkedRelativePath(tab.sourceRelativePath))));
+    const addedExclusions = addLinkedSourceExclusions(sourcePath);
+    if (addedExclusions.length) {
       if (!(await saveDocumentOrganization())) {
-        const current = getLinkedLocation(location.id);
-        const path = normalizeLinkedRelativePath(tab.sourceRelativePath);
-        if (current && !previousExcluded.includes(path)) current.excludedPaths = (current.excludedPaths || []).filter(function(item) { return item !== path; });
+        rollbackLinkedSourceExclusions(addedExclusions);
         await saveDocumentOrganization({ silent: true });
         showAppToast('The folder exclusion could not be saved. The linked draft was kept; nothing was converted.', { tone: 'error', title: 'Conversion failed' });
         return false;
@@ -12552,12 +12917,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     delete tab.sourceKind;
     delete tab.linkedRootId;
     delete tab.sourceRelativePath;
+    delete tab.linkedParentId;
+    delete tab.linkedParentPath;
     delete tab.sourceMissing;
     delete tab.sourceConflict;
     setDocumentLocation(tab, DEFAULT_WORKSPACE_ID, destination && destination.folderId || null);
     tab.isOpen = true;
     try {
-      if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id] }))) throw new Error('Workspace copy could not be saved.');
+      if (!(await _flushTabsToStorage(tabs, { changedIds: [tab.id], requireExactCommit: true }))) throw new Error('The requested conversion did not complete. Any conflict copy was kept; retry after reviewing both versions.');
     } catch (error) {
       if (tabs.includes(tab)) {
         captureLiveLinkedDraft(tab);
@@ -12568,13 +12935,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (journalState !== true) persistEditWithoutDurableJournal(tab, tab.content);
         saveTabsToStorage(tabs, [tab.id]);
       }
-      const currentLocation = location && getLinkedLocation(location.id);
-      if (currentLocation && previous.sourceRelativePath) {
-        const excludedPath = normalizeLinkedRelativePath(previous.sourceRelativePath);
-        if (!previousExcluded.includes(excludedPath)) {
-          currentLocation.excludedPaths = (currentLocation.excludedPaths || []).filter(function(path) { return path !== excludedPath; });
-        }
-      }
+      rollbackLinkedSourceExclusions(addedExclusions);
       saveDocumentOrganization();
       renderTabBar(tabs, activeTabId);
       renderDocumentSidebar();
@@ -12606,7 +12967,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { title: 'Convert linked folder', confirmLabel: 'Convert to Workspace copy', dedupeKey: 'convert-folder:' + locationId + ':' + prefix }
     );
     if (!confirmed) return false;
-    return withLinkedLocationMutation(locationId, async function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(location.path), async function() {
       const root = getLinkedLocation(locationId);
       if (!root || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress) {
         showAppToast('Wait for the current Save to finish, then retry.', { tone: 'warning', title: 'Conversion deferred' });
@@ -12710,7 +13071,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function removeLinkedDocument(tabId, options) {
     const tab = tabs.find(function(item) { return item.id === tabId; });
-    return withLinkedLocationMutation(tab && tab.linkedRootId, function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(tab && tab.sourcePath), function() {
       return removeLinkedDocumentSnapshot(tabId, options);
     });
   }
@@ -12719,18 +13080,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     const settings = options || {};
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || !tab.sourcePath) return false;
-    const location = tab.linkedRootId ? getLinkedLocation(tab.linkedRootId) : null;
-    const excludedPath = location && tab.sourceRelativePath ? normalizeLinkedRelativePath(tab.sourceRelativePath) : null;
-    const addedExclusion = excludedPath && !(location.excludedPaths || []).includes(excludedPath);
+    const addedExclusions = addLinkedSourceExclusions(tab.sourcePath);
     const rollbackExclusion = async function() {
-      const current = location && getLinkedLocation(location.id);
-      if (addedExclusion && current) {
-        current.excludedPaths = (current.excludedPaths || []).filter(function(path) { return path !== excludedPath; });
+      if (addedExclusions.length) {
+        rollbackLinkedSourceExclusions(addedExclusions);
         await saveDocumentOrganization({ silent: settings.silent });
       }
     };
-    if (location && tab.sourceRelativePath) {
-      location.excludedPaths = Array.from(new Set((location.excludedPaths || []).concat(normalizeLinkedRelativePath(tab.sourceRelativePath))));
+    if (addedExclusions.length) {
       if (!(await saveDocumentOrganization({ silent: settings.silent }))) {
         await rollbackExclusion();
         return false;
@@ -12754,7 +13111,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { title: 'Remove linked folder', confirmLabel: 'Remove link', dedupeKey: 'remove-linked-folder:' + location.id }
     );
     if (!confirmed) return;
-    return withLinkedLocationMutation(locationId, async function() {
+    return withLinkedLocationMutation(getOverlappingLinkedLocationIds(location.path), async function() {
       // Include links discovered while the confirmation was open. Once the
       // mutation begins, pending scans cannot add further root associations.
       const currentLinkedTabs = tabs.filter(function(tab) { return tab.linkedRootId === locationId; });
@@ -12909,7 +13266,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Native-drop integration, when available, can reuse the same folder workflow.
   window.NL_LINK_MARKDOWN_FOLDER_PATH = function(folderPath) {
     if (typeof folderPath !== 'string' || !folderPath) return Promise.resolve(null);
-    return addLinkedFolderPath(folderPath, { silent: true });
+    return linkMarkdownFolderWithProgress(folderPath, { silent: true });
   };
 
   window.NL_HANDLE_NATIVE_DROP = async function(paths) {
@@ -13884,7 +14241,12 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
     if (!isTemporaryDocument(tab)) saveTabsToStorage(tabs, [tab.id]);
-    if (contentChanged) renderDocumentSidebar();
+    if (contentChanged) {
+      // A delayed draft save must not remove the menu the user just opened.
+      if (document.querySelector('.document-menu-dropdown.open, .tab-menu-dropdown.open, [data-tab-context-menu="true"]')) {
+        linkedBackgroundUIRefreshPending = true;
+      } else renderDocumentSidebar();
+    }
   }
 
   function saveSecondarySplitState() {
@@ -14728,7 +15090,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!tabs.some(function(tab) { return tab.kind === LINKED_WORKSPACE_GUIDE_KIND; })) {
         const response = await fetch('assets/linked-workspace-guide.md');
         if (!response.ok) throw new Error('Unable to load the Linked Workspace guide.');
-        const guide = createTab(await response.text(), 'Welcome to Linked Workspace', 'preview', {
+        const guide = createTab(await response.text(), 'Welcome to Linked Workspace', 'split', {
           workspaceId: DEFAULT_WORKSPACE_ID, folderId: null
         });
         guide.kind = LINKED_WORKSPACE_GUIDE_KIND;
@@ -16852,6 +17214,7 @@ ${selector} .arrowheadPath {
   }
 
   function renderMarkdown(options) {
+    window.renderMarkdown = renderMarkdown;
     stopActiveAbcPlayback();
     options = options || {};
     const rawVal = markdownEditor.value;
@@ -18582,7 +18945,7 @@ ${selector} .arrowheadPath {
           fileButton.title = file.path;
 
           const fileIcon = document.createElement("i");
-          fileIcon.className = "lucide lucide-file-text github-tree-file-icon";
+          fileIcon.className = "lucide lucide-file github-tree-file-icon";
           fileIcon.setAttribute("aria-hidden", "true");
           const fileName = document.createElement("span");
           fileName.className = "github-import-tree-name";
@@ -18977,7 +19340,10 @@ ${selector} .arrowheadPath {
       
       while ((match = emojiRegex.exec(text)) !== null) {
         const shortcode = match[1];
-        const emoji = joypixels.shortnameToUnicode(`:${shortcode}:`);
+        const effectiveShortcode = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.resolveEmojiShortcode === 'function')
+          ? window.visualSettingsAdapters.resolveEmojiShortcode(shortcode)
+          : shortcode;
+        const emoji = joypixels.shortnameToUnicode(`:${effectiveShortcode}:`);
         
         if (emoji !== `:${shortcode}:`) { // If conversion was successful
           hasEmoji = true;
@@ -21000,12 +21366,14 @@ ${selector} .arrowheadPath {
             shortcode: `:${name}:`,
             search: `${name} :${name}:`.toLowerCase(),
           }));
+        if (!emojiEntries.length) throw new Error('Empty emoji response');
         emojiUrlMap = new Map(emojiEntries.map((entry) => [entry.name, entry.url]));
         emojiLookupLoaded = true;
         return emojiEntries;
       })
       .catch((error) => {
         console.error('Failed to load GitHub emojis:', error);
+        emojiLoadPromise = null;
         emojiEntries = [];
         emojiUrlMap = new Map();
         emojiLookupLoaded = true;
@@ -21111,193 +21479,440 @@ ${selector} .arrowheadPath {
     columnInput.select();
   }
 
-  function openEmojiModal() {
+  function loadEmojiCatalog() {
+    if (!emojiCatalogPromise) {
+      emojiCatalogPromise = fetch('assets/emoji/catalog.json')
+        .then(response => {
+          if (!response.ok) throw new Error(`Emoji catalog request failed (${response.status})`);
+          return response.json();
+        })
+        .then(catalog => {
+          if (!Array.isArray(catalog) || !catalog.length) throw new Error('Empty emoji catalog');
+          return catalog;
+        })
+        .catch(error => {
+          emojiCatalogPromise = null;
+          throw error;
+        });
+    }
+    return emojiCatalogPromise;
+  }
+
+  function buildEmojiPickerEntries(entries, catalog) {
+    const available = new Map(entries.map(entry => [entry.name, entry]));
+    const grouped = [];
+    catalog.forEach(record => {
+      const aliases = record.aliases.filter(alias => available.has(alias));
+      if (!aliases.length) return;
+      const entry = available.get(aliases[0]);
+      grouped.push({ ...entry, ...record, name: entry.name, aliases,
+        search: [record.emoji, record.description, ...record.tags, ...aliases].join(' ').toLowerCase().replace(/[_-]/g, ' ') });
+      aliases.forEach(alias => available.delete(alias));
+    });
+    available.forEach(entry => grouped.push({ ...entry, category: 'github', aliases: [entry.name],
+      search: entry.search.replace(/[_-]/g, ' '), emoji: '', description: entry.name.replace(/_/g, ' ') }));
+    return grouped;
+  }
+
+  function openEmojiModal(trigger) {
     const modal = document.getElementById('emoji-modal');
     const grid = document.getElementById('emoji-modal-grid');
-    const emptyMessage = document.getElementById('emoji-modal-empty');
+    const emptyState = document.getElementById('emoji-modal-empty');
+    const status = document.getElementById('emoji-modal-status');
+    const loadingSpinner = document.getElementById('emoji-modal-spinner');
     const searchInput = document.getElementById('emoji-modal-search');
+    const clearSearch = document.getElementById('emoji-modal-clear-search');
+    const categoryBar = document.getElementById('emoji-modal-categories');
+    const heading = document.getElementById('emoji-modal-category-title');
+    const shortcodePreview = document.getElementById('emoji-modal-shortcode');
+    const selectionTray = document.getElementById('emoji-modal-selection');
+    const selectionHint = document.getElementById('emoji-modal-selection-hint');
+    const selectionCount = document.getElementById('emoji-modal-selection-count');
+    const copyBtn = document.getElementById('emoji-modal-copy');
+    const retryBtn = document.getElementById('emoji-modal-retry');
     const confirmBtn = document.getElementById('emoji-modal-insert');
     const cancelBtn = document.getElementById('emoji-modal-cancel');
-    if (!modal || !grid || !emptyMessage || !searchInput || !confirmBtn || !cancelBtn) return;
+    if (!modal || !grid) return;
     const start = markdownEditor.selectionStart;
     const end = markdownEditor.selectionEnd;
-    modal.style.display = 'flex';
-    confirmBtn.disabled = true;
-
-    // Localized and accessible announcements for loading
-    const loadingText = I18N_DICTS[activeLang].loadingEmojis || "Loading emojis...";
-    emptyMessage.textContent = loadingText;
-    emptyMessage.style.display = 'block';
-    announceToScreenReader(loadingText);
-
-    searchInput.value = '';
-    emojiSelection.clear();
-    // PERF-007: Clear elements using textContent
-    grid.textContent = '';
-    grid.scrollTop = 0;
-    emojiItems = [];
-
-    // Render visual placeholders during active requests
-    if (!emojiLookupLoaded) {
-      renderEmojiSkeletons();
-    }
-
-    let currentFilteredEntries = [];
-    let renderedCount = 0;
-    const CHUNK_SIZE = 120;
-
-    function updateInsertState() {
-      confirmBtn.disabled = emojiSelection.size === 0;
-    }
-
-    function toggleSelection(shortcode, element) {
-      if (emojiSelection.has(shortcode)) {
-        emojiSelection.delete(shortcode);
-        element.classList.remove('is-selected');
-      } else {
-        emojiSelection.add(shortcode);
-        element.classList.add('is-selected');
-      }
-      element.setAttribute('aria-pressed', emojiSelection.has(shortcode).toString());
-      updateInsertState();
-    }
-
-    function renderEmojiChunk(clear = false) {
-      if (clear) {
-        // PERF-007: Clear elements using textContent
-        grid.textContent = '';
-        emojiItems = [];
-        renderedCount = 0;
-      }
-
-      const nextBatch = currentFilteredEntries.slice(renderedCount, renderedCount + CHUNK_SIZE);
-      if (nextBatch.length === 0) {
-        emptyMessage.style.display = emojiItems.length ? 'none' : 'block';
-        return;
-      }
-
-      const fragment = document.createDocumentFragment();
-      const newItems = nextBatch.map((entry) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'emoji-item';
-
-        const isSelected = emojiSelection.has(entry.shortcode);
-        if (isSelected) {
-          item.classList.add('is-selected');
-        }
-        item.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-        item.dataset.search = entry.search;
-        item.dataset.shortcode = entry.shortcode;
-
-        const preview = document.createElement('span');
-        preview.className = 'emoji-preview';
-        const image = document.createElement('img');
-        image.src = entry.url;
-        image.alt = entry.shortcode;
-        image.loading = 'lazy';
-        preview.appendChild(image);
-
-        const shortcodeRow = document.createElement('div');
-        shortcodeRow.className = 'emoji-shortcode';
-        const code = document.createElement('span');
-        code.textContent = entry.shortcode;
-        const copyBtn = document.createElement('button');
-        copyBtn.type = 'button';
-        copyBtn.className = 'emoji-copy-btn';
-        copyBtn.setAttribute('aria-label', `Copy ${entry.shortcode}`);
-        copyBtn.innerHTML = '<i class="lucide lucide-copy"></i>';
-        copyBtn.addEventListener('click', (event) => {
-          event.stopPropagation();
-          copyTextToClipboard(entry.shortcode)
-            .then(() => flashCopyButton(copyBtn))
-            .catch((error) => console.error('Copy failed:', error));
-        });
-        shortcodeRow.appendChild(code);
-        shortcodeRow.appendChild(copyBtn);
-
-        item.appendChild(preview);
-        item.appendChild(shortcodeRow);
-        item.addEventListener('click', () => toggleSelection(entry.shortcode, item));
-        fragment.appendChild(item);
-        return { element: item, search: entry.search, shortcode: entry.shortcode };
+    const selection = new Map();
+    const itemCache = new Map();
+    const chipCache = new Map();
+    const listeners = new AbortController();
+    // Load only the visible rows and one row ahead, rather than competing with
+    // hundreds of offscreen downloads when a category is opened.
+    const imageObserver = new IntersectionObserver(entries => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (!isIntersecting || !grid.contains(target)) return;
+        loadPreviewImage(target);
+        imageObserver.unobserve(target);
       });
+    }, { root: grid, rootMargin: '50px 0px' });
+    const categories = [
+      { id: 'smileys', label: 'Smileys', title: 'Smileys & emotion', icon: 'smile' },
+      { id: 'people', label: 'People', title: 'People & body', icon: 'hand' },
+      { id: 'nature', label: 'Nature', title: 'Animals & nature', icon: 'leaf' },
+      { id: 'food', label: 'Food', title: 'Food & drink', icon: 'coffee' },
+      { id: 'travel', label: 'Travel', title: 'Travel & places', icon: 'plane' },
+      { id: 'activities', label: 'Activities', title: 'Activities', icon: 'trophy' },
+      { id: 'objects', label: 'Objects', title: 'Objects', icon: 'lightbulb' },
+      { id: 'symbols', label: 'Symbols', title: 'Symbols', icon: 'heart' },
+      { id: 'flags', label: 'Flags', title: 'Flags', icon: 'flag' },
+      { id: 'github', label: 'GitHub', title: 'GitHub', icon: 'code-2' }
+    ];
+    let activeCategory = 'smileys';
+    let pickerEntries = [];
+    let entriesByName = new Map();
+    let visibleEntries = [];
+    let activeIndex = 0;
+    let closed = false;
+    let loading = true;
+    let failed = false;
+    let skinToneRequest = 0;
 
-      emojiItems = emojiItems.concat(newItems);
-      grid.appendChild(fragment);
-      renderedCount += nextBatch.length;
-      emptyMessage.style.display = emojiItems.length ? 'none' : 'block';
+    function listen(element, event, handler) {
+      element.addEventListener(event, handler, { signal: listeners.signal });
     }
 
-    function applyFilter() {
-      const query = searchInput.value.trim().toLowerCase();
-      currentFilteredEntries = emojiEntries.filter(entry => !query || entry.search.includes(query));
-      renderEmojiChunk(true);
+    function loadPreviewImage(image) {
+      if (!image.dataset.src) return;
+      image.src = image.dataset.src;
+      delete image.dataset.src;
     }
 
-    function handleScroll() {
-      if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 60) {
-        renderEmojiChunk(false);
+    function previewSource(entry) {
+      return window.visualSettingsAdapters?.resolveEmojiImage?.(entry.name, entry.url) || { url: entry.url, unicode: '' };
+    }
+
+    async function ensureSkinToneLibrary() {
+      const tone = window.visualSettingsStore?.getSettings().emojiSkinTone;
+      if (tone && tone !== 'default' && !window.joypixels) await loadScript(CDN.joypixels);
+    }
+
+    function createPreview(entry, eager = false) {
+      const source = previewSource(entry);
+      const preview = document.createElement('span');
+      preview.className = 'emoji-preview skeleton-placeholder';
+      preview.setAttribute('aria-hidden', 'true');
+      preview.dataset.i18nSkip = 'true';
+      preview.dataset.url = source.url;
+      const image = document.createElement('img');
+      image.dataset.src = preview.dataset.url;
+      image.alt = '';
+      image.decoding = 'async';
+      function unavailable() {
+        preview.classList.remove('skeleton-placeholder');
+        // Some GitHub tone variants have no artwork. This is the final fallback,
+        // never temporary content shown ahead of a successfully loaded image.
+        if (source.unicode && source.url !== entry.url) {
+          preview.classList.add('is-unicode');
+          preview.textContent = source.unicode;
+          return;
+        }
+        preview.classList.add('is-unavailable');
+        preview.title = translateUiString('Unable to load emojis.');
+        const icon = document.createElement('i');
+        icon.className = 'lucide lucide-circle-alert';
+        preview.replaceChildren(icon);
       }
+      image.addEventListener('load', async () => {
+        try {
+          await image.decode();
+          preview.classList.remove('skeleton-placeholder');
+          preview.classList.add('has-image');
+        } catch (_) {
+          unavailable();
+        }
+      }, { once: true });
+      image.addEventListener('error', unavailable, { once: true });
+      preview.appendChild(image);
+      if (eager) loadPreviewImage(image);
+      return preview;
     }
 
-    function insertEmojis() {
-      if (!emojiSelection.size) return;
-      // Retain the modal's visual/definition order of emojis, consistent with the Symbols modal
-      const ordered = emojiItems
-        .filter(item => emojiSelection.has(item.shortcode))
-        .map(item => item.shortcode);
-      const insertion = ordered.join(' ');
-      modal.style.display = 'none';
-      cleanup();
-      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
-    }
-
-    function closeModal() {
-      modal.style.display = 'none';
-      cleanup();
-    }
-
-    function onKey(e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeModal();
+    function refreshPreviewImages() {
+      imageObserver.disconnect();
+      for (const [cache, eager] of [[itemCache, false], [chipCache, true]]) {
+        cache.forEach((item, name) => {
+          const entry = entriesByName.get(name);
+          const preview = item.querySelector('.emoji-preview');
+          if (entry && preview.dataset.url !== previewSource(entry).url) {
+            preview.replaceWith(createPreview(entry, eager));
+          }
+        });
       }
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
     }
 
-    function cleanup() {
-      confirmBtn.removeEventListener('click', insertEmojis);
-      cancelBtn.removeEventListener('click', closeModal);
-      searchInput.removeEventListener('input', applyFilter);
-      searchInput.removeEventListener('keydown', onKey);
-      grid.removeEventListener('scroll', handleScroll);
+    function shortcodeFor(entry) {
+      const alias = searchInput.value.trim().toLowerCase().replace(/^:|:$/g, '');
+      return entry.aliases.includes(alias) ? `:${alias}:` : entry.shortcode;
     }
 
-    loadEmojiEntries().then((entries) => {
-      if (!entries.length) {
-        emptyMessage.textContent = 'Unable to load emojis.';
-        emptyMessage.style.display = 'block';
-        // PERF-007: Clear elements using textContent
-        grid.textContent = '';
-        emojiItems = [];
-        announceToScreenReader("Failed to load emojis.");
-        return;
-      }
-      currentFilteredEntries = entries;
-      renderEmojiChunk(true);
-      emptyMessage.textContent = 'No emojis found.';
-      announceToScreenReader("Emojis loaded. " + entries.length + " items available.");
-      updateInsertState();
+    function selectedText() {
+      return Array.from(selection.values(), item => item.shortcode).join(' ');
+    }
+
+    function updateSelection() {
+      confirmBtn.disabled = copyBtn.disabled = selection.size === 0;
+      selectionCount.textContent = selection.size ? translateUiString(`${selection.size} selected`) : '';
+      selectionHint.hidden = selection.size > 0;
+      selectionTray.hidden = selection.size === 0;
+      chipCache.forEach((chip, name) => {
+        if (!selection.has(name)) { chip.remove(); chipCache.delete(name); }
+      });
+      selection.forEach(({ entry, shortcode }) => {
+        if (chipCache.has(entry.name)) return;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'emoji-selection-chip';
+        chip.dataset.name = entry.name;
+        chip.title = shortcode;
+        chip.setAttribute('aria-label', translateUiString(`Remove ${shortcode}`));
+        chip.appendChild(createPreview(entry, true));
+        const removeIcon = document.createElement('i');
+        removeIcon.className = 'lucide lucide-x';
+        removeIcon.setAttribute('aria-hidden', 'true');
+        chip.appendChild(removeIcon);
+        chipCache.set(entry.name, chip);
+        selectionTray.appendChild(chip);
+      });
+      Array.from(grid.children).forEach((item, index) => {
+        const selected = selection.has(visibleEntries[index].name);
+        item.setAttribute('aria-selected', String(selected));
+        item.classList.toggle('is-selected', selected);
+      });
+    }
+
+    function focusEmoji(index) {
+      if (!visibleEntries.length) return;
+      grid.children[activeIndex]?.setAttribute('tabindex', '-1');
+      activeIndex = Math.max(0, Math.min(index, visibleEntries.length - 1));
+      const item = grid.children[activeIndex];
+      item.tabIndex = 0;
+      item.focus({ preventScroll: true });
+      item.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function renderEntries() {
+      const rawQuery = searchInput.value.trim().toLowerCase();
+      const aliasQuery = rawQuery.replace(/^:|:$/g, '');
+      const terms = rawQuery.replace(/[:_-]/g, ' ').split(/\s+/).filter(Boolean);
+      clearSearch.hidden = !searchInput.value;
+      shortcodePreview.textContent = '';
+      heading.textContent = rawQuery ? 'Search results' : categories.find(category => category.id === activeCategory).title;
+      categoryBar.querySelectorAll('button').forEach(button => {
+        button.setAttribute('aria-pressed', String(!rawQuery && button.dataset.category === activeCategory));
+      });
+      visibleEntries = pickerEntries.filter(entry => rawQuery
+        ? entry.aliases.includes(aliasQuery) || terms.every(term => entry.search.includes(term))
+        : entry.category === activeCategory);
+      if (rawQuery) visibleEntries.sort((a, b) => Number(b.aliases.includes(aliasQuery)) - Number(a.aliases.includes(aliasQuery)));
+      imageObserver.disconnect();
+      grid.scrollTop = 0;
+      activeIndex = 0;
+      const fragment = document.createDocumentFragment();
+      visibleEntries.forEach((entry, index) => {
+        let item = itemCache.get(entry.name);
+        if (!item) {
+          item = document.createElement('button');
+          item.type = 'button';
+          item.className = 'emoji-item';
+          item.setAttribute('role', 'option');
+          item.dataset.name = entry.name;
+          item.dataset.i18nSkip = 'true';
+          item.appendChild(createPreview(entry));
+          itemCache.set(entry.name, item);
+        }
+        item.dataset.shortcode = shortcodeFor(entry);
+        item.setAttribute('aria-label', `${entry.description} ${item.dataset.shortcode}`);
+        item.title = item.dataset.shortcode;
+        item.tabIndex = index === 0 ? 0 : -1;
+        fragment.appendChild(item);
+      });
+      grid.replaceChildren(fragment);
+      grid.querySelectorAll('img[data-src]').forEach(image => imageObserver.observe(image));
+      grid.setAttribute('aria-busy', String(loading));
+      grid.hidden = failed;
+      emptyState.hidden = visibleEntries.length > 0 && !failed;
+      loadingSpinner.hidden = !loading;
+      emptyState.querySelector('.lucide').hidden = loading;
+      retryBtn.hidden = !failed;
+      status.textContent = loading ? 'Loading emojis...' : failed ? 'Unable to load emojis.' : 'No emojis found.';
+      updateSelection();
+    }
+
+    function chooseCategory(button) {
+      activeCategory = button.dataset.category;
+      searchInput.value = '';
+      categoryBar.querySelectorAll('button').forEach(item => { item.tabIndex = item === button ? 0 : -1; });
+      renderEntries();
+      button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    categoryBar.textContent = '';
+    categories.forEach((category, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'emoji-category';
+      button.dataset.category = category.id;
+      button.tabIndex = index === 0 ? 0 : -1;
+      button.title = category.title;
+      button.setAttribute('aria-label', category.title);
+      button.setAttribute('aria-controls', 'emoji-modal-grid');
+      const icon = document.createElement('i');
+      icon.className = `lucide lucide-${category.icon}`;
+      icon.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = category.label;
+      button.append(icon, label);
+      categoryBar.appendChild(button);
     });
 
-    confirmBtn.addEventListener('click', insertEmojis);
-    cancelBtn.addEventListener('click', closeModal);
-    searchInput.addEventListener('input', applyFilter);
-    searchInput.addEventListener('keydown', onKey);
-    grid.addEventListener('scroll', handleScroll);
+    listen(categoryBar, 'click', event => {
+      const button = event.target.closest('button');
+      if (button) chooseCategory(button);
+    });
+    listen(categoryBar, 'keydown', event => {
+      const buttons = Array.from(categoryBar.children);
+      const index = buttons.indexOf(event.target);
+      const rtl = getComputedStyle(categoryBar).direction === 'rtl';
+      let next;
+      if (event.key === 'ArrowRight') next = index + (rtl ? -1 : 1);
+      if (event.key === 'ArrowLeft') next = index + (rtl ? 1 : -1);
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = buttons.length - 1;
+      if (event.key === 'ArrowDown') { event.preventDefault(); focusEmoji(0); }
+      if (next === undefined) return;
+      event.preventDefault();
+      const button = buttons[(next + buttons.length) % buttons.length];
+      chooseCategory(button);
+      button.focus({ preventScroll: true });
+    });
+    listen(grid, 'click', event => {
+      const item = event.target.closest('.emoji-item');
+      if (!item) return;
+      const entry = visibleEntries.find(entry => entry.name === item.dataset.name);
+      if (selection.has(entry.name)) selection.delete(entry.name);
+      else selection.set(entry.name, { entry, shortcode: item.dataset.shortcode });
+      updateSelection();
+    });
+    function previewItem(event) {
+      const item = event.target.closest('.emoji-item');
+      if (!item) return;
+      shortcodePreview.textContent = item.dataset.shortcode;
+      if (event.type === 'focusin') {
+        grid.children[activeIndex]?.setAttribute('tabindex', '-1');
+        activeIndex = Array.from(grid.children).indexOf(item);
+        item.tabIndex = 0;
+      }
+    }
+    listen(grid, 'mouseover', previewItem);
+    listen(grid, 'focusin', previewItem);
+    listen(grid, 'keydown', event => {
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+      const rtl = getComputedStyle(grid).direction === 'rtl';
+      let next;
+      if (event.key === 'ArrowRight') next = activeIndex + (rtl ? -1 : 1);
+      if (event.key === 'ArrowLeft') next = activeIndex + (rtl ? 1 : -1);
+      if (event.key === 'ArrowDown') next = activeIndex + columns;
+      if (event.key === 'ArrowUp') next = activeIndex - columns;
+      if (event.key === 'Home') next = 0;
+      if (event.key === 'End') next = visibleEntries.length - 1;
+      if (next === undefined) return;
+      event.preventDefault();
+      focusEmoji(next);
+    });
+    listen(selectionTray, 'click', event => {
+      const chip = event.target.closest('button');
+      if (!chip) return;
+      const index = Array.from(selectionTray.children).indexOf(chip);
+      selection.delete(chip.dataset.name);
+      updateSelection();
+      (selectionTray.children[Math.min(index, selection.size - 1)] || searchInput).focus();
+    });
+    listen(copyBtn, 'click', async () => {
+      try {
+        await copyTextToClipboard(selectedText());
+        if (!closed) {
+          flashCopyButton(copyBtn);
+          announceToScreenReader(translateUiString('Copied!'));
+        }
+      } catch (error) {
+        if (!closed) showAppToast(translateUiString('Copy failed. Please try again.'));
+      }
+    });
+    listen(searchInput, 'input', renderEntries);
+    listen(searchInput, 'keydown', event => {
+      if (event.key === 'ArrowDown') { event.preventDefault(); focusEmoji(0); }
+    });
+    listen(clearSearch, 'click', () => {
+      searchInput.value = '';
+      renderEntries();
+      searchInput.focus();
+    });
+    const unsubscribeSettings = window.visualSettingsStore?.onSettingsChange(async (_, changedKey) => {
+      if (changedKey !== 'emojiSkinTone' && changedKey !== '*') return;
+      const request = ++skinToneRequest;
+      try {
+        await ensureSkinToneLibrary();
+        if (closed || request !== skinToneRequest) return;
+        if (failed) load();
+        else refreshPreviewImages();
+      } catch (error) {
+        if (!closed && request === skinToneRequest) { failed = true; renderEntries(); }
+      }
+    });
 
-    requestAnimationFrame(() => searchInput.focus());
+    function closeModal() {
+      if (closed) return;
+      closed = true;
+      listeners.abort();
+      unsubscribeSettings?.();
+      imageObserver.disconnect();
+      clearTimeout(copyBtn.copyTimeout);
+      closeAppModal(modal);
+    }
+    listen(confirmBtn, 'click', () => {
+      if (!selection.size) return;
+      const insertion = selectedText();
+      closeModal();
+      replaceEditorRange(start, end, insertion, start + insertion.length, start + insertion.length);
+    });
+    listen(cancelBtn, 'click', closeModal);
+    async function load() {
+      loading = true;
+      failed = false;
+      renderEntries();
+      try {
+        const [entries, catalog] = await Promise.all([loadEmojiEntries(), loadEmojiCatalog(), ensureSkinToneLibrary()]);
+        // The preference can change while the catalog is still downloading.
+        await ensureSkinToneLibrary();
+        if (closed) return;
+        if (!entries.length) throw new Error('Empty emoji response');
+        pickerEntries = buildEmojiPickerEntries(entries, catalog);
+        entriesByName = new Map(pickerEntries.map(entry => [entry.name, entry]));
+        refreshPreviewImages();
+      } catch (error) {
+        if (closed) return;
+        failed = true;
+      }
+      loading = false;
+      renderEntries();
+    }
+    listen(retryBtn, 'click', () => {
+      searchInput.focus();
+      load();
+    });
+    searchInput.value = '';
+    selectionTray.replaceChildren();
+    copyBtn.classList.remove('is-copied');
+    copyBtn.querySelector('i').className = 'lucide lucide-copy';
+    categoryBar.scrollLeft = 0;
+    openAppModal(modal, { focusTarget: searchInput, returnFocus: trigger, onClose: closeModal });
+    load();
   }
+
 
   function openSymbolsModal() {
     const modal = document.getElementById('symbols-modal');
@@ -25351,7 +25966,7 @@ ${selector} .arrowheadPath {
       const timestamp = formatMarkdownDateTime();
       replaceEditorRange(markdownEditor.selectionStart, markdownEditor.selectionEnd, timestamp, markdownEditor.selectionStart + timestamp.length, markdownEditor.selectionStart + timestamp.length);
     } else if (action === 'emoji') {
-      openEmojiModal();
+      openEmojiModal(button);
     }
     else if (action === 'symbols') openSymbolsModal();
     else if (action === 'alert') openAlertModal();
@@ -25988,6 +26603,13 @@ ${selector} .arrowheadPath {
     });
   }
 
+  if (mobileVisualSettingsButton) {
+    mobileVisualSettingsButton.addEventListener('click', function() {
+      closeMobileMenu();
+      openVisualSettingsModal(mobileMenuToggle);
+    });
+  }
+
   if (mobileStorageSettingsButton) {
     mobileStorageSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
@@ -25999,6 +26621,243 @@ ${selector} .arrowheadPath {
     mobileTrashSettingsButton.addEventListener('click', function() {
       closeMobileMenu();
       openTrashModal(mobileTrashSettingsButton);
+    });
+  }
+
+  // Preview Styling settings
+  function populateVisualSettingsOptions() {
+    const options = (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.getOptions === 'function')
+      ? window.visualSettingsAdapters.getOptions()
+      : (window.visualSettingsStore ? window.visualSettingsStore.DEFAULT_OPTIONS : null);
+
+    if (!options) return;
+
+    const list = [
+      { el: selectHljsTheme, opts: options.hljsTheme, namedOptions: true },
+      { el: selectMathFont, opts: options.mathFont, namedOptions: true },
+      { el: selectMermaidTheme, opts: options.mermaidTheme },
+      { el: selectMermaidLook, opts: options.mermaidLook },
+      { el: selectEmojiSkinTone, opts: options.emojiSkinTone }
+    ];
+
+    list.forEach(function(item) {
+      if (!item.el || !item.opts) return;
+      const currentVal = item.el.value;
+      item.el.innerHTML = '';
+      item.opts.forEach(function(opt) {
+        const val = typeof opt === 'object' && opt !== null ? opt.value : opt;
+        const label = typeof opt === 'object' && opt !== null ? opt.label : opt;
+        const optEl = document.createElement('option');
+        optEl.value = val;
+        optEl.textContent = label;
+        if (item.namedOptions && val !== 'auto' && val !== 'default') {
+          optEl.setAttribute('data-i18n-skip', '');
+        }
+        item.el.appendChild(optEl);
+      });
+      if (currentVal) item.el.value = currentVal;
+    });
+  }
+
+  function syncVisualSettingsUI() {
+    if (!window.visualSettingsStore) return;
+    const settings = window.visualSettingsStore.getSettings();
+    if (selectHljsTheme && settings.hljsTheme) selectHljsTheme.value = settings.hljsTheme;
+    if (selectMathFont && settings.mathFont) selectMathFont.value = settings.mathFont;
+    if (selectMermaidTheme && settings.mermaidTheme) selectMermaidTheme.value = settings.mermaidTheme;
+    if (selectMermaidLook && settings.mermaidLook) selectMermaidLook.value = settings.mermaidLook;
+    if (selectEmojiSkinTone && settings.emojiSkinTone) selectEmojiSkinTone.value = settings.emojiSkinTone;
+  }
+
+  const visualSettingHints = [];
+
+  function hideVisualSettingHints() {
+    visualSettingHints.forEach(hint => hint.hide());
+  }
+
+  function initializeVisualSettingHints() {
+    if (visualSettingHints.length || !window.bootstrap?.Tooltip) return;
+    visualSettingsModal.querySelectorAll('[data-setting-help]').forEach(button => {
+      const help = document.getElementById(button.dataset.settingHelp);
+      const tooltip = new bootstrap.Tooltip(button, {
+        title: () => help.textContent.trim(),
+        container: visualSettingsModal,
+        customClass: 'visual-setting-tooltip',
+        placement: 'top',
+        trigger: 'manual',
+        animation: false
+      });
+      let hideTimer;
+      const hide = () => {
+        clearTimeout(hideTimer);
+        tooltip.hide();
+      };
+      const show = () => {
+        clearTimeout(hideTimer);
+        if (button.hasAttribute('aria-describedby')) return;
+        hideVisualSettingHints();
+        tooltip.show();
+      };
+      const scheduleHide = () => {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          const tip = document.getElementById(button.getAttribute('aria-describedby'));
+          if (document.activeElement !== button && !button.matches(':hover') && !tip?.matches(':hover')) hide();
+        }, 120);
+      };
+      visualSettingHints.push({ hide });
+      button.addEventListener('mouseenter', show);
+      button.addEventListener('mouseleave', scheduleHide);
+      button.addEventListener('focus', show);
+      button.addEventListener('blur', scheduleHide);
+      button.addEventListener('click', () => {
+        button.focus();
+        show();
+      });
+      button.addEventListener('inserted.bs.tooltip', () => {
+        const tip = document.getElementById(button.getAttribute('aria-describedby'));
+        tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        tip.addEventListener('mouseleave', scheduleHide);
+      });
+    });
+    visualSettingsModal.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && visualSettingsModal.querySelector('.visual-setting-tooltip.show')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        hideVisualSettingHints();
+      }
+    }, true);
+    visualSettingsModal.addEventListener('pointerdown', event => {
+      if (!event.target.closest('.visual-setting-info, .visual-setting-tooltip')) hideVisualSettingHints();
+    });
+    visualSettingsModal.querySelector('.visual-settings-body').addEventListener('scroll', hideVisualSettingHints);
+  }
+
+  function openVisualSettingsModal(opener) {
+    if (!visualSettingsModal) return;
+    hideVisualSettingHints();
+    populateVisualSettingsOptions();
+    syncVisualSettingsUI();
+    initializeVisualSettingHints();
+    openAppModal(visualSettingsModal, {
+      focusTarget: selectHljsTheme,
+      returnFocus: opener || document.activeElement,
+      onClose: closeVisualSettingsModal
+    });
+  }
+
+  function closeVisualSettingsModal() {
+    hideVisualSettingHints();
+    if (visualSettingsModal) closeAppModal(visualSettingsModal);
+  }
+
+  let _visualSettingsDebounceTimer = null;
+
+  async function applyVisualSettings(settings, changedKey) {
+    if (window.visualSettingsAdapters) {
+      try {
+        if (changedKey === 'hljsTheme') {
+          await window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme);
+        } else if (changedKey === 'mathFont') {
+          await window.visualSettingsAdapters.applyMathFont(settings.mathFont);
+        } else if (changedKey === 'mermaidTheme' || changedKey === 'mermaidLook') {
+          await window.visualSettingsAdapters.applyMermaid({
+            theme: settings.mermaidTheme,
+            look: settings.mermaidLook
+          });
+        } else if (changedKey === 'emojiSkinTone') {
+          await window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone);
+        } else {
+          if (typeof window.visualSettingsAdapters.applyAll === 'function') {
+            await window.visualSettingsAdapters.applyAll(settings);
+          } else {
+            await Promise.all([
+              window.visualSettingsAdapters.applyHighlightTheme && window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme),
+              window.visualSettingsAdapters.applyMathFont && window.visualSettingsAdapters.applyMathFont(settings.mathFont),
+              window.visualSettingsAdapters.applyMermaid && window.visualSettingsAdapters.applyMermaid({ theme: settings.mermaidTheme, look: settings.mermaidLook }),
+              window.visualSettingsAdapters.applyEmojiSkinTone && window.visualSettingsAdapters.applyEmojiSkinTone(settings.emojiSkinTone)
+            ]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error applying visual setting via adapter:', err);
+      }
+    }
+
+    // Invalidate secondary split document preview cache (P6)
+    documentSplitPreviewContent = null;
+    if (secondarySplitTabId && typeof renderDocumentSplitView === 'function') {
+      renderDocumentSplitView();
+    }
+
+    // Check if re-render is needed according to adapter contract (e.g. hljsTheme does not need markdown AST re-render)
+    const needsRender = !window.visualSettingsAdapters ||
+      typeof window.visualSettingsAdapters.needsRerender !== 'function' ||
+      window.visualSettingsAdapters.needsRerender(changedKey);
+
+    if (needsRender) {
+      if (_visualSettingsDebounceTimer) {
+        clearTimeout(_visualSettingsDebounceTimer);
+      }
+      _visualSettingsDebounceTimer = setTimeout(function() {
+        _visualSettingsDebounceTimer = null;
+        renderMarkdown({ force: true, forceAdvancedPostProcess: true });
+      }, 50);
+    }
+  }
+
+  if (menuVisualSettingsButton) {
+    menuVisualSettingsButton.addEventListener('click', function() {
+      const settingsToggle = document.getElementById('workspaceSettingsDropdown');
+      if (settingsToggle && window.bootstrap && bootstrap.Dropdown) {
+        bootstrap.Dropdown.getOrCreateInstance(settingsToggle).hide();
+      }
+      openVisualSettingsModal(settingsToggle);
+    });
+  }
+
+  if (visualSettingsCloseBtn) visualSettingsCloseBtn.addEventListener('click', closeVisualSettingsModal);
+  if (visualSettingsCloseIcon) visualSettingsCloseIcon.addEventListener('click', closeVisualSettingsModal);
+
+  if (selectHljsTheme) {
+    selectHljsTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('hljsTheme', selectHljsTheme.value);
+    });
+  }
+  if (selectMathFont) {
+    selectMathFont.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mathFont', selectMathFont.value);
+    });
+  }
+  if (selectMermaidTheme) {
+    selectMermaidTheme.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidTheme', selectMermaidTheme.value);
+    });
+  }
+  if (selectMermaidLook) {
+    selectMermaidLook.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('mermaidLook', selectMermaidLook.value);
+    });
+  }
+  if (selectEmojiSkinTone) {
+    selectEmojiSkinTone.addEventListener('change', function() {
+      if (window.visualSettingsStore) window.visualSettingsStore.updateSetting('emojiSkinTone', selectEmojiSkinTone.value);
+    });
+  }
+
+  if (visualSettingsResetBtn) {
+    visualSettingsResetBtn.addEventListener('click', function() {
+      if (window.visualSettingsStore) {
+        window.visualSettingsStore.resetSettings();
+        syncVisualSettingsUI();
+      }
+    });
+  }
+
+  if (window.visualSettingsStore) {
+    window.visualSettingsStore.onSettingsChange(function(settings, changedKey) {
+      syncVisualSettingsUI();
+      applyVisualSettings(settings, changedKey);
     });
   }
 
@@ -26482,8 +27341,19 @@ ${selector} .arrowheadPath {
       }
     }
 
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      window.visualSettingsAdapters.onAppThemeChange(theme);
+    }
+
     updateMapThemes();
     updateStlThemes();
+    if (window.visualSettingsAdapters && typeof window.visualSettingsAdapters.onAppThemeChange === 'function') {
+      try {
+        window.visualSettingsAdapters.onAppThemeChange(theme);
+      } catch (err) {
+        console.warn('Error in visualSettingsAdapters.onAppThemeChange:', err);
+      }
+    }
   });
 
   async function readLinkedSourceForSave(sourcePath) {
@@ -26529,6 +27399,7 @@ ${selector} .arrowheadPath {
 
   async function writeLinkedMarkdownSource(tab, content) {
     if (!isLinkedDocument(tab)) return false;
+    await assertOutsideManagedVault(tab.sourcePath);
     const requestedSource = tab.sourcePath;
     const requestedBaseline = tab.sourceContentHash;
     let confirmed = false;
@@ -26549,24 +27420,6 @@ ${selector} .arrowheadPath {
         });
         if (!overwrite) return true;
         confirmed = true;
-      }
-    }
-
-    // Stronger conflict/recreation confirmations above remain mandatory even
-    // when the ordinary Save warning has been disabled. Avoid a second prompt.
-    if (!confirmed && shouldConfirmOriginalSave()) {
-      let disableWarning = false;
-      const accepted = await showLinkedConfirmation('This will update the original file on disk: ' + requestedSource, {
-        title: 'Save to original file?', confirmLabel: 'Save to original', cancelLabel: 'Cancel',
-        fullMessage: true,
-        dedupeKey: 'linked-original-save:' + tab.id, focusCancel: true,
-        checkbox: { label: 'Don’t show this warning again', onChange: function(checked) { disableWarning = checked; } }
-      });
-      if (!accepted) return true;
-      confirmed = true;
-      if (disableWarning) {
-        saveStorageItem(ORIGINAL_SAVE_WARNING_DISABLED_KEY, 'true');
-        updateOriginalSaveWarningControls();
       }
     }
 
@@ -26647,6 +27500,7 @@ ${selector} .arrowheadPath {
     if (!chosen) return null;
     const name = getNativePathName(chosen);
     const result = name.lastIndexOf('.') > 0 && !name.endsWith('.') ? chosen : chosen.replace(/\.+$/, '') + '.md';
+    await assertOutsideManagedVault(result);
     if (options && options.newLinked && tab.sourcePath && normalizeLinkedSourcePath(result) === normalizeLinkedSourcePath(tab.sourcePath)) {
       showAppToast('Choose a different path to create a new linked file. Use Save to update the current original.', { tone: 'warning', title: 'Choose a new file' });
       return null;
@@ -26654,12 +27508,6 @@ ${selector} .arrowheadPath {
     // The native picker provides no content snapshot for its overwrite approval.
     // Capture one and explicitly confirm existing destinations in the app.
     const expectedContent = await readLinkedSourceForSave(result);
-    if (options && options.requireNew && (expectedContent !== null || findTabBySourcePath(result))) {
-      showAppToast('Choose a new filename. Existing files and workspace links are never replaced when creating a linked file.', {
-        tone: 'warning', title: 'Choose a new file'
-      });
-      return null;
-    }
     if (expectedContent !== null && !(await showLinkedConfirmation('Replace the existing file at ' + result + '?', {
       title: 'Replace Markdown file?', confirmLabel: 'Replace', destructive: true, dedupeKey: 'save-overwrite:' + result, focusCancel: true
     }))) return null;
@@ -26689,9 +27537,7 @@ ${selector} .arrowheadPath {
     try {
       const parentPath = await Neutralino.os.showFolderDialog('Choose parent folder for the new linked copy');
       if (!parentPath) return;
-      const managedRoot = workspaceStorage && workspaceStorage.vaultPath ? normalizeLinkedSourcePath(workspaceStorage.vaultPath).replace(/\\/g, '/').replace(/\/$/, '') : '';
-      const chosenParent = normalizeLinkedSourcePath(parentPath).replace(/\\/g, '/').replace(/\/$/, '');
-      if (managedRoot && (chosenParent === managedRoot || chosenParent.startsWith(managedRoot + '/'))) throw new Error('Choose a destination outside the managed Vault storage.');
+      await assertOutsideManagedVault(parentPath);
       if (container) container.inert = true;
       const folder = getFolderById(folderId);
       if (!folder || folder.workspaceId !== DEFAULT_WORKSPACE_ID) throw new Error('The Vault folder changed. Retry from its current location.');
@@ -26774,54 +27620,6 @@ ${selector} .arrowheadPath {
       nativeMarkdownSaveInProgress = false;
       linkedReadEpoch++;
       renderTabBar(tabs, activeTabId); renderDocumentSidebar();
-    }
-  }
-  async function nativeCreateLinkedMarkdownFile() {
-    if (!hasDesktopFileAccess() || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) return;
-    nativeMarkdownSaveInProgress = true;
-    linkedReadEpoch++;
-    let destination = null;
-    let createdPath = null;
-    try {
-      const selection = await chooseMarkdownSavePath({ title: 'Untitled' }, { requireNew: true });
-      if (!selection || workspaceMaintenancePending || suspendWorkspacePersistence) return;
-      destination = normalizeLinkedSourcePath(selection.path);
-      linkedSourceSavePaths.add(destination);
-      // Check again after the picker and before writing. Never reuse a linked
-      // draft, including one whose original is currently missing.
-      if (await readLinkedSourceForSave(selection.path) !== null || findTabBySourcePath(selection.path)) {
-        showAppToast('The destination is now occupied. Nothing was written; choose another filename.', {
-          tone: 'warning', title: 'Creation cancelled'
-        });
-        return;
-      }
-      // Stock Neutralino has no exclusive-create API: an external process can
-      // still create a file between this last check and the native write.
-      await Neutralino.filesystem.writeFile(selection.path, '');
-      createdPath = selection.path;
-      if (await readNativeMarkdownSource(selection.path) !== '') throw new Error('The new file could not be verified.');
-      saveCurrentTabState();
-      const title = getNativePathName(selection.path).replace(/\.(md|markdown)$/i, '');
-      const linked = await openLinkedMarkdownDocument('', title, selection.path, { notify: false });
-      if (!linked) throw new Error('The new workspace link could not be opened.');
-      if (!(await _flushTabsToStorage(tabs, { changedIds: [linked.id] }))) {
-        throw new Error('The file was created at ' + selection.path + ', but its workspace link could not be persisted.');
-      }
-      await refreshLinkedSourceMonitoring();
-      markdownEditor.focus();
-      showAppToast('Created at ' + selection.path + '. Press Ctrl+S to save your edits to the original.', {
-        tone: 'success', title: 'Linked file created'
-      });
-    } catch (error) {
-      console.warn('Could not create linked Markdown file:', error);
-      const message = error.message || 'The new linked file could not be created.';
-      showAppToast(message + (createdPath && !message.includes(createdPath) ? ' The file was created at ' + createdPath + ' and was not removed.' : ''), {
-        tone: 'error', title: 'Creation failed'
-      });
-    } finally {
-      if (destination) linkedSourceSavePaths.delete(destination);
-      linkedReadEpoch++;
-      nativeMarkdownSaveInProgress = false;
     }
   }
 
@@ -26969,20 +27767,6 @@ ${selector} .arrowheadPath {
       } else {
         fileInput.click();
       }
-    });
-  }
-
-  if (linkFromFileButton) {
-    linkFromFileButton.addEventListener('click', function(event) {
-      event.preventDefault();
-      void nativeLinkMarkdownFiles();
-    });
-  }
-
-  if (linkFromFolderButton) {
-    linkFromFolderButton.addEventListener('click', function(event) {
-      event.preventDefault();
-      void nativeLinkMarkdownFolder();
     });
   }
 
@@ -34543,42 +35327,6 @@ ${selector} .arrowheadPath {
     }, 50);
   }
 
-  // Visual skeleton loader generator for emoji list
-  function renderEmojiSkeletons() {
-    const grid = document.getElementById('emoji-modal-grid');
-    if (!grid) return;
-    // PERF-007: Clear elements using textContent
-    grid.textContent = '';
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < 18; i++) {
-      const item = document.createElement('div');
-      item.className = 'emoji-item skeleton-placeholder';
-      item.setAttribute('aria-hidden', 'true');
-      item.style.border = '1px solid var(--border-color)';
-      item.style.borderRadius = '10px';
-      item.style.padding = '10px';
-      item.style.display = 'flex';
-      item.style.flexDirection = 'column';
-      item.style.alignItems = 'center';
-      item.style.gap = '8px';
-
-      const preview = document.createElement('span');
-      preview.className = 'emoji-preview skeleton-circle';
-      item.appendChild(preview);
-
-      const shortcodeRow = document.createElement('div');
-      shortcodeRow.className = 'emoji-shortcode';
-      const code = document.createElement('span');
-      code.className = 'skeleton-text';
-      code.style.width = '60px';
-      shortcodeRow.appendChild(code);
-      item.appendChild(shortcodeRow);
-
-      fragment.appendChild(item);
-    }
-    grid.appendChild(fragment);
-  }
-
   // Visual skeleton loader generator for GitHub file list tree
   function renderGitHubImportTreeSkeleton() {
     if (!githubImportTree) return;
@@ -34733,6 +35481,17 @@ ${selector} .arrowheadPath {
       activate: releaseNotesLaunch.activate
     });
   }
+
+  // Initialize Visual Library Settings (Issue #129)
+  window.renderMarkdown = renderMarkdown;
+  populateVisualSettingsOptions();
+  syncVisualSettingsUI();
+  if (window.visualSettingsStore) {
+    const initialVisualSettings = window.visualSettingsStore.getSettings();
+    // Optional theme/font downloads must not delay workspace readiness.
+    applyVisualSettings(initialVisualSettings, '*');
+  }
+
   document.documentElement.dataset.appReady = 'true';
   window.dispatchEvent(new Event('markdown-viewer:ready'));
 });

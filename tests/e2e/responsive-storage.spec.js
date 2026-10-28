@@ -458,7 +458,7 @@ test('dedicated Trash uses the shared application type scale at compact widths',
   await expect(page.locator('.trash-item-type, .trash-item-meta, .trash-item-copy')).toHaveCount(0);
   await expect(page.locator('.trash-item-expiry')).toHaveText('30 days');
   await expect(page.locator('.trash-item-expiry .lucide-clock-3')).toBeVisible();
-  await expect(page.locator('.trash-item-icon')).toHaveClass(/lucide-file-text/);
+  await expect(page.locator('.trash-item-icon')).toHaveClass(/\blucide-file\b/);
   const fileIcon = await page.locator('.trash-item-icon').evaluate(icon => ({
     tagName: icon.tagName,
     parentClass: icon.parentElement.className,
@@ -643,9 +643,11 @@ test('mobile layout exposes menu controls at 375px width', async ({ page }) => {
   expect(settingsOrder[0]).toBe('mobile-theme-toggle');
   expect(settingsOrder[1]).toContain('mobile-menu-language');
   expect(settingsOrder[2]).toBe('mobile-private-mode-toggle');
-  expect(settingsOrder[3]).toBe('mobile-storage-settings-button');
-  expect(settingsOrder[4]).toBe('mobile-trash-settings-button');
-  expect(settingsOrder[5]).toBe('mobile-tab-reset-btn');
+  expect(settingsOrder[3]).toBe('mobile-visual-settings-button');
+  expect(settingsOrder[4]).toBe('mobile-storage-settings-button');
+  expect(settingsOrder[5]).toBe('mobile-trash-settings-button');
+  expect(settingsOrder[6]).toBe('mobile-tab-reset-btn');
+  await expect(page.locator('#mobile-visual-settings-button')).toHaveText('Preview Styling');
   await expect(page.locator('#mobile-tab-reset-btn')).toBeVisible();
   await expect(page.locator('#mobile-about-button')).toBeVisible();
 

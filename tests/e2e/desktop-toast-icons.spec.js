@@ -3,7 +3,7 @@ const { openApp } = require('../helpers/app');
 const { installDesktopFilesystem } = require('../helpers/desktop-filesystem');
 
 for (const theme of ['light', 'dark']) {
-  test(`linked workflow toast icons are consistent and render in ${theme} theme`, async ({ page }) => {
+  test(`linked workflow status icons are consistent and render in ${theme} theme`, async ({ page }) => {
     await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window); window.NL_TOKEN = "test-token";');
     await openApp(page);
     await page.evaluate(theme => {
@@ -28,12 +28,27 @@ for (const theme of ['light', 'dark']) {
       expect(parseFloat(rendered.width)).toBeGreaterThan(0);
       return toast;
     };
+    const assertFolderProgress = async () => {
+      const card = page.locator('.linked-folder-progress-toast').last();
+      await expect(card).toHaveAttribute('data-state', 'complete');
+      await expect(card).toContainText('Folder linked');
+      const icon = card.locator('.import-progress-icon-shell > i');
+      await expect(icon).toHaveClass('lucide lucide-check import-progress-icon');
+      const rendered = await icon.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { mask: style.maskImage, width: style.width, height: style.height };
+      });
+      expect(rendered.mask).not.toBe('none');
+      expect(rendered.width).toBe(rendered.height);
+      expect(parseFloat(rendered.width)).toBeGreaterThan(0);
+      return card;
+    };
     await page.locator('#sidebar-link-folder').click();
-    await assertToast('Linked folder scanned.', 'success', 'lucide-check');
+    await assertFolderProgress();
     const location = page.locator('#document-tree [data-tree-type="linked-location"]');
     await location.dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
     await page.getByRole('menuitem', { name: 'Rescan folder' }).click();
-    await assertToast('Linked folder scanned.', 'success', 'lucide-check');
+    await assertFolderProgress();
     await page.locator('#sidebar-link-files').click();
     await assertToast('Linked files', 'success', 'lucide-check');
     await page.evaluate(async () => {

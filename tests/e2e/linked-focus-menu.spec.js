@@ -62,3 +62,26 @@ test('individual missing-source refresh waits until the context menu closes', as
   await page.keyboard.press('Escape');
   await expect(row).toHaveClass(/is-source-missing/);
 });
+
+test('draft persistence preserves an open linked-file context menu', async ({ page }) => {
+  await page.evaluate(async () => {
+    window.__desktopFiles.set('C:/one.md', '# original');
+    await window.NL_IMPORT_EXTERNAL_FILE('# original', 'one', 'C:/one.md');
+    await window.MarkdownViewerFlushWorkspace();
+    Neutralino.os.showSaveDialog = async () => 'C:/Saved/copy.md';
+    const editor = document.querySelector('#markdown-editor');
+    editor.value = '# edited draft';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    const row = document.querySelector('#document-tree [data-document-id="' + document.querySelector('#tab-list .tab-item.active').dataset.tabId + '"]');
+    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 120, clientY: 120 }));
+    window.__originalMenu = document.querySelector('.document-menu-context.open');
+    await window.MarkdownViewerFlushWorkspace();
+  });
+  expect(await page.evaluate(() => window.__originalMenu.isConnected)).toBe(true);
+  const menu = page.locator('.document-menu-context.open');
+  await expect(menu).toBeVisible();
+  await menu.locator('[data-action="save-as"]').click();
+  await expect(page.locator('#tab-list .tab-item.active .tab-title')).toHaveText('copy');
+  expect(await page.evaluate(() => window.__desktopFiles.get('C:/Saved/copy.md'))).toBe('# edited draft');
+  expect(await page.evaluate(() => window.__desktopFiles.get('C:/one.md'))).toBe('# original');
+});

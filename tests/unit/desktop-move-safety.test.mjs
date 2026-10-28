@@ -67,3 +67,24 @@ test('unavailable parent listing stops move rather than assuming absence', async
   assert.equal(s.target.__desktopFiles.get(s.original),'# original');
   assert.equal(s.target.__desktopFiles.has(s.destination),false);
 });
+
+test('distinct files differing only by case are still protected on a case-sensitive directory', async () => {
+  const s = await setup();
+  s.tab.title = 'before';
+  const destination = s.storage.vaultPath + '/' + await s.storage._desktopDocumentRelativePath(s.tab, {folders:[]});
+  s.target.__desktopFiles.set(destination, '# unrelated case-sensitive file');
+  await assert.rejects(s.save(), /destination.*exists/i);
+  assert.equal(s.target.__desktopFiles.get(s.original), '# original');
+  assert.equal(s.target.__desktopFiles.get(destination), '# unrelated case-sensitive file');
+});
+
+test('case-sensitive parent folders are not mistaken for aliases', async () => {
+  const s = await setup();
+  const first = s.storage.vaultPath + '/Workspace/Folder';
+  const second = s.storage.vaultPath + '/Workspace/folder';
+  await s.target.Neutralino.filesystem.createDirectory(first);
+  await s.target.Neutralino.filesystem.createDirectory(second);
+  s.target.__desktopFiles.set(first + '/note.md', '# first');
+  s.target.__desktopFiles.set(second + '/note.md', '# second');
+  await assert.rejects(s.storage._desktopCheckMovePaths(first + '/note.md', second + '/note.md'), /destination.*exists/i);
+});

@@ -9,12 +9,14 @@ const assetBodyCache = new Map();
 let appVersionPromise;
 
 const localBrowserAssets = [
+  ['https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js', 'node_modules/emoji-toolkit/lib/js/joypixels.min.js', 'application/javascript'],
+  ['https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/extras/css/joypixels.min.css', 'node_modules/emoji-toolkit/extras/css/joypixels.min.css', 'text/css'],
   ['https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css', 'node_modules/bootstrap/dist/css/bootstrap.min.css', 'text/css'],
   ['https://cdn.jsdelivr.net/npm/github-markdown-css@5.3.0/github-markdown.css', 'node_modules/github-markdown-css/github-markdown.css', 'text/css'],
   ['https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js', 'node_modules/marked/marked.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js', 'node_modules/@highlightjs/cdn-assets/highlight.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js', 'node_modules/@highlightjs/cdn-assets/languages/powershell.min.js', 'application/javascript'],
-  ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js', 'node_modules/dompurify/dist/purify.min.js', 'application/javascript'],
+  ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js', 'node_modules/dompurify/dist/purify.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js', 'node_modules/file-saver/dist/FileSaver.min.js', 'application/javascript'],
   ['https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js', 'node_modules/js-yaml/dist/js-yaml.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js', 'node_modules/bootstrap/dist/js/bootstrap.bundle.min.js', 'application/javascript'],
@@ -33,7 +35,7 @@ async function appVersion() {
   return appVersionPromise;
 }
 
-async function installLocalBrowserAssets(page) {
+async function installLocalBrowserAssets(page, options = {}) {
   if (routedPages.has(page)) return;
   routedPages.add(page);
 
@@ -50,26 +52,42 @@ async function installLocalBrowserAssets(page) {
     });
   }
 
-  await page.addInitScript(() => {
-    window.MathJax = {
-      startup: { promise: Promise.resolve() },
-      typesetPromise(targets = []) {
-        targets.forEach(target => {
-          if (target.querySelector('mjx-container[data-test-renderer]')) return;
-          const rendered = document.createElement('mjx-container');
-          rendered.dataset.testRenderer = 'true';
-          rendered.textContent = 'Rendered math';
-          target.appendChild(rendered);
-        });
-        return Promise.resolve();
-      },
-      typesetClear(targets = []) {
-        targets.forEach(target => {
-          target.querySelectorAll('mjx-container[data-test-renderer]').forEach(node => node.remove());
-        });
-      }
-    };
-  });
+  if (options.mockMathJax === false) {
+    // Exercise real rendering and network timing with locked, local packages.
+    await page.route(/^https:\/\/cdn\.jsdelivr\.net\/npm\/(mathjax@4\.0\.0-beta\.7|mathjax-(?:modern|stix2|asana)-font)\//, async route => {
+      const [, packageName, resource] = new URL(route.request().url()).pathname.match(/^\/npm\/([^/]+)\/(.+)$/);
+      const file = path.join(rootDir, 'node_modules', packageName.split('@')[0], resource);
+      if (!assetBodyCache.has(file)) assetBodyCache.set(file, fs.readFile(file));
+      await route.fulfill({
+        status: 200,
+        contentType: resource.endsWith('.woff') ? 'font/woff' : 'application/javascript',
+        body: await assetBodyCache.get(file)
+      });
+    });
+  }
+
+  if (options.mockMathJax !== false) {
+    await page.addInitScript(() => {
+      window.MathJax = {
+        startup: { promise: Promise.resolve() },
+        typesetPromise(targets = []) {
+          targets.forEach(target => {
+            if (target.querySelector('mjx-container[data-test-renderer]')) return;
+            const rendered = document.createElement('mjx-container');
+            rendered.dataset.testRenderer = 'true';
+            rendered.textContent = 'Rendered math';
+            target.appendChild(rendered);
+          });
+          return Promise.resolve();
+        },
+        typesetClear(targets = []) {
+          targets.forEach(target => {
+            target.querySelectorAll('mjx-container[data-test-renderer]').forEach(node => node.remove());
+          });
+        }
+      };
+    });
+  }
 }
 
 async function waitForAppReady(page) {
@@ -91,16 +109,7 @@ function isCriticalBrowserMessage(message) {
 async function openApp(page, url = '/', options = {}) {
   const expectEditorVisible = options.expectEditorVisible !== false;
   const criticalErrors = [];
-  await installLocalBrowserAssets(page);
-  // Existing filesystem/race scenarios exercise the explicit user opt-out.
-  // Confirmation UX tests opt into the production default instead.
-  if (options.originalSaveConfirmation !== true) {
-    await page.addInitScript(() => {
-      if (typeof window.NL_PORT !== 'undefined' && window.Neutralino) {
-        localStorage.setItem('markdownViewerOriginalSaveWarningDisabled', 'true');
-      }
-    });
-  }
+  await installLocalBrowserAssets(page, options);
   if (options.showReleaseNotes !== true) {
     const version = await appVersion();
     await page.addInitScript(currentVersion => {

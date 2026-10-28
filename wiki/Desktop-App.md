@@ -22,14 +22,21 @@ PlantUML and D2 contain an optional local-command code path, but it requires `os
 
 Linked Workspace keeps references to external Markdown files separate from independent
 Workspace (Vault) documents. Use the Explorer toolbar or Linked Workspace context menu
-to link files/folders, or create a new external linked file. Linking the same normalized
+and choose **Link file** or **Link folder** to link existing files/folders. The header's
+plus menu stays the same as the web app: **New document**, **From files**, and **From GitHub**.
+Workspace and folder icons turn blue when expanded, independently of the active document.
+Linking the same normalized
 source path reuses its existing document. Folder linking includes nested Markdown files.
+
+Right-click a linked folder or subfolder to group existing links inside it. This sidebar
+organization does not move originals or change filesystem scan roots. Independently
+grouped links remain available if their parent source folder is removed or converted.
 
 - Edits autosave recovery drafts under the separate **Linked Workspace** storage root,
   mirroring linked-folder subdirectories. They do not automatically overwrite originals.
 - **Save / Ctrl+S** writes the selected linked original after preserving and verifying
-  its recovery draft. The ordinary original-save confirmation can be disabled in the
-  dialog and enabled again in Settings; conflict/missing-source decisions remain explicit.
+  its recovery draft, without an ordinary confirmation prompt. Conflict/missing-source
+  decisions remain explicit.
 - **Save As…** creates a separate external file/link. **Save As linked file…** on a Vault
   document keeps its Vault copy and activates the new link. Dialogs suggest the document
   title and append `.md` when no extension is supplied. Ctrl+S recognizes keyboard layouts;
@@ -42,13 +49,19 @@ source path reuses its existing document. Folder linking includes nested Markdow
   Vault folder to a new external directory, preserves Vault documents and links the result.
 - Removing linked files/folders removes application references, not originals. Automatic
   scans respect removed links; explicit Rescan or re-linking the same folder restores them.
+  Removal and conversion exclusions apply to every covering linked root, including
+  separately linked parent and child folders.
 - External changes refresh unmodified drafts. Conflicts, missing sources and incomplete
   scans retain drafts and show distinct hover indicators rather than repeated alerts.
   Reload, overwrite and recreation decisions use application confirmations.
-- A built-in editable guide explains these workflows. Both built-in guides have a book
-  icon; identity comes from metadata, not an arbitrary document's title.
+- A built-in editable quick-start guide opens in Split view and explains these workflows
+  with a step-by-step diagram, quick-start instructions, and action tables. Both welcome guides use
+  the `book-open` icon; guide identity comes from metadata, not an arbitrary document's title.
 - Workspace backups include normal and linked recovery documents. Imported backups
   recover drafts but do not reconnect external paths or authorize writes to originals.
+- Linked documents cannot move directly into Secret Workspace. Convert to a Vault copy
+  first. Moving a Vault document into Secret saves its encrypted record before removing
+  the active plaintext copy and its automatic history; a failed cleanup reports a failed move.
 
 External HTML drops continue importing Vault copies. Native-path drop choice and
 single-instance handling are separate runtime-dependent proposals, not enabled by this
@@ -181,6 +194,7 @@ chmod +x markdown-viewer-mac_universal
 
 - Normal documents are ordinary `.md` files under the fixed `Documents/Markdown Viewer Vault/Workspace` path.
 - Vault metadata, up to 20 recent history copies per document, trash, recovery journals, settings, and opaque encrypted Secret Workspace records are kept under the same vault.
+- Linked documents keep separate recovery drafts under the vault. After a recovered copy is saved successfully, only its matching captured journal is consumed; failed saves or a newer replacement journal remain recoverable instead of being deleted.
 - Replacement binaries check the fixed vault path automatically. Use **Storage and Backup** to inspect, back up, import, or open it.
 - Importing a ZIP backup replaces the current workspace. ZIP backups exclude vault history, trash, and recovery journals; copy the full vault separately when those records must also be retained.
 - Native file access happens through explicit open/save actions or launch arguments.
