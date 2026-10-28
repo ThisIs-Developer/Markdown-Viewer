@@ -171,24 +171,35 @@ const desktopAppReady = new Promise(function(resolve) {
   window.addEventListener('markdown-viewer:ready', resolve, { once: true });
 });
 let secondInstanceQueue = Promise.resolve();
+let nativeDropQueue = Promise.resolve();
 
 async function resolveLaunchMarkdownPaths(args, cwd) {
   const paths = [];
+  const seen = new Set();
   for (const arg of args) {
     if (typeof arg !== 'string' || arg.startsWith('-') || !/\.(md|markdown)$/i.test(arg)) continue;
-    let filePath = arg;
-    if (!/^(?:[a-z]:[/\\]|[/\\]{2})/i.test(arg)) {
-      // Drive-relative paths (C:notes.md) require per-drive cwd state we do not have.
-      if (/^[a-z]:/i.test(arg) || !cwd) continue;
-      if (/^[/\\]/.test(arg)) {
-        const drive = /^[a-z]:/i.exec(cwd);
-        if (!drive) continue;
-        filePath = drive[0] + arg;
-      } else {
-        filePath = await Neutralino.filesystem.getJoinedPath(cwd, arg);
+    try {
+      let filePath = arg;
+      if (!/^(?:[a-z]:[/\\]|[/\\]{2})/i.test(arg)) {
+        // Drive-relative paths (C:notes.md) require per-drive cwd state we do not have.
+        if (/^[a-z]:/i.test(arg) || !cwd) continue;
+        if (/^[/\\]/.test(arg)) {
+          const drive = /^[a-z]:/i.exec(cwd);
+          if (!drive) continue;
+          filePath = drive[0] + arg;
+        } else {
+          filePath = await Neutralino.filesystem.getJoinedPath(cwd, arg);
+        }
       }
+      const normalized = await Neutralino.filesystem.getNormalizedPath(filePath);
+      if (typeof normalized === 'string' && !seen.has(normalized.toLowerCase())) {
+        seen.add(normalized.toLowerCase());
+        paths.push(normalized);
+      }
+    } catch (error) {
+      // A malformed/unavailable argument must not poison later launch requests.
+      console.warn('Could not resolve Markdown launch path:', arg, error);
     }
-    paths.push(await Neutralino.filesystem.getNormalizedPath(filePath));
   }
   return paths;
 }
@@ -208,7 +219,7 @@ function onDesktopSecondInstance(event) {
   return secondInstanceQueue;
 }
 
-async function onDesktopFilesDropped(event) {
+function onDesktopFilesDropped(event) {
   const detail = event && event.detail;
   const droppedItems = Array.isArray(detail)
     ? detail
@@ -219,9 +230,17 @@ async function onDesktopFilesDropped(event) {
     if (item && typeof item.filePath === 'string') return item.filePath;
     return '';
   }).filter(Boolean);
-  if (!paths.length || typeof window.NL_HANDLE_NATIVE_DROP !== 'function') return;
-  await window.NL_HANDLE_NATIVE_DROP(paths);
-  await focusDesktopWindow();
+  if (!paths.length) return Promise.resolve();
+  nativeDropQueue = nativeDropQueue.then(async function() {
+    await desktopAppReady;
+    await initialFileLoad;
+    if (typeof window.NL_HANDLE_NATIVE_DROP !== 'function') return;
+    await focusDesktopWindow();
+    await window.NL_HANDLE_NATIVE_DROP(paths);
+  }).catch(function(error) {
+    console.warn('Could not process native file drop:', error);
+  });
+  return nativeDropQueue;
 }
 
 // Initialize Neutralino if in native environment
@@ -230,15 +249,15 @@ if (isNeutralinoRuntime()) {
       window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeSingleInstance === true) {
     Neutralino.events.on("secondInstance", onDesktopSecondInstance);
   }
+  if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows' &&
+      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeFileDrop === true) {
+    Neutralino.events.on("filesDropped", onDesktopFilesDropped);
+  }
   Neutralino.init();
 
   // Register event listeners
   Neutralino.events.on("trayMenuItemClicked", onTrayMenuItemClicked);
   Neutralino.events.on("windowClose", onWindowClose);
-  if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows' &&
-      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeFileDrop === true) {
-    Neutralino.events.on("filesDropped", onDesktopFilesDropped);
-  }
 
   // Conditional initialization: Set up system tray if not running on macOS
   if (typeof NL_OS !== 'undefined' && NL_OS != "Darwin") {

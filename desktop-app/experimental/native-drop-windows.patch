@@ -1,0 +1,100 @@
+diff --git a/lib/webview/webview.h b/lib/webview/webview.h
+--- a/lib/webview/webview.h
++++ b/lib/webview/webview.h
+@@ -969,6 +1052,7 @@ namespace webview {
+ 
+ class DropTarget : public IDropTarget {
+   ULONG ref = 1;
++  bool hasFiles = false;
+ 
+   public:
+     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv) override {
+@@ -994,16 +1078,19 @@ class DropTarget : public IDropTarget {
+       DWORD,
+       POINTL,
+       DWORD* effect) override {
+-        *effect = DROPEFFECT_COPY;
++        FORMATETC fmt = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
++        hasFiles = (data && data->QueryGetData(&fmt) == S_OK);
++        *effect = hasFiles ? DROPEFFECT_COPY : DROPEFFECT_NONE;
+         return S_OK;
+     }
+ 
+     HRESULT STDMETHODCALLTYPE DragOver(DWORD, POINTL, DWORD* effect) override {
+-      *effect = DROPEFFECT_COPY;
++      *effect = hasFiles ? DROPEFFECT_COPY : DROPEFFECT_NONE;
+       return S_OK;
+     }
+ 
+     HRESULT STDMETHODCALLTYPE DragLeave() override {
++      hasFiles = false;
+       return S_OK;
+     }
+ 
+@@ -1019,9 +1106,12 @@ class DropTarget : public IDropTarget {
+             HDROP hDrop = (HDROP)GlobalLock(medium.hGlobal);
+             UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
+             for(UINT i = 0; i < count; i++) {
+-                wchar_t path[MAX_PATH];
+-                DragQueryFileW(hDrop, i, path, MAX_PATH);
+-                droppedPaths.push_back(wstr2str(path));
++                UINT len = DragQueryFileW(hDrop, i, nullptr, 0);
++                if (len > 0) {
++                    std::vector<wchar_t> path(len + 1);
++                    DragQueryFileW(hDrop, i, path.data(), len + 1);
++                    droppedPaths.push_back(wstr2str(path.data()));
++                }
+             }
+             GlobalUnlock(medium.hGlobal);
+             ReleaseStgMedium(&medium);
+@@ -1264,6 +1354,7 @@ class win32_edge_engine {
+             switch (msg) {
+             case WM_SIZE:
+               w->m_browser->resize(hwnd);
++              w->registerDropTargets();
+               if(!windowStateChange) break;
+               if(wp == SIZE_MINIMIZED) 
+                 windowStateChange(WEBVIEW_WINDOW_MINIMIZED);
+@@ -1404,10 +1495,8 @@ class win32_edge_engine {
+ 
+     if(emitDropEvents) {
+       OleInitialize(nullptr);
+-      RevokeDragDrop(m_window);
+-      ComPtr<DropTarget> dropTarget = new DropTarget();
+-      RegisterDragDrop(m_window, dropTarget.Get());
+-      DragAcceptFiles(m_window, TRUE);
++      m_dropTarget = new DropTarget();
++      registerDropTargets();
+     }
+   }
+ 
+@@ -1508,6 +1597,20 @@ class win32_edge_engine {
+   void init(const std::string js) { m_browser->init(js); }
+   void extend_user_agent(const std::string customAgent) { m_browser->extend_user_agent(customAgent); }
+ 
++  void registerDropTargets() {
++    if(!m_dropTarget) return;
++    RevokeDragDrop(m_window);
++    RegisterDragDrop(m_window, m_dropTarget.Get());
++    DragAcceptFiles(m_window, TRUE);
++    EnumChildWindows(m_window, [](HWND childHwnd, LPARAM lParam) -> BOOL {
++      IDropTarget* target = reinterpret_cast<IDropTarget*>(lParam);
++      RevokeDragDrop(childHwnd);
++      RegisterDragDrop(childHwnd, target);
++      DragAcceptFiles(childHwnd, TRUE);
++      return TRUE;
++    }, reinterpret_cast<LPARAM>(m_dropTarget.Get()));
++  }
++
+   DWORD m_originalStyleEx;
+ 
+ protected:
+@@ -1531,6 +1634,7 @@ class win32_edge_engine {
+   DWORD m_main_thread = GetCurrentThreadId();
+   std::unique_ptr<webview::edge_chromium> m_browser =
+       std::make_unique<webview::edge_chromium>();
++  ComPtr<DropTarget> m_dropTarget;
+ 
+ };
+ 
+

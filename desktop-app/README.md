@@ -65,6 +65,9 @@ npm run dev
 
 ## Build
 
+For the opt-in Windows native drop/single-instance trial executable, see the
+[native runtime demo instructions](experimental/README.md).
+
 ```bash
 npm run build
 ```

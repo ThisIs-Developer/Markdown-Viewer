@@ -1,0 +1,60 @@
+name: Windows Native Runtime Demo
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-native-demo.yml'
+      - 'desktop-app/build-native-demo.js'
+      - 'desktop-app/experimental/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-demo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-demo:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit
+      - run: node assets/i18n/audit-ui-locales.mjs
+      - name: Checkout pinned single-instance runtime
+        uses: actions/checkout@v4
+        with:
+          repository: Kechos23/neutralinojs
+          ref: 3c307cba7c6de5eb10db614ae8daad99bf44e51d
+          path: desktop-app/.tmp/neutralino-source
+          persist-credentials: false
+      - name: Apply Windows drop patch
+        working-directory: desktop-app/.tmp/neutralino-source
+        run: git apply --check ../../experimental/native-drop-windows.patch; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git apply ../../experimental/native-drop-windows.patch
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile reviewed Windows runtime
+        run: |
+          cmake -S desktop-app/.tmp/neutralino-source -B desktop-app/.tmp/neutralino-source/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build desktop-app/.tmp/neutralino-source/build --parallel 4
+      - name: Prepare desktop dependencies
+        run: npm --prefix desktop-app run setup
+      - name: Package isolated native demo
+        run: node desktop-app/build-native-demo.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Markdown-Viewer-PR269-Windows-Native-Demo
+          path: desktop-app/dist/native-demo/
+          if-no-files-found: error
+          retention-days: 30

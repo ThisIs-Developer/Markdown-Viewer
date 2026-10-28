@@ -4,7 +4,9 @@
   const DATABASE_NAME = 'markdownViewerWorkspace';
   const DATABASE_VERSION = 3;
   const VAULT_FORMAT_VERSION = 1;
-  const VAULT_NAME = 'Markdown Viewer Vault';
+  const ISOLATED_DEMO_VAULT = isDesktopRuntime() && window.NL_OS === 'Windows' &&
+    window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.isolatedVault === true;
+  const VAULT_NAME = ISOLATED_DEMO_VAULT ? 'Markdown Viewer Native Demo Vault' : 'Markdown Viewer Vault';
   const LEGACY_VAULT_LOCATOR_KEY = 'markdownViewerVaultLocator';
   const LEGACY_PORTABLE_LOCATOR_FILE = '.markdown-viewer-vault-locator.json';
   const LEGACY_TABS_KEY = 'markdownViewerTabs';
@@ -532,7 +534,7 @@
     async _initDesktop() {
       const documentsPath = await Neutralino.os.getPath('documents');
       // Cleanup from the preview locator design is non-blocking and never gates startup.
-      this._removeLegacyVaultLocator(documentsPath);
+      if (!ISOLATED_DEMO_VAULT) this._removeLegacyVaultLocator(documentsPath);
       const vaultPath = await this._pathJoin(documentsPath, VAULT_NAME);
       this.vaultPath = vaultPath;
 

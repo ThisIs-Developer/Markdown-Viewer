@@ -7008,7 +7008,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           target.classList.add('is-drop-target');
           scheduleDocumentTreeDragExpansion(target, destination);
         } else clearDocumentTreeDragExpansion();
-        activeDocumentDragPreview.dataset.dropAction = destination ? (hasLinked ? 'Convert to Workspace copy' : 'Move here') : 'Cannot drop here';
+        activeDocumentDragPreview.dataset.dropAction = translateUiString(destination ? (hasLinked ? 'Convert to Workspace copy' : 'Move here') : 'Cannot drop here');
         if (hit && hit.closest('#document-tree')) updateDocumentTreeAutoScroll(event);
         else stopDocumentTreeAutoScroll();
       }, listenerOptions);
@@ -13269,78 +13269,140 @@ document.addEventListener("DOMContentLoaded", async function () {
     return linkMarkdownFolderWithProgress(folderPath, { silent: true });
   };
 
-  window.NL_HANDLE_NATIVE_DROP = async function(paths) {
-    if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
-    if (!useExperimentalNativeFileDrop()) return;
+  let nativeDropQueue = Promise.resolve();
+  window.NL_HANDLE_NATIVE_DROP = function(paths) {
+    if (workspaceMaintenancePending || suspendWorkspacePersistence || !useExperimentalNativeFileDrop()) return Promise.resolve(0);
+    const readEpoch = linkedReadEpoch;
     const values = (Array.isArray(paths) ? paths : []).map(function(item) {
       if (typeof item === 'string') return item;
       if (item && typeof item.path === 'string') return item.path;
       if (item && typeof item.filePath === 'string') return item.filePath;
       return '';
     }).filter(Boolean);
+    const mediaTarget = { tabId: activeTabId, content: markdownEditor.value,
+      start: markdownEditor.selectionStart, end: markdownEditor.selectionEnd };
+    const operation = nativeDropQueue.then(function() { return processNativeDrop(values, readEpoch, mediaTarget); });
+    nativeDropQueue = operation.catch(function(error) {
+      console.warn('Native drop failed:', error);
+      showAppToast('The dropped items could not be added. Please try again.', { tone: 'error', title: 'Import failed' });
+      return 0;
+    });
+    return nativeDropQueue;
+  };
+
+  async function processNativeDrop(values, readEpoch, mediaTarget) {
+    const canApply = function() { return !workspaceMaintenancePending && !suspendWorkspacePersistence && readEpoch === linkedReadEpoch; };
+    if (!canApply()) return 0;
+    const uniquePaths = Array.from(new Map(values.map(function(filePath) {
+      return [normalizeLinkedSourcePath(filePath), filePath];
+    })).values());
+    if (uniquePaths.length > 1000) {
+      showAppToast('Too many dropped items. Drop at most 1,000 files or folders at a time.', { tone: 'error', title: 'Import failed' });
+      return 0;
+    }
     const markdownPaths = [];
     const folderPaths = [];
+    const mediaPaths = [];
+    const failedNames = [];
+    let unsupported = false;
     let linkedFiles = 0;
     let linkedFolders = 0;
-    for (const filePath of values) {
+    let copiedFiles = 0;
+    let insertedMedia = 0;
+    for (const filePath of uniquePaths) {
+      if (!canApply()) return 0;
       try {
         const stats = await Neutralino.filesystem.getStats(filePath);
         if (stats && stats.isDirectory) {
           folderPaths.push(filePath);
         } else if (/\.(md|markdown)$/i.test(filePath)) {
           markdownPaths.push(filePath);
+        } else if (isMediaFile({ name: getNativePathName(filePath) })) {
+          mediaPaths.push(filePath);
+        } else {
+          unsupported = true;
         }
       } catch (error) {
         console.warn('Dropped path could not be inspected:', filePath, error);
+        failedNames.push(getNativePathName(filePath));
       }
     }
-
-    for (const folderPath of folderPaths) {
+    if (!canApply()) return 0;
+    let dropMode = null;
+    if (markdownPaths.length) {
+      dropMode = await chooseDesktopMarkdownDropMode(markdownPaths.map(function(filePath) {
+        return { name: getNativePathName(filePath), path: filePath };
+      }), { folders: folderPaths.length, media: mediaPaths.length });
+      // No folder linking, file import or media upload happens before this choice.
+      if (!dropMode || !canApply()) return 0;
+    }
+    for (const filePath of mediaPaths) {
+      if (!canApply()) return 0;
       try {
-        if (await addLinkedFolderPath(folderPath, { silent: true })) linkedFolders++;
+        const name = getNativePathName(filePath);
+        const descriptor = { name: name };
+        const video = isVideoFile(descriptor);
+        const mime = video ? getManagedVideoMime(descriptor) : getEmbeddedRasterMime(descriptor);
+        const limit = video ? MANAGED_VIDEO_MAX_BYTES : mime === 'image/gif' ? MANAGED_GIF_MAX_BYTES : MAX_LOCAL_IMAGE_BYTES;
+        const content = await MarkdownNativeSourceReader.readBinary(Neutralino.filesystem, filePath, limit);
+        if (!canApply()) return 0;
+        if (activeTabId !== mediaTarget.tabId || markdownEditor.value !== mediaTarget.content) {
+          announceToScreenReader('Media insertion was cancelled because the document changed.');
+          break;
+        }
+        const count = await insertImageFilesIntoEditor([new File([content], name, { type: mime })], {
+          source: 'drop', selectionStart: mediaTarget.start, selectionEnd: mediaTarget.end
+        });
+        if (!count) break; // Respect consent cancellation for the whole media batch.
+        insertedMedia += count;
+        mediaTarget.content = markdownEditor.value;
+        mediaTarget.start = markdownEditor.selectionStart;
+        mediaTarget.end = markdownEditor.selectionEnd;
+      } catch (error) {
+        console.warn('Dropped media could not be imported:', filePath, error);
+        failedNames.push(getNativePathName(filePath));
+      }
+    }
+    for (const folderPath of folderPaths) {
+      if (!canApply()) return 0;
+      try {
+        if (await linkMarkdownFolderWithProgress(folderPath, { silent: true })) linkedFolders++;
+        else if (canApply()) failedNames.push(getNativePathName(folderPath));
       } catch (error) {
         console.warn('Dropped folder could not be linked:', folderPath, error);
+        failedNames.push(getNativePathName(folderPath));
       }
     }
-
-    if (markdownPaths.length) {
-      const dropMode = await chooseDesktopMarkdownDropMode(markdownPaths.map(function(filePath) {
-        return { name: getNativePathName(filePath), path: filePath };
-      }));
-      if (dropMode === 'link') {
-        for (const filePath of markdownPaths) {
-          try {
-            if (await addLinkedFilePath(filePath, { open: false })) linkedFiles++;
-          } catch (error) {
-            console.warn('Dropped file could not be linked:', filePath, error);
-          }
-        }
-      } else if (dropMode === 'copy') {
-        const droppedCopies = [];
-        for (const filePath of markdownPaths) {
-          try {
-            const content = await readNativeMarkdownSource(filePath);
-            droppedCopies.push(new File([content], getNativePathName(filePath), { type: 'text/markdown' }));
-          } catch (error) {
-            console.warn('Dropped file could not be imported:', filePath, error);
-          }
-        }
-        const copiedFiles = await importMarkdownFiles(droppedCopies, {
-          location: { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null },
-          showInvalidAlert: false
-        });
-        if (copiedFiles) {
-          showAppToast(copiedFiles + ' file' + (copiedFiles === 1 ? '' : 's') + ' imported as independent Vault ' + (copiedFiles === 1 ? 'copy' : 'copies') + '.', {
-            tone: 'success',
-            title: 'Imported to Vault'
+    for (const filePath of markdownPaths) {
+      if (!canApply()) return 0;
+      try {
+        if (dropMode === 'link') {
+          if (await addLinkedFilePath(filePath, { open: false })) linkedFiles++;
+          else if (canApply()) failedNames.push(getNativePathName(filePath));
+        } else if (dropMode === 'copy') {
+          // Import one bounded file at a time instead of retaining an entire batch.
+          const content = await readNativeMarkdownSource(filePath);
+          if (!canApply()) return 0;
+          const count = await importMarkdownFiles([new File([content], getNativePathName(filePath), { type: 'text/markdown' })], {
+            location: { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null }, showInvalidAlert: false, requireExactCommit: true
           });
+          copiedFiles += count;
+          if (!count && canApply()) failedNames.push(getNativePathName(filePath));
         }
+      } catch (error) {
+        console.warn('Dropped Markdown could not be added:', filePath, error);
+        failedNames.push(getNativePathName(filePath));
       }
     }
+    if (!canApply()) return 0;
+    if (unsupported) showUnsupportedFileToast('Dropped files must be Markdown, image, GIF, MP4, WebM, or Ogg files.');
     if (linkedFiles || linkedFolders) {
-      showAppToast('Linked ' + linkedFiles + ' file' + (linkedFiles === 1 ? '' : 's') + ' and ' + linkedFolders + ' folder' + (linkedFolders === 1 ? '' : 's') + '. Originals remain on disk.', { tone: 'success', title: 'Desktop drop linked' });
+      showAppToast('Linked files: ' + linkedFiles + '. Linked folders: ' + linkedFolders + '. Originals remain on disk.', { tone: 'success', title: 'Linked files' });
     }
-  };
+    if (copiedFiles) showAppToast('Files imported to Vault: ' + copiedFiles + '.', { tone: 'success', title: 'Imported to Vault' });
+    if (failedNames.length) showAppToast(translateUiString('Could not add dropped items: {{0}}').replace('{{0}}', failedNames.slice(0, 5).join(', ')), { tone: 'warning', title: 'Import failed' });
+    return linkedFiles + linkedFolders + copiedFiles + insertedMedia;
+  }
 
   function isTabOpen(tab) {
     return Boolean(tab && tab.isOpen !== false);
@@ -17670,13 +17732,14 @@ ${selector} .arrowheadPath {
     return tab;
   }
 
-  async function persistImportedDocuments(documentIds) {
+  async function persistImportedDocuments(documentIds, options) {
     const ids = Array.from(documentIds || []).filter(Boolean);
     if (!ids.length) return;
     saveTabsToStorage(tabs, ids);
-    await _flushTabsToStorage(tabs, { changedIds: ids });
+    const saved = await _flushTabsToStorage(tabs, { changedIds: ids, requireExactCommit: options && options.requireExactCommit });
     evictInactiveDocumentContent();
     renderDocumentSidebar();
+    if (options && options.requireExactCommit && !saved) throw new Error('The dropped copy could not be saved.');
   }
 
   function importMarkdownFile(file, location) {
@@ -17745,7 +17808,7 @@ ${selector} .arrowheadPath {
       }
       updateImportProgress(index + 1, filesToImport.length);
     }
-    await persistImportedDocuments(importedDocumentIds);
+    await persistImportedDocuments(importedDocumentIds, settings);
     if (settings.location && settings.location.workspaceId === SECRET_WORKSPACE_ID && isSecretWorkspaceUnlocked()) {
       await flushSecretWorkspaceToStorage();
     }
@@ -32753,7 +32816,7 @@ ${selector} .arrowheadPath {
     }
   }
 
-  function chooseDesktopMarkdownDropMode(files) {
+  function chooseDesktopMarkdownDropMode(files, options) {
     const modal = document.getElementById('desktop-drop-modal');
     const linkButton = document.getElementById('desktop-drop-link');
     const copyButton = document.getElementById('desktop-drop-copy');
@@ -32761,17 +32824,15 @@ ${selector} .arrowheadPath {
     const closeButton = document.getElementById('desktop-drop-modal-close');
     const summary = document.getElementById('desktop-drop-file-summary');
     if (!modal || !linkButton || !copyButton || !cancelButton || !closeButton) {
-      return Promise.resolve('copy');
+      return Promise.resolve(null);
     }
 
     const droppedFiles = Array.from(files || []);
     if (summary) {
-      const names = droppedFiles.slice(0, 3).map(function(file) { return file.name; }).filter(Boolean);
-      const remainder = Math.max(0, droppedFiles.length - names.length);
-      summary.textContent = droppedFiles.length === 1
-        ? 'Dropped: ' + (names[0] || '1 Markdown file')
-        : 'Dropped ' + droppedFiles.length + ' Markdown files: ' + names.join(', ') + (remainder ? ' and ' + remainder + ' more' : '');
+      summary.textContent = translateUiString('Dropped Markdown files: {{0}}').replace('{{0}}', droppedFiles.map(function(file) { return file.name; }).join(', '));
     }
+    const otherItems = document.getElementById('desktop-drop-other-items');
+    if (otherItems) otherItems.hidden = !(options && (options.folders || options.media));
 
     if (typeof cancelPendingDesktopDropChoice === 'function') cancelPendingDesktopDropChoice();
     return new Promise(function(resolve) {
@@ -32781,13 +32842,14 @@ ${selector} .arrowheadPath {
         copyButton.removeEventListener('click', chooseCopy);
         cancelButton.removeEventListener('click', cancel);
         closeButton.removeEventListener('click', cancel);
+        modal._confirmationCancel = null;
         if (cancelPendingDesktopDropChoice === cancel) cancelPendingDesktopDropChoice = null;
       }
-      function finish(value) {
+      function finish(value, alreadyClosing) {
         if (settled) return;
         settled = true;
         cleanup();
-        closeAppModal(modal);
+        if (!alreadyClosing) closeAppModal(modal);
         resolve(value);
       }
       function chooseLink() { finish('link'); }
@@ -32799,7 +32861,8 @@ ${selector} .arrowheadPath {
       copyButton.addEventListener('click', chooseCopy);
       cancelButton.addEventListener('click', cancel);
       closeButton.addEventListener('click', cancel);
-      openAppModal(modal, { focusTarget: linkButton, onClose: cancel });
+      modal._confirmationCancel = function() { finish(null, true); };
+      openAppModal(modal, { focusTarget: cancelButton, onClose: cancel });
     });
   }
 
@@ -32814,8 +32877,21 @@ ${selector} .arrowheadPath {
       return isMediaFile(file) || isMarkdownFile(file);
     }).length;
     let handledCount = 0;
+    let mode = 'copy';
+    if (markdownFiles.length && useExperimentalNativeFileDrop()) {
+      mode = await chooseDesktopMarkdownDropMode(markdownFiles, { media: imageFiles.length });
+      if (!mode) return 0;
+    }
     if (supportedFileCount !== files.length) {
       showUnsupportedFileToast('Dropped files must be Markdown, image, GIF, MP4, WebM, or Ogg files.');
+    }
+    if (markdownFiles.length && mode === 'link') {
+      showAppToast('Confirm the dropped Markdown file in the Windows dialog so Markdown Viewer can retain its real path.', {
+        tone: 'info', title: 'Confirm linked file'
+      });
+      const linkedCount = await nativeLinkMarkdownFiles();
+      if (!linkedCount) return 0;
+      handledCount += linkedCount;
     }
     if (imageFiles.length) {
       const insertedCount = await insertImageFilesIntoEditor(imageFiles, { source: 'drop' });
@@ -32824,17 +32900,7 @@ ${selector} .arrowheadPath {
         alert('Open an editable Markdown file before inserting images.');
       }
     }
-    if (markdownFiles.length) {
-      if (useExperimentalNativeFileDrop()) {
-        const mode = await chooseDesktopMarkdownDropMode(markdownFiles);
-        if (!mode) return handledCount;
-        if (mode === 'link') {
-          showAppToast('Confirm the dropped Markdown file in the Windows dialog so Markdown Viewer can retain its real path.', {
-            tone: 'info', title: 'Confirm linked file'
-          });
-          return handledCount + await nativeLinkMarkdownFiles();
-        }
-      }
+    if (markdownFiles.length && mode === 'copy') {
       handledCount += await importMarkdownFiles(markdownFiles, {
         location: settings.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null },
         showInvalidAlert: false
