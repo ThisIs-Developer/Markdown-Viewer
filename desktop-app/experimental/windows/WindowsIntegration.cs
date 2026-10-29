@@ -33,7 +33,8 @@ internal sealed class Registration {
     }
     bool Exists(string path) { using(var key = Registry.CurrentUser.OpenSubKey(Key(path))) return key != null; }
     string[] OwnedKeys(string executable) {
-        return new [] { "Classes\\Applications\\" + Path.GetFileName(executable), "Classes\\" + ProgId, Id };
+        return new [] { "Classes\\Applications\\" + Path.GetFileName(executable), "Classes\\" + ProgId, Id,
+            "Microsoft\\Windows\\CurrentVersion\\App Paths\\" + Path.GetFileName(executable) };
     }
     internal void Register(string executable) {
         var registeredPath = Key(Id + "\\Capabilities");
@@ -58,6 +59,8 @@ internal sealed class Registration {
         Put(prog, "", "Markdown document");
         Put(prog + "\\Application", "ApplicationName", "Markdown Viewer");
         Put(prog + "\\Application", "ApplicationIcon", icon);
+        Put(prog + "\\Application", "ApplicationDescription", "Markdown Viewer");
+        Put(prog + "\\Application", "ApplicationCompany", "Markdown Viewer contributors");
         Put(prog + "\\DefaultIcon", "", icon);
         Put(prog + "\\shell\\open\\command", "", command);
         // Windows requires the capability name and RegisteredApplications value
@@ -65,6 +68,7 @@ internal sealed class Registration {
         Put(capabilities, "ApplicationName", RegisteredName);
         Put(capabilities, "ApplicationDescription", "Markdown Viewer");
         Put(capabilities, "ApplicationIcon", icon);
+        Put(OwnedKeys(executable)[3], "", executable);
         foreach(var extension in new [] { ".md", ".markdown" }) {
             Put(app + "\\SupportedTypes", extension, "");
             Put("Classes\\" + extension + "\\OpenWithProgids", ProgId, "");
@@ -79,6 +83,8 @@ internal sealed class Registration {
         // An old portable copy cannot remove a newer copy's registration.
         if(!String.Equals(Get(Id, "ExecutablePath"), executable, StringComparison.OrdinalIgnoreCase)) return;
         foreach(var key in OwnedKeys(executable)) {
+            // Earlier portable helpers did not register App Paths.
+            if(!Exists(key)) continue;
             if(Get(key, "MarkdownViewerOwner") != Id || !String.Equals(Get(key, "ExecutablePath"), executable, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Registration ownership changed.");
         }
@@ -111,12 +117,16 @@ internal sealed class Registration {
             check(test.Get("Classes\\.md") == "Other.Application");
             check(test.Get("Classes\\" + ProgId + "\\shell\\open\\command") == "\"" + first + "\" \"%1\"");
             check(test.Get("Classes\\.markdown\\OpenWithProgids", ProgId) == "");
+            check(test.Get(test.OwnedKeys(first)[3]) == first);
+            // Migration must tolerate the older helper's missing App Paths key.
+            Registry.CurrentUser.DeleteSubKeyTree(test.Key(test.OwnedKeys(first)[3]), false);
             test.Register(second);
             test.Unregister(first);
             check(test.Get(Id, "ExecutablePath") == second);
             check(!test.Exists("Classes\\Applications\\First.exe"));
             test.Unregister(second);
             check(!test.Exists("Classes\\" + ProgId));
+            check(!test.Exists(test.OwnedKeys(second)[3]));
             check(test.Get("Classes\\.md") == "Other.Application");
             check(test.Get("Classes\\.md\\OpenWithProgids", "Other.Application") == "");
             check(test.Get("Classes\\.md\\OpenWithProgids", ProgId) == null);
