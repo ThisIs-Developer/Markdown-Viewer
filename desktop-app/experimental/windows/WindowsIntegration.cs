@@ -20,6 +20,7 @@ using Microsoft.Win32;
 // or machine-wide keys. A link to this portable executable is not an installation.
 internal sealed class Registration {
     const string Id = "MarkdownViewer.NativeDemo", ProgId = "MarkdownViewer.NativeDemo.Markdown";
+    internal const string RegisteredName = "Markdown Viewer";
     readonly string software;
     internal Registration(string root = "Software") { software = root; }
     string Key(string path) { return software + "\\" + path; }
@@ -35,6 +36,9 @@ internal sealed class Registration {
         return new [] { "Classes\\Applications\\" + Path.GetFileName(executable), "Classes\\" + ProgId, Id };
     }
     internal void Register(string executable) {
+        var registeredPath = Key(Id + "\\Capabilities");
+        var registered = Get("RegisteredApplications", RegisteredName);
+        if(registered != null && registered != registeredPath) throw new InvalidOperationException("Registration belongs to another application.");
         foreach (var key in OwnedKeys(executable))
             if (Exists(key) && Get(key, "MarkdownViewerOwner") != Id) throw new InvalidOperationException("Registration belongs to another application.");
         var previous = Get(Id, "ExecutablePath");
@@ -56,7 +60,9 @@ internal sealed class Registration {
         Put(prog + "\\Application", "ApplicationIcon", icon);
         Put(prog + "\\DefaultIcon", "", icon);
         Put(prog + "\\shell\\open\\command", "", command);
-        Put(capabilities, "ApplicationName", "Markdown Viewer");
+        // Windows requires the capability name and RegisteredApplications value
+        // name to match. Keep ownership/storage separate from this display name.
+        Put(capabilities, "ApplicationName", RegisteredName);
         Put(capabilities, "ApplicationDescription", "Markdown Viewer");
         Put(capabilities, "ApplicationIcon", icon);
         foreach(var extension in new [] { ".md", ".markdown" }) {
@@ -64,7 +70,10 @@ internal sealed class Registration {
             Put("Classes\\" + extension + "\\OpenWithProgids", ProgId, "");
             Put(capabilities + "\\FileAssociations", extension, ProgId);
         }
-        Put("RegisteredApplications", Id, "Software\\" + capabilities);
+        Put("RegisteredApplications", RegisteredName, registeredPath);
+        // Migrate only the earlier trial's own internal-name registration.
+        if(Get("RegisteredApplications", Id) == registeredPath)
+            using(var key = Registry.CurrentUser.OpenSubKey(Key("RegisteredApplications"), true)) key.DeleteValue(Id, false);
     }
     internal void Unregister(string executable) {
         // An old portable copy cannot remove a newer copy's registration.
@@ -77,8 +86,9 @@ internal sealed class Registration {
             using(var key = Registry.CurrentUser.OpenSubKey(Key("Classes\\" + extension + "\\OpenWithProgids"), true))
                 if(key != null) key.DeleteValue(ProgId, false);
         }
-        if(Get("RegisteredApplications", Id) == "Software\\" + Id + "\\Capabilities")
-            using(var key = Registry.CurrentUser.OpenSubKey(Key("RegisteredApplications"), true)) key.DeleteValue(Id, false);
+        foreach(var name in new [] { RegisteredName, Id })
+            if(Get("RegisteredApplications", name) == Key(Id + "\\Capabilities"))
+                using(var key = Registry.CurrentUser.OpenSubKey(Key("RegisteredApplications"), true)) key.DeleteValue(name, false);
         // Exact per-user keys, verified above. Extension/default keys are retained.
         foreach(var key in OwnedKeys(executable)) Registry.CurrentUser.DeleteSubKeyTree(Key(key), false);
     }
@@ -92,6 +102,12 @@ internal sealed class Registration {
             test.Put("Classes\\.md", "", "Other.Application");
             test.Put("Classes\\.md\\OpenWithProgids", "Other.Application", "");
             test.Register(first);
+            test.Put("RegisteredApplications", Id, test.Key(Id + "\\Capabilities"));
+            test.Register(first);
+            check(test.Get(Id + "\\Capabilities", "ApplicationName") == RegisteredName);
+            check(test.Get("RegisteredApplications", RegisteredName) == test.Key(Id + "\\Capabilities"));
+            check(test.Get("RegisteredApplications", Id) == null);
+            check(test.Get(Id + "\\Capabilities", "ApplicationDescription") == "Markdown Viewer");
             check(test.Get("Classes\\.md") == "Other.Application");
             check(test.Get("Classes\\" + ProgId + "\\shell\\open\\command") == "\"" + first + "\" \"%1\"");
             check(test.Get("Classes\\.markdown\\OpenWithProgids", ProgId) == "");
@@ -104,6 +120,12 @@ internal sealed class Registration {
             check(test.Get("Classes\\.md") == "Other.Application");
             check(test.Get("Classes\\.md\\OpenWithProgids", "Other.Application") == "");
             check(test.Get("Classes\\.md\\OpenWithProgids", ProgId) == null);
+            test.Put("RegisteredApplications", RegisteredName, "Software\\AnotherApplication\\Capabilities");
+            bool nameRejected = false;
+            try { test.Register(first); } catch(InvalidOperationException) { nameRejected = true; }
+            check(nameRejected && !test.Exists(Id));
+            check(test.Get("RegisteredApplications", RegisteredName) == "Software\\AnotherApplication\\Capabilities");
+            using(var key = Registry.CurrentUser.OpenSubKey(test.Key("RegisteredApplications"), true)) key.DeleteValue(RegisteredName);
             test.Put("Classes\\" + ProgId, "", "Other owner");
             bool rejected = false;
             try { test.Register(first); } catch(InvalidOperationException) { rejected = true; }
@@ -151,7 +173,7 @@ internal static class Program {
             Action<Action> run = operation => { try { operation(); status.Text = T("Done. Your default app was not changed."); } catch(Exception ex) { MessageBox.Show(form, T(ex.Message), T("Windows integration"), MessageBoxButtons.OK, MessageBoxIcon.Error); } };
             register.Click += (s,e) => run(() => { registration.Register(executable); Notify(); });
             remove.Click += (s,e) => run(() => { registration.Unregister(executable); Notify(); });
-            defaults.Click += (s,e) => run(() => Process.Start(new ProcessStartInfo("ms-settings:defaultapps") { UseShellExecute = true }));
+            defaults.Click += (s,e) => run(() => Process.Start(new ProcessStartInfo("ms-settings:defaultapps?registeredAppUser=" + Uri.EscapeDataString(Registration.RegisteredName)) { UseShellExecute = true }));
             form.Controls.AddRange(new Control[] {explanation,register,remove,defaults,status});
             Application.Run(form);
             return 0;

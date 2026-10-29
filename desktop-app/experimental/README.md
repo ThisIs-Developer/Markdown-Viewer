@@ -38,6 +38,8 @@ Keep the extracted portable folder in its final location, then run
 Viewer** to **Open with** and **Default apps** for `.md` and `.markdown`. Choose
 your preferred default through Windows; registration never changes it automatically.
 The helper uses the current user's registry and does not require administrator access.
+Its Default apps button opens Markdown Viewer's own settings page. Registration
+refuses to replace another application's existing entry with the same display name.
 
 **Remove registration** removes only registrations owned by this portable copy.
 Do this before deleting or moving it. A newer registered copy is protected from an
