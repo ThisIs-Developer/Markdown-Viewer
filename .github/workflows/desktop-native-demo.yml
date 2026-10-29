@@ -6,6 +6,16 @@ on:
       - '.github/workflows/desktop-native-demo.yml'
       - 'desktop-app/build-native-demo.js'
       - 'desktop-app/experimental/**'
+      - 'desktop-app/prepare.js'
+      - 'desktop-app/resources/js/main.js'
+      - 'script.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'workspace-storage.js'
+      - 'native-markdown-source.js'
+      - 'browser-drop-source.js'
+      - 'assets/i18n/**'
+      - 'tests/**'
   workflow_dispatch:
 
 permissions:

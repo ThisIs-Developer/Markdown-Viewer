@@ -6922,21 +6922,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (location.workspaceId === DEFAULT_WORKSPACE_ID) void convertLinkedFolderToVault(linkedFolder.locationId, linkedFolder.path, location);
         return;
       }
-      const files = event.dataTransfer && event.dataTransfer.files;
-      if (files && files.length) {
-        dragDepth = 0;
-        if (dragOverlay) {
-          dragOverlay.classList.remove('active');
-          dragOverlay.setAttribute('aria-hidden', 'true');
-        }
-        const importFiles = function() {
-          handleIncomingDroppedFiles(files, { location: location, destination: { mode: 'copy', location: location }, source: 'drop' });
-        };
-        if (location.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
-          withUnlockedSecretWorkspace(importFiles);
-        } else {
-          importFiles();
-        }
+      if (event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files')) {
+        clearExternalDragFeedback();
+        void handleDrop(event);
         return;
       }
       const tabIds = getDraggedSidebarDocumentIds(event.dataTransfer);
@@ -13352,15 +13340,18 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!dragOverlay) return;
     const folders = items.filter(function(item) { return item.directory; }).length;
     const icon = dragOverlay.querySelector('.drag-overlay-icon');
-    icon.className = 'lucide drag-overlay-icon ' + (folders === items.length && folders ? 'lucide-folder' : items.length > 1 ? 'lucide-files' : 'lucide-file');
+    icon.className = 'lucide drag-overlay-icon ' + (folders === items.length && folders ? 'lucide-folder'
+      : items.length > 1 || items.some(function(item) { return item.unknown; }) ? 'lucide-files' : 'lucide-file');
     const mediaOnly = items.length && items.every(function(item) { return !item.directory && isMediaFile(item); });
     const title = invalid ? 'Cannot drop here' : mediaOnly ? 'Insert media' : destination
-      ? (destination.mode === 'link' ? 'Link original' : 'Import to Vault') : 'Choose a workspace';
+      ? (destination.mode === 'link' ? 'Link original' : 'Import to Vault')
+      : hasDesktopFileAccess() ? 'Choose a workspace' : 'Drop to import or insert';
     dragOverlay.querySelector('.drag-overlay-text').textContent = translateUiString(title);
     const names = items.map(function(item) { return item.name; }).filter(Boolean);
     const description = destination ? destination.mode === 'link'
       ? 'Keep originals in place. Saving edits can change them.'
-      : 'Create independent copies. Originals stay unchanged.' : 'Drop to choose Vault Workspace or Linked Workspace.';
+      : 'Create independent copies. Originals stay unchanged.' : hasDesktopFileAccess()
+      ? 'Drop to choose Vault Workspace or Linked Workspace.' : 'Markdown files, images, GIFs, and videos are supported';
     const sub = dragOverlay.querySelector('.drag-overlay-sub');
     sub.setAttribute('data-i18n-skip', '');
     sub.textContent = names.length ? names.slice(0, 2).join(', ') + (names.length > 2 ? ' …' : '') : translateUiString(description);
@@ -17908,7 +17899,7 @@ ${selector} .arrowheadPath {
     if (options && options.requireExactCommit && !saved) throw new Error('The dropped copy could not be saved.');
   }
 
-  function importMarkdownFile(file, location) {
+  function importMarkdownFile(file, location, canApply) {
     return new Promise(function(resolve) {
       if (!file) {
         resolve(null);
@@ -17924,6 +17915,7 @@ ${selector} .arrowheadPath {
 
       const reader = new FileReader();
       reader.onload = function(e) {
+        if (canApply && !canApply()) { resolve(null); return; }
         const text = e.target.result || '';
       
         // Simple binary check: look for null bytes in the first 8KB
@@ -17967,7 +17959,8 @@ ${selector} .arrowheadPath {
     const importedDocumentIds = [];
     showImportProgress(filesToImport.length);
     for (let index = 0; index < filesToImport.length; index++) {
-      const importedDocument = await importMarkdownFile(filesToImport[index], settings.location);
+      if (settings.canApply && !settings.canApply()) break;
+      const importedDocument = await importMarkdownFile(filesToImport[index], settings.location, settings.canApply);
       if (importedDocument) {
         importedCount++;
         importedDocumentIds.push(importedDocument.id);
@@ -32943,21 +32936,16 @@ ${selector} .arrowheadPath {
     if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
       e.preventDefault();
       dragDepth++;
-      dragOverlay.classList.add("active");
-      dragOverlay.setAttribute("aria-hidden", "false");
+      showExternalDragFeedback(e.target, MarkdownBrowserDropSource.describe(MarkdownBrowserDropSource.capture(e.dataTransfer)), e);
     }
   }, false);
 
   document.addEventListener("dragover", function(e) {
     if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
       e.preventDefault();
-      if (hasDesktopFileAccess()) {
-        const items = Array.from(e.dataTransfer.items || []).filter(function(item) { return item.kind === 'file'; }).map(function(item) {
-          const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
-          return { name: entry && entry.name || '', directory: Boolean(entry && entry.isDirectory) };
-        });
-        showExternalDragFeedback(e.target, items, e);
-      }
+      const items = MarkdownBrowserDropSource.describe(MarkdownBrowserDropSource.capture(e.dataTransfer));
+      showExternalDragFeedback(e.target, items, e);
+      e.dataTransfer.dropEffect = dragOverlay.classList.contains('is-drop-invalid') ? 'none' : 'copy';
     }
   }, false);
 
@@ -32973,25 +32961,93 @@ ${selector} .arrowheadPath {
 
   document.addEventListener("drop", function(e) {
     e.preventDefault();
-    dragDepth = 0;
-    dragOverlay.classList.remove("active");
-    dragOverlay.setAttribute("aria-hidden", "true");
-    resetDocumentTreeDragFeedback();
-    handleDrop(e);
+    clearExternalDragFeedback();
+    void handleDrop(e);
   }, false);
 
   async function handleDrop(e) {
-    const dt = e.dataTransfer;
-    const files = dt && dt.files;
-    if (files && files.length) {
-      const destination = hasDesktopFileAccess() && getExternalDropTarget(e.target);
-      if (destination && destination.invalid) return;
+    // Snapshot before the first await, including drops handled by Explorer rows.
+    const snapshot = MarkdownBrowserDropSource.capture(e.dataTransfer);
+    const destination = getExternalDropTarget(e.target);
+    const location = destination && destination.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null };
+    const epoch = linkedReadEpoch;
+    const canApply = function() {
+      return !workspaceMaintenancePending && !suspendWorkspacePersistence && epoch === linkedReadEpoch &&
+        !(destination && destination.invalid) && Boolean(getWorkspaceById(location.workspaceId)) &&
+        (!location.folderId || Boolean(getFolderById(location.folderId))) &&
+        (location.workspaceId !== SECRET_WORKSPACE_ID || isSecretWorkspaceUnlocked());
+    };
+    if (!snapshot.length || !canApply()) return;
+    const files = snapshot.filter(function(item) { return !(item.entry && item.entry.isDirectory); })
+      .map(function(item) { return item.file; }).filter(Boolean);
+    const folders = snapshot.filter(function(item) { return item.entry && item.entry.isDirectory; });
+    const mediaTarget = { tabId: activeTabId, content: markdownEditor.value,
+      start: markdownEditor.selectionStart, end: markdownEditor.selectionEnd };
+    try {
+      let staged = null;
+      let selected = destination;
+      if (folders.length) {
+        if (!selected && useExperimentalNativeFileDrop()) {
+          const mode = await chooseDesktopMarkdownDropMode(MarkdownBrowserDropSource.describe(snapshot), { folders: folders.length });
+          if (!mode || !canApply()) return;
+          selected = { mode: mode, location: location };
+        }
+        if (selected && selected.mode === 'link') {
+          // Browser entries cannot supply a persistent absolute native path.
+          if (!(await nativeLinkMarkdownFolder(selected.parent)) || !canApply()) return;
+        } else {
+          showImportProgress(0, { title: 'Importing folder', detail: 'Scanning folder…' });
+          staged = await MarkdownBrowserDropSource.collectFolders(snapshot, { canContinue: canApply,
+            limits: { fileBytes: hasDesktopFileAccess() ? MarkdownNativeSourceReader.maxBytes : 10 * 1024 * 1024 } });
+        }
+      }
+      if (!canApply()) { if (folders.length) finishImportProgress(0, 1, { success: false }); return; }
+      // Stage folder reads before importing anything, but insert top-level media
+      // first so an asynchronous scan cannot redirect it into a different tab.
       await handleIncomingDroppedFiles(files, {
-        destination: destination,
-        location: destination && destination.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null },
+        canApply: canApply, mediaTarget: mediaTarget,
+        destination: selected,
+        location: location,
         source: 'drop'
       });
+      if (staged) {
+        if (canApply()) await importBrowserFolders(staged, location, canApply);
+        else finishImportProgress(0, 1, { success: false });
+      }
+    } catch (error) {
+      console.warn('Browser drop failed:', error);
+      if (canApply()) showAppToast('The dropped items could not be added. Please try again.', { tone: 'error', title: 'Import failed' });
+      if (folders.length) finishImportProgress(0, 1, { success: false });
     }
+  }
+
+  async function importBrowserFolders(staged, location, canApply) {
+    const ids = [];
+    const folders = new Map();
+    const key = function(root, path) { return JSON.stringify([root, path]); };
+    showImportProgress(staged.files.length, { title: 'Importing folder' });
+    for (const directory of staged.directories) {
+      if (!canApply()) { finishImportProgress(ids.length, staged.files.length, { success: false }); return; }
+      const parent = folders.get(key(directory.root, directory.path.slice(0, -1)));
+      const folder = ensureWorkspaceFolder(location.workspaceId, directory.path[directory.path.length - 1], parent ? parent.id : location.folderId);
+      if (!folder) throw new Error('The destination folders could not be saved.');
+      folders.set(key(directory.root, directory.path), folder);
+    }
+    if (!(await saveDocumentOrganization())) throw new Error('The destination folders could not be saved.');
+    for (const file of staged.files) {
+      if (!canApply()) { finishImportProgress(ids.length, staged.files.length, { success: false }); return; }
+      const parent = folders.get(key(file.root, file.path.slice(0, -1)));
+      const tab = await importMarkdownFile(new File([file.content], file.name, { type: 'text/markdown' }), {
+        workspaceId: location.workspaceId, folderId: parent.id
+      }, canApply);
+      if (tab) ids.push(tab.id);
+      updateImportProgress(ids.length, staged.files.length);
+    }
+    if (!canApply()) { finishImportProgress(ids.length, staged.files.length, { success: false }); return; }
+    await persistImportedDocuments(ids, { requireExactCommit: true });
+    if (location.workspaceId === SECRET_WORKSPACE_ID) await flushSecretWorkspaceToStorage();
+    renderDocumentSidebar();
+    finishImportProgress(ids.length, staged.files.length);
   }
 
   function chooseDesktopMarkdownDropMode(files, options) {
@@ -33052,6 +33108,7 @@ ${selector} .arrowheadPath {
 
   async function handleIncomingDroppedFiles(fileList, options) {
     const settings = options || {};
+    if (settings.canApply && !settings.canApply()) return 0;
     const files = Array.from(fileList || []);
     const imageFiles = files.filter(isMediaFile);
     const markdownFiles = files.filter(isMarkdownFile);
@@ -33062,7 +33119,7 @@ ${selector} .arrowheadPath {
     let mode = settings.destination && settings.destination.mode || 'copy';
     if (markdownFiles.length && useExperimentalNativeFileDrop() && !settings.destination) {
       mode = await chooseDesktopMarkdownDropMode(markdownFiles, { media: imageFiles.length });
-      if (!mode) return 0;
+      if (!mode || (settings.canApply && !settings.canApply())) return 0;
     }
     if (supportedFileCount !== files.length) {
       showUnsupportedFileToast('Dropped files must be Markdown, image, GIF, MP4, WebM, or Ogg files.');
@@ -33075,8 +33132,12 @@ ${selector} .arrowheadPath {
       if (!linkedCount) return 0;
       handledCount += linkedCount;
     }
-    if (imageFiles.length) {
-      const insertedCount = await insertImageFilesIntoEditor(imageFiles, { source: 'drop' });
+    const mediaTarget = settings.mediaTarget;
+    const mediaUnchanged = !mediaTarget || (activeTabId === mediaTarget.tabId && markdownEditor.value === mediaTarget.content);
+    if (imageFiles.length && !mediaUnchanged) announceToScreenReader('Media insertion was cancelled because the document changed.');
+    if (imageFiles.length && mediaUnchanged && (!settings.canApply || settings.canApply())) {
+      const insertedCount = await insertImageFilesIntoEditor(imageFiles, { source: 'drop',
+        selectionStart: mediaTarget && mediaTarget.start, selectionEnd: mediaTarget && mediaTarget.end });
       handledCount += insertedCount;
       if (!insertedCount && !markdownFiles.length && (!hasActiveOpenDocument() || !canMutateEditor())) {
         alert('Open an editable Markdown file before inserting images.');
@@ -33085,6 +33146,7 @@ ${selector} .arrowheadPath {
     if (markdownFiles.length && mode === 'copy') {
       handledCount += await importMarkdownFiles(markdownFiles, {
         location: settings.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null },
+        canApply: settings.canApply,
         showInvalidAlert: false
       });
     }

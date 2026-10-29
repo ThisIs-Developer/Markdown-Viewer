@@ -70,6 +70,29 @@ this draft as a future demo until stable Neutralino support is available.
 
 ## Evidence and manual tests
 
+### Browser file and folder drops
+
+The web app also uses the compact drag notice and exact Explorer target highlights.
+Dropping a Markdown file imports an independent Vault copy; dropping a folder imports
+its Markdown files and nested/empty folders into the hovered Vault destination.
+Dropping onto a document selects its parent folder. Original files are never written.
+Linked Workspace retains its desktop filesystem requirements.
+
+Browser folder scans drain all directory batches, skip `.git` and `node_modules`,
+and stage reads before creating Vault items. Limits are 10,000 Markdown files,
+2,000 folders, 40,000 entries, 32 nested levels, 10 MiB per Markdown file and 200 MiB
+total, with a 60-second scan deadline. Unreadable or oversized folder contents fail
+before import. Nested media is skipped; top-level media keeps the existing consent
+and insertion flow. Workspace changes invalidate pending reads.
+
+Browsers protect drag data during hover: they may withhold names and file/folder
+types until drop. The notice uses a neutral items icon while details are unavailable,
+then uses file/folder icons when exposed by the browser. It cannot reliably identify
+a folder before drop on browsers that enforce this restriction. The Windows native
+bridge supplies this information throughout the drag.
+
+### Desktop acceptance
+
 Automated app coverage includes launch forwarding, malformed arguments, readiness
 queues, native drops, bounded media reads, cancellation, failed saves, workspace
 restore races, pointer dragging, translations, and stock/web isolation. Browser

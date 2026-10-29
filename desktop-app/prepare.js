@@ -48,6 +48,7 @@ console.log("✓ Copied script.js → resources/js/script.js");
 
 fs.copyFileSync(path.join(ROOT_DIR, "workspace-storage.js"), path.join(jsDest, "workspace-storage.js"));
 fs.copyFileSync(path.join(ROOT_DIR, "native-markdown-source.js"), path.join(jsDest, "native-markdown-source.js"));
+fs.copyFileSync(path.join(ROOT_DIR, "browser-drop-source.js"), path.join(jsDest, "browser-drop-source.js"));
 console.log("✓ Copied workspace-storage.js → resources/js/workspace-storage.js");
 
 if (fs.existsSync(path.join(ROOT_DIR, "visual-settings-store.js"))) {
@@ -350,6 +351,7 @@ async function prepareOfflineDependencies() {
   html = html.replace(/\s*<!-- Browser fallback for hosts that do not run the Cloudflare Pages SEO middleware\. -->\s*<script type="module" src="assets\/seo-metadata\.mjs"><\/script>/i, '');
 
   html = html.replace(/<script src="native-markdown-source\.js" defer><\/script>/g, '<script src="/js/native-markdown-source.js"></script>');
+  html = html.replace(/<script src="browser-drop-source\.js" defer><\/script>/g, '<script src="/js/browser-drop-source.js"></script>');
 
   // Inject Neutralino script tags
   html = html.replace(
