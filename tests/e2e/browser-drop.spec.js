@@ -109,6 +109,19 @@ test('folder read failures create no documents or folders', async ({ page }) => 
   await expect(page.locator('[data-tree-type="folder"]').filter({ hasText: 'Failed folder' })).toHaveCount(0);
 });
 
+test('web folder drops in Private mode remain session-only and report success', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  await page.locator('#private-mode-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'true');
+  await page.keyboard.press('Escape');
+  await dispatch(page, '[data-tree-id="workspace_default"]', 'drop', [{ name: 'Private folder', children: [{ name: 'session-only.md' }] }]);
+  await expect(page.locator('#import-progress-toast')).toHaveAttribute('data-state', 'complete');
+  await expect(page.locator('#app-toast-region')).not.toContainText('could not be added');
+  expect((await metadata(page)).some(x => x.title === 'session-only')).toBe(false);
+  await page.reload();
+  await expect(page.locator('[data-tree-type="folder"]').filter({ hasText: 'Private folder' })).toHaveCount(0);
+});
+
 test('locked targets reject web drops and unsupported hover shows invalid feedback', async ({ page }) => {
   const secret = '[data-tree-id="workspace_secret"]';
   await dispatch(page, secret, 'dragover', [{ name: 'notes.md' }]);

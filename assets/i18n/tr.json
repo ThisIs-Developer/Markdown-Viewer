@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "Kayıt başka bir uygulamaya ait.",
   "Registration ownership changed.": "Kayıt sahibi değişti.",
   "Keep one trial executable next to this helper, or pass its full path.": "Bu yardımcının yanında tek bir deneme yürütülebilir dosyası bulundurun veya tam yolunu belirtin.",
-  "Select a branded Markdown Viewer executable.": "Markdown Viewer olarak tanımlanan bir yürütülebilir dosya seçin."
+  "Select a branded Markdown Viewer executable.": "Markdown Viewer olarak tanımlanan bir yürütülebilir dosya seçin.",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "İçe aktarılan taslaklar Gezgin’de kalır. Depolama kullanılabilir olduğunda bunları yeniden kaydedin."
 }

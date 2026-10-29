@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "Registration belongs to another application.",
   "Registration ownership changed.": "Registration ownership changed.",
   "Keep one trial executable next to this helper, or pass its full path.": "Keep one trial executable next to this helper, or pass its full path.",
-  "Select a branded Markdown Viewer executable.": "Select a branded Markdown Viewer executable."
+  "Select a branded Markdown Viewer executable.": "Select a branded Markdown Viewer executable.",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Imported drafts remain in Explorer. Save them again when storage is available."
 }

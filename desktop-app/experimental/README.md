@@ -2,7 +2,8 @@
 
 PR #269 tests three opt-in Windows features: pointer-based Explorer dragging,
 native file/folder drops with real paths, and forwarding later launches to the
-existing window. Ordinary web and desktop builds keep their current behavior.
+existing window. The native runtime features stay opt-in. Shared web/desktop UI
+also restores precise drop feedback and adds bounded browser folder imports.
 
 ## Download and try
 
@@ -38,8 +39,20 @@ Keep the extracted portable folder in its final location, then run
 Viewer** to **Open with** and **Default apps** for `.md` and `.markdown`. Choose
 your preferred default through Windows; registration never changes it automatically.
 The helper uses the current user's registry and does not require administrator access.
-Its Default apps button opens Markdown Viewer's own settings page. Registration
+Its Default apps button requests Markdown Viewer's own settings page. Registration
 refuses to replace another application's existing entry with the same display name.
+
+**Acceptance still required:** registry tests and Windows shell dispatch pass, but
+the reviewed Windows machine still omitted the new registration from Default apps
+and the Open with list. Its old manually selected trial remained visible under the
+generic Neutralino name. The new executable's metadata is correctly branded; this
+does not prove Windows app discovery is resolved. Do not treat registration as
+release-ready until this UI issue is reproduced and resolved on the target system.
+
+Browser folder drops preserve Markdown hierarchy and empty folders; top-level
+media keeps its existing consent flow. Private mode imports stay session-only.
+Browsers may hide item types during hover, so the notice uses a neutral items icon
+until file/folder metadata is available. See [browser behavior and limits](../../docs/desktop-native-runtime-demo.md#browser-file-and-folder-drops).
 
 **Remove registration** removes only registrations owned by this portable copy.
 Do this before deleting or moving it. A newer registered copy is protected from an

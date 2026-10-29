@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "O registo pertence a outra aplicação.",
   "Registration ownership changed.": "O proprietário do registo mudou.",
   "Keep one trial executable next to this helper, or pass its full path.": "Mantenha um único executável de teste junto deste assistente ou indique o caminho completo.",
-  "Select a branded Markdown Viewer executable.": "Selecione um executável identificado como Markdown Viewer."
+  "Select a branded Markdown Viewer executable.": "Selecione um executável identificado como Markdown Viewer.",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Os rascunhos importados permanecem no Explorador. Salve-os novamente quando o armazenamento estiver disponível."
 }

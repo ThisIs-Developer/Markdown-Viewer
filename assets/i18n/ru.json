@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "Регистрация принадлежит другому приложению.",
   "Registration ownership changed.": "Владелец регистрации изменился.",
   "Keep one trial executable next to this helper, or pass its full path.": "Поместите один пробный исполняемый файл рядом с помощником или укажите полный путь.",
-  "Select a branded Markdown Viewer executable.": "Выберите исполняемый файл с названием Markdown Viewer."
+  "Select a branded Markdown Viewer executable.": "Выберите исполняемый файл с названием Markdown Viewer.",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Импортированные черновики остаются в Проводнике. Сохраните их снова, когда хранилище станет доступно."
 }

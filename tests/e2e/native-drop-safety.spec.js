@@ -174,6 +174,8 @@ test('a failed Vault write is never reported as a successful copy', async ({ pag
   await page.locator('#desktop-drop-copy').click();
   expect(await page.evaluate(() => __drop)).toBe(0);
   await expect(page.locator('#app-toast-region')).toContainText('Could not add dropped items: unsaved-copy.md');
+  await expect(page.locator('#app-toast-region')).toContainText('Imported drafts remain in Explorer.');
+  await expect(page.locator('#import-progress-toast')).toHaveAttribute('data-state', 'partial');
   expect(await page.evaluate(() => __desktopFiles.get('C:/unsaved-copy.md'))).toBe('# unique unsaved copy');
 });
 

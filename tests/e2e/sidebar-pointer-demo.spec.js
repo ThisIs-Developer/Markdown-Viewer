@@ -21,6 +21,25 @@ async function addFolder(page, name) {
   return page.locator('#document-tree [data-tree-type="folder"]').filter({ hasText: name });
 }
 
+test('Escape cancels a pointer drag without opening its source on mouse release', async ({page}) => {
+  await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window); window.NL_OS="Windows"; window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES={sidebarPointerDrag:true};');
+  await openApp(page);
+  const source = page.locator('[data-tree-type="document"]').filter({hasText:'Welcome to Markdown'});
+  await page.locator('#tab-new-btn').click();
+  const active = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
+  const box = await source.boundingBox();
+  await page.mouse.move(box.x + 60, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 90, box.y + box.height / 2, {steps: 4});
+  await expect(page.locator('.document-drag-preview')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(page.locator('#tab-list .tab-item.active')).toHaveAttribute('data-tab-id', active);
+  await expect(page.locator('.document-drag-preview')).toHaveCount(0);
+  await source.click();
+  await expect(page.locator('#tab-list .tab-item.active')).not.toHaveAttribute('data-tab-id', active);
+});
+
 for (const desktop of [false, true]) {
   test(`real mouse dragging moves Vault documents into folders and back (${desktop ? 'desktop' : 'web'})`, async ({ page }) => {
     if (desktop) await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window); window.NL_OS = "Windows"; window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES = { sidebarPointerDrag: true };');

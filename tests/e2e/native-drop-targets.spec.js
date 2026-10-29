@@ -160,3 +160,46 @@ test('HTML drop on Linked Workspace requests a real linked path rather than impo
   await expect(page.locator('.is-linked-document').filter({hasText:'δοκιμή notes'})).toBeVisible();
   expect((await records(page)).filter(x=>x.title==='δοκιμή notes'&&!x.sourcePath)).toHaveLength(0);
 });
+
+test('Private mode accepts native file and folder copies without persisting or reporting failure', async ({page}) => {
+  await page.getByRole('button', { name: 'Open workspace settings' }).click();
+  await page.locator('#private-mode-toggle').click();
+  await expect(page.locator('html')).toHaveAttribute('data-private-mode', 'true');
+  await page.keyboard.press('Escape');
+  await page.evaluate(async () => {
+    await Neutralino.filesystem.createDirectory('C:/Private folder');
+    __desktopFiles.set('C:/Private folder/private-child.md', '# private folder');
+  });
+  const vault = page.locator('[data-tree-id="workspace_default"][data-tree-type="workspace"]');
+  await at(page, vault, ['C:/Original/δοκιμή notes.md', 'C:/Private folder']);
+  expect(await page.evaluate(() => __drop)).toBe(2);
+  await expect(page.locator('#app-toast-region')).not.toContainText('Could not add dropped items');
+  expect((await records(page)).some(x => x.title === 'private-child' || x.title === 'δοκιμή notes')).toBe(false);
+});
+
+test('native folder import waits for encrypted Secret storage and reports a failed encryption commit', async ({page}) => {
+  const secret = page.locator('[data-tree-id="workspace_secret"]');
+  await secret.locator('.document-tree-main').click();
+  await page.locator('#secret-workspace-key').fill('native-secret-test');
+  await page.locator('#secret-workspace-key-confirm').fill('native-secret-test');
+  await page.locator('#secret-workspace-modal-confirm').click();
+  await expect(page.locator('#secret-workspace-modal')).toBeHidden();
+  await page.evaluate(async () => {
+    await MarkdownViewerFlushWorkspace();
+    await Neutralino.filesystem.createDirectory('C:/Encrypted folder');
+    __desktopFiles.set('C:/Encrypted folder/secret-child.md', '# secret import');
+    const original = MarkdownWorkspaceStorage.prototype.applySecretRecordChanges;
+    MarkdownWorkspaceStorage.prototype.applySecretRecordChanges = async function(changes, manifest) {
+      if (changes.upserts.some(item => item.id !== '__folders__')) throw new Error('Simulated encrypted storage failure');
+      return original.call(this, changes, manifest);
+    };
+  });
+  await at(page, secret, ['C:/Encrypted folder']);
+  expect(await page.evaluate(() => __drop)).toBe(0);
+  await expect(page.locator('#app-toast-region')).toContainText('Could not add dropped items: Encrypted folder');
+  await expect(page.locator('#import-progress-toast')).toHaveAttribute('data-state', 'partial');
+  expect(await page.evaluate(async () => {
+    const storage = new MarkdownWorkspaceStorage(); await storage.init();
+    return (await storage.listDocumentMetadata()).some(item => item.title === 'secret-child');
+  })).toBe(false);
+});

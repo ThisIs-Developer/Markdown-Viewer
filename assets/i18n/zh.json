@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "此注册属于其他应用。",
   "Registration ownership changed.": "注册所有者已更改。",
   "Keep one trial executable next to this helper, or pass its full path.": "请在此助手旁保留一个试用可执行文件，或提供其完整路径。",
-  "Select a branded Markdown Viewer executable.": "请选择标识为 Markdown Viewer 的可执行文件。"
+  "Select a branded Markdown Viewer executable.": "请选择标识为 Markdown Viewer 的可执行文件。",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "导入的草稿会保留在资源管理器中。存储可用时，请再次保存。"
 }

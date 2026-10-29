@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "L’enregistrement appartient à une autre application.",
   "Registration ownership changed.": "Le propriétaire de l’enregistrement a changé.",
   "Keep one trial executable next to this helper, or pass its full path.": "Placez un seul exécutable d’essai à côté de cet assistant ou indiquez son chemin complet.",
-  "Select a branded Markdown Viewer executable.": "Sélectionnez un exécutable identifié comme Markdown Viewer."
+  "Select a branded Markdown Viewer executable.": "Sélectionnez un exécutable identifié comme Markdown Viewer.",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Les brouillons importés restent dans l’Explorateur. Enregistrez-les à nouveau lorsque le stockage est disponible."
 }

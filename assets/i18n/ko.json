@@ -1661,5 +1661,6 @@
   "Registration belongs to another application.": "이 등록은 다른 애플리케이션에 속합니다.",
   "Registration ownership changed.": "등록 소유자가 변경되었습니다.",
   "Keep one trial executable next to this helper, or pass its full path.": "이 도우미 옆에 시험용 실행 파일 하나를 두거나 전체 경로를 지정하세요.",
-  "Select a branded Markdown Viewer executable.": "Markdown Viewer로 식별되는 실행 파일을 선택하세요."
+  "Select a branded Markdown Viewer executable.": "Markdown Viewer로 식별되는 실행 파일을 선택하세요.",
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "가져온 초안은 탐색기에 남아 있습니다. 저장소를 사용할 수 있게 되면 다시 저장하세요."
 }
