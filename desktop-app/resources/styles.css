@@ -12627,19 +12627,20 @@ html[data-theme="dark"] .mermaid svg {
   min-width: 0;
   padding: 14px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-color);
+  border-radius: 8px;
+  background: var(--button-bg);
   color: var(--text-color);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
 }
 
 .desktop-drop-choice:hover,
-.desktop-drop-choice:focus-visible {
+.desktop-drop-choice:focus-visible,
+.desktop-drop-choice:active {
   border-color: var(--accent-color);
-  background: color-mix(in srgb, var(--accent-color) 7%, var(--bg-color));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent);
+  background: rgba(3, 102, 214, 0.08);
+  box-shadow: none;
   outline: 0;
 }
 
