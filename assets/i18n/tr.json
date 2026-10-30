@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "Kayıt sahibi değişti.",
   "Keep one trial executable next to this helper, or pass its full path.": "Bu yardımcının yanında tek bir deneme yürütülebilir dosyası bulundurun veya tam yolunu belirtin.",
   "Select a branded Markdown Viewer executable.": "Markdown Viewer olarak tanımlanan bir yürütülebilir dosya seçin.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "İçe aktarılan taslaklar Gezgin’de kalır. Depolama kullanılabilir olduğunda bunları yeniden kaydedin."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "İçe aktarılan taslaklar Gezgin’de kalır. Depolama kullanılabilir olduğunda bunları yeniden kaydedin.",
+  "Download folder": "Klasörü indir",
+  "Open in File Explorer": "Dosya Gezgini’nde aç",
+  "Open in Finder": "Finder’da aç",
+  "Open in File Manager": "Dosya yöneticisinde aç",
+  "Rename failed. The original was kept. Try again.": "Yeniden adlandırma başarısız. Orijinal korundu. Tekrar deneyin.",
+  "Use a valid Markdown filename ending in .md or .markdown.": ".md veya .markdown ile biten geçerli bir Markdown dosya adı kullanın.",
+  "File renamed. Save the workspace again to retain the updated link.": "Dosya yeniden adlandırıldı. Güncellenen bağlantıyı korumak için çalışma alanını yeniden kaydedin.",
+  "Could not open the original folder.": "Orijinal klasör açılamadı.",
+  "Folder download failed. Try again.": "Klasör indirilemedi. Tekrar deneyin."
 }

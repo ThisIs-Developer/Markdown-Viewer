@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "登録の所有者が変更されました。",
   "Keep one trial executable next to this helper, or pass its full path.": "このヘルパーの横に試用実行ファイルを1つ置くか、そのフルパスを指定してください。",
   "Select a branded Markdown Viewer executable.": "Markdown Viewer として識別される実行ファイルを選択してください。",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "インポートした下書きはエクスプローラーに残っています。ストレージが利用可能になったら、もう一度保存してください。"
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "インポートした下書きはエクスプローラーに残っています。ストレージが利用可能になったら、もう一度保存してください。",
+  "Download folder": "フォルダーをダウンロード",
+  "Open in File Explorer": "エクスプローラーで開く",
+  "Open in Finder": "Finderで開く",
+  "Open in File Manager": "ファイルマネージャーで開く",
+  "Rename failed. The original was kept. Try again.": "名前の変更に失敗しました。元のファイルは保持されています。もう一度お試しください。",
+  "Use a valid Markdown filename ending in .md or .markdown.": ".md または .markdown で終わる有効なMarkdownファイル名を使用してください。",
+  "File renamed. Save the workspace again to retain the updated link.": "ファイル名を変更しました。更新したリンクを保持するため、ワークスペースを再保存してください。",
+  "Could not open the original folder.": "元のフォルダーを開けませんでした。",
+  "Folder download failed. Try again.": "フォルダーのダウンロードに失敗しました。もう一度お試しください。"
 }

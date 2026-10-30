@@ -89,7 +89,10 @@ The runtime is pinned to `Kechos23/neutralinojs` commit
 [drop PR #1845](https://github.com/neutralinojs/neutralinojs/pull/1845) at
 `bcae000f1759d37ead5aef524c08451d1db82874`, and adds the Windows drag lifecycle,
 shell drag-image helper and coordinate/type payload in `lib/webview/webview.h`
-and the Windows-only bridge in `api/window/window.cpp`. It does not include that branch's
+and the Windows-only bridge in `api/window/window.cpp`. The Windows `filesystem.move`
+implementation in `api/fs/fs.cpp` also uses an atomic rename without replacement:
+an occupied destination is rejected even if it appeared after the UI's check.
+It does not include that branch's
 unrelated authentication, server, macOS or Linux changes. Both upstream changes
 are still unreleased dependencies of this experiment.
 
@@ -110,9 +113,42 @@ node desktop-app/build-native-demo.js
 Outputs are in `desktop-app/dist/native-demo/`. Packaging copies resources and the
 custom runtime into an isolated staging directory, enables demo flags there, and
 restores ordinary prepared resources afterward. The standard runtime/client pins
-and release workflow remain unchanged. The manifest records the application and
+remain unchanged. Standard Windows packaging now applies the same app branding;
+the release build installs the pinned packaging dependencies for that step.
+The manifest records the application and
 runtime commits, patch hash, runtime hash and final executable hash.
 
 `prepare.js --experimental-neutralino-runtime` alone is a developer opt-in and
 continues using the normal Vault. The separate Vault is enabled specifically by
 `build-native-demo.js` for the downloadable trial executable.
+
+## Explorer editing and Windows identity
+
+File/folder Rename edits the name directly in Explorer, with the full current name
+selected. Enter commits; Escape or clicking elsewhere cancels. Invalid names and
+collisions remain in the field with an accessible error. F2 invokes Rename too.
+Renaming a linked file renames its original on disk, retains unsaved text, updates
+the linked source path and makes later saves use the new filename. It never falls
+back to copying/deleting an original when a rename fails. Sidebar grouping stays
+independent of the original disk directory. The parent-directory action is named
+for File Explorer on Windows, Finder on macOS, and File Manager on Linux.
+
+On the web, a folder's **Download folder** action exports a ZIP containing its
+Markdown documents, nested folders and empty folders. Current editor drafts are
+included; duplicate export names receive numeric suffixes. A Secret Workspace
+download is abandoned if the workspace locks while the archive is being prepared.
+
+Both packaged Windows executables use **Markdown Viewer**, version 3.10.5, and
+the official app icon. The trial title also reads **Markdown Viewer**; its filename,
+application ID and separate Vault continue to distinguish it from a normal release.
+Explorer itself controls tooltip property labels, size and creation-date fields.
+
+The supplied `markdown-document.svg` is embedded as a separate document icon
+(resource 200), with 16–256 px ICO sizes. Rebuild it with
+`node scripts/build-markdown-document-icon.cjs` after installing the root Playwright
+dependencies. The optional integration helper associates this document icon with
+the application's Markdown ProgID and executable association, keeping the M icon
+for application identity. This requires explicit registration; merely changing EXE
+metadata cannot install a separate document association. The helper never sets
+UserChoice/default applications. Open-with discovery investigation is deferred at
+the maintainer's request; no automatic registration is added.

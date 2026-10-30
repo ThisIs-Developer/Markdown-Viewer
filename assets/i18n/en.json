@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "Registration ownership changed.",
   "Keep one trial executable next to this helper, or pass its full path.": "Keep one trial executable next to this helper, or pass its full path.",
   "Select a branded Markdown Viewer executable.": "Select a branded Markdown Viewer executable.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "Imported drafts remain in Explorer. Save them again when storage is available."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Imported drafts remain in Explorer. Save them again when storage is available.",
+  "Download folder": "Download folder",
+  "Open in File Explorer": "Open in File Explorer",
+  "Open in Finder": "Open in Finder",
+  "Open in File Manager": "Open in File Manager",
+  "Rename failed. The original was kept. Try again.": "Rename failed. The original was kept. Try again.",
+  "Use a valid Markdown filename ending in .md or .markdown.": "Use a valid Markdown filename ending in .md or .markdown.",
+  "File renamed. Save the workspace again to retain the updated link.": "File renamed. Save the workspace again to retain the updated link.",
+  "Could not open the original folder.": "Could not open the original folder.",
+  "Folder download failed. Try again.": "Folder download failed. Try again."
 }

@@ -4319,6 +4319,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   let linkedSourceMonitoringChain = Promise.resolve();
   const linkedSourceSavePaths = new Set();
   let linkedReadEpoch = 0;
+  let explorerRename = null;
   const linkedSourceRefreshTimers = new Map();
   const linkedLocationScanTokens = new Map();
   const linkedLocationMutations = new Map();
@@ -5616,10 +5617,113 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function openExplorerRename(options) {
+    if (explorerRename && explorerRename.busy) return;
+    closeDocumentSidebarMenus();
+    openDocumentSidebar();
+    explorerRename = Object.assign({ error: '', busy: false, select: true }, options);
+    // Keep the current view when its row is already visible. Renaming from a
+    // tab menu may first need to expose a filtered/collapsed Explorer row.
+    const visible = Array.from(document.querySelectorAll('#document-tree .document-tree-row')).some(function(row) {
+      return row.dataset.treeType === options.type && row.dataset.treeId === options.id && row.offsetParent !== null;
+    });
+    if (!visible) {
+      documentSidebarSearch = '';
+      const search = document.getElementById('document-sidebar-search');
+      if (search) search.value = '';
+      documentOrganization.ui.filter = 'all';
+      getExpandableDocumentTreeItems().forEach(function(item) { item.expanded = true; });
+    }
+    renderDocumentSidebar();
+  }
+
+  function renderExplorerRename() {
+    const state = explorerRename;
+    if (!state) return;
+    const row = Array.from(document.querySelectorAll('#document-tree .document-tree-row')).find(function(item) {
+      return item.dataset.treeType === state.type && item.dataset.treeId === state.id;
+    });
+    if (!row) { explorerRename = null; return; }
+    const main = row.querySelector('.document-tree-main');
+    const edit = document.createElement('div');
+    edit.className = 'document-tree-rename';
+    const icon = main.querySelector('i');
+    if (icon) edit.appendChild(icon.cloneNode(true));
+    const field = document.createElement('div');
+    field.className = 'document-tree-rename-field';
+    const input = document.createElement('input');
+    input.className = 'document-tree-rename-input';
+    input.setAttribute('aria-label', state.title || 'Rename');
+    input.value = state.value;
+    input.disabled = state.busy;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    field.appendChild(input);
+    if (state.error) {
+      const error = document.createElement('span');
+      error.id = 'explorer-rename-error';
+      error.className = 'document-tree-rename-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = state.error;
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', error.id);
+      field.appendChild(error);
+    }
+    edit.appendChild(field);
+    main.replaceWith(edit);
+    row.classList.add('is-renaming');
+    row.draggable = false;
+    ['pointerdown', 'click', 'dblclick', 'contextmenu'].forEach(function(name) {
+      edit.addEventListener(name, function(event) { event.stopPropagation(); });
+    });
+    function finish() {
+      if (explorerRename !== state) return;
+      explorerRename = null;
+      renderDocumentSidebar();
+      const current = Array.from(document.querySelectorAll('#document-tree .document-tree-row')).find(function(item) {
+        return item.dataset.treeType === state.type && item.dataset.treeId === state.id;
+      });
+      if (current) current.focus();
+    }
+    input.addEventListener('input', function() { state.value = input.value; });
+    input.addEventListener('blur', function() {
+      // Detached inputs blur during a sidebar refresh; that is not cancellation.
+      if (input.isConnected && !input._explorerRefreshing && !state.busy && explorerRename === state) finish();
+    });
+    input.addEventListener('keydown', async function(event) {
+      event.stopPropagation();
+      if (event.isComposing) return;
+      if (event.key === 'Escape') { event.preventDefault(); finish(); return; }
+      if (event.key !== 'Enter' || state.busy) return;
+      event.preventDefault();
+      const value = input.value.trim();
+      state.error = state.validate ? state.validate(value) : (!value ? 'Enter a name.' : '');
+      if (state.error) { renderDocumentSidebar(); return; }
+      state.busy = true;
+      input.disabled = true;
+      try { await state.onConfirm(value); finish(); }
+      catch (error) {
+        console.error('Explorer rename failed:', error);
+        state.error = error.userMessage || 'Rename failed. The original was kept. Try again.';
+        state.busy = false;
+        renderDocumentSidebar();
+      }
+    });
+    if (!state.busy) {
+      input.focus({ preventScroll: true });
+      if (state.select) {
+        input.select();
+        state.select = false;
+      } else if (state.selection) input.setSelectionRange(state.selection[0], state.selection[1]);
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   function renameFolder(folderId) {
     const folder = getFolderById(folderId);
     if (!folder) return;
-    openDocumentNameDialog({
+    openExplorerRename({
+      type: 'folder', id: folder.id,
       title: 'Rename folder',
       label: 'Folder name',
       value: folder.name,
@@ -5635,6 +5739,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         return '';
       },
       onConfirm: function(value) {
+        if (getFolderById(folderId) !== folder) return;
         folder.name = value;
         saveDocumentOrganization();
         renderDocumentSidebar();
@@ -6054,7 +6159,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         { id: 'save', icon: 'lucide-save', label: 'Save', run: function() { void nativeSaveMarkdown({ tabId: tab.id, useLinkedSource: true }); } },
         { id: 'save-as', icon: 'lucide-save-plus', label: 'Save As…', run: function() { void nativeSaveMarkdown({ tabId: tab.id, createLinked: true }); } },
         { id: 'reload-source', icon: 'lucide-refresh-cw', label: 'Reload from disk', run: function() { void reloadLinkedDocument(tab.id, { force: true }); } },
-        { id: 'reveal-source', icon: 'lucide-folder-input', label: 'Open containing folder', run: function() { void revealLinkedSource(tab); } },
+        { id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameTab(tab.id); } },
+        { id: 'reveal-source', icon: 'lucide-folder-input', label: getFileManagerActionLabel(), run: function() { void revealLinkedSource(tab); } },
         { separator: true },
         { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedDocumentToVault(tab.id); } },
         { id: 'remove-link', icon: 'lucide-x', label: 'Remove linked file', danger: true, run: function() { void removeLinkedDocument(tab.id); } }
@@ -6126,6 +6232,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameFolder(folder.id); } },
       { id: 'delete', icon: 'lucide-trash-2', label: 'Delete', danger: true, run: function() { deleteFolder(folder.id); } }
     ];
+    if (!hasDesktopFileAccess()) {
+      actions.splice(3, 0, { id: 'download-folder', icon: 'lucide-download', label: 'Download folder', run: function() { void downloadWorkspaceFolder(folder.id); } });
+    }
     if (hasDesktopFileAccess() && folder.workspaceId === DEFAULT_WORKSPACE_ID) {
       actions.splice(3, 0, { id: 'save-linked-folder', icon: 'lucide-save-plus', label: 'Save As linked folder…', run: function() { void nativeSaveVaultFolderAsLinked(folder.id); } });
     }
@@ -7702,6 +7811,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renderDocumentSidebar() {
     const tree = document.getElementById('document-tree');
     if (!tree || !documentOrganization) return;
+    const renameInput = tree.querySelector('.document-tree-rename-input');
+    if (explorerRename && renameInput) {
+      renameInput._explorerRefreshing = true;
+      explorerRename.value = renameInput.value;
+      explorerRename.selection = [renameInput.selectionStart, renameInput.selectionEnd];
+    }
     removeDocumentSidebarMenus();
     tree.textContent = '';
     tree.removeAttribute('aria-busy');
@@ -7791,6 +7906,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     const firstRow = tree.querySelector('.document-tree-row');
     if (firstRow && !tree.querySelector('.document-tree-row[tabindex="0"]')) firstRow.setAttribute('tabindex', '0');
+    renderExplorerRename();
   }
 
   function isDocumentSidebarMobile() {
@@ -7934,12 +8050,17 @@ document.addEventListener("DOMContentLoaded", async function () {
   function handleDocumentTreeKeydown(event) {
     const tree = document.getElementById('document-tree');
     const row = event.target.closest('.document-tree-row');
-    if (!tree || event.target.closest('.document-menu-btn')) return;
+    if (!tree || event.target.closest('.document-menu-btn, input, textarea')) return;
     if (!row && (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) {
       openDocumentTreeBackgroundContextMenu(event);
       return;
     }
     if (!row) return;
+    if (event.key === 'F2') {
+      const action = getDocumentTreeMenuActionsForRow(row).find(function(item) { return item.id === 'rename'; });
+      if (action) { event.preventDefault(); event.stopPropagation(); action.run(); }
+      return;
+    }
     const rows = Array.from(tree.querySelectorAll('.document-tree-row')).filter(function(item) {
       return item.offsetParent !== null;
     });
@@ -12890,9 +13011,63 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function getFileManagerActionLabel() {
+    if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows') return 'Open in File Explorer';
+    if (typeof NL_OS !== 'undefined' && (NL_OS === 'Darwin' || NL_OS === 'macOS')) return 'Open in Finder';
+    return 'Open in File Manager';
+  }
+
+  async function renameLinkedOriginal(tab, filename) {
+    if (!hasDesktopFileAccess() || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) {
+      throw new Error('Workspace operation in progress');
+    }
+    const source = tab.sourcePath;
+    const destination = getNativeParentPath(source).replace(/[\\/]+$/, '') + '/' + filename;
+    if (source.replace(/\\/g, '/') === destination) return;
+    nativeMarkdownSaveInProgress = true;
+    linkedReadEpoch++;
+    const sourceKey = normalizeLinkedSourcePath(source);
+    const destinationKey = normalizeLinkedSourcePath(destination);
+    linkedSourceSavePaths.add(sourceKey);
+    linkedSourceSavePaths.add(destinationKey);
+    try {
+      await withLinkedLocationMutation(getOverlappingLinkedLocationIds(source), async function() {
+        if (!tabs.includes(tab) || tab.sourcePath !== source) throw new Error('Link changed');
+        if (findTabBySourcePath(destination) && findTabBySourcePath(destination) !== tab) throw new Error('Destination already linked');
+        // The storage backend checks source type, case aliases, occupied names
+        // and inaccessible entries. Never fall back to copying or deleting.
+        await workspaceStorage._desktopCheckMovePaths(source, destination);
+        if (!tabs.includes(tab) || tab.sourcePath !== source) throw new Error('Link changed');
+        captureLiveLinkedDraft(tab);
+        await Neutralino.filesystem.move(source, destination);
+        const changed = tabs.filter(function(item) { return normalizeLinkedSourcePath(item.sourcePath) === sourceKey; });
+        changed.forEach(function(item) {
+          captureLiveLinkedDraft(item);
+          item.sourcePath = destination;
+          item.title = filename.replace(/\.(md|markdown)$/i, '');
+          if (item.sourceRelativePath) item.sourceRelativePath = item.sourceRelativePath.replace(/[^/\\]+$/, filename);
+          item.sourceMissing = false;
+        });
+        // Once the filesystem rename has succeeded, retain its actual new path
+        // even if persistence fails. Reverting metadata would point at nothing.
+        if (!(await _flushTabsToStorage(tabs, { changedIds: changed.map(function(item) { return item.id; }) }).catch(function() { return false; }))) {
+          showAppToast('File renamed. Save the workspace again to retain the updated link.', { tone: 'warning' });
+        }
+        renderTabBar(tabs, activeTabId);
+      });
+    } finally {
+      linkedReadEpoch++;
+      linkedSourceSavePaths.delete(sourceKey);
+      linkedSourceSavePaths.delete(destinationKey);
+      nativeMarkdownSaveInProgress = false;
+      await refreshLinkedSourceMonitoring().catch(function(error) { console.warn('Linked monitoring refresh failed:', error); });
+    }
+  }
+
   async function revealLinkedSource(tab) {
     if (!isLinkedDocument(tab)) return;
-    await Neutralino.os.open(getNativeParentPath(tab.sourcePath));
+    try { await Neutralino.os.open(getNativeParentPath(tab.sourcePath)); }
+    catch (error) { console.error('Could not open source folder:', error); showAppToast('Could not open the original folder.', { tone: 'error' }); }
   }
 
   async function convertLinkedDocumentToVault(tabId, destination) {
@@ -15039,51 +15214,84 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renameTab(tabId) {
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
-    const modal = document.getElementById('rename-modal');
-    const input = document.getElementById('rename-modal-input');
-    const confirmBtn = document.getElementById('rename-modal-confirm');
-    const cancelBtn = document.getElementById('rename-modal-cancel');
-    if (!modal || !input) return;
-    input.value = tab.title;
-
-    function doRename() {
-      const newName = input.value.trim();
-      if (newName) {
-        tab.title = newName;
-        if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) {
-          syncLiveSessionTitle(newName);
+    const linked = isLinkedDocument(tab);
+    openExplorerRename({
+      type: 'document', id: tab.id, title: 'Rename file',
+      value: linked ? tab.sourcePath.split(/[/\\]/).pop() : tab.title,
+      validate: function(value) {
+        if (!value) return 'Enter a name.';
+        if (linked && (!/\.(md|markdown)$/i.test(value) || /[\x00-\x1f<>:"/\\|?*]/.test(value) || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value))) {
+          return 'Use a valid Markdown filename ending in .md or .markdown.';
         }
+        return '';
+      },
+      onConfirm: async function(value) {
+        if (!tabs.includes(tab)) return;
+        if (linked) { await renameLinkedOriginal(tab, value); return; }
+        tab.title = value;
+        if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) syncLiveSessionTitle(value);
         saveTabsToStorage(tabs, [tab.id]);
         renderTabBar(tabs, activeTabId);
       }
-      closeAppModal(modal);
-      cleanup();
-    }
-
-    function doCancel() {
-      closeAppModal(modal);
-      cleanup();
-    }
-
-    function onKey(e) {
-      if (e.key === 'Enter') doRename();
-    }
-
-    function cleanup() {
-      confirmBtn.removeEventListener('click', doRename);
-      cancelBtn.removeEventListener('click', doCancel);
-      input.removeEventListener('keydown', onKey);
-    }
-
-    confirmBtn.addEventListener('click', doRename);
-    cancelBtn.addEventListener('click', doCancel);
-    input.addEventListener('keydown', onKey);
-
-    openAppModal(modal, {
-      focusTarget: input,
-      onClose: doCancel
     });
-    input.select();
+  }
+
+  async function downloadWorkspaceFolder(folderId) {
+    const folder = getFolderById(folderId);
+    if (!folder || (folder.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked())) return;
+    const secretSession = secretWorkspaceKey;
+    const valid = function() {
+      return getFolderById(folderId) === folder && !workspaceMaintenancePending && !suspendWorkspacePersistence &&
+        (folder.workspaceId !== SECRET_WORKSPACE_ID || (isSecretWorkspaceUnlocked() && secretWorkspaceKey === secretSession));
+    };
+    try {
+      saveCurrentTabState();
+      saveSecondarySplitState();
+      const ids = getFolderDescendantIds([folderId]);
+      const folders = documentOrganization.folders.filter(function(item) { return ids.has(item.id); }).map(function(item) { return Object.assign({}, item); });
+      const documents = tabs.filter(function(tab) { return !isTemporaryDocument(tab) && !isLinkedDocument(tab) && ids.has(tab.folderId); });
+      const JSZip = await ensureJsZip();
+      if (!valid()) return;
+      const zip = new JSZip();
+      const paths = new Map();
+      const used = new Set();
+      function unique(parent, name) {
+        const base = String(name || 'Untitled').replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g, '_')
+          .replace(/[. ]+$/, '').replace(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?=\.|$)/i, '_$1') || 'Untitled';
+        let candidate = base;
+        let index = 2;
+        while (used.has((parent + candidate).toLowerCase())) {
+          const match = /^(.*)(\.md)$/i.exec(base);
+          candidate = match ? match[1] + ' (' + index++ + ')' + match[2] : base + ' (' + index++ + ')';
+        }
+        used.add((parent + candidate).toLowerCase());
+        return parent + candidate;
+      }
+      function folderPath(item, visiting) {
+        if (paths.has(item.id)) return paths.get(item.id);
+        if (visiting.has(item.id)) throw new Error('Invalid folder tree');
+        visiting.add(item.id);
+        const parent = item.id === folderId ? null : folders.find(function(other) { return other.id === item.parentFolderId; });
+        const result = unique(parent ? folderPath(parent, visiting) : '', item.name) + '/';
+        paths.set(item.id, result);
+        zip.folder(result);
+        visiting.delete(item.id);
+        return result;
+      }
+      folders.forEach(function(item) { folderPath(item, new Set()); });
+      for (const tab of documents) {
+        await ensureTabContent(tab);
+        if (!valid() || !tabs.includes(tab) || !ids.has(tab.folderId)) return;
+        if (tab.id === activeTabId) saveCurrentTabState();
+        saveSecondarySplitState();
+        zip.file(unique(paths.get(tab.folderId), getSafeDocumentFilename(tab.title, 'md', 'document.md')), typeof tab.content === 'string' ? tab.content : '');
+      }
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      if (valid()) saveAs(blob, getSafeDocumentFilename(folder.name, 'zip', 'folder.zip'));
+    } catch (error) {
+      console.error('Folder download failed:', error);
+      showAppToast('Folder download failed. Try again.', { tone: 'error' });
+    }
   }
 
   async function duplicateTab(tabId) {

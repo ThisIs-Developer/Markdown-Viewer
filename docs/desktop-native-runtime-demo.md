@@ -66,7 +66,7 @@ Normal preparation keeps existing HTML dragging and default desktop behavior.
 
 Both runtime APIs must ship in an official stable release before normal distribution
 can rely on them. Their interfaces may change during review. The maintainer can leave
-this draft as a future demo until stable Neutralino support is available.
+this PR as an opt-in demo until stable Neutralino support is available.
 
 ## Evidence and manual tests
 
@@ -104,3 +104,22 @@ rapid startup launches, minimized-window activation, Greek names/spaces, relativ
 paths from another cwd, drops over editor/preview/sidebar, Linked vs Vault copy,
 cancellation, internal moves/conversion, Ctrl+S and original-file preservation.
 Corporate execution policy still needs testing on the actual machine.
+
+### Explorer rename, folder download and branding
+
+Rename now runs inline in Explorer (Enter commits, Escape/blur cancels, F2 opens
+the field). Linked-file renames change the original filename while retaining local
+drafts and updating subsequent Save targets. The experimental Windows runtime
+rejects replacement during file moves, including destination races. File Explorer,
+Finder and File Manager actions open the actual source parent directory.
+
+Web folders can be downloaded as ZIP archives including nested/empty folders,
+current Markdown drafts and safely disambiguated names. Locked Secret workspaces
+cannot finish an in-flight archive export.
+
+Windows packaging sets ProductName, FileDescription, CompanyName, OriginalFilename
+and version metadata. Both window titles use Markdown Viewer. A separate supplied
+Markdown document icon is embedded without replacing the application icon. The
+existing optional registration helper selects that resource for document
+associations; it never changes the user's default. Windows controls its tooltip
+layout. Open-with discovery work is deferred at the maintainer's request.

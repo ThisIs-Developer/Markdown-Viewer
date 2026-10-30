@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "Cambió el propietario del registro.",
   "Keep one trial executable next to this helper, or pass its full path.": "Deja un solo ejecutable de prueba junto a este asistente o indica su ruta completa.",
   "Select a branded Markdown Viewer executable.": "Selecciona un ejecutable identificado como Markdown Viewer.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "Los borradores importados permanecen en el Explorador. Guárdalos de nuevo cuando el almacenamiento esté disponible."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Los borradores importados permanecen en el Explorador. Guárdalos de nuevo cuando el almacenamiento esté disponible.",
+  "Download folder": "Descargar carpeta",
+  "Open in File Explorer": "Abrir en el Explorador de archivos",
+  "Open in Finder": "Abrir en Finder",
+  "Open in File Manager": "Abrir en el gestor de archivos",
+  "Rename failed. The original was kept. Try again.": "No se pudo cambiar el nombre. Se conservó el original. Inténtalo de nuevo.",
+  "Use a valid Markdown filename ending in .md or .markdown.": "Usa un nombre de archivo Markdown válido que termine en .md o .markdown.",
+  "File renamed. Save the workspace again to retain the updated link.": "Archivo renombrado. Guarda de nuevo el espacio de trabajo para conservar el enlace actualizado.",
+  "Could not open the original folder.": "No se pudo abrir la carpeta original.",
+  "Folder download failed. Try again.": "No se pudo descargar la carpeta. Inténtalo de nuevo."
 }

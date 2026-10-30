@@ -754,6 +754,31 @@ body {
   color: var(--text-secondary);
 }
 
+.document-tree-rename {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 3px 4px;
+}
+.document-tree-rename > i { flex: 0 0 14px; font-size: 14px; margin-top: 5px; }
+.document-tree-rename-field { flex: 1; min-width: 0; }
+.document-tree-rename-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--accent-color);
+  border-radius: 3px;
+  padding: 2px 4px;
+  background: var(--editor-bg);
+  color: var(--text-color);
+  font: inherit;
+  outline-offset: 1px;
+}
+.document-tree-rename-input[aria-invalid="true"] { border-color: var(--color-danger-fg); }
+.document-tree-rename-error { display: block; white-space: normal; color: var(--color-danger-fg); font-size: 11px; }
+.document-tree-row.is-renaming > .document-menu-btn { visibility: hidden; }
+
 .document-tree-main {
   display: flex;
   align-items: center;

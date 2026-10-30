@@ -279,3 +279,23 @@ index 0d95254..a73b949 100755
 -#endif /* WEBVIEW_H */
 \ No newline at end of file
 +#endif /* WEBVIEW_H */
+diff --git a/api/fs/fs.cpp b/api/fs/fs.cpp
+index 868bfb5..d83eaa1 100644
+--- a/api/fs/fs.cpp
++++ b/api/fs/fs.cpp
+@@ -741,7 +741,15 @@ json move(const json &input) {
+     }
+ 
+     error_code ec;
++#if defined(_WIN32)
++    // Explorer rename and Vault moves must never replace a file created after
++    // the caller checked the destination. A same-volume rename is atomic;
++    // deliberately omit MOVEFILE_REPLACE_EXISTING and MOVEFILE_COPY_ALLOWED.
++    if(!MoveFileExW(CONVSTR(source).c_str(), CONVSTR(destination).c_str(), 0))
++        ec = error_code(GetLastError(), system_category());
++#else
+     filesystem::rename(CONVSTR(source), CONVSTR(destination), ec);
++#endif
+ 
+     if(!ec) {
+         output["success"] = true;

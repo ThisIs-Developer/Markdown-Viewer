@@ -27,7 +27,7 @@ async function main() {
   // Require the reviewed Windows WebView and event-bridge patch, excluding
   // unrelated upstream authentication, server and other-platform experiments.
   execFileSync('git', ['apply', '--reverse', '--check', patch], { cwd: runtimeSource, stdio: 'inherit' });
-  if (git(runtimeSource, 'diff', '--name-only', 'HEAD') !== 'api/window/window.cpp\nlib/webview/webview.h') throw new Error('Unexpected runtime source changes.');
+  if (git(runtimeSource, 'diff', '--name-only', 'HEAD') !== 'api/fs/fs.cpp\napi/window/window.cpp\nlib/webview/webview.h') throw new Error('Unexpected runtime source changes.');
   const appCommit = git(root, 'rev-parse', 'HEAD');
   fs.mkdirSync(path.join(appDir, '.tmp'), { recursive: true });
   const stage = fs.mkdtempSync(path.join(appDir, '.tmp/native-demo-'));
@@ -41,7 +41,7 @@ async function main() {
     config.applicationName = 'Markdown Viewer';
     config.description = 'Markdown Viewer';
     config.author = 'Markdown Viewer contributors';
-    config.modes.window.title = 'Markdown Viewer - Native Runtime Demo';
+    config.modes.window.title = 'Markdown Viewer';
     config.cli.binaryName = 'markdown-viewer-native-demo';
     config.cli.binaryVersion = '6.10.0';
     config.cli.distributionPath = 'dist';

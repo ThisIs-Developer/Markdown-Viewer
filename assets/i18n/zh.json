@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "注册所有者已更改。",
   "Keep one trial executable next to this helper, or pass its full path.": "请在此助手旁保留一个试用可执行文件，或提供其完整路径。",
   "Select a branded Markdown Viewer executable.": "请选择标识为 Markdown Viewer 的可执行文件。",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "导入的草稿会保留在资源管理器中。存储可用时，请再次保存。"
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "导入的草稿会保留在资源管理器中。存储可用时，请再次保存。",
+  "Download folder": "下载文件夹",
+  "Open in File Explorer": "在文件资源管理器中打开",
+  "Open in Finder": "在访达中打开",
+  "Open in File Manager": "在文件管理器中打开",
+  "Rename failed. The original was kept. Try again.": "重命名失败。原文件已保留，请重试。",
+  "Use a valid Markdown filename ending in .md or .markdown.": "请使用以 .md 或 .markdown 结尾的有效 Markdown 文件名。",
+  "File renamed. Save the workspace again to retain the updated link.": "文件已重命名。请再次保存工作区以保留更新后的链接。",
+  "Could not open the original folder.": "无法打开原文件夹。",
+  "Folder download failed. Try again.": "文件夹下载失败，请重试。"
 }

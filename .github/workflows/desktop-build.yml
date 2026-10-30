@@ -30,6 +30,10 @@ jobs:
             desktop-app/resources/libs
           key: neutralino-${{ hashFiles('desktop-app/neutralino.config.json') }}
 
+      - name: Install desktop packaging dependencies
+        working-directory: desktop-app
+        run: npm ci
+
       - name: Setup Neutralinojs binaries
         working-directory: desktop-app
         run: npm run setup

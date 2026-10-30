@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "등록 소유자가 변경되었습니다.",
   "Keep one trial executable next to this helper, or pass its full path.": "이 도우미 옆에 시험용 실행 파일 하나를 두거나 전체 경로를 지정하세요.",
   "Select a branded Markdown Viewer executable.": "Markdown Viewer로 식별되는 실행 파일을 선택하세요.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "가져온 초안은 탐색기에 남아 있습니다. 저장소를 사용할 수 있게 되면 다시 저장하세요."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "가져온 초안은 탐색기에 남아 있습니다. 저장소를 사용할 수 있게 되면 다시 저장하세요.",
+  "Download folder": "폴더 다운로드",
+  "Open in File Explorer": "파일 탐색기에서 열기",
+  "Open in Finder": "Finder에서 열기",
+  "Open in File Manager": "파일 관리자에서 열기",
+  "Rename failed. The original was kept. Try again.": "이름을 변경하지 못했습니다. 원본은 유지되었습니다. 다시 시도하세요.",
+  "Use a valid Markdown filename ending in .md or .markdown.": ".md 또는 .markdown으로 끝나는 올바른 Markdown 파일 이름을 사용하세요.",
+  "File renamed. Save the workspace again to retain the updated link.": "파일 이름을 변경했습니다. 변경된 링크를 유지하려면 작업 공간을 다시 저장하세요.",
+  "Could not open the original folder.": "원본 폴더를 열 수 없습니다.",
+  "Folder download failed. Try again.": "폴더 다운로드에 실패했습니다. 다시 시도하세요."
 }

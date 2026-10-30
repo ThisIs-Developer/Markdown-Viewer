@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "Der Eigentümer der Registrierung hat sich geändert.",
   "Keep one trial executable next to this helper, or pass its full path.": "Legen Sie genau eine Testprogrammdatei neben diesen Helfer oder geben Sie ihren vollständigen Pfad an.",
   "Select a branded Markdown Viewer executable.": "Wählen Sie eine Programmdatei mit der Kennzeichnung Markdown Viewer.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "Importierte Entwürfe bleiben im Explorer. Speichern Sie sie erneut, sobald der Speicher verfügbar ist."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Importierte Entwürfe bleiben im Explorer. Speichern Sie sie erneut, sobald der Speicher verfügbar ist.",
+  "Download folder": "Ordner herunterladen",
+  "Open in File Explorer": "Im Datei-Explorer öffnen",
+  "Open in Finder": "Im Finder öffnen",
+  "Open in File Manager": "Im Dateimanager öffnen",
+  "Rename failed. The original was kept. Try again.": "Umbenennen fehlgeschlagen. Das Original wurde beibehalten. Versuchen Sie es erneut.",
+  "Use a valid Markdown filename ending in .md or .markdown.": "Verwenden Sie einen gültigen Markdown-Dateinamen mit der Endung .md oder .markdown.",
+  "File renamed. Save the workspace again to retain the updated link.": "Datei umbenannt. Speichern Sie den Arbeitsbereich erneut, um die aktualisierte Verknüpfung zu behalten.",
+  "Could not open the original folder.": "Der ursprüngliche Ordner konnte nicht geöffnet werden.",
+  "Folder download failed. Try again.": "Ordnerdownload fehlgeschlagen. Versuchen Sie es erneut."
 }

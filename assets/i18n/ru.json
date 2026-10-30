@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "Владелец регистрации изменился.",
   "Keep one trial executable next to this helper, or pass its full path.": "Поместите один пробный исполняемый файл рядом с помощником или укажите полный путь.",
   "Select a branded Markdown Viewer executable.": "Выберите исполняемый файл с названием Markdown Viewer.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "Импортированные черновики остаются в Проводнике. Сохраните их снова, когда хранилище станет доступно."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Импортированные черновики остаются в Проводнике. Сохраните их снова, когда хранилище станет доступно.",
+  "Download folder": "Скачать папку",
+  "Open in File Explorer": "Открыть в Проводнике",
+  "Open in Finder": "Открыть в Finder",
+  "Open in File Manager": "Открыть в файловом менеджере",
+  "Rename failed. The original was kept. Try again.": "Не удалось переименовать. Оригинал сохранён. Повторите попытку.",
+  "Use a valid Markdown filename ending in .md or .markdown.": "Используйте допустимое имя файла Markdown с расширением .md или .markdown.",
+  "File renamed. Save the workspace again to retain the updated link.": "Файл переименован. Сохраните рабочее пространство снова, чтобы сохранить обновлённую ссылку.",
+  "Could not open the original folder.": "Не удалось открыть исходную папку.",
+  "Folder download failed. Try again.": "Не удалось скачать папку. Повторите попытку."
 }

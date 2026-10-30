@@ -53,15 +53,16 @@ internal sealed class Registration {
         var capabilities = Id + "\\Capabilities";
         var command = "\"" + executable + "\" \"%1\"";
         var icon = "\"" + executable + "\",0";
+        var documentIcon = "\"" + executable + "\",-200";
         Put(app, "FriendlyAppName", "Markdown Viewer");
-        Put(app + "\\DefaultIcon", "", icon);
+        Put(app + "\\DefaultIcon", "", documentIcon);
         Put(app + "\\shell\\open\\command", "", command);
         Put(prog, "", "Markdown document");
         Put(prog + "\\Application", "ApplicationName", "Markdown Viewer");
         Put(prog + "\\Application", "ApplicationIcon", icon);
         Put(prog + "\\Application", "ApplicationDescription", "Markdown Viewer");
         Put(prog + "\\Application", "ApplicationCompany", "Markdown Viewer contributors");
-        Put(prog + "\\DefaultIcon", "", icon);
+        Put(prog + "\\DefaultIcon", "", documentIcon);
         Put(prog + "\\shell\\open\\command", "", command);
         // Windows requires the capability name and RegisteredApplications value
         // name to match. Keep ownership/storage separate from this display name.
@@ -115,6 +116,9 @@ internal sealed class Registration {
             check(test.Get("RegisteredApplications", Id) == null);
             check(test.Get(Id + "\\Capabilities", "ApplicationDescription") == "Markdown Viewer");
             check(test.Get("Classes\\.md") == "Other.Application");
+            check(test.Get("Classes\\" + ProgId + "\\DefaultIcon") == "\"" + first + "\",-200");
+            check(test.Get(test.OwnedKeys(first)[0] + "\\DefaultIcon") == "\"" + first + "\",-200");
+            check(test.Get("Classes\\" + ProgId + "\\Application", "ApplicationIcon") == "\"" + first + "\",0");
             check(test.Get("Classes\\" + ProgId + "\\shell\\open\\command") == "\"" + first + "\" \"%1\"");
             check(test.Get("Classes\\.markdown\\OpenWithProgids", ProgId) == "");
             check(test.Get(test.OwnedKeys(first)[3]) == first);

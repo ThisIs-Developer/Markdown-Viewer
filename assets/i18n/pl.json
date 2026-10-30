@@ -1662,5 +1662,14 @@
   "Registration ownership changed.": "Właściciel rejestracji uległ zmianie.",
   "Keep one trial executable next to this helper, or pass its full path.": "Umieść jeden plik wykonywalny wersji próbnej obok tego narzędzia lub podaj pełną ścieżkę.",
   "Select a branded Markdown Viewer executable.": "Wybierz plik wykonywalny oznaczony jako Markdown Viewer.",
-  "Imported drafts remain in Explorer. Save them again when storage is available.": "Zaimportowane wersje robocze pozostają w Eksploratorze. Zapisz je ponownie, gdy pamięć będzie dostępna."
+  "Imported drafts remain in Explorer. Save them again when storage is available.": "Zaimportowane wersje robocze pozostają w Eksploratorze. Zapisz je ponownie, gdy pamięć będzie dostępna.",
+  "Download folder": "Pobierz folder",
+  "Open in File Explorer": "Otwórz w Eksploratorze plików",
+  "Open in Finder": "Otwórz w Finderze",
+  "Open in File Manager": "Otwórz w menedżerze plików",
+  "Rename failed. The original was kept. Try again.": "Zmiana nazwy nie powiodła się. Oryginał został zachowany. Spróbuj ponownie.",
+  "Use a valid Markdown filename ending in .md or .markdown.": "Użyj prawidłowej nazwy pliku Markdown z rozszerzeniem .md lub .markdown.",
+  "File renamed. Save the workspace again to retain the updated link.": "Nazwa pliku została zmieniona. Zapisz ponownie obszar roboczy, aby zachować zaktualizowane łącze.",
+  "Could not open the original folder.": "Nie można otworzyć oryginalnego folderu.",
+  "Folder download failed. Try again.": "Pobieranie folderu nie powiodło się. Spróbuj ponownie."
 }
