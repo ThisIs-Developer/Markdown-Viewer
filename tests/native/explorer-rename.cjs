@@ -31,7 +31,15 @@ let child, browser, page;
       await delay(250);
     }
     browser = await chromium.connectOverCDP('http://127.0.0.1:9389');
-    page = browser.contexts()[0].pages()[0];
+    // The debugging endpoint can be ready before WebView2 creates its page.
+    // Wait for the actual application target, not just the browser connection.
+    for (let index = 0; index < 120; index++) {
+      page = browser.contexts().flatMap(context => context.pages()).find(candidate => /^http:\/\/(127\.0\.0\.1|localhost):/.test(candidate.url()));
+      if (page) break;
+      if (child.exitCode !== null) throw new Error('Trial exited while creating its WebView: ' + child.exitCode);
+      await delay(250);
+    }
+    assert.ok(page, 'The native application WebView becomes available');
     page.setDefaultTimeout(60000);
     await page.waitForFunction(() => document.documentElement.dataset.appReady === 'true');
     assert.equal(await page.evaluate(() => MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES.isolatedVault), true);
@@ -82,6 +90,9 @@ let child, browser, page;
     fs.writeFileSync(path.join(output, 'native-rename-results.json'), JSON.stringify(result, null, 2));
     if (page) await page.evaluate(async () => { await MarkdownViewerFlushWorkspace(); await Neutralino.app.exit(); }).catch(() => {});
     if (browser) await browser.close().catch(() => {});
-    if (child && child.exitCode === null) child.unref();
+    if (child && child.exitCode === null) {
+      for (let index = 0; index < 20 && child.exitCode === null; index++) await delay(100);
+      if (child.exitCode === null) child.kill();
+    }
   }
 })();
