@@ -55,7 +55,7 @@ internal sealed class Registration {
         var icon = "\"" + executable + "\",0";
         var documentIcon = "\"" + executable + "\",-200";
         Put(app, "FriendlyAppName", "Markdown Viewer");
-        Put(app + "\\DefaultIcon", "", documentIcon);
+        Put(app + "\\DefaultIcon", "", icon);
         Put(app + "\\shell\\open\\command", "", command);
         Put(prog, "", "Markdown document");
         Put(prog + "\\Application", "ApplicationName", "Markdown Viewer");
@@ -117,7 +117,7 @@ internal sealed class Registration {
             check(test.Get(Id + "\\Capabilities", "ApplicationDescription") == "Markdown Viewer");
             check(test.Get("Classes\\.md") == "Other.Application");
             check(test.Get("Classes\\" + ProgId + "\\DefaultIcon") == "\"" + first + "\",-200");
-            check(test.Get(test.OwnedKeys(first)[0] + "\\DefaultIcon") == "\"" + first + "\",-200");
+            check(test.Get(test.OwnedKeys(first)[0] + "\\DefaultIcon") == "\"" + first + "\",0");
             check(test.Get("Classes\\" + ProgId + "\\Application", "ApplicationIcon") == "\"" + first + "\",0");
             check(test.Get("Classes\\" + ProgId + "\\shell\\open\\command") == "\"" + first + "\" \"%1\"");
             check(test.Get("Classes\\.markdown\\OpenWithProgids", ProgId) == "");

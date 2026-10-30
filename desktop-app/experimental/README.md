@@ -153,8 +153,9 @@ The supplied `markdown-document.svg` is embedded as a separate document icon
 (resource 200), with 16–256 px ICO sizes. Rebuild it with
 `node scripts/build-markdown-document-icon.cjs` after installing the root Playwright
 dependencies. The optional integration helper associates this document icon with
-the application's Markdown ProgID and executable association, keeping the M icon
-for application identity. This requires explicit registration; merely changing EXE
+the application's Markdown ProgID, keeping the M icon for application identity.
+Choosing an unregistered EXE directly can still use its application icon for files.
+The separate document icon requires explicit registration; merely changing EXE
 metadata cannot install a separate document association. The helper never sets
 UserChoice/default applications. Open-with discovery investigation is deferred at
 the maintainer's request; no automatic registration is added.
