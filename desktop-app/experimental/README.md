@@ -158,3 +158,6 @@ for application identity. This requires explicit registration; merely changing E
 metadata cannot install a separate document association. The helper never sets
 UserChoice/default applications. Open-with discovery investigation is deferred at
 the maintainer's request; no automatic registration is added.
+
+The supplied file-md-thin artwork is from Phosphor Icons (MIT). Its notice is kept
+in `assets/phosphor-icons.LICENSE.txt`, which is included in embedded desktop assets.
