@@ -13,7 +13,6 @@ using Microsoft.Win32;
 [assembly: AssemblyTitle("Markdown Viewer Windows integration")]
 [assembly: AssemblyDescription("Markdown Viewer Windows integration")]
 [assembly: AssemblyProduct("Markdown Viewer")]
-[assembly: AssemblyCompany("Markdown Viewer contributors")]
 [assembly: AssemblyVersion("3.10.5.0")]
 
 // Explicit per-user registration. Never writes UserChoice, extension defaults,

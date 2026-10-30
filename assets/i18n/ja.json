@@ -1672,5 +1672,7 @@
   "File renamed. Save the workspace again to retain the updated link.": "ファイル名を変更しました。更新したリンクを保持するため、ワークスペースを再保存してください。",
   "Could not open the original folder.": "元のフォルダーを開けませんでした。",
   "Folder download failed. Try again.": "フォルダーのダウンロードに失敗しました。もう一度お試しください。",
-  "Item changed. Start Rename again.": "項目が変更されました。名前の変更をやり直してください。"
+  "Item changed. Start Rename again.": "項目が変更されました。名前の変更をやり直してください。",
+  "Download": "ダウンロード",
+  "Use a valid filename.": "有効なファイル名を使用してください。"
 }

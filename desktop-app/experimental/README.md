@@ -62,7 +62,7 @@ The helper also accepts `--register <full-executable-path>` and
 an isolated temporary registry subtree and checks quoting, defaults, ownership and
 cleanup. It embeds the application's locale catalogs and uses the Windows UI language.
 
-The app executable uses the Markdown Viewer name, description, contributor name,
+The app executable uses the Markdown Viewer name, description, version,
 and official icon in its Windows resources. Opening files through the registered
 quoted command uses the existing Unicode-aware single-instance launch queue.
 
@@ -140,6 +140,9 @@ the linked source path and makes later saves use the new filename. It never fall
 back to copying/deleting an original when a rename fails. Sidebar grouping stays
 independent of the original disk directory. The parent-directory action is named
 for File Explorer on Windows, Finder on macOS, and File Manager on Linux.
+Linked Rename shows the base name only and preserves its existing Markdown extension.
+Selecting multiple files also offers **Download**, saving their current Markdown
+contents together in a ZIP, with a single destination dialog on desktop.
 
 On the web, a folder's **Download folder** action exports a ZIP containing its
 Markdown documents, nested folders and empty folders. Current editor drafts are
@@ -150,6 +153,7 @@ Both packaged Windows executables use **Markdown Viewer**, version 3.10.5, and
 the official app icon. The trial title also reads **Markdown Viewer**; its filename,
 application ID and separate Vault continue to distinguish it from a normal release.
 Explorer itself controls tooltip property labels, size and creation-date fields.
+Company metadata is omitted from packaged executables.
 
 The supplied `markdown-document.svg` is embedded as a separate document icon
 (resource 200), with 16–256 px ICO sizes. Rebuild it with

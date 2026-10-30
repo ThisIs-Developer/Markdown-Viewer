@@ -1672,5 +1672,7 @@
   "File renamed. Save the workspace again to retain the updated link.": "Fichier renommé. Enregistrez à nouveau l’espace de travail pour conserver le lien mis à jour.",
   "Could not open the original folder.": "Impossible d’ouvrir le dossier d’origine.",
   "Folder download failed. Try again.": "Le téléchargement du dossier a échoué. Réessayez.",
-  "Item changed. Start Rename again.": "L’élément a changé. Relancez le renommage."
+  "Item changed. Start Rename again.": "L’élément a changé. Relancez le renommage.",
+  "Download": "Télécharger",
+  "Use a valid filename.": "Utilisez un nom de fichier valide."
 }

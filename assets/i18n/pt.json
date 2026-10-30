@@ -1672,5 +1672,7 @@
   "File renamed. Save the workspace again to retain the updated link.": "Arquivo renomeado. Salve o espaço de trabalho novamente para manter o vínculo atualizado.",
   "Could not open the original folder.": "Não foi possível abrir a pasta original.",
   "Folder download failed. Try again.": "Falha ao baixar a pasta. Tente novamente.",
-  "Item changed. Start Rename again.": "O item mudou. Inicie a renomeação novamente."
+  "Item changed. Start Rename again.": "O item mudou. Inicie a renomeação novamente.",
+  "Download": "Baixar",
+  "Use a valid filename.": "Use um nome de arquivo válido."
 }

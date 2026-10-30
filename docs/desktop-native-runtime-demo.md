@@ -117,7 +117,7 @@ Web folders can be downloaded as ZIP archives including nested/empty folders,
 current Markdown drafts and safely disambiguated names. Locked Secret workspaces
 cannot finish an in-flight archive export.
 
-Windows packaging sets ProductName, FileDescription, CompanyName, OriginalFilename
+Windows packaging sets ProductName, FileDescription, OriginalFilename
 and version metadata. Both window titles use Markdown Viewer. A separate supplied
 Markdown document icon is embedded without replacing the application icon. The
 existing optional registration helper selects that resource for document

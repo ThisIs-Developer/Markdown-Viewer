@@ -26,8 +26,9 @@ async function brandExecutable(file) {
     for (const language of version.getAllLanguagesForStringValues()) {
       version.setStringValues(language, {
         ProductName: 'Markdown Viewer', FileDescription: 'Markdown Viewer',
-        CompanyName: 'Markdown Viewer contributors', OriginalFilename: path.basename(file)
+        OriginalFilename: path.basename(file)
       });
+      version.removeStringValue(language, 'CompanyName');
     }
     version.outputToResourceEntries(resources.entries);
   }

@@ -134,21 +134,21 @@ test('linked rename changes the original filename, retains draft and saves to th
   await setEditorContent(page, '# local draft');
   await menu(page, row, 'Rename');
   const input = page.locator('.document-tree-rename-input');
-  await expect(input).toHaveValue('δοκιμή & %.md');
-  await input.fill('Renamed 日本 & #.markdown');
+  await expect(input).toHaveValue('δοκιμή & %');
+  await input.fill('Renamed 日本 & #');
   await input.press('Enter');
   const renamed = page.locator(`[data-document-id="${id}"]`);
-  await expect(renamed).toHaveAttribute('title', 'C:/Original/Renamed 日本 & #.markdown');
+  await expect(renamed).toHaveAttribute('title', 'C:/Original/Renamed 日本 & #.md');
   expect(await editorValue(page)).toBe('# local draft');
-  expect(await page.evaluate(() => [...window.__desktopFiles].filter(([key]) => key.startsWith('C:/Original/')))).toEqual([['C:/Original/Renamed 日本 & #.markdown', '# original']]);
+  expect(await page.evaluate(() => [...window.__desktopFiles].filter(([key]) => key.startsWith('C:/Original/')))).toEqual([['C:/Original/Renamed 日本 & #.md', '# original']]);
   await menu(page, renamed, 'Save');
-  await expect.poll(() => page.evaluate(() => window.__desktopFiles.get('C:/Original/Renamed 日本 & #.markdown'))).toBe('# local draft');
+  await expect.poll(() => page.evaluate(() => window.__desktopFiles.get('C:/Original/Renamed 日本 & #.md'))).toBe('# local draft');
   const record = await page.evaluate(async id => {
     await MarkdownViewerFlushWorkspace();
     const storage = new MarkdownWorkspaceStorage(); await storage.init();
     return (await storage.listDocumentMetadata()).find(tab => tab.id === id);
   }, id);
-  expect(record.sourcePath).toBe('C:/Original/Renamed 日本 & #.markdown');
+  expect(record.sourcePath).toBe('C:/Original/Renamed 日本 & #.md');
 });
 
 test('unchanged Windows linked filename closes without attempting a disk move', async ({ page }) => {
@@ -204,7 +204,7 @@ test('linked rename rejects invalid names and collisions without changing either
   await page.evaluate(() => window.__desktopFiles.set('C:/Original/Occupied.md', '# occupied'));
   await menu(page, row, 'Rename');
   const input = page.locator('.document-tree-rename-input');
-  for (const name of ['../escape.md', 'CON.md', 'other.txt', 'Occupied.md']) {
+  for (const name of ['../escape', 'CON', '', 'Occupied']) {
     await input.fill(name); await input.press('Enter');
     await expect(input).toHaveAttribute('aria-invalid', 'true');
   }
@@ -230,7 +230,7 @@ test('permission failure during linked rename retains the original link and draf
   await page.evaluate(() => { Neutralino.filesystem.move = async () => { throw new Error('Access denied'); }; });
   await menu(page, row, 'Rename');
   const input = page.locator('.document-tree-rename-input');
-  await input.fill('Denied.md'); await input.press('Enter');
+  await input.fill('Denied'); await input.press('Enter');
   await expect(input).toHaveAttribute('aria-invalid', 'true');
   await input.press('Escape');
   await expect(row).toHaveAttribute('title', 'C:/Original/δοκιμή & %.md');

@@ -1672,5 +1672,7 @@
   "File renamed. Save the workspace again to retain the updated link.": "Файлът е преименуван. Запазете работното пространство отново, за да запазите обновената връзка.",
   "Could not open the original folder.": "Оригиналната папка не може да бъде отворена.",
   "Folder download failed. Try again.": "Изтеглянето на папката не бе успешно. Опитайте отново.",
-  "Item changed. Start Rename again.": "Елементът е променен. Започнете преименуването отново."
+  "Item changed. Start Rename again.": "Елементът е променен. Започнете преименуването отново.",
+  "Download": "Изтегляне",
+  "Use a valid filename.": "Използвайте валидно име на файл."
 }

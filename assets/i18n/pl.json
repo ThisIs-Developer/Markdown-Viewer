@@ -1672,5 +1672,7 @@
   "File renamed. Save the workspace again to retain the updated link.": "Nazwa pliku została zmieniona. Zapisz ponownie obszar roboczy, aby zachować zaktualizowane łącze.",
   "Could not open the original folder.": "Nie można otworzyć oryginalnego folderu.",
   "Folder download failed. Try again.": "Pobieranie folderu nie powiodło się. Spróbuj ponownie.",
-  "Item changed. Start Rename again.": "Element uległ zmianie. Rozpocznij zmianę nazwy ponownie."
+  "Item changed. Start Rename again.": "Element uległ zmianie. Rozpocznij zmianę nazwy ponownie.",
+  "Download": "Pobierz",
+  "Use a valid filename.": "Użyj prawidłowej nazwy pliku."
 }

@@ -6153,7 +6153,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getDocumentMenuActions(tab) {
     if (tab && tab.kind === LINKED_WORKSPACE_GUIDE_KIND) {
       return [
-        { id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'favorite', icon: tab.favorite ? 'lucide-star-filled' : 'lucide-star', label: tab.favorite ? 'Remove from Favorites' : 'Add to Favorites', run: function() { toggleDocumentFavorite(tab.id); } },
         { id: 'download', icon: 'lucide-download', label: 'Download Markdown', run: function() { downloadTabMarkdown(tab.id); } },
         { id: 'delete', icon: 'lucide-trash-2', label: 'Delete', danger: true, run: function() { deleteTab(tab.id); } }
@@ -6161,7 +6161,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (isLinkedDocument(tab) && !isTemporaryDocument(tab)) {
       const linkedActions = [
-        { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'save', icon: 'lucide-save', label: 'Save', run: function() { void nativeSaveMarkdown({ tabId: tab.id, useLinkedSource: true }); } },
         { id: 'save-as', icon: 'lucide-save-plus', label: 'Save As…', run: function() { void nativeSaveMarkdown({ tabId: tab.id, createLinked: true }); } },
         { id: 'reload-source', icon: 'lucide-refresh-cw', label: 'Reload from disk', run: function() { void reloadLinkedDocument(tab.id, { force: true }); } },
@@ -6174,7 +6174,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return linkedActions;
     }
     const actions = [
-      { id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } }, {
+      { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } }, {
       id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameTab(tab.id); }
     }];
     if (!isTemporaryDocument(tab)) {
@@ -6406,9 +6406,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       actions.push(
         {
           id: 'open-selected',
-          icon: 'lucide-files',
+          icon: 'lucide-folder-open',
           label: 'Open all',
           run: openSelectedDocuments
+        },
+        {
+          id: 'download-selected',
+          icon: 'lucide-download',
+          label: 'Download',
+          run: function() { void downloadSelectedDocuments(); }
         },
         {
           id: 'move-selected',
@@ -15229,21 +15235,29 @@ document.addEventListener("DOMContentLoaded", async function () {
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
     const linked = isLinkedDocument(tab);
+    const sourcePath = linked ? tab.sourcePath : '';
+    const sourceName = linked ? getLinkedRenameParts(sourcePath).name : '';
+    const extension = linked ? (sourceName.match(/\.(md|markdown)$/i) || ['.md'])[0] : '';
+    const linkedFilename = function(value) { return value + extension; };
     openExplorerRename({
       type: 'document', id: tab.id, title: 'Rename file',
-      value: linked ? getLinkedRenameParts(tab.sourcePath).name : tab.title,
+      value: linked ? sourceName.slice(0, -extension.length) : tab.title,
       validate: function(value) {
         if (!value) return 'Enter a name.';
         const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
-        if (linked && (!/\.(md|markdown)$/i.test(value) || /[\x00/]/.test(value) ||
+        if (linked && (/[\x00/]/.test(value) ||
             (windows && (/[\x00-\x1f<>:"\\|?*]/.test(value) || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value))))) {
-          return 'Use a valid Markdown filename ending in .md or .markdown.';
+          return 'Use a valid filename.';
         }
         return '';
       },
       onConfirm: async function(value) {
         if (!tabs.includes(tab)) return;
-        if (linked) { await renameLinkedOriginal(tab, value); return; }
+        if (linked) {
+          if (tab.sourcePath !== sourcePath) throw Object.assign(new Error('Link changed during rename'), { userMessage: 'Item changed. Start Rename again.' });
+          await renameLinkedOriginal(tab, linkedFilename(value));
+          return;
+        }
         if (tab.title === value) {
           if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) syncLiveSessionTitle(value);
           return;
@@ -15254,6 +15268,54 @@ document.addEventListener("DOMContentLoaded", async function () {
         renderTabBar(tabs, activeTabId);
       }
     });
+  }
+
+  async function downloadSelectedDocuments() {
+    const documents = getSelectedDocuments().slice();
+    if (documents.length < 2 || documents.some(isShareSnapshotTab)) return;
+    const secretSession = secretWorkspaceKey;
+    const valid = function() {
+      return !workspaceMaintenancePending && !suspendWorkspacePersistence && documents.every(function(tab) {
+        return tabs.includes(tab) && (tab.workspaceId !== SECRET_WORKSPACE_ID ||
+          (isSecretWorkspaceUnlocked() && secretWorkspaceKey === secretSession));
+      });
+    };
+    try {
+      if (!valid()) return;
+      saveCurrentTabState();
+      saveSecondarySplitState();
+      const JSZip = await ensureJsZip();
+      if (!valid()) return;
+      const zip = new JSZip();
+      const names = new Set();
+      for (const tab of documents) {
+        await ensureTabContent(tab);
+        if (!valid()) return;
+        saveCurrentTabState();
+        saveSecondarySplitState();
+        const filename = getSafeDocumentFilename(tab.title, 'md', 'document.md');
+        let name = filename;
+        let index = 2;
+        while (names.has(name.toLowerCase())) name = filename.slice(0, -3) + ' (' + index++ + ').md';
+        names.add(name.toLowerCase());
+        zip.file(name, typeof tab.content === 'string' ? tab.content : '');
+      }
+      if (hasDesktopFileAccess()) {
+        let destination = await Neutralino.os.showSaveDialog('Download', {
+          defaultPath: 'selected-files.zip', filters: [{ name: 'ZIP archives (*.zip)', extensions: ['zip'] }]
+        });
+        if (!destination || !valid()) return;
+        if (!/\.zip$/i.test(destination)) destination += '.zip';
+        const bytes = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+        if (valid()) await Neutralino.filesystem.writeBinaryFile(destination, bytes);
+      } else {
+        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+        if (valid()) saveAs(blob, 'selected-files.zip');
+      }
+    } catch (error) {
+      console.error('Selected document download failed:', error);
+      showAppToast('Export failed:', { tone: 'error' });
+    }
   }
 
   async function downloadWorkspaceFolder(folderId) {
