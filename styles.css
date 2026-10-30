@@ -3225,7 +3225,7 @@ body {
 
 .header-icon-command.sync-active:disabled,
 .header-icon-command.sync-active[aria-disabled="true"] {
-  border-color: transparent;
+  border-color: var(--border-color);
   background: transparent;
   color: var(--text-color);
   box-shadow: none;

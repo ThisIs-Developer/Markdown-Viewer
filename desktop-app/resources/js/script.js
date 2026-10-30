@@ -6222,7 +6222,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       }];
     }
     const actions = [
-      { id: 'new-document', icon: 'lucide-file-text', label: 'New file', run: function() { newTab('', null, { workspaceId: workspace.id }); } },
+      { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab('', null, { workspaceId: workspace.id }); } },
       { id: 'new-folder', icon: 'lucide-folder-plus', label: 'New folder', run: function() { createFolder(workspace.id); } }
     ];
     if (workspace.id === SECRET_WORKSPACE_ID) {
@@ -6233,7 +6233,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getFolderMenuActions(folder) {
     const actions = [
-      { id: 'new-document', icon: 'lucide-file-text', label: 'New file', run: function() { newTab('', null, { workspaceId: folder.workspaceId, folderId: folder.id }); } },
+      { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab('', null, { workspaceId: folder.workspaceId, folderId: folder.id }); } },
       { id: 'new-folder', icon: 'lucide-folder-plus', label: 'New folder', run: function() { createFolder(folder.workspaceId, folder.id); } },
       { id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameFolder(folder.id); } },
       { id: 'delete', icon: 'lucide-trash-2', label: 'Delete', danger: true, run: function() { deleteFolder(folder.id); } }
@@ -6474,7 +6474,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const actions = [
       {
         id: 'new-document',
-        icon: 'lucide-file-text',
+        icon: 'lucide-file-plus-2',
         label: 'New file',
         run: function() { newTab('', null, location); }
       },
