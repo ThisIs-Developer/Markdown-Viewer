@@ -63,7 +63,12 @@ jobs:
         run: npm --prefix desktop-app run setup
       - name: Package isolated native demo
         run: node desktop-app/build-native-demo.js
+      - name: Validate native rename with real Windows files
+        run: |
+          $manifest = Get-Content desktop-app/dist/native-demo/provenance.json | ConvertFrom-Json
+          node tests/native/explorer-rename.cjs "desktop-app/dist/native-demo/$($manifest.executable)"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Markdown-Viewer-PR269-Windows-Native-Demo
           path: desktop-app/dist/native-demo/

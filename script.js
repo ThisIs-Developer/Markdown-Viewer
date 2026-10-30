@@ -5739,7 +5739,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         return '';
       },
       onConfirm: function(value) {
-        if (getFolderById(folderId) !== folder) return;
+        if (getFolderById(folderId) !== folder || folder.name === value) return;
         folder.name = value;
         saveDocumentOrganization();
         renderDocumentSidebar();
@@ -7301,7 +7301,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function appendDocumentTreeItem(container, tab, depth, meta) {
-    const isActiveDocument = tab.id === activeTabId;
+    const isActiveDocument = tab.id === activeTabId || (explorerRename && explorerRename.type === 'document' && explorerRename.id === tab.id);
     const consumesRenderBudget = documentSidebarRenderBudget && documentSidebarRenderBudget.remaining > 0;
     if (documentSidebarRenderBudget && documentSidebarRenderBudget.remaining <= 0 && !isActiveDocument) {
       return false;
@@ -12923,7 +12923,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!hasDesktopFileAccess()) return;
     try {
       const folderPath = await Neutralino.os.showFolderDialog('Link folder');
-      if (folderPath) await linkMarkdownFolderWithProgress(folderPath, { parent: parent });
+      if (folderPath) return await linkMarkdownFolderWithProgress(folderPath, { parent: parent });
     } catch (error) {
       console.warn('Could not link Markdown folder:', error);
       showAppToast(error.message || 'The selected folder could not be linked.', { tone: 'error', title: 'Link failed' });
@@ -13022,8 +13022,8 @@ document.addEventListener("DOMContentLoaded", async function () {
       throw new Error('Workspace operation in progress');
     }
     const source = tab.sourcePath;
-    const destination = getNativeParentPath(source).replace(/[\\/]+$/, '') + '/' + filename;
-    if (source.replace(/\\/g, '/') === destination) return;
+    if (source.split(/[/\\]/).pop() === filename) return;
+    const destination = getNativeParentPath(source).replace(/\\/g, '/').replace(/\/+$/, '') + '/' + filename;
     nativeMarkdownSaveInProgress = true;
     linkedReadEpoch++;
     const sourceKey = normalizeLinkedSourcePath(source);
@@ -15228,6 +15228,10 @@ document.addEventListener("DOMContentLoaded", async function () {
       onConfirm: async function(value) {
         if (!tabs.includes(tab)) return;
         if (linked) { await renameLinkedOriginal(tab, value); return; }
+        if (tab.title === value) {
+          if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) syncLiveSessionTitle(value);
+          return;
+        }
         tab.title = value;
         if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) syncLiveSessionTitle(value);
         saveTabsToStorage(tabs, [tab.id]);

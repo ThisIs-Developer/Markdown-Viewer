@@ -75,13 +75,13 @@ test('web folder ZIP preserves hierarchy, empty folders, duplicate names and cur
   expect(bodies.sort()).toEqual(['# first', '# latest draft']);
 });
 
-async function linked(page) {
+async function linked(page, sourcePath = 'C:/Original/δοκιμή & %.md') {
   await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window); window.NL_OS="Windows";');
   await openApp(page);
-  await page.evaluate(async () => {
+  await page.evaluate(async sourcePath => {
     window.__desktopFiles.set('C:/Original/δοκιμή & %.md', '# original');
-    await window.NL_IMPORT_EXTERNAL_FILE('# original', 'δοκιμή & %', 'C:/Original/δοκιμή & %.md');
-  });
+    await window.NL_IMPORT_EXTERNAL_FILE('# original', 'δοκιμή & %', sourcePath);
+  }, sourcePath);
   return page.locator('.document-tree-row.is-linked-document').filter({ hasText: 'δοκιμή & %' });
 }
 
@@ -106,6 +106,54 @@ test('linked rename changes the original filename, retains draft and saves to th
     return (await storage.listDocumentMetadata()).find(tab => tab.id === id);
   }, id);
   expect(record.sourcePath).toBe('C:/Original/Renamed 日本 & #.markdown');
+});
+
+test('unchanged Windows linked filename closes without attempting a disk move', async ({ page }) => {
+  const row = await linked(page, 'C:\\Original\\δοκιμή & %.md');
+  await page.evaluate(() => { window.__moves = 0; Neutralino.filesystem.move = async () => { window.__moves++; throw new Error('Unexpected move'); }; });
+  await menu(page, row, 'Rename');
+  await page.locator('.document-tree-rename-input').press('Enter');
+  await expect(page.locator('.document-tree-rename-input')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__moves)).toBe(0);
+});
+
+test('a tab beyond the Explorer render budget can still be renamed inline', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('markdownViewerTabs', JSON.stringify(Array.from({ length: 270 }, (_, index) => ({
+      id: 'many_' + index, title: 'Document ' + String(index).padStart(3, '0'), content: '# fixture',
+      workspaceId: 'workspace_default', isOpen: index === 0 || index === 269, createdAt: 1, lastEditedAt: 1
+    }))));
+    localStorage.setItem('markdownViewerActiveTab', 'many_0');
+  });
+  await openApp(page);
+  await expect(page.locator('[data-document-id="many_269"]')).toHaveCount(0);
+  await page.locator('[data-tab-id="many_269"] .tab-menu-btn').click();
+  await page.locator('.tab-menu-dropdown.open [data-action="rename"]').click();
+  await expect(page.locator('.document-tree-rename-input')).toHaveValue('Document 269');
+  await page.locator('.document-tree-rename-input').fill('Renamed last');
+  await page.locator('.document-tree-rename-input').press('Enter');
+  await expect(page.locator('[data-tab-id="many_269"] .tab-title')).toHaveText('Renamed last');
+});
+
+test('a mixed browser drop on Linked Workspace continues to the file after linking its folder', async ({ page }) => {
+  await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window); window.NL_OS="Windows";');
+  await openApp(page);
+  await page.evaluate(async () => {
+    await Neutralino.filesystem.createDirectory('C:/Dropped');
+    window.__desktopFiles.set('C:/Dropped/nested.md', '# nested original');
+    window.__desktopFiles.set('C:/Original/extra.md', '# extra original');
+    Neutralino.os.showFolderDialog = async () => 'C:/Dropped';
+    Neutralino.os.showOpenDialog = async () => ['C:/Original/extra.md'];
+    const file = new File(['# extra original'], 'extra.md', { type: 'text/markdown' });
+    const data = new DataTransfer(); data.items.add(file);
+    Object.defineProperty(data, 'items', { value: [
+      { kind: 'file', webkitGetAsEntry: () => ({ name: 'Dropped', isDirectory: true }), getAsFile: () => null },
+      { kind: 'file', webkitGetAsEntry: () => null, getAsFile: () => file }
+    ] });
+    document.querySelector('[data-tree-type="linked-workspace"]').dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data }));
+  });
+  await expect(page.locator('.is-linked-document').filter({ hasText: 'nested' })).toHaveCount(1);
+  await expect(page.locator('.is-linked-document').filter({ hasText: 'extra' })).toHaveCount(1);
 });
 
 test('linked rename rejects invalid names and collisions without changing either original', async ({ page }) => {

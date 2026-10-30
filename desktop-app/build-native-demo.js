@@ -23,16 +23,15 @@ function run(command, args, cwd) {
 async function main() {
   if (process.platform !== 'win32') throw new Error('Build the native demo on Windows.');
   if (!fs.existsSync(runtime)) throw new Error(`Compile the reviewed runtime first: ${runtime}`);
-  if (git(runtimeSource, 'rev-parse', 'HEAD') !== runtimeCommit) throw new Error('Unexpected runtime source revision.');
-  // Require the reviewed Windows WebView and event-bridge patch, excluding
-  // unrelated upstream authentication, server and other-platform experiments.
-  execFileSync('git', ['apply', '--reverse', '--check', patch], { cwd: runtimeSource, stdio: 'inherit' });
-  if (git(runtimeSource, 'diff', '--name-only', 'HEAD') !== 'api/fs/fs.cpp\napi/window/window.cpp\nlib/webview/webview.h') throw new Error('Unexpected runtime source changes.');
+  const runtimeSourceTree = require('./experimental/verify-runtime').verifyRuntimeSource(runtimeSource, runtimeCommit, patch);
   const appCommit = git(root, 'rev-parse', 'HEAD');
   fs.mkdirSync(path.join(appDir, '.tmp'), { recursive: true });
   const stage = fs.mkdtempSync(path.join(appDir, '.tmp/native-demo-'));
   const outputDir = path.join(appDir, 'dist/native-demo');
   fs.mkdirSync(outputDir, { recursive: true });
+  const tempRoot = path.resolve(appDir, '.tmp') + path.sep;
+  if (!path.resolve(stage).startsWith(tempRoot)) throw new Error('Invalid staging path');
+  let failure = null;
   try {
     run(process.execPath, ['prepare.js', '--experimental-neutralino-runtime'], appDir);
     fs.cpSync(path.join(appDir, 'resources'), path.join(stage, 'resources'), { recursive: true });
@@ -62,7 +61,7 @@ async function main() {
     const manifest = {
       applicationCommit: appCommit, applicationId: config.applicationId,
       vault: 'Markdown Viewer Native Demo Vault',
-      runtimeRepository: 'https://github.com/Kechos23/neutralinojs', runtimeCommit,
+      runtimeRepository: 'https://github.com/Kechos23/neutralinojs', runtimeCommit, runtimeSourceTree,
       runtimeVersion: config.cli.binaryVersion, clientVersion: config.cli.clientVersion,
       windowsDropPatchSha256: hash(patch), runtimeSha256: hash(runtime),
       executable: name, executableSha256: hash(output),
@@ -71,12 +70,14 @@ async function main() {
     fs.writeFileSync(path.join(outputDir, 'provenance.json'), JSON.stringify(manifest, null, 2) + '\n');
     fs.writeFileSync(path.join(outputDir, 'SHA256SUMS'), `${manifest.executableSha256}  ${name}\n${manifest.integrationHelperSha256}  ${helperName}\n`);
     console.log(`Native demo: ${output}`);
-  } finally {
-    run(process.execPath, ['prepare.js'], appDir);
-    // Never recursively remove a caller-provided path.
-    const tempRoot = path.resolve(appDir, '.tmp') + path.sep;
-    if (!path.resolve(stage).startsWith(tempRoot)) throw new Error('Invalid staging path');
-    fs.rmSync(stage, { recursive: true, force: true });
+  } catch (error) { failure = error; }
+  finally {
+    // Attempt both cleanup operations and retain the original packaging error.
+    for (const cleanup of [() => fs.rmSync(stage, { recursive: true, force: true }), () => run(process.execPath, ['prepare.js'], appDir)]) {
+      try { cleanup(); }
+      catch (error) { failure = failure ? new AggregateError([failure, error], 'Packaging and cleanup failed.') : error; }
+    }
   }
+  if (failure) throw failure;
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

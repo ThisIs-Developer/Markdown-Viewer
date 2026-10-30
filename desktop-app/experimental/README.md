@@ -115,8 +115,14 @@ custom runtime into an isolated staging directory, enables demo flags there, and
 restores ordinary prepared resources afterward. The standard runtime/client pins
 remain unchanged. Standard Windows packaging now applies the same app branding;
 the release build installs the pinned packaging dependencies for that step.
-The manifest records the application and
-runtime commits, patch hash, runtime hash and final executable hash.
+The manifest records the application/runtime commits, expected patched source
+tree, patch hash, runtime hash and final executable hash. Packaging compares the
+entire tracked source against the pinned commit plus the reviewed patch, using an
+isolated Git index, and rejects additional source changes.
+
+Windows CI runs `node tests/native/explorer-rename.cjs <trial.exe>` after packaging
+to exercise the real WebView2 application and filesystem: Unicode/case-only rename,
+draft preservation, subsequent saves, collision protection and persisted links.
 
 `prepare.js --experimental-neutralino-runtime` alone is a developer opt-in and
 continues using the normal Vault. The separate Vault is enabled specifically by
