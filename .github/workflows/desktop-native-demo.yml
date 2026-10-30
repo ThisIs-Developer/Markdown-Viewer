@@ -71,6 +71,11 @@ jobs:
         if: always()
         with:
           name: Markdown-Viewer-PR269-Windows-Native-Demo
-          path: desktop-app/dist/native-demo/
+          path: |
+            desktop-app/dist/native-demo/*.exe
+            desktop-app/dist/native-demo/SHA256SUMS
+            desktop-app/dist/native-demo/provenance.json
+            desktop-app/dist/native-demo/native-rename-results.json
+            desktop-app/dist/native-demo/inline-rename.png
           if-no-files-found: error
           retention-days: 30

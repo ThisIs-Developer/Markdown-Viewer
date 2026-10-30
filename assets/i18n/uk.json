@@ -1671,5 +1671,6 @@
   "Use a valid Markdown filename ending in .md or .markdown.": "Використовуйте припустиме ім’я файлу Markdown із розширенням .md або .markdown.",
   "File renamed. Save the workspace again to retain the updated link.": "Файл перейменовано. Збережіть робочий простір ще раз, щоб зберегти оновлене посилання.",
   "Could not open the original folder.": "Не вдалося відкрити оригінальну папку.",
-  "Folder download failed. Try again.": "Не вдалося завантажити папку. Спробуйте ще раз."
+  "Folder download failed. Try again.": "Не вдалося завантажити папку. Спробуйте ще раз.",
+  "Item changed. Start Rename again.": "Елемент змінився. Почніть перейменування знову."
 }

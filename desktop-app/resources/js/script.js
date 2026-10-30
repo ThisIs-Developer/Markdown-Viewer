@@ -5722,6 +5722,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renameFolder(folderId) {
     const folder = getFolderById(folderId);
     if (!folder) return;
+    const original = { name: folder.name, workspaceId: folder.workspaceId, parentFolderId: folder.parentFolderId || null };
     openExplorerRename({
       type: 'folder', id: folder.id,
       title: 'Rename folder',
@@ -5739,8 +5740,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         return '';
       },
       onConfirm: function(value) {
-        if (getFolderById(folderId) !== folder || folder.name === value) return;
-        folder.name = value;
+        const current = getFolderById(folderId);
+        if (!current || current.name !== original.name || current.workspaceId !== original.workspaceId ||
+            (current.parentFolderId || null) !== original.parentFolderId) {
+          throw Object.assign(new Error('Folder changed during rename'), { userMessage: 'Item changed. Start Rename again.' });
+        }
+        if (current.name === value) return;
+        current.name = value;
         saveDocumentOrganization();
         renderDocumentSidebar();
         announceToScreenReader('Folder renamed to ' + value);
@@ -13017,13 +13023,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     return 'Open in File Manager';
   }
 
+  function getLinkedRenameParts(source) {
+    const path = typeof NL_OS !== 'undefined' && NL_OS === 'Windows' ? String(source).replace(/\\/g, '/') : String(source);
+    const separator = path.lastIndexOf('/');
+    return { parent: path.slice(0, separator + 1), name: path.slice(separator + 1) };
+  }
+
   async function renameLinkedOriginal(tab, filename) {
     if (!hasDesktopFileAccess() || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) {
       throw new Error('Workspace operation in progress');
     }
     const source = tab.sourcePath;
-    if (source.split(/[/\\]/).pop() === filename) return;
-    const destination = getNativeParentPath(source).replace(/\\/g, '/').replace(/\/+$/, '') + '/' + filename;
+    const parts = getLinkedRenameParts(source);
+    if (parts.name === filename) return;
+    if (!parts.parent) throw new Error('The original parent directory is unavailable');
+    const destination = parts.parent + filename;
     nativeMarkdownSaveInProgress = true;
     linkedReadEpoch++;
     const sourceKey = normalizeLinkedSourcePath(source);
@@ -13045,7 +13059,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           captureLiveLinkedDraft(item);
           item.sourcePath = destination;
           item.title = filename.replace(/\.(md|markdown)$/i, '');
-          if (item.sourceRelativePath) item.sourceRelativePath = item.sourceRelativePath.replace(/[^/\\]+$/, filename);
+          if (item.sourceRelativePath) item.sourceRelativePath = getLinkedRenameParts(item.sourceRelativePath).parent + filename;
           item.sourceMissing = false;
         });
         // Once the filesystem rename has succeeded, retain its actual new path
@@ -15217,10 +15231,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const linked = isLinkedDocument(tab);
     openExplorerRename({
       type: 'document', id: tab.id, title: 'Rename file',
-      value: linked ? tab.sourcePath.split(/[/\\]/).pop() : tab.title,
+      value: linked ? getLinkedRenameParts(tab.sourcePath).name : tab.title,
       validate: function(value) {
         if (!value) return 'Enter a name.';
-        if (linked && (!/\.(md|markdown)$/i.test(value) || /[\x00-\x1f<>:"/\\|?*]/.test(value) || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value))) {
+        const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+        if (linked && (!/\.(md|markdown)$/i.test(value) || /[\x00/]/.test(value) ||
+            (windows && (/[\x00-\x1f<>:"\\|?*]/.test(value) || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value))))) {
           return 'Use a valid Markdown filename ending in .md or .markdown.';
         }
         return '';

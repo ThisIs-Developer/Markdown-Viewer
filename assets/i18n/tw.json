@@ -1671,5 +1671,6 @@
   "Use a valid Markdown filename ending in .md or .markdown.": "請使用以 .md 或 .markdown 結尾的有效 Markdown 檔名。",
   "File renamed. Save the workspace again to retain the updated link.": "檔案已重新命名。請再次儲存工作區以保留更新後的連結。",
   "Could not open the original folder.": "無法開啟原始資料夾。",
-  "Folder download failed. Try again.": "資料夾下載失敗，請再試一次。"
+  "Folder download failed. Try again.": "資料夾下載失敗，請再試一次。",
+  "Item changed. Start Rename again.": "項目已變更。請重新開始重新命名。"
 }

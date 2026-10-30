@@ -1671,5 +1671,6 @@
   "Use a valid Markdown filename ending in .md or .markdown.": ".md veya .markdown ile biten geçerli bir Markdown dosya adı kullanın.",
   "File renamed. Save the workspace again to retain the updated link.": "Dosya yeniden adlandırıldı. Güncellenen bağlantıyı korumak için çalışma alanını yeniden kaydedin.",
   "Could not open the original folder.": "Orijinal klasör açılamadı.",
-  "Folder download failed. Try again.": "Klasör indirilemedi. Tekrar deneyin."
+  "Folder download failed. Try again.": "Klasör indirilemedi. Tekrar deneyin.",
+  "Item changed. Start Rename again.": "Öğe değişti. Yeniden adlandırmayı tekrar başlatın."
 }

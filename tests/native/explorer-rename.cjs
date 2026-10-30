@@ -47,9 +47,21 @@ let child, browser, page;
     const id = await page.locator('.tab-item.active').getAttribute('data-tab-id');
     const row = page.locator(`[data-document-id="${id}"]`);
     await page.locator('#markdown-editor').fill('# unsaved draft');
+    const rowTypography = await row.locator('.document-tree-label').evaluate(el => {
+      const style = getComputedStyle(el);
+      return { fontSize: style.fontSize, fontFamily: style.fontFamily };
+    });
     await row.focus(); await row.press('F2');
     const input = page.locator('.document-tree-rename-input');
     await expect(input).toBeFocused();
+    const inputTypography = await input.evaluate(el => {
+      const style = getComputedStyle(el);
+      return { fontSize: style.fontSize, fontFamily: style.fontFamily, outline: style.outlineStyle };
+    });
+    assert.equal(inputTypography.fontSize, rowTypography.fontSize);
+    assert.equal(inputTypography.fontFamily, rowTypography.fontFamily);
+    assert.equal(inputTypography.outline, 'none');
+    check('Native inline rename retains Explorer font and themed focus border');
     await page.screenshot({ path: path.join(output, 'inline-rename.png') });
     await input.fill(path.basename(renamed)); await input.press('Enter');
     await expect(row).toHaveAttribute('title', renamed.replaceAll('\\', '/'));

@@ -760,20 +760,32 @@ body {
   gap: 6px;
   flex: 1;
   min-width: 0;
-  padding: 3px 4px;
+  min-height: calc(var(--document-sidebar-row-height) - 2px);
+  padding: 2px 5px;
 }
-.document-tree-rename > i { flex: 0 0 14px; font-size: 14px; margin-top: 5px; }
+.document-tree-rename > i {
+  flex: 0 0 var(--ui-icon-size-md);
+  color: var(--text-secondary);
+  font-size: var(--document-sidebar-icon-size);
+  line-height: 1;
+  text-align: center;
+  margin-top: 4px;
+}
 .document-tree-rename-field { flex: 1; min-width: 0; }
 .document-tree-rename-input {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--accent-color);
   border-radius: 3px;
-  padding: 2px 4px;
+  padding: 1px 3px;
   background: var(--editor-bg);
   color: var(--text-color);
   font: inherit;
-  outline-offset: 1px;
+  font-size: var(--ui-font-md);
+  line-height: 1.3;
+  appearance: none;
+  outline: none;
+  box-shadow: none;
 }
 .document-tree-rename-input[aria-invalid="true"] { border-color: var(--color-danger-fg); }
 .document-tree-rename-error { display: block; white-space: normal; color: var(--color-danger-fg); font-size: 11px; }

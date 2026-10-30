@@ -42,12 +42,10 @@ The helper uses the current user's registry and does not require administrator a
 Its Default apps button requests Markdown Viewer's own settings page. Registration
 refuses to replace another application's existing entry with the same display name.
 
-**Acceptance still required:** registry tests and Windows shell dispatch pass, but
-the reviewed Windows machine still omitted the new registration from Default apps
-and the Open with list. Its old manually selected trial remained visible under the
-generic Neutralino name. The new executable's metadata is correctly branded; this
-does not prove Windows app discovery is resolved. Do not treat registration as
-release-ready until this UI issue is reproduced and resolved on the target system.
+**Discovery investigation is deferred at the maintainer's request.** Registry tests
+and Windows shell dispatch pass, but appearance in the Windows app lists remains
+unverified on the target machine. Registration stays optional and is never run on
+startup. Correct executable branding does not itself register a portable app.
 
 Browser folder drops preserve Markdown hierarchy and empty folders; top-level
 media keeps its existing consent flow. Private mode imports stay session-only.
@@ -133,6 +131,10 @@ continues using the normal Vault. The separate Vault is enabled specifically by
 File/folder Rename edits the name directly in Explorer, with the full current name
 selected. Enter commits; Escape or clicking elsewhere cancels. Invalid names and
 collisions remain in the field with an accessible error. F2 invokes Rename too.
+The field keeps the row's font size and uses the application's themed focus border.
+If another session changes the folder being renamed, retry Rename from its current
+row rather than overwriting that change. No trial documents are seeded by packaging;
+native acceptance fixtures are excluded from the downloadable artifact.
 Renaming a linked file renames its original on disk, retains unsaved text, updates
 the linked source path and makes later saves use the new filename. It never falls
 back to copying/deleting an original when a rename fails. Sidebar grouping stays

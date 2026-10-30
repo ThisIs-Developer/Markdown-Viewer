@@ -1671,5 +1671,6 @@
   "Use a valid Markdown filename ending in .md or .markdown.": ".md または .markdown で終わる有効なMarkdownファイル名を使用してください。",
   "File renamed. Save the workspace again to retain the updated link.": "ファイル名を変更しました。更新したリンクを保持するため、ワークスペースを再保存してください。",
   "Could not open the original folder.": "元のフォルダーを開けませんでした。",
-  "Folder download failed. Try again.": "フォルダーのダウンロードに失敗しました。もう一度お試しください。"
+  "Folder download failed. Try again.": "フォルダーのダウンロードに失敗しました。もう一度お試しください。",
+  "Item changed. Start Rename again.": "項目が変更されました。名前の変更をやり直してください。"
 }

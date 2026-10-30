@@ -13,7 +13,7 @@ test('every native-drop dialog string and dynamic message has a catalog entry', 
     'Too many dropped items. Drop at most 1,000 files or folders at a time.',
     'The dropped items could not be added. Please try again.', 'Move here', 'Cannot drop here',
     'Confirm linked file', 'Confirm the dropped Markdown file in the Windows dialog so Markdown Viewer can retain its real path.', 'Imported to Vault',
-    'Download folder', 'Open in File Explorer', 'Open in Finder', 'Open in File Manager',
+    'Download folder', 'Open in File Explorer', 'Open in Finder', 'Open in File Manager', 'Item changed. Start Rename again.',
     'Rename failed. The original was kept. Try again.', 'Use a valid Markdown filename ending in .md or .markdown.',
     'File renamed. Save the workspace again to retain the updated link.', 'Could not open the original folder.', 'Folder download failed. Try again.');
   const dir = new URL('../../assets/i18n/', import.meta.url);

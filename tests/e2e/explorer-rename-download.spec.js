@@ -16,6 +16,49 @@ async function folder(page, name, parent) {
   return page.locator('[data-tree-type="folder"]').filter({ hasText: name });
 }
 
+test('inline rename keeps Explorer typography, row height and themed focus in light and dark modes', async ({ page }, testInfo) => {
+  await openApp(page);
+  await page.locator('#tab-new-btn').click();
+  const id = await page.locator('.tab-item.active').getAttribute('data-tab-id');
+  const file = page.locator(`[data-document-id="${id}"]`);
+  const directory = await folder(page, 'Research');
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(theme => document.documentElement.setAttribute('data-theme', theme), theme);
+    for (const row of [file, directory]) {
+      const before = await row.evaluate(el => {
+        const label = getComputedStyle(el.querySelector('.document-tree-label'));
+        const icon = getComputedStyle(el.querySelector('.document-tree-main > i'));
+        return { fontSize: label.fontSize, fontFamily: label.fontFamily, lineHeight: label.lineHeight,
+          iconSize: icon.fontSize, rowHeight: el.getBoundingClientRect().height };
+      });
+      await menu(page, row, 'Rename');
+      const input = page.locator('.document-tree-rename-input');
+      await expect(input).toBeFocused();
+      const after = await input.evaluate(el => {
+        const style = getComputedStyle(el);
+        const row = el.closest('.document-tree-row');
+        return { fontSize: style.fontSize, fontFamily: style.fontFamily, lineHeight: style.lineHeight,
+          iconSize: getComputedStyle(row.querySelector('.document-tree-rename > i')).fontSize,
+          rowHeight: row.getBoundingClientRect().height, outline: style.outlineStyle,
+          border: style.borderTopColor, accent: style.getPropertyValue('--accent-color').trim() };
+      });
+      expect(after.fontSize).toBe(before.fontSize);
+      expect(after.fontFamily).toBe(before.fontFamily);
+      // Firefox rounds text-input line boxes to whole pixels.
+      expect(Math.abs(parseFloat(after.lineHeight) - parseFloat(before.lineHeight))).toBeLessThan(1);
+      expect(after.iconSize).toBe(before.iconSize);
+      expect(after.rowHeight).toBe(before.rowHeight);
+      expect(after.outline).toBe('none');
+      expect(after.border).toBe(await page.evaluate(accent => {
+        const probe = document.createElement('span'); probe.style.color = accent;
+        document.body.appendChild(probe); const color = getComputedStyle(probe).color; probe.remove(); return color;
+      }, after.accent));
+      await page.locator('#document-sidebar').screenshot({ path: testInfo.outputPath(`rename-${theme}-${row === file ? 'file' : 'folder'}.png`) });
+      await input.press('Escape');
+    }
+  }
+});
+
 test('inline file and folder rename selects the name, validates, cancels and preserves drafts', async ({ page }) => {
   const errors = await openApp(page);
   await page.locator('#tab-new-btn').click();

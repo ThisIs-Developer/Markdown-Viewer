@@ -1314,7 +1314,7 @@
         if (!error || error.code !== 'NE_FS_NOPATHE') throw error;
         // Native stat can report missing for an inaccessible entry. Confirm
         // absence using its parent; never turn permission errors into absence.
-        const normalized = normalizePathSeparators(path);
+        const normalized = typeof NL_OS !== 'undefined' && NL_OS === 'Windows' ? normalizePathSeparators(path) : String(path);
         const separator = normalized.lastIndexOf('/');
         if (separator < 0) throw error;
         const entries = await Neutralino.filesystem.readDirectory(normalized.slice(0, separator));
@@ -1330,8 +1330,9 @@
     }
 
     async _desktopPathsShareCaseAlias(source, destination) {
-      const from = normalizePathSeparators(source).split('/');
-      const to = normalizePathSeparators(destination).split('/');
+      const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+      const from = (windows ? normalizePathSeparators(source) : String(source)).split('/');
+      const to = (windows ? normalizePathSeparators(destination) : String(destination)).split('/');
       if (from.length !== to.length || from.join('/').toLowerCase() !== to.join('/').toLowerCase()) return false;
       // A case-sensitive directory may contain both spellings. Check each changed
       // component rather than assuming Windows (or macOS) is case-insensitive.

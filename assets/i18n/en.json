@@ -1671,5 +1671,6 @@
   "Use a valid Markdown filename ending in .md or .markdown.": "Use a valid Markdown filename ending in .md or .markdown.",
   "File renamed. Save the workspace again to retain the updated link.": "File renamed. Save the workspace again to retain the updated link.",
   "Could not open the original folder.": "Could not open the original folder.",
-  "Folder download failed. Try again.": "Folder download failed. Try again."
+  "Folder download failed. Try again.": "Folder download failed. Try again.",
+  "Item changed. Start Rename again.": "Item changed. Start Rename again."
 }
