@@ -118,8 +118,7 @@ current Markdown drafts and safely disambiguated names. Locked Secret workspaces
 cannot finish an in-flight archive export.
 
 Windows packaging sets ProductName, FileDescription, OriginalFilename
-and version metadata. Both window titles use Markdown Viewer. A separate supplied
-Markdown document icon is embedded without replacing the application icon. The
-existing optional registration helper selects that resource for document
-associations; it never changes the user's default. Windows controls its tooltip
+and version metadata, omitting CompanyName. Both window titles use Markdown Viewer.
+The official application icon is also used by the optional registration helper for
+Markdown associations; it never changes the user's default. Windows controls its tooltip
 layout. Open-with discovery work is deferred at the maintainer's request.

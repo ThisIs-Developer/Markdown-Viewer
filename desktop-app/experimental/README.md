@@ -155,16 +155,8 @@ application ID and separate Vault continue to distinguish it from a normal relea
 Explorer itself controls tooltip property labels, size and creation-date fields.
 Company metadata is omitted from packaged executables.
 
-The supplied `markdown-document.svg` is embedded as a separate document icon
-(resource 200), with 16–256 px ICO sizes. Rebuild it with
-`node scripts/build-markdown-document-icon.cjs` after installing the root Playwright
-dependencies. The optional integration helper associates this document icon with
-the application's Markdown ProgID, keeping the M icon for application identity.
-Choosing an unregistered EXE directly can still use its application icon for files.
-The separate document icon requires explicit registration; merely changing EXE
-metadata cannot install a separate document association. The helper never sets
+The official Markdown Viewer icon is used for both application identity and the
+optional Markdown file association. Merely changing EXE metadata cannot install
+a document association. The helper never sets
 UserChoice/default applications. Open-with discovery investigation is deferred at
 the maintainer's request; no automatic registration is added.
-
-The supplied file-md-thin artwork is from Phosphor Icons (MIT). Its notice is kept
-in `assets/phosphor-icons.LICENSE.txt`, which is included in embedded desktop assets.
