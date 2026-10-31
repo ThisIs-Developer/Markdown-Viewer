@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "Le téléchargement du dossier a échoué. Réessayez.",
   "Item changed. Start Rename again.": "L’élément a changé. Relancez le renommage.",
   "Download": "Télécharger",
-  "Use a valid filename.": "Utilisez un nom de fichier valide."
+  "Use a valid filename.": "Utilisez un nom de fichier valide.",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "L'espace de travail secret n'a pas pu être verrouillé. Vos documents restent ouverts ; réessayez lorsque le stockage est disponible.",
+  "Workspace not locked": "Espace de travail non verrouillé"
 }

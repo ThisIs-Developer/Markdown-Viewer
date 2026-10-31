@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "폴더 다운로드에 실패했습니다. 다시 시도하세요.",
   "Item changed. Start Rename again.": "항목이 변경되었습니다. 이름 변경을 다시 시작하세요.",
   "Download": "다운로드",
-  "Use a valid filename.": "유효한 파일 이름을 사용하세요."
+  "Use a valid filename.": "유효한 파일 이름을 사용하세요.",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "비밀 작업 공간을 잠글 수 없습니다. 귀하의 문서는 열린 상태로 유지됩니다. 저장 공간이 확보되면 다시 시도하세요.",
+  "Workspace not locked": "작업공간이 잠겨있지 않음"
 }

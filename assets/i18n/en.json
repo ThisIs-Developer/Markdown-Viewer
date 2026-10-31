@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "Folder download failed. Try again.",
   "Item changed. Start Rename again.": "Item changed. Start Rename again.",
   "Download": "Download",
-  "Use a valid filename.": "Use a valid filename."
+  "Use a valid filename.": "Use a valid filename.",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.",
+  "Workspace not locked": "Workspace not locked"
 }

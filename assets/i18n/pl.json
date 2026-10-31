@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "Pobieranie folderu nie powiodło się. Spróbuj ponownie.",
   "Item changed. Start Rename again.": "Element uległ zmianie. Rozpocznij zmianę nazwy ponownie.",
   "Download": "Pobierz",
-  "Use a valid filename.": "Użyj prawidłowej nazwy pliku."
+  "Use a valid filename.": "Użyj prawidłowej nazwy pliku.",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Nie można zablokować tajnego obszaru roboczego. Twoje dokumenty pozostają otwarte; spróbuj ponownie, gdy dostępna będzie pamięć.",
+  "Workspace not locked": "Obszar roboczy nie jest zablokowany"
 }

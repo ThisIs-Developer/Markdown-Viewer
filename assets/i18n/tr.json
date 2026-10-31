@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "Klasör indirilemedi. Tekrar deneyin.",
   "Item changed. Start Rename again.": "Öğe değişti. Yeniden adlandırmayı tekrar başlatın.",
   "Download": "İndir",
-  "Use a valid filename.": "Geçerli bir dosya adı kullanın."
+  "Use a valid filename.": "Geçerli bir dosya adı kullanın.",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Gizli Çalışma Alanı kilitlenemedi. Belgeleriniz açık kalır; Depolama alanı mevcut olduğunda yeniden deneyin.",
+  "Workspace not locked": "Çalışma alanı kilitli değil"
 }

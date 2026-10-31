@@ -4326,6 +4326,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const linkedLocationMutationChains = new Map();
   let linkedSourceMonitoringReady = false;
   let secretWorkspaceKey = null;
+  let secretWorkspaceLockInProgress = false;
   let secretWorkspaceSalt = null;
   let secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
   let secretWorkspaceDocumentCount = 0;
@@ -4830,8 +4831,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const key = secretWorkspaceKey;
     const salt = new Uint8Array(secretWorkspaceSalt);
     secretWorkspaceSaveChain = secretWorkspaceSaveChain.catch(function() {}).then(async function() {
+      // A queued save must not interpret a locked (or newly unlocked) session's
+      // tabs as deletions from the session that originally requested the save.
+      if (!isSecretWorkspaceUnlocked() || secretWorkspaceKey !== key) return false;
       if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
       for (let attempt = 0; attempt < 4; attempt += 1) {
+        if (!isSecretWorkspaceUnlocked() || secretWorkspaceKey !== key) return false;
         const payload = getSecretWorkspacePayload();
         secretWorkspaceDocumentCount = payload.documents.length;
         const currentIds = new Set();
@@ -4874,6 +4879,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           updatedAt: Date.now()
         };
         try {
+          if (!isSecretWorkspaceUnlocked() || secretWorkspaceKey !== key) return false;
           const result = await workspaceStorage.applySecretRecordChanges({
             upserts: upserts,
             deletions: deletions
@@ -5057,40 +5063,56 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function lockSecretWorkspace() {
-    if (!isSecretWorkspaceUnlocked()) return;
-    saveCurrentTabState();
-    saveSecondarySplitState();
-    await flushSecretWorkspaceToStorage();
-    const secretTabIds = new Set(tabs.filter(function(tab) {
-      return !isTemporaryDocument(tab) && tab.workspaceId === SECRET_WORKSPACE_ID;
-    }).map(function(tab) { return tab.id; }));
-    if (secretTabIds.has(secondarySplitTabId)) closeDocumentSplitView({ silent: true, renderTabs: false });
-    tabs = tabs.filter(function(tab) { return !secretTabIds.has(tab.id); });
-    secretTabIds.forEach(function(tabId) {
-      if (typeof tabHistories !== 'undefined' && tabHistories[tabId]) delete tabHistories[tabId];
-    });
-    documentOrganization.folders = documentOrganization.folders.filter(function(folder) {
-      return folder.workspaceId !== SECRET_WORKSPACE_ID;
-    });
-    secretWorkspaceKey = null;
-    secretWorkspaceSalt = null;
-    secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
-    const workspace = getWorkspaceById(SECRET_WORKSPACE_ID);
-    if (workspace) workspace.expanded = false;
-    documentOrganization.ui.lastWorkspaceId = DEFAULT_WORKSPACE_ID;
-    documentOrganization.ui.lastFolderId = null;
+    if (!isSecretWorkspaceUnlocked() || secretWorkspaceLockInProgress) return;
+    const key = secretWorkspaceKey;
+    secretWorkspaceLockInProgress = true;
+    // Cancel pending imports before taking the final encrypted snapshot. Inert
+    // prevents new UI edits while encryption/storage yields to the event loop.
+    linkedReadEpoch++;
+    const container = document.querySelector('.app-container');
+    const previousInert = Boolean(container && container.inert);
+    if (container) container.inert = true;
+    try {
+      saveCurrentTabState();
+      saveSecondarySplitState();
+      const saved = await flushSecretWorkspaceToStorage();
+      if (secretWorkspaceKey !== key || (!saved && !isPrivateStorageMode())) {
+        throw new Error('Secret Workspace changed while locking. Nothing was locked.');
+      }
+      const secretTabIds = new Set(tabs.filter(function(tab) {
+        return !isTemporaryDocument(tab) && tab.workspaceId === SECRET_WORKSPACE_ID;
+      }).map(function(tab) { return tab.id; }));
+      if (secretTabIds.has(secondarySplitTabId)) closeDocumentSplitView({ silent: true, renderTabs: false });
+      tabs = tabs.filter(function(tab) { return !secretTabIds.has(tab.id); });
+      secretTabIds.forEach(function(tabId) {
+        if (typeof tabHistories !== 'undefined' && tabHistories[tabId]) delete tabHistories[tabId];
+      });
+      documentOrganization.folders = documentOrganization.folders.filter(function(folder) {
+        return folder.workspaceId !== SECRET_WORKSPACE_ID;
+      });
+      secretWorkspaceKey = null;
+      secretWorkspaceSalt = null;
+      secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
+      const workspace = getWorkspaceById(SECRET_WORKSPACE_ID);
+      if (workspace) workspace.expanded = false;
+      documentOrganization.ui.lastWorkspaceId = DEFAULT_WORKSPACE_ID;
+      documentOrganization.ui.lastFolderId = null;
 
-    if (secretTabIds.has(activeTabId)) {
-      const nextTab = getOpenTabs().find(function(tab) { return !isTemporaryDocument(tab); }) || getOpenTabs()[0];
-      if (nextTab) switchTab(nextTab.id);
-      else clearActiveDocument();
-    } else {
-      renderTabBar(tabs, activeTabId);
+      if (secretTabIds.has(activeTabId)) {
+        const nextTab = getOpenTabs().find(function(tab) { return !isTemporaryDocument(tab); }) || getOpenTabs()[0];
+        if (nextTab) switchTab(nextTab.id);
+        else clearActiveDocument();
+      } else {
+        renderTabBar(tabs, activeTabId);
+      }
+      _flushTabsToStorage(tabs);
+      saveDocumentOrganization();
+      renderDocumentSidebar();
+      announceToScreenReader('Secret Workspace locked.');
+    } finally {
+      secretWorkspaceLockInProgress = false;
+      if (container) container.inert = previousInert;
     }
-    _flushTabsToStorage(tabs);
-    saveDocumentOrganization();
-    renderDocumentSidebar();
-    announceToScreenReader('Secret Workspace locked.');
   }
 
   async function resetSecretWorkspaceData() {
@@ -5319,7 +5341,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!documentOrganization) return null;
     const workspace = getWorkspaceById(workspaceId);
     const normalizedName = String(folderName || '').trim();
-    if (!workspace || !normalizedName) return null;
+    if (!workspace || !normalizedName ||
+        (workspaceId === SECRET_WORKSPACE_ID && secretWorkspaceLockInProgress)) return null;
 
     const parent = getFolderById(parentFolderId);
     const normalizedParentId = parent && parent.workspaceId === workspace.id ? parent.id : null;
@@ -6226,7 +6249,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'new-folder', icon: 'lucide-folder-plus', label: 'New folder', run: function() { createFolder(workspace.id); } }
     ];
     if (workspace.id === SECRET_WORKSPACE_ID) {
-      actions.push({ id: 'lock', icon: 'lucide-lock-keyhole', label: 'Lock workspace', run: function() { lockSecretWorkspace(); } });
+      actions.push({ id: 'lock', icon: 'lucide-lock-keyhole', label: 'Lock workspace', run: function() {
+        lockSecretWorkspace().catch(function(error) {
+          console.warn('Secret Workspace lock failed:', error);
+          showAppToast('Secret Workspace could not be locked. Your documents remain open; retry when storage is available.', {
+            tone: 'error', title: 'Workspace not locked'
+          });
+        });
+      } });
     }
     return actions;
   }
@@ -12116,6 +12146,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function beginWorkspaceMaintenance() {
     if (workspaceMaintenancePending || suspendWorkspacePersistence) throw new Error('Workspace maintenance is already active. Reload or wait before retrying.');
+    if (secretWorkspaceLockInProgress) throw new Error('Secret Workspace is still locking. Wait for it to finish, then retry.');
     if (nativeMarkdownSaveInProgress) throw new Error('A file Save is still in progress. Wait for it to finish, then retry.');
     if (liveCollaboration) throw new Error('Leave the live collaboration session before replacing the workspace.');
     workspaceMaintenancePending = true;
@@ -18188,7 +18219,8 @@ ${selector} .arrowheadPath {
     const targetLocation = location || (documentOrganization
       ? getPreferredDocumentLocation()
       : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
-    if (targetLocation.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) return null;
+    if (targetLocation.workspaceId === SECRET_WORKSPACE_ID &&
+        (secretWorkspaceLockInProgress || !isSecretWorkspaceUnlocked())) return null;
     const tab = createTab(content, title, 'split', targetLocation);
     tab.isOpen = false;
     normalizeTabDocumentMetadata(tab, { allowSecret: targetLocation.workspaceId === SECRET_WORKSPACE_ID });

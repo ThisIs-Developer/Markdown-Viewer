@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "Не вдалося завантажити папку. Спробуйте ще раз.",
   "Item changed. Start Rename again.": "Елемент змінився. Почніть перейменування знову.",
   "Download": "Завантажити",
-  "Use a valid filename.": "Використовуйте допустиму назву файлу."
+  "Use a valid filename.": "Використовуйте допустиму назву файлу.",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Не вдалося заблокувати секретну робочу область. Ваші документи залишаються відкритими; повторіть спробу, коли пам’ять буде доступна.",
+  "Workspace not locked": "Робоча область не заблокована"
 }

@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "フォルダーのダウンロードに失敗しました。もう一度お試しください。",
   "Item changed. Start Rename again.": "項目が変更されました。名前の変更をやり直してください。",
   "Download": "ダウンロード",
-  "Use a valid filename.": "有効なファイル名を使用してください。"
+  "Use a valid filename.": "有効なファイル名を使用してください。",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "シークレット ワークスペースをロックできませんでした。文書は開いたままになります。ストレージが利用可能なときに再試行してください。",
+  "Workspace not locked": "ワークスペースがロックされていません"
 }

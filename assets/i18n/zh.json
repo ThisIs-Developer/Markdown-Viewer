@@ -1674,5 +1674,7 @@
   "Folder download failed. Try again.": "文件夹下载失败，请重试。",
   "Item changed. Start Rename again.": "项目已更改。请重新开始重命名。",
   "Download": "下载",
-  "Use a valid filename.": "请使用有效的文件名。"
+  "Use a valid filename.": "请使用有效的文件名。",
+  "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "秘密工作区无法锁定。您的文件保持打开状态；当存储可用时重试。",
+  "Workspace not locked": "工作区未锁定"
 }
