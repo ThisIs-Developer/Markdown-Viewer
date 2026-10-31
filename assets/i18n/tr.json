@@ -1676,5 +1676,15 @@
   "Download": "İndir",
   "Use a valid filename.": "Geçerli bir dosya adı kullanın.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Gizli Çalışma Alanı kilitlenemedi. Belgeleriniz açık kalır; Depolama alanı mevcut olduğunda yeniden deneyin.",
-  "Workspace not locked": "Çalışma alanı kilitli değil"
+  "Workspace not locked": "Çalışma alanı kilitli değil",
+  "Resolve interrupted rename…": "Kesintiye uğrayan yeniden adlandırmayı çözümle…",
+  "The recovery link could not be saved. Your draft was kept.": "Kurtarma bağlantısı kaydedilemedi. Taslağınız saklandı.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Orijinali yeniden yüklemeden önce kesintiye uğrayan yeniden adlandırma sorununu çözün. Taslağınız saklandı.",
+  "Select the original after interrupted rename": "Yeniden adlandırma kesintiye uğradıktan sonra orijinali seçin",
+  "Connect the retained draft to": "Tutulan taslağı şuraya bağlayın:",
+  "? No original will be changed. Review the draft and original before saving.": "? Hiçbir orijinal değiştirilmeyecektir. Kaydetmeden önce taslağı ve orijinali inceleyin.",
+  "Resolve interrupted rename?": "Kesintiye uğrayan yeniden adlandırma sorunu çözülsün mü?",
+  "Connect original": "Özgün dosyayı bağla",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Kesintiye uğramış bir yeniden adlandırmanın gözden geçirilmesi gerekiyor. Taslaklarınız saklandı. Bağlantılı dosya menüsünde Kesintiye uğrayan yeniden adlandırmayı çözümle seçeneğini kullanın.",
+  "Rename recovery": "Kurtarmayı yeniden adlandırın"
 }

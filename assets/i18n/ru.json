@@ -1676,5 +1676,15 @@
   "Download": "Скачать",
   "Use a valid filename.": "Используйте допустимое имя файла.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Секретное рабочее пространство не удалось заблокировать. Ваши документы остаются открытыми; повторите попытку, когда место станет доступным.",
-  "Workspace not locked": "Рабочая область не заблокирована"
+  "Workspace not locked": "Рабочая область не заблокирована",
+  "Resolve interrupted rename…": "Устранить прерванное переименование…",
+  "The recovery link could not be saved. Your draft was kept.": "Не удалось сохранить ссылку для восстановления. Ваш черновик сохранен.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Разрешите прерванное переименование перед перезагрузкой оригинала. Ваш черновик сохранен.",
+  "Select the original after interrupted rename": "Выбор оригинала после прерванного переименования",
+  "Connect the retained draft to": "Подключите сохраненный черновик к",
+  "? No original will be changed. Review the draft and original before saving.": "? Оригинал не будет изменен. Перед сохранением просмотрите черновик и оригинал.",
+  "Resolve interrupted rename?": "Разрешить прерванное переименование?",
+  "Connect original": "Связать оригинал",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Прерванное переименование требует проверки. Ваши черновики сохранены. Используйте «Разрешить прерванное переименование» в меню связанного файла.",
+  "Rename recovery": "Переименование рекавери"
 }

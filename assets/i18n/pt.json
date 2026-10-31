@@ -1676,5 +1676,15 @@
   "Download": "Baixar",
   "Use a valid filename.": "Use um nome de arquivo válido.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "O espaço de trabalho secreto não pôde ser bloqueado. Seus documentos permanecem abertos; tente novamente quando o armazenamento estiver disponível.",
-  "Workspace not locked": "Espaço de trabalho não bloqueado"
+  "Workspace not locked": "Espaço de trabalho não bloqueado",
+  "Resolve interrupted rename…": "Resolver renomeação interrompida…",
+  "The recovery link could not be saved. Your draft was kept.": "O link de recuperação não pôde ser salvo. Seu rascunho foi mantido.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Resolva a renomeação interrompida antes de recarregar um original. Seu rascunho foi mantido.",
+  "Select the original after interrupted rename": "Selecione o original após renomeação interrompida",
+  "Connect the retained draft to": "Conecte o calado retido ao",
+  "? No original will be changed. Review the draft and original before saving.": "? Nenhum original será alterado. Revise o rascunho e o original antes de salvar.",
+  "Resolve interrupted rename?": "Resolver renomeação interrompida?",
+  "Connect original": "Vincular original",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Uma renomeação interrompida precisa de revisão. Seus rascunhos foram mantidos. Use Resolver renomeação interrompida no menu do arquivo vinculado.",
+  "Rename recovery": "Renomear recuperação"
 }

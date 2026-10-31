@@ -1676,5 +1676,15 @@
   "Download": "Herunterladen",
   "Use a valid filename.": "Verwenden Sie einen gültigen Dateinamen.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Der geheime Arbeitsbereich konnte nicht gesperrt werden. Ihre Dokumente bleiben offen; Versuchen Sie es erneut, wenn Speicherplatz verfügbar ist.",
-  "Workspace not locked": "Arbeitsbereich nicht gesperrt"
+  "Workspace not locked": "Arbeitsbereich nicht gesperrt",
+  "Resolve interrupted rename…": "Unterbrochene Umbenennung beheben…",
+  "The recovery link could not be saved. Your draft was kept.": "Der Wiederherstellungslink konnte nicht gespeichert werden. Ihr Entwurf wurde aufbewahrt.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Beheben Sie die unterbrochene Umbenennung, bevor Sie ein Original neu laden. Ihr Entwurf wurde aufbewahrt.",
+  "Select the original after interrupted rename": "Wählen Sie das Original nach unterbrochener Umbenennung aus",
+  "Connect the retained draft to": "Verbinden Sie den beibehaltenen Entwurf mit",
+  "? No original will be changed. Review the draft and original before saving.": "? Es wird kein Original verändert. Überprüfen Sie den Entwurf und das Original, bevor Sie es speichern.",
+  "Resolve interrupted rename?": "Unterbrochene Umbenennung beheben?",
+  "Connect original": "Original verknüpfen",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Eine unterbrochene Umbenennung muss überprüft werden. Ihre Entwürfe wurden aufbewahrt. Verwenden Sie „Unterbrochene Umbenennung beheben“ im Menü „Verknüpfte Dateien“.",
+  "Rename recovery": "Wiederherstellung umbenennen"
 }

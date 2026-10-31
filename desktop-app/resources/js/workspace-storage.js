@@ -367,6 +367,7 @@
       this.lastError = null;
       this._desktopIndexWrite = Promise.resolve();
       this._normalContentCache = new Map();
+      this._linkedRenameRecoveries = new Map();
       this._maxContentCacheEntries = 20;
       this.writerId = randomId('writer');
     }
@@ -714,6 +715,7 @@
     }
 
     async _recoverDesktopJournal() {
+      this._linkedRenameRecoveries.clear();
       const journalPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal');
       let entries = [];
       try {
@@ -748,6 +750,12 @@
             await this._writeJsonFileRecoverably(indexPath, record.index);
           }
           try { await Neutralino.filesystem.remove(recordPath); } catch (_) {}
+          continue;
+        }
+        if (record && record.operation === 'linked-rename') {
+          // External originals are never moved, removed or overwritten during
+          // recovery. Only a verified, unchanged link may be repaired.
+          await this._recoverLinkedRename(recordPath, record);
           continue;
         }
         if (record && record.operation === 'move') {
@@ -1345,6 +1353,149 @@
         if (matches.length !== 1) return false;
       }
       return true;
+    }
+
+    getLinkedRenameRecovery(documentId) {
+      const pending = this._linkedRenameRecoveries.get(documentId);
+      return pending ? cloneJson(pending, null) : null;
+    }
+
+    _validLinkedRename(record) {
+      if (!record || record.version !== 1 || record.operation !== 'linked-rename' ||
+          !/^[a-f0-9]{64}$/.test(record.sourceHash || '') ||
+          !Array.isArray(record.documents) || !record.documents.length || record.documents.length > 1000) return false;
+      const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+      const normalize = path => windows ? String(path).replace(/\\/g, '/') : String(path);
+      const paths = [record.source, record.destination];
+      if (paths.some(path => typeof path !== 'string' || path.length > 32768 ||
+          !/^(?:[a-z]:[/\\]|[/\\])/i.test(path) || /[\x00-\x1f]/.test(path) ||
+          normalize(path).split('/').some(part => part === '.' || part === '..') || !/\.(md|markdown)$/i.test(path))) return false;
+      const parts = paths.map(path => normalize(path));
+      const root = normalize(this.vaultPath).replace(/\/+$/, '') + '/';
+      const identity = path => windows ? path.toLowerCase() : path;
+      if (parts[0] === parts[1] || parts.some(path => identity(path).startsWith(identity(root))) ||
+          parts[0].slice(0, parts[0].lastIndexOf('/')) !== parts[1].slice(0, parts[1].lastIndexOf('/'))) return false;
+      const ids = new Set();
+      return record.documents.every(item => {
+        try { requireDocumentId(item.id); } catch (_) { return false; }
+        if (ids.has(item.id) || !Number.isSafeInteger(item.revision) || item.revision < 0) return false;
+        ids.add(item.id);
+        return true;
+      });
+    }
+
+    async prepareLinkedRename(documentIds, source, destination, sourceHash) {
+      if (!this.desktop) throw new Error('Durable linked rename recovery requires desktop storage.');
+      const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+      const index = await this._readJsonFileRecoverably(indexPath, null);
+      const documents = Array.from(new Set(documentIds)).map(id => {
+        const item = index && index.documents.find(item => item.id === id);
+        if (!item || item.sourcePath !== source || this._linkedRenameRecoveries.has(id)) throw new Error('The linked document changed or has an unresolved rename.');
+        return { id: id, revision: normalizedStorageRevision(item.storageRevision) };
+      });
+      const record = { version: 1, operation: 'linked-rename', source, destination, sourceHash, documents };
+      if (!this._validLinkedRename(record)) throw new Error('The linked rename recovery record is invalid.');
+      const path = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'journal', randomId('linked-rename') + '.json');
+      await this._writeJsonFileRecoverably(path, record);
+      const verified = await this._readJsonFile(path, null);
+      if (JSON.stringify(verified) !== JSON.stringify(record)) throw new Error('The linked rename recovery record could not be verified.');
+      documents.forEach(item => this._linkedRenameRecoveries.set(item.id, { path, source, destination }));
+      return path;
+    }
+
+    async _recoverLinkedRename(path, record) {
+      if (!this._validLinkedRename(record)) return 'pending';
+      record.documents.forEach(item => this._linkedRenameRecoveries.set(item.id, {
+        path, source: record.source, destination: record.destination
+      }));
+      try {
+        const indexPath = await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json');
+        const index = await this._readJsonFileRecoverably(indexPath, null);
+        if (!index || !Array.isArray(index.documents)) return 'pending';
+        const documents = record.documents.map(item => index.documents.find(tab => tab.id === item.id));
+        // Explicit removal/conversion is authoritative too. Retaining a draft
+        // as a Vault copy must never reconnect it to an external original.
+        if (documents.every(item => !item || !item.sourcePath)) {
+          await Neutralino.filesystem.remove(path);
+          record.documents.forEach(item => this._linkedRenameRecoveries.delete(item.id));
+          return 'unchanged';
+        }
+        // A completed metadata commit is authoritative even if the user has
+        // subsequently edited the renamed original in another application.
+        let outcome = documents.every((item, i) => item && item.sourcePath === record.destination &&
+          normalizedStorageRevision(item.storageRevision) > record.documents[i].revision) ? 'renamed' : null;
+        if (!outcome) {
+          const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+          const identity = value => windows ? String(value || '').replace(/\\/g, '/').toLowerCase() : value;
+          const ids = new Set(record.documents.map(item => item.id));
+          if (index.documents.some(item => !ids.has(item.id) && identity(item.sourcePath) === identity(record.destination))) return 'pending';
+          if (!documents.every((item, i) => item && item.sourcePath === record.source &&
+              normalizedStorageRevision(item.storageRevision) === record.documents[i].revision)) return 'pending';
+          const normalize = value => windows ? value.replace(/\\/g, '/') : value;
+          const from = normalize(record.source), to = normalize(record.destination);
+          let parent = from.slice(0, from.lastIndexOf('/')) || '/';
+          if (/^[a-z]:$/i.test(parent)) parent += '/';
+          const entries = await Neutralino.filesystem.readDirectory(parent);
+          // Inspect exact spelling, including case-only renames on Windows.
+          const oldExists = entries.some(item => item.entry === from.slice(from.lastIndexOf('/') + 1));
+          const newExists = entries.some(item => item.entry === to.slice(to.lastIndexOf('/') + 1));
+          if (oldExists === newExists) return 'pending';
+          const candidate = newExists ? record.destination : record.source;
+          const check = stats => stats && stats.isFile !== false && !stats.isDirectory &&
+            Number.isSafeInteger(stats.size) && stats.size >= 0 && stats.size <= 20 * 1024 * 1024;
+          if (!check(await Neutralino.filesystem.getStats(candidate))) return 'pending';
+          const content = await Neutralino.filesystem.readFile(candidate, { size: 20 * 1024 * 1024 + 1 });
+          if (typeof content !== 'string') return 'pending';
+          const bytes = new TextEncoder().encode(content);
+          if (bytes.length > 20 * 1024 * 1024 || !check(await Neutralino.filesystem.getStats(candidate))) return 'pending';
+          const hash = Array.from(new Uint8Array(await self.crypto.subtle.digest('SHA-256', bytes)))
+            .map(byte => byte.toString(16).padStart(2, '0')).join('');
+          if (hash !== record.sourceHash) return 'pending';
+          const latest = await this._readJsonFileRecoverably(indexPath, null);
+          if (JSON.stringify(latest) !== JSON.stringify(index)) return 'pending';
+          outcome = newExists ? 'renamed' : 'unchanged';
+          if (newExists) {
+            documents.forEach(item => {
+              item.sourcePath = record.destination;
+              item.title = to.slice(to.lastIndexOf('/') + 1).replace(/\.(md|markdown)$/i, '');
+              if (item.sourceRelativePath) item.sourceRelativePath = item.sourceRelativePath.slice(0, item.sourceRelativePath.lastIndexOf('/') + 1) + to.slice(to.lastIndexOf('/') + 1);
+              item.sourceMissing = false;
+              item.storageRevision = normalizedStorageRevision(item.storageRevision) + 1;
+              item.storageWriterId = this.writerId;
+            });
+            index.updatedAt = Date.now();
+            await this._writeJsonFileRecoverably(indexPath, index);
+          }
+        }
+        this.vaultIndex = index;
+        await Neutralino.filesystem.remove(path);
+        record.documents.forEach(item => this._linkedRenameRecoveries.delete(item.id));
+        return outcome;
+      } catch (error) {
+        this.lastError = error;
+        return 'pending';
+      }
+    }
+
+    async recoverLinkedRename(documentId) {
+      const pending = this._linkedRenameRecoveries.get(documentId);
+      if (!this.desktop || !pending) return 'unchanged';
+      const record = await this._readJsonFile(pending.path, null);
+      return this._recoverLinkedRename(pending.path, record);
+    }
+
+    async clearLinkedRenameRecovery(documentId, selectedPath) {
+      const pending = this._linkedRenameRecoveries.get(documentId);
+      if (!pending) return;
+      const record = await this._readJsonFile(pending.path, null);
+      if (!this._validLinkedRename(record)) throw new Error('Invalid linked rename recovery record.');
+      const index = await this._readJsonFileRecoverably(await this._pathJoin(this.vaultPath, INTERNAL_DIR, 'index.json'), null);
+      if (!index || !record.documents.every(expected => {
+        const item = index.documents.find(item => item.id === expected.id);
+        return item && item.sourcePath === selectedPath && normalizedStorageRevision(item.storageRevision) > expected.revision;
+      })) throw new Error('The selected recovery link has not been saved.');
+      await Neutralino.filesystem.remove(pending.path);
+      record.documents.forEach(item => this._linkedRenameRecoveries.delete(item.id));
     }
 
     async _desktopCheckMovePaths(source, destination) {

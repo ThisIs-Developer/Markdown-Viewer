@@ -1676,5 +1676,15 @@
   "Download": "下載",
   "Use a valid filename.": "請使用有效的檔案名稱。",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "秘密工作區無法鎖定。您的文件保持開啟；當儲存可用時重試。",
-  "Workspace not locked": "工作區未鎖定"
+  "Workspace not locked": "工作區未鎖定",
+  "Resolve interrupted rename…": "解決重命名中斷問題...",
+  "The recovery link could not be saved. Your draft was kept.": "無法儲存恢復連結。你的草稿被保留了。",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "在重新載入原件之前解決重命名中斷的問題。你的草稿被保留了。",
+  "Select the original after interrupted rename": "選擇中斷重命名後的原稿",
+  "Connect the retained draft to": "將保留草稿連接到",
+  "? No original will be changed. Review the draft and original before saving.": "？不會改變原件。儲存前檢查草稿和原件。",
+  "Resolve interrupted rename?": "解決重命名中斷問題？",
+  "Connect original": "連結原始檔案",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中斷的重命名需要審核。你的草稿被保留了。使用連結檔案選單中的解決中斷的重命名。",
+  "Rename recovery": "重新命名恢復"
 }

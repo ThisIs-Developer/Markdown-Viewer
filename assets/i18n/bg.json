@@ -1676,5 +1676,15 @@
   "Download": "Изтегляне",
   "Use a valid filename.": "Използвайте валидно име на файл.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Тайното работно пространство не можа да бъде заключено. Вашите документи остават отворени; опитайте отново, когато има място за съхранение.",
-  "Workspace not locked": "Работното пространство не е заключено"
+  "Workspace not locked": "Работното пространство не е заключено",
+  "Resolve interrupted rename…": "Разрешаване на прекъснато преименуване...",
+  "The recovery link could not be saved. Your draft was kept.": "Връзката за възстановяване не можа да бъде запазена. Вашата чернова бе запазена.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Разрешете прекъснатото преименуване, преди да презаредите оригинал. Вашата чернова бе запазена.",
+  "Select the original after interrupted rename": "Изберете оригинала след прекъснато преименуване",
+  "Connect the retained draft to": "Свържете запазената чернова към",
+  "? No original will be changed. Review the draft and original before saving.": "? Няма да се променя оригиналът. Прегледайте черновата и оригинала, преди да запазите.",
+  "Resolve interrupted rename?": "Разрешаване на прекъснато преименуване?",
+  "Connect original": "Свързване на оригинала",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Прекъснато преименуване се нуждае от преглед. Вашите чернови бяха запазени. Използвайте Разрешаване на прекъснато преименуване в менюто на свързания файл.",
+  "Rename recovery": "Преименуване на възстановяване"
 }

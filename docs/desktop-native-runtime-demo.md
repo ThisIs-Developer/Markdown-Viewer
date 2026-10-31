@@ -113,6 +113,17 @@ drafts and updating subsequent Save targets. The experimental Windows runtime
 rejects replacement during file moves, including destination races. File Explorer,
 Finder and File Manager actions open the actual source parent directory.
 
+Linked renames first verify the retained draft and a write-ahead journal under
+the Vault's internal journal directory. Startup can repair an unchanged link
+after a verified move, including a lost native reply, without moving or writing
+external originals. Changed/ambiguous paths or metadata keep the journal and block
+source saves/reloads until **Resolve interrupted rename…** explicitly reconnects
+the draft to a selected Markdown original. Cancelling keeps both files and the
+draft. A retained draft can also be converted to a Vault copy and exported without
+reconnecting an original. Private mode cannot rename originals because durable recovery is paused.
+These journals are excluded from exported backups; importing a backup does not
+replay a rename or reconnect its external paths.
+
 Web folders can be downloaded as ZIP archives including nested/empty folders,
 current Markdown drafts and safely disambiguated names. Locked Secret workspaces
 cannot finish an in-flight archive export.

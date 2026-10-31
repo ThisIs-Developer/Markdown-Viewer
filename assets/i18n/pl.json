@@ -1676,5 +1676,15 @@
   "Download": "Pobierz",
   "Use a valid filename.": "Użyj prawidłowej nazwy pliku.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Nie można zablokować tajnego obszaru roboczego. Twoje dokumenty pozostają otwarte; spróbuj ponownie, gdy dostępna będzie pamięć.",
-  "Workspace not locked": "Obszar roboczy nie jest zablokowany"
+  "Workspace not locked": "Obszar roboczy nie jest zablokowany",
+  "Resolve interrupted rename…": "Rozwiąż przerwaną zmianę nazwy…",
+  "The recovery link could not be saved. Your draft was kept.": "Nie można zapisać łącza odzyskiwania. Twoja wersja robocza została zachowana.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Rozwiąż przerwaną zmianę nazwy przed ponownym załadowaniem oryginału. Twoja wersja robocza została zachowana.",
+  "Select the original after interrupted rename": "Wybierz oryginał po przerwanej zmianie nazwy",
+  "Connect the retained draft to": "Podłącz zachowany projekt do",
+  "? No original will be changed. Review the draft and original before saving.": "? Żaden oryginał nie zostanie zmieniony. Przed zapisaniem przejrzyj wersję roboczą i oryginał.",
+  "Resolve interrupted rename?": "Rozwiązać przerwaną zmianę nazwy?",
+  "Connect original": "Połącz z oryginałem",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Przerwana zmiana nazwy wymaga sprawdzenia. Twoje wersje robocze zostały zachowane. Użyj opcji Rozwiąż przerwaną zmianę nazwy w menu połączonego pliku.",
+  "Rename recovery": "Zmień nazwę odzyskiwania"
 }

@@ -1676,5 +1676,15 @@
   "Download": "Scarica",
   "Use a valid filename.": "Usa un nome di file valido.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Impossibile bloccare l'area di lavoro segreta. I tuoi documenti rimangono aperti; riprovare quando lo spazio di archiviazione è disponibile.",
-  "Workspace not locked": "Spazio di lavoro non bloccato"
+  "Workspace not locked": "Spazio di lavoro non bloccato",
+  "Resolve interrupted rename…": "Risolvi la ridenominazione interrotta…",
+  "The recovery link could not be saved. Your draft was kept.": "Impossibile salvare il collegamento di ripristino. La tua bozza è stata mantenuta.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Risolvere la ridenominazione interrotta prima di ricaricare un originale. La tua bozza è stata mantenuta.",
+  "Select the original after interrupted rename": "Selezionare l'originale dopo la ridenominazione interrotta",
+  "Connect the retained draft to": "Collega il tiraggio trattenuto a",
+  "? No original will be changed. Review the draft and original before saving.": "? Nessun originale verrà modificato. Rivedi la bozza e l'originale prima di salvare.",
+  "Resolve interrupted rename?": "Risolvere la ridenominazione interrotta?",
+  "Connect original": "Collega originale",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Una ridenominazione interrotta necessita di revisione. Le tue bozze sono state conservate. Utilizzare Risolvi la ridenominazione interrotta nel menu dei file collegati.",
+  "Rename recovery": "Rinomina la recovery"
 }

@@ -1676,5 +1676,15 @@
   "Download": "ダウンロード",
   "Use a valid filename.": "有効なファイル名を使用してください。",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "シークレット ワークスペースをロックできませんでした。文書は開いたままになります。ストレージが利用可能なときに再試行してください。",
-  "Workspace not locked": "ワークスペースがロックされていません"
+  "Workspace not locked": "ワークスペースがロックされていません",
+  "Resolve interrupted rename…": "中断された名前変更を解決します…",
+  "The recovery link could not be saved. Your draft was kept.": "回復リンクを保存できませんでした。あなたのドラフトは保存されました。",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "オリジナルを再ロードする前に、中断された名前変更を解決します。あなたのドラフトは保存されました。",
+  "Select the original after interrupted rename": "中断後の名前変更後のオリジナルを選択",
+  "Connect the retained draft to": "保持されたドラフトを接続します",
+  "? No original will be changed. Review the draft and original before saving.": "?オリジナルは変更されません。保存する前に、下書きとオリジナルを確認してください。",
+  "Resolve interrupted rename?": "中断された名前変更を解決しますか?",
+  "Connect original": "元のファイルをリンク",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中断された名前変更は見直す必要があります。あなたの下書きは保管されていました。リンク ファイル メニューの [中断された名前変更を解決する] を使用します。",
+  "Rename recovery": "リカバリ名の変更"
 }

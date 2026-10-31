@@ -1676,5 +1676,15 @@
   "Download": "Télécharger",
   "Use a valid filename.": "Utilisez un nom de fichier valide.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "L'espace de travail secret n'a pas pu être verrouillé. Vos documents restent ouverts ; réessayez lorsque le stockage est disponible.",
-  "Workspace not locked": "Espace de travail non verrouillé"
+  "Workspace not locked": "Espace de travail non verrouillé",
+  "Resolve interrupted rename…": "Résoudre le changement de nom interrompu…",
+  "The recovery link could not be saved. Your draft was kept.": "Le lien de récupération n'a pas pu être enregistré. Votre brouillon a été conservé.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Résolvez le changement de nom interrompu avant de recharger un original. Votre brouillon a été conservé.",
+  "Select the original after interrupted rename": "Sélectionnez l'original après un changement de nom interrompu",
+  "Connect the retained draft to": "Connectez le brouillon retenu à",
+  "? No original will be changed. Review the draft and original before saving.": "? Aucun original ne sera modifié. Vérifiez le brouillon et l’original avant de sauvegarder.",
+  "Resolve interrupted rename?": "Résoudre le changement de nom interrompu ?",
+  "Connect original": "Lier l’original",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Un changement de nom interrompu doit être revu. Vos brouillons ont été conservés. Utilisez Résoudre le changement de nom interrompu dans le menu des fichiers liés.",
+  "Rename recovery": "Renommer la récupération"
 }

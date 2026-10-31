@@ -1676,5 +1676,15 @@
   "Download": "Download",
   "Use a valid filename.": "Use a valid filename.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.",
-  "Workspace not locked": "Workspace not locked"
+  "Workspace not locked": "Workspace not locked",
+  "Resolve interrupted rename…": "Resolve interrupted rename…",
+  "The recovery link could not be saved. Your draft was kept.": "The recovery link could not be saved. Your draft was kept.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Resolve the interrupted rename before reloading an original. Your draft was kept.",
+  "Select the original after interrupted rename": "Select the original after interrupted rename",
+  "Connect the retained draft to": "Connect the retained draft to",
+  "? No original will be changed. Review the draft and original before saving.": "? No original will be changed. Review the draft and original before saving.",
+  "Resolve interrupted rename?": "Resolve interrupted rename?",
+  "Connect original": "Connect original",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.",
+  "Rename recovery": "Rename recovery"
 }

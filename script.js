@@ -6194,6 +6194,14 @@ document.addEventListener("DOMContentLoaded", async function () {
         { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedDocumentToVault(tab.id); } },
         { id: 'remove-link', icon: 'lucide-x', label: 'Remove linked file', danger: true, run: function() { void removeLinkedDocument(tab.id); } }
       ];
+      if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+        linkedActions.splice(1, 0, {
+          id: 'resolve-rename', icon: 'lucide-refresh-cw', label: 'Resolve interrupted rename…',
+          run: function() { void resolveLinkedRenameRecovery(tab).catch(function(error) {
+            showAppToast(error.message || 'The recovery link could not be saved. Your draft was kept.', { tone: 'error' });
+          }); }
+        });
+      }
       return linkedActions;
     }
     const actions = [
@@ -12368,6 +12376,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     await assertOutsideManagedVault(sourcePath);
     if (!canApply()) return null;
     const normalizedPath = String(sourcePath || '').trim();
+    const pendingRenameTab = tabs.find(function(item) {
+      if (!isLinkedDocument(item)) return false;
+      const pending = workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(item.id);
+      return pending && [pending.source, pending.destination].some(function(path) {
+        return normalizeLinkedSourcePath(path) === normalizeLinkedSourcePath(normalizedPath);
+      });
+    });
+    if (pendingRenameTab) {
+      if (settings.open !== false) openSidebarDocument(pendingRenameTab.id);
+      return pendingRenameTab;
+    }
     const incomingContent = String(content == null ? '' : content);
     const incomingHash = await hashLinkedSourceContent(incomingContent);
     if (!canApply()) return null;
@@ -12582,6 +12601,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function reloadLinkedDocument(tabId, options) {
     if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
+    if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tabId)) {
+      if (!(options && options.background)) showAppToast('Resolve the interrupted rename before reloading an original. Your draft was kept.', { tone: 'warning' });
+      return false;
+    }
     if (!isLinkedDocument(tab)) return false;
     if (linkedSourceSavePaths.has(normalizeLinkedSourcePath(tab.sourcePath))) return false;
     const readEpoch = linkedReadEpoch;
@@ -13074,6 +13097,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const parts = getLinkedRenameParts(source);
     if (parts.name === filename) return;
     if (!parts.parent) throw new Error('The original parent directory is unavailable');
+    if (isPrivateStorageMode() || !workspaceStorage || !workspaceStorage.desktop) {
+      throw new Error('Durable rename recovery is unavailable. The original was not renamed.');
+    }
+    if (workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+      throw Object.assign(new Error('Resolve the interrupted rename first.'), { userMessage: 'Use Resolve interrupted rename before renaming this file again.' });
+    }
     const destination = parts.parent + filename;
     nativeMarkdownSaveInProgress = true;
     linkedReadEpoch++;
@@ -13089,9 +13118,40 @@ document.addEventListener("DOMContentLoaded", async function () {
         // and inaccessible entries. Never fall back to copying or deleting.
         await workspaceStorage._desktopCheckMovePaths(source, destination);
         if (!tabs.includes(tab) || tab.sourcePath !== source) throw new Error('Link changed');
-        captureLiveLinkedDraft(tab);
-        await Neutralino.filesystem.move(source, destination);
         const changed = tabs.filter(function(item) { return normalizeLinkedSourcePath(item.sourcePath) === sourceKey; });
+        for (const item of changed) { await ensureTabContent(item); captureLiveLinkedDraft(item); }
+        const ids = changed.map(function(item) { return item.id; });
+        if (!(await _flushTabsToStorage(tabs, { changedIds: ids, requireExactCommit: true }))) {
+          throw new Error('The recovery draft could not be saved. The original was not renamed.');
+        }
+        for (const item of changed) {
+          if (await workspaceStorage.loadDocumentContent(item.id, { fresh: true }) !== item.content) {
+            throw new Error('The recovery draft could not be verified. The original was not renamed.');
+          }
+        }
+        const original = await readLinkedSourceForSave(source);
+        if (original === null) throw new Error('The original is missing. Nothing was renamed.');
+        const hash = await hashLinkedSourceContent(original);
+        await workspaceStorage.prepareLinkedRename(ids, source, destination, hash);
+        try {
+          if (!tabs.includes(tab) || tab.sourcePath !== source || await readLinkedSourceForSave(source) !== original) {
+            throw new Error('The original or link changed before rename.');
+          }
+          await workspaceStorage._desktopCheckMovePaths(source, destination);
+          await Neutralino.filesystem.move(source, destination);
+        } catch (error) {
+          const outcome = await recoverLinkedRenameWithStorageLock(tab.id);
+          if (outcome === 'renamed') {
+            await refreshLinkedRenameMetadata(changed);
+            renderTabBar(tabs, activeTabId);
+            return;
+          }
+          error.userMessage = outcome === 'pending'
+            ? 'The rename result is uncertain. Your draft and recovery details were kept. Use Resolve interrupted rename.'
+            : 'The original was not renamed. Your draft was kept. Try again.';
+          renderDocumentSidebar();
+          throw error;
+        }
         changed.forEach(function(item) {
           captureLiveLinkedDraft(item);
           item.sourcePath = destination;
@@ -13101,8 +13161,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         });
         // Once the filesystem rename has succeeded, retain its actual new path
         // even if persistence fails. Reverting metadata would point at nothing.
-        if (!(await _flushTabsToStorage(tabs, { changedIds: changed.map(function(item) { return item.id; }) }).catch(function() { return false; }))) {
+        if (!(await _flushTabsToStorage(tabs, { changedIds: ids, requireExactCommit: true }).catch(function() { return false; }))) {
           showAppToast('File renamed. Save the workspace again to retain the updated link.', { tone: 'warning' });
+        } else {
+          await recoverLinkedRenameWithStorageLock(tab.id);
         }
         renderTabBar(tabs, activeTabId);
       });
@@ -13112,6 +13174,78 @@ document.addEventListener("DOMContentLoaded", async function () {
       linkedSourceSavePaths.delete(destinationKey);
       nativeMarkdownSaveInProgress = false;
       await refreshLinkedSourceMonitoring().catch(function(error) { console.warn('Linked monitoring refresh failed:', error); });
+    }
+  }
+
+  function recoverLinkedRenameWithStorageLock(documentId) {
+    workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
+      return workspaceStorage.recoverLinkedRename(documentId);
+    });
+    return workspacePersistenceChain;
+  }
+
+  async function refreshLinkedRenameMetadata(documents) {
+    for (const tab of documents) {
+      const stored = await workspaceStorage.loadDocumentMetadata(tab.id);
+      if (!stored || !tabs.includes(tab)) continue;
+      // Preserve live draft bytes and editor state, including input typed while
+      // the native response was pending. Only refresh link/storage metadata.
+      ['sourcePath', 'sourceRelativePath', 'sourceMissing', 'title', '_storageRevision'].forEach(function(key) {
+        if (Object.prototype.hasOwnProperty.call(stored, key)) tab[key] = stored[key];
+      });
+      if (stored.vaultRelativePath) tab._vaultRelativePath = stored.vaultRelativePath;
+    }
+  }
+
+  async function resolveLinkedRenameRecovery(tab) {
+    if (!tabs.includes(tab) || nativeMarkdownSaveInProgress || workspaceMaintenancePending ||
+        suspendWorkspacePersistence || isPrivateStorageMode()) return;
+    const pending = workspaceStorage.getLinkedRenameRecovery(tab.id);
+    if (!pending) return;
+    nativeMarkdownSaveInProgress = true;
+    linkedReadEpoch++;
+    try {
+      const documents = tabs.filter(function(item) {
+        const record = workspaceStorage.getLinkedRenameRecovery(item.id);
+        return item.id === tab.id || record && record.path === pending.path;
+      });
+      const result = await recoverLinkedRenameWithStorageLock(tab.id);
+      if (result !== 'pending') { await refreshLinkedRenameMetadata(documents); return; }
+      const chosen = await Neutralino.os.showOpenDialog('Select the original after interrupted rename', {
+        multiSelections: false, filters: [{ name: 'Markdown files', extensions: ['md', 'markdown'] }]
+      });
+      if (!chosen || chosen.length !== 1 || !/\.(md|markdown)$/i.test(chosen[0])) return;
+      const path = chosen[0];
+      await assertOutsideManagedVault(path);
+      const existing = findTabBySourcePath(path);
+      if (existing && !documents.includes(existing)) throw new Error('The selected original is already linked to another document.');
+      const content = await readLinkedSourceForSave(path);
+      if (content === null) throw new Error('The selected original is missing.');
+      if (!(await showLinkedConfirmation('Connect the retained draft to ' + path + '? No original will be changed. Review the draft and original before saving.', {
+        title: 'Resolve interrupted rename?', confirmLabel: 'Connect original', cancelLabel: 'Keep draft', focusCancel: true
+      }))) return;
+      if (!tabs.includes(tab) || await readLinkedSourceForSave(path) !== content) throw new Error('The selected original or workspace changed. Retry recovery.');
+      documents.forEach(function(item) {
+        captureLiveLinkedDraft(item);
+        item.sourcePath = path;
+        item.title = getLinkedRenameParts(path).name.replace(/\.(md|markdown)$/i, '');
+        item.sourceMissing = false;
+        // An explicitly selected replacement may be outside its old scan root.
+        delete item.linkedRootId;
+        delete item.sourceRelativePath;
+        delete item.linkedParentId;
+        delete item.linkedParentPath;
+      });
+      if (!(await _flushTabsToStorage(tabs, { changedIds: documents.map(function(item) { return item.id; }), requireExactCommit: true }))) {
+        throw new Error('The recovery link could not be saved. Your draft and recovery details were kept.');
+      }
+      await workspaceStorage.clearLinkedRenameRecovery(tab.id, path);
+    } finally {
+      nativeMarkdownSaveInProgress = false;
+      linkedReadEpoch++;
+      renderTabBar(tabs, activeTabId);
+      renderDocumentSidebar();
+      await refreshLinkedSourceMonitoring().catch(function() {});
     }
   }
 
@@ -15617,6 +15751,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization = await loadDocumentOrganization();
       initializeSecretWorkspaceState();
       tabs = await loadTabsFromStorage();
+      if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && tabs.some(function(tab) { return isLinkedDocument(tab) && workspaceStorage.getLinkedRenameRecovery(tab.id); })) {
+        showAppToast('An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.', {
+          tone: 'warning', title: 'Rename recovery'
+        });
+      }
     } catch (error) {
       if (!documentOrganization) documentOrganization = createDefaultDocumentOrganization();
       return enterWorkspaceStorageRecoveryMode(error);
@@ -27974,6 +28113,9 @@ ${selector} .arrowheadPath {
 
   async function writeLinkedMarkdownSource(tab, content) {
     if (!isLinkedDocument(tab)) return false;
+    if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+      throw new Error('Resolve the interrupted rename before saving to an original. Your draft was kept.');
+    }
     await assertOutsideManagedVault(tab.sourcePath);
     const requestedSource = tab.sourcePath;
     const requestedBaseline = tab.sourceContentHash;
@@ -28210,6 +28352,9 @@ ${selector} .arrowheadPath {
       saveCurrentTabState();
       const tab = tabs.find(function(t) { return t.id === (settings.tabId || activeTabId); });
       if (!tab || isTemporaryDocument(tab)) return;
+      if (isLinkedDocument(tab) && workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+        throw new Error('Resolve the interrupted rename before saving to an original. Your draft was kept.');
+      }
       await ensureTabContent(tab);
       const snapshot = captureLiveLinkedDraft(tab);
       const content = typeof snapshot.content === 'string' ? snapshot.content : '';

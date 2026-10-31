@@ -19,6 +19,7 @@ function setup({ disk = 'DISK CHANGED', draft = 'BASE', editor = draft, secondar
     Neutralino: { filesystem: { readFile: async () => disk, getStats: async () => ({ size: new TextEncoder().encode(disk).byteLength }) } }, TextEncoder,
     isLinkedDocument: tab => Boolean(tab?.sourcePath), ensureTabContent: async () => {},
     workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
+    workspaceStorage: { getLinkedRenameRecovery: () => null },
     linkedReadEpoch: 0, linkedSourceSavePaths: new Set(), normalizeLinkedSourcePath: path => path,
     hashLinkedSourceContent: async text => text, journal: [], toasts: [], saves: [],
     writeDirtyDocumentJournal: (tab, text) => { target.journal.push(text); return true; },
@@ -76,6 +77,17 @@ test('cancelled force reload leaves local changes and source baseline intact', a
   assert.equal(await target.reloadLinkedDocument(tab.id, { force: true }), false);
   assert.equal(tab.content, 'LOCAL NEW');
   assert.equal(tab.sourceContentHash, 'BASE');
+});
+
+test('an unresolved rename prevents a watcher or explicit reload from changing the retained draft', async () => {
+  const { target, tab } = setup({ editor: 'LOCAL NEW' });
+  target.workspaceStorage.getLinkedRenameRecovery = () => ({ source: 'C:/notes.md', destination: 'C:/renamed.md' });
+  for (const options of [{ background: true }, { force: true }]) {
+    assert.equal(await target.reloadLinkedDocument(tab.id, options), false);
+    assert.equal(tab.content, 'BASE');
+    assert.equal(target.markdownEditor.value, 'LOCAL NEW');
+    assert.equal(tab.sourceContentHash, 'BASE');
+  }
 });
 
 test('startup placeholder text is not mistaken for a linked draft', async () => {

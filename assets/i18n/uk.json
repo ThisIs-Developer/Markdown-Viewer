@@ -1676,5 +1676,15 @@
   "Download": "Завантажити",
   "Use a valid filename.": "Використовуйте допустиму назву файлу.",
   "Secret Workspace could not be locked. Your documents remain open; retry when storage is available.": "Не вдалося заблокувати секретну робочу область. Ваші документи залишаються відкритими; повторіть спробу, коли пам’ять буде доступна.",
-  "Workspace not locked": "Робоча область не заблокована"
+  "Workspace not locked": "Робоча область не заблокована",
+  "Resolve interrupted rename…": "Вирішити перерване перейменування…",
+  "The recovery link could not be saved. Your draft was kept.": "Не вдалося зберегти посилання для відновлення. Вашу чернетку збережено.",
+  "Resolve the interrupted rename before reloading an original. Your draft was kept.": "Вирішіть проблему перейменування перед перезавантаженням оригіналу. Вашу чернетку збережено.",
+  "Select the original after interrupted rename": "Виберіть оригінал після перерваного перейменування",
+  "Connect the retained draft to": "Під’єднайте збережену чернетку до",
+  "? No original will be changed. Review the draft and original before saving.": "? Жоден оригінал не буде змінено. Перегляньте чернетку та оригінал перед збереженням.",
+  "Resolve interrupted rename?": "Вирішити перерване перейменування?",
+  "Connect original": "Зв’язати оригінал",
+  "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Перерване перейменування потребує перевірки. Ваші чернетки збережено. Скористайтеся пунктом «Вирішити перерване перейменування» в меню пов’язаного файлу.",
+  "Rename recovery": "Перейменувати відновлення"
 }

@@ -43,7 +43,7 @@ for (const theme of ['light', 'dark']) {
     await page.locator('#document-tree .is-linked-document').dispatchEvent('contextmenu', { clientX: 120, clientY: 120 });
     const menu = page.locator('.document-menu-dropdown.open');
     const masks = [];
-    for (const [action, icon] of [['Save', 'save'], ['Save As…', 'save-plus'], ['Open containing folder', 'folder-input'], ['Convert to Workspace copy', 'copy-plus']]) {
+    for (const [action, icon] of [['Save', 'save'], ['Save As…', 'save-plus'], ['Open in File Explorer', 'folder-input'], ['Convert to Workspace copy', 'copy-plus']]) {
       const glyph = menu.getByRole('menuitem', { name: action, exact: true }).locator('.lucide-' + icon);
       await expect(glyph).toBeVisible();
       const mask = await glyph.evaluate(node => getComputedStyle(node).maskImage);
