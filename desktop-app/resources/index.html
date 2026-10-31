@@ -2064,6 +2064,41 @@
       </div>
     </div>
 
+    <div id="desktop-drop-modal" class="reset-modal-overlay modal-overlay" role="dialog" aria-modal="true" aria-labelledby="desktop-drop-modal-title" aria-describedby="desktop-drop-modal-description" aria-hidden="true" style="display:none;">
+      <div class="reset-modal-box reset-modal-box--wide app-modal-box modal-box desktop-drop-modal-box">
+        <div class="modal-header">
+          <div>
+            <p id="desktop-drop-modal-title" class="reset-modal-message">Choose a workspace</p>
+            <p id="desktop-drop-modal-description" class="modal-subtext">Where should these items appear?</p>
+          </div>
+          <button type="button" class="modal-close-btn" id="desktop-drop-modal-close" aria-label="Cancel dropped file import"><i class="lucide lucide-x" aria-hidden="true"></i></button>
+        </div>
+        <div class="modal-body desktop-drop-modal-body">
+          <div class="desktop-drop-items"><i id="desktop-drop-item-icon" class="lucide lucide-file" aria-hidden="true"></i><div><span id="desktop-drop-item-kind">File</span><p id="desktop-drop-file-summary" class="desktop-drop-file-summary" data-i18n-skip></p></div></div>
+          <p id="desktop-drop-other-items" class="modal-subtext" hidden>Folders include their Markdown files. Media uses the existing import flow.</p>
+          <div class="desktop-drop-choice-grid">
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-copy">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-briefcase-business" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Vault Workspace</strong>
+                <span>Create independent copies. Originals stay unchanged.</span>
+              </span>
+            </button>
+            <button type="button" class="desktop-drop-choice" id="desktop-drop-link">
+              <span class="desktop-drop-choice-icon"><i class="lucide lucide-link-2" aria-hidden="true"></i></span>
+              <span class="desktop-drop-choice-copy">
+                <strong>Linked Workspace</strong>
+                <span>Keep originals in place. Saving edits can change them.</span>
+              </span>
+            </button>
+          </div>
+        </div>
+        <div class="reset-modal-actions">
+          <button type="button" class="reset-modal-btn reset-modal-cancel" id="desktop-drop-modal-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Shared Diagram Viewer Modal -->
     <div id="mermaid-zoom-modal" role="dialog" aria-modal="true" aria-labelledby="diagram-viewer-modal-title" aria-hidden="true">
         <div class="mermaid-modal-content">
@@ -2316,6 +2351,7 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="/libs/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
     <script src="assets/document-toc.js" defer></script>
     <script src="/js/native-markdown-source.js"></script>
+    <script src="/js/browser-drop-source.js"></script>
     <script src="/js/neutralino.js"></script>
     <script src="/js/main.js"></script>
     <script src="/js/workspace-storage.js"></script>

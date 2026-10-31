@@ -126,6 +126,22 @@ test('standard HTML folder drag uses the same conversion and hierarchy', async (
   expect((await records(page)).items.every(item => !item.linked)).toBe(true);
 });
 
+test('opt-in Windows pointer dragging a subfolder converts only that subtree', async ({ page }) => {
+  await page.addInitScript(() => { window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES = { sidebarPointerDrag: true }; window.NL_OS = 'Windows'; });
+  await setup(page);
+  const source = page.locator('[data-tree-type="linked-virtual-folder"]').first();
+  await expect(source).toHaveAttribute('data-pointer-draggable', 'true');
+  const a = await source.boundingBox();
+  const b = await page.locator('[data-tree-type="workspace"][data-drop-workspace-id="workspace_default"]').boundingBox();
+  await page.mouse.move(a.x + 85, a.y + a.height / 2); await page.mouse.down();
+  await page.mouse.move(b.x + 100, b.y + b.height / 2, { steps: 10 }); await page.mouse.up();
+  await page.getByRole('alertdialog', { name: 'Convert linked folder', exact: true }).getByRole('button', { name: 'Convert to Workspace copy', exact: true }).click();
+  await expect(page.locator('.app-toast').filter({ hasText: 'Folder converted' })).toBeVisible();
+  const result = await records(page);
+  expect(result.items.find(item => item.title === 'top').linked).toBe(true);
+  expect(result.items.find(item => item.title === 'notes').path).toMatch(/^Workspace\/sub\/deep\//);
+});
+
 async function saveFolder(page, cancel = false) {
   await page.evaluate(async cancel => {
     await Neutralino.filesystem.createDirectory('C:/Exports');

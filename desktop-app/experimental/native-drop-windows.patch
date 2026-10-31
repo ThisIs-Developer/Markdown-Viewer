@@ -1,0 +1,301 @@
+diff --git a/api/window/window.cpp b/api/window/window.cpp
+index 1f89673..4b856e6 100644
+--- a/api/window/window.cpp
++++ b/api/window/window.cpp
+@@ -672,6 +672,14 @@ bool __createWindow() {
+ 
+     nativeWindow->setEventHandler(&window::handlers::windowStateChange);
+     nativeWindow->setNewWindowHandler(&window::handlers::decideNewWindowPolicy);
++#if defined(_WIN32)
++    nativeWindow->setFileDragHandler([](const string& phase, const vector<string>& paths,
++      const vector<bool>& directories, int x, int y, int width, int height) {
++        json detail = {{"phase", phase}, {"files", paths}, {"directories", directories},
++          {"x", x}, {"y", y}, {"width", width}, {"height", height}};
++        events::dispatch(phase == "drop" ? "filesDropped" : "filesDragged", detail);
++    });
++#endif
+     nativeWindow->setFileDropHandler([](const vector<string>& droppedPaths) {
+         events::dispatch("filesDropped", droppedPaths);
+     });
+diff --git a/lib/webview/webview.h b/lib/webview/webview.h
+index 0d95254..a73b949 100755
+--- a/lib/webview/webview.h
++++ b/lib/webview/webview.h
+@@ -925,6 +925,7 @@ using browser_engine = cocoa_wkwebview_engine;
+ 
+ #define WIN32_LEAN_AND_MEAN
+ #include <Shlwapi.h>
++#include <shlobj.h>
+ #include <codecvt>
+ #include <stdlib.h>
+ #include <windows.h>
+@@ -932,6 +933,7 @@ using browser_engine = cocoa_wkwebview_engine;
+ 
+ #pragma comment(lib, "user32.lib")
+ #pragma comment(lib, "Shlwapi.lib")
++#pragma comment(lib, "uuid.lib")
+ 
+ // Edge/Chromium headers and libs
+ #include "webview2.h"
+@@ -967,69 +969,116 @@ namespace webview {
+     return ret;
+   }
+ 
++// Windows-only drag lifecycle. Coordinates are native client pixels; the app
++// maps them to its CSS viewport, including Windows DPI and WebView zoom.
++using fileDragHandler_t = std::function<void(const std::string&, const std::vector<std::string>&,
++  const std::vector<bool>&, int, int, int, int)>;
++static fileDragHandler_t filesDragged;
++
+ class DropTarget : public IDropTarget {
+   ULONG ref = 1;
+-
+-  public:
+-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv) override {
+-      if (riid == IID_IUnknown || riid == IID_IDropTarget)
+-      {
+-          *ppv = static_cast<IDropTarget*>(this);
+-          AddRef();
+-          return S_OK;
+-      }
+-      *ppv = nullptr;
+-      return E_NOINTERFACE;
+-    }
+-
+-    ULONG STDMETHODCALLTYPE AddRef() override { return ++ref; }
+-
+-    ULONG STDMETHODCALLTYPE Release() override {
+-      if (--ref == 0) delete this;
+-      return ref;
+-    }
+-
+-    HRESULT STDMETHODCALLTYPE DragEnter(
+-      IDataObject* data,
+-      DWORD,
+-      POINTL,
+-      DWORD* effect) override {
+-        *effect = DROPEFFECT_COPY;
+-        return S_OK;
++  HWND window;
++  std::vector<std::string> paths;
++  std::vector<bool> directories;
++  ComPtr<IDropTargetHelper> helper;
++  DWORD allowedEffect = DROPEFFECT_NONE;
++
++  void readPaths(IDataObject* data) {
++    paths.clear();
++    directories.clear();
++    FORMATETC format = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
++    STGMEDIUM medium = {};
++    if(!data || FAILED(data->GetData(&format, &medium))) return;
++    // DragQueryFile takes the HDROP handle, not a GlobalLock pointer.
++    HDROP drop = reinterpret_cast<HDROP>(medium.hGlobal);
++    UINT count = DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0);
++    // Keep one overflow entry so the application's 1,000-item guard can reject.
++    for(UINT i = 0; i < count && i < 1001; ++i) {
++      UINT length = DragQueryFileW(drop, i, nullptr, 0);
++      if(!length || length > 32767) continue;
++      std::vector<wchar_t> path(length + 1);
++      if(!DragQueryFileW(drop, i, path.data(), length + 1)) continue;
++      paths.push_back(wstr2str(path.data()));
++      DWORD attributes = GetFileAttributesW(path.data());
++      directories.push_back(attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY));
+     }
++    ReleaseStgMedium(&medium);
++  }
+ 
+-    HRESULT STDMETHODCALLTYPE DragOver(DWORD, POINTL, DWORD* effect) override {
+-      *effect = DROPEFFECT_COPY;
+-      return S_OK;
+-    }
++  void emit(const std::string& phase, POINTL point, bool includeFiles = false) {
++    if(!filesDragged) return;
++    POINT client = { point.x, point.y };
++    RECT bounds = {};
++    ScreenToClient(window, &client);
++    GetClientRect(window, &bounds);
++    filesDragged(phase, includeFiles ? paths : std::vector<std::string>{},
++      includeFiles ? directories : std::vector<bool>{}, client.x, client.y,
++      bounds.right - bounds.left, bounds.bottom - bounds.top);
++  }
+ 
+-    HRESULT STDMETHODCALLTYPE DragLeave() override {
+-      return S_OK;
+-    }
++  DWORD effect() const {
++    if(paths.empty()) return DROPEFFECT_NONE;
++    // Never claim MOVE: linking and Vault import both preserve source files.
++    if(allowedEffect & DROPEFFECT_COPY) return DROPEFFECT_COPY;
++    if(allowedEffect & DROPEFFECT_LINK) return DROPEFFECT_LINK;
++    return DROPEFFECT_NONE;
++  }
+ 
+-    HRESULT STDMETHODCALLTYPE Drop(
+-      IDataObject* data,
+-      DWORD,
+-      POINTL,
+-      DWORD* effect) override {
+-        FORMATETC fmt = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+-        STGMEDIUM medium;
+-        std::vector<std::string> droppedPaths;
+-        if(SUCCEEDED(data->GetData(&fmt, &medium))) {
+-            HDROP hDrop = (HDROP)GlobalLock(medium.hGlobal);
+-            UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
+-            for(UINT i = 0; i < count; i++) {
+-                wchar_t path[MAX_PATH];
+-                DragQueryFileW(hDrop, i, path, MAX_PATH);
+-                droppedPaths.push_back(wstr2str(path));
+-            }
+-            GlobalUnlock(medium.hGlobal);
+-            ReleaseStgMedium(&medium);
+-        }
+-        *effect = DROPEFFECT_COPY;
+-        filesDropped(droppedPaths);
+-        return S_OK;
+-    }
++public:
++  explicit DropTarget(HWND owner) : window(owner) {
++    CoCreateInstance(CLSID_DragDropHelper, nullptr, CLSCTX_INPROC_SERVER,
++      IID_PPV_ARGS(helper.GetAddressOf()));
++  }
++  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** value) override {
++    if(!value) return E_POINTER;
++    *value = nullptr;
++    if(riid != IID_IUnknown && riid != IID_IDropTarget) return E_NOINTERFACE;
++    *value = static_cast<IDropTarget*>(this);
++    AddRef();
++    return S_OK;
++  }
++  ULONG STDMETHODCALLTYPE AddRef() override { return ++ref; }
++  ULONG STDMETHODCALLTYPE Release() override {
++    ULONG remaining = --ref;
++    if(!remaining) delete this;
++    return remaining;
++  }
++  HRESULT STDMETHODCALLTYPE DragEnter(IDataObject* data, DWORD, POINTL point, DWORD* output) override {
++    allowedEffect = *output;
++    readPaths(data);
++    *output = effect();
++    POINT screen = {point.x, point.y};
++    if(helper) helper->DragEnter(window, data, &screen, *output);
++    emit("enter", point, true);
++    return S_OK;
++  }
++  HRESULT STDMETHODCALLTYPE DragOver(DWORD, POINTL point, DWORD* output) override {
++    *output = effect();
++    POINT screen = {point.x, point.y};
++    if(helper) helper->DragOver(&screen, *output);
++    emit("over", point);
++    return S_OK;
++  }
++  HRESULT STDMETHODCALLTYPE DragLeave() override {
++    if(helper) helper->DragLeave();
++    emit("leave", {0, 0});
++    paths.clear();
++    directories.clear();
++    return S_OK;
++  }
++  HRESULT STDMETHODCALLTYPE Drop(IDataObject* data, DWORD, POINTL point, DWORD* output) override {
++    readPaths(data);
++    *output = effect();
++    POINT screen = {point.x, point.y};
++    if(helper) helper->Drop(data, &screen, *output);
++    if(*output != DROPEFFECT_NONE) {
++      if(filesDragged) emit("drop", point, true);
++      else if(filesDropped) filesDropped(paths);
++    } else emit("leave", point);
++    paths.clear();
++    directories.clear();
++    return S_OK;
++  }
+ };
+ 
+ class edge_chromium {
+@@ -1264,6 +1313,7 @@ public:
+             switch (msg) {
+             case WM_SIZE:
+               w->m_browser->resize(hwnd);
++              w->registerDropTargets();
+               if(!windowStateChange) break;
+               if(wp == SIZE_MINIMIZED) 
+                 windowStateChange(WEBVIEW_WINDOW_MINIMIZED);
+@@ -1404,10 +1454,8 @@ public:
+ 
+     if(emitDropEvents) {
+       OleInitialize(nullptr);
+-      RevokeDragDrop(m_window);
+-      ComPtr<DropTarget> dropTarget = new DropTarget();
+-      RegisterDragDrop(m_window, dropTarget.Get());
+-      DragAcceptFiles(m_window, TRUE);
++      m_dropTarget.Attach(new DropTarget(m_window));
++      registerDropTargets();
+     }
+   }
+ 
+@@ -1508,6 +1556,20 @@ public:
+   void init(const std::string js) { m_browser->init(js); }
+   void extend_user_agent(const std::string customAgent) { m_browser->extend_user_agent(customAgent); }
+ 
++  void registerDropTargets() {
++    if(!m_dropTarget) return;
++    RevokeDragDrop(m_window);
++    RegisterDragDrop(m_window, m_dropTarget.Get());
++    DragAcceptFiles(m_window, TRUE);
++    EnumChildWindows(m_window, [](HWND childHwnd, LPARAM lParam) -> BOOL {
++      IDropTarget* target = reinterpret_cast<IDropTarget*>(lParam);
++      RevokeDragDrop(childHwnd);
++      RegisterDragDrop(childHwnd, target);
++      DragAcceptFiles(childHwnd, TRUE);
++      return TRUE;
++    }, reinterpret_cast<LPARAM>(m_dropTarget.Get()));
++  }
++
+   DWORD m_originalStyleEx;
+ 
+ protected:
+@@ -1531,6 +1593,7 @@ private:
+   DWORD m_main_thread = GetCurrentThreadId();
+   std::unique_ptr<webview::edge_chromium> m_browser =
+       std::make_unique<webview::edge_chromium>();
++  ComPtr<DropTarget> m_dropTarget;
+ 
+ };
+ 
+@@ -1558,6 +1621,10 @@ public:
+     handleNewWindow = handler;
+   }
+ 
++#if defined(WEBVIEW_EDGE)
++  void setFileDragHandler(fileDragHandler_t handler) { filesDragged = handler; }
++#endif
++
+   void setFileDropHandler(fileDropHandler_t handler) {
+     filesDropped = handler;
+   }
+@@ -1572,4 +1639,4 @@ public:
+ 
+ #endif /* WEBVIEW_HEADER */
+ 
+-#endif /* WEBVIEW_H */
+\ No newline at end of file
++#endif /* WEBVIEW_H */
+diff --git a/api/fs/fs.cpp b/api/fs/fs.cpp
+index 868bfb5..d83eaa1 100644
+--- a/api/fs/fs.cpp
++++ b/api/fs/fs.cpp
+@@ -741,7 +741,15 @@ json move(const json &input) {
+     }
+ 
+     error_code ec;
++#if defined(_WIN32)
++    // Explorer rename and Vault moves must never replace a file created after
++    // the caller checked the destination. A same-volume rename is atomic;
++    // deliberately omit MOVEFILE_REPLACE_EXISTING and MOVEFILE_COPY_ALLOWED.
++    if(!MoveFileExW(CONVSTR(source).c_str(), CONVSTR(destination).c_str(), 0))
++        ec = error_code(GetLastError(), system_category());
++#else
+     filesystem::rename(CONVSTR(source), CONVSTR(destination), ec);
++#endif
+ 
+     if(!ec) {
+         output["success"] = true;

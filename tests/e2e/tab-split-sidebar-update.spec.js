@@ -109,8 +109,8 @@ test('split view uses one combined tab and offers only edit or preview modes', a
   const firstTab = page.locator('#tab-list .tab-item').first();
   await firstTab.locator('.tab-menu-btn').click();
   await page.locator('.tab-menu-dropdown.open [data-action="rename"]').click();
-  await page.locator('#rename-modal-input').fill('Primary architecture decision record for the document sidebar');
-  await page.locator('#rename-modal-confirm').click();
+  await page.locator('.document-tree-rename-input').fill('Primary architecture decision record for the document sidebar');
+  await page.locator('.document-tree-rename-input').press('Enter');
   await expect(firstTab.locator('.tab-title')).toContainText('Primary architecture decision record');
   await page.locator('#tab-new-btn').click();
   const secondaryContent = '# Secondary implementation notes for synchronized preview\n\n' + Array.from({ length: 120 }, (_, index) => `Line ${index + 1}: synchronized split content`).join('\n\n');
@@ -118,8 +118,8 @@ test('split view uses one combined tab and offers only edit or preview modes', a
   const secondTab = page.locator('#tab-list .tab-item.active');
   await secondTab.locator('.tab-menu-btn').click();
   await page.locator('.tab-menu-dropdown.open [data-action="rename"]').click();
-  await page.locator('#rename-modal-input').fill('Secondary implementation notes for synchronized preview');
-  await page.locator('#rename-modal-confirm').click();
+  await page.locator('.document-tree-rename-input').fill('Secondary implementation notes for synchronized preview');
+  await page.locator('.document-tree-rename-input').press('Enter');
   const secondTabId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
 
   await firstTab.click({ button: 'right' });

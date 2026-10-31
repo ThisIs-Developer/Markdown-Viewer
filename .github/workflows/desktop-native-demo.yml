@@ -1,0 +1,81 @@
+name: Windows Native Runtime Demo
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-native-demo.yml'
+      - 'desktop-app/build-native-demo.js'
+      - 'desktop-app/experimental/**'
+      - 'desktop-app/prepare.js'
+      - 'desktop-app/resources/js/main.js'
+      - 'script.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'workspace-storage.js'
+      - 'native-markdown-source.js'
+      - 'browser-drop-source.js'
+      - 'assets/i18n/**'
+      - 'tests/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-demo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-demo:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix desktop-app
+      - run: npm run build
+      - run: npm run test:unit
+      - run: node assets/i18n/audit-ui-locales.mjs
+      - name: Checkout pinned single-instance runtime
+        uses: actions/checkout@v4
+        with:
+          repository: Kechos23/neutralinojs
+          ref: 3c307cba7c6de5eb10db614ae8daad99bf44e51d
+          path: desktop-app/.native-runtime
+          persist-credentials: false
+      - name: Apply Windows drop patch
+        working-directory: desktop-app/.native-runtime
+        run: git apply --check ../experimental/native-drop-windows.patch; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git apply ../experimental/native-drop-windows.patch
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile reviewed Windows runtime
+        run: |
+          cmake -S desktop-app/.native-runtime -B desktop-app/.native-runtime/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build desktop-app/.native-runtime/build --parallel 4
+      - name: Prepare desktop dependencies
+        run: npm --prefix desktop-app run setup
+      - name: Package isolated native demo
+        run: node desktop-app/build-native-demo.js
+      - name: Validate native rename with real Windows files
+        run: |
+          $manifest = Get-Content desktop-app/dist/native-demo/provenance.json | ConvertFrom-Json
+          node tests/native/explorer-rename.cjs "desktop-app/dist/native-demo/$($manifest.executable)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Markdown-Viewer-PR269-Windows-Native-Demo
+          path: |
+            desktop-app/dist/native-demo/*.exe
+            desktop-app/dist/native-demo/SHA256SUMS
+            desktop-app/dist/native-demo/provenance.json
+            desktop-app/dist/native-demo/native-rename-results.json
+            desktop-app/dist/native-demo/inline-rename.png
+          if-no-files-found: error
+          retention-days: 30

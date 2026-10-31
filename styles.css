@@ -562,6 +562,26 @@ body {
   outline: none;
 }
 
+.sidebar-pointer-dragging,
+.sidebar-pointer-dragging * {
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+.sidebar-pointer-dragging .document-drag-preview {
+  pointer-events: none;
+}
+
+.sidebar-pointer-dragging .document-drag-preview::after {
+  content: attr(data-drop-action);
+  display: block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--button-bg);
+  color: var(--text-primary);
+  font-size: var(--ui-font-xs);
+}
+
 .document-tree-load-more {
   width: calc(100% - 12px);
   min-height: 30px;
@@ -733,6 +753,43 @@ body {
 .document-tree-row.is-secret-locked .document-tree-meta {
   color: var(--text-secondary);
 }
+
+.document-tree-rename {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--document-sidebar-row-height) - 2px);
+  padding: 2px 5px;
+}
+.document-tree-rename > i {
+  flex: 0 0 var(--ui-icon-size-md);
+  color: var(--text-secondary);
+  font-size: var(--document-sidebar-icon-size);
+  line-height: 1;
+  text-align: center;
+  margin-top: 4px;
+}
+.document-tree-rename-field { flex: 1; min-width: 0; }
+.document-tree-rename-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--accent-color);
+  border-radius: 3px;
+  padding: 1px 3px;
+  background: var(--editor-bg);
+  color: var(--text-color);
+  font: inherit;
+  font-size: var(--ui-font-md);
+  line-height: 1.3;
+  appearance: none;
+  outline: none;
+  box-shadow: none;
+}
+.document-tree-rename-input[aria-invalid="true"] { border-color: var(--color-danger-fg); }
+.document-tree-rename-error { display: block; white-space: normal; color: var(--color-danger-fg); font-size: 11px; }
+.document-tree-row.is-renaming > .document-menu-btn { visibility: hidden; }
 
 .document-tree-main {
   display: flex;
@@ -3168,7 +3225,7 @@ body {
 
 .header-icon-command.sync-active:disabled,
 .header-icon-command.sync-active[aria-disabled="true"] {
-  border-color: transparent;
+  border-color: var(--border-color);
   background: transparent;
   color: var(--text-color);
   box-shadow: none;
@@ -3492,6 +3549,28 @@ body {
   display: block;
   pointer-events: none;
 }
+
+.drag-overlay.is-drop-invalid .drag-overlay-inner,
+#document-tree .is-drop-invalid {
+  border-color: var(--danger-color, #dc3545);
+  background: color-mix(in srgb, var(--danger-color, #dc3545) 10%, var(--header-bg));
+}
+
+#document-tree .is-drop-invalid {
+  outline: 1px dashed var(--danger-color, #dc3545);
+  outline-offset: -1px;
+}
+
+.desktop-drop-items {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.desktop-drop-items > .lucide { font-size: 28px; color: var(--accent-color); }
+#desktop-drop-item-kind { color: var(--text-secondary); font-size: 12px; }
+.desktop-drop-items .desktop-drop-file-summary { margin: 4px 0 0; overflow-wrap: anywhere; }
 
 .drag-overlay-inner {
   display: grid;
@@ -12507,6 +12586,109 @@ html[data-theme="dark"] .mermaid svg {
 
 .app-modal-box > .modal-header + .reset-modal-actions {
   border-top: 0;
+}
+
+.desktop-drop-modal-box {
+  width: min(94vw, 680px);
+  max-width: 680px;
+}
+
+.desktop-drop-modal-box .modal-header > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.desktop-drop-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desktop-drop-file-summary {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.desktop-drop-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.desktop-drop-choice {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 11px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--button-bg);
+  color: var(--text-color);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.desktop-drop-choice:hover,
+.desktop-drop-choice:focus-visible,
+.desktop-drop-choice:active {
+  border-color: var(--accent-color);
+  background: rgba(3, 102, 214, 0.08);
+  box-shadow: none;
+  outline: 0;
+}
+
+.desktop-drop-choice-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--header-bg);
+  color: var(--accent-color);
+}
+
+.desktop-drop-choice-icon .lucide {
+  width: 17px;
+  height: 17px;
+}
+
+.desktop-drop-choice-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.desktop-drop-choice-copy strong {
+  font-size: var(--ui-font-md);
+  line-height: 1.25;
+}
+
+.desktop-drop-choice-copy span,
+.desktop-drop-choice-copy small {
+  color: var(--text-secondary);
+  font-size: var(--ui-font-sm);
+  line-height: 1.4;
+}
+
+.desktop-drop-choice-copy small {
+  margin-top: 2px;
+  font-size: var(--ui-font-xs);
+}
+
+@media (max-width: 620px) {
+  .desktop-drop-choice-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Keep the custom table form compact: it only contains two numeric values. */

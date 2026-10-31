@@ -11,6 +11,7 @@ function setup() {
   const state = {
     workspaceMaintenancePending: false, suspendWorkspacePersistence: false,
     workspaceMaintenancePreviousInert: false, nativeMarkdownSaveInProgress: false,
+    secretWorkspaceLockInProgress: false,
     liveCollaboration: null, linkedReadEpoch: 0, linkedLocationScanTokens: new Map([['root', {}]]),
     linkedSourceRefreshTimers: new Map(), saveTabStateTimeout: null, secretWorkspaceSaveTimeout: null,
     linkedMutationOperations: new Set(), documentDeletionChain: Promise.resolve(),
@@ -27,6 +28,13 @@ test('maintenance rejects an active original Save without taking ownership', asy
   const { state, container } = setup(); state.nativeMarkdownSaveInProgress = true;
   await assert.rejects(state.begin(), /Save is still in progress/);
   assert.equal(state.workspaceMaintenancePending, false); assert.equal(container.inert, false);
+});
+
+test('maintenance cannot replace a workspace while its Secret lock is pending', async () => {
+  const { state, container } = setup(); state.secretWorkspaceLockInProgress = true;
+  await assert.rejects(state.begin(), /still locking/);
+  assert.equal(state.workspaceMaintenancePending, false);
+  assert.equal(container.inert, false);
 });
 
 test('maintenance waits for existing mutations and deletions then flushes split drafts', async () => {
