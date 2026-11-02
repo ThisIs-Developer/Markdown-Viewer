@@ -316,6 +316,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let previewRenderGeneration = 0;
   let previewHasCommittedRender = false;
   let previewLastRenderedTabId = null;
+  let pendingPreviewScrollRestore = null;
+  let previewScrollLayoutRetry = null;
   // PERF-003: Track last rendered content to skip redundant renders
   let _lastRenderedContent = null;
   const LARGE_DOCUMENT_THRESHOLD = 15000;
@@ -14815,14 +14817,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     const contentChanged = tab.content !== markdownEditor.value;
     tab.content = markdownEditor.value;
     tab.contentLoaded = true;
-    tab.scrollPos = markdownEditor.scrollTop;
-    if (
-      previewHasCommittedRender &&
-      previewLastRenderedTabId === tab.id &&
-      !previewContainsSkeleton()
-    ) {
-      savePreviewScrollSnapshot(tab.id, capturePreviewScroll());
-    }
+    if (markdownEditor.clientHeight) tab.scrollPos = markdownEditor.scrollTop;
+    savePreviewScrollSnapshot(tab.id, captureRenderedPreviewScroll(tab.id));
     tab.viewMode = reviewModeActive && reviewPreviousViewModes.has(activeTabId)
       ? reviewPreviousViewModes.get(activeTabId)
       : (currentViewMode || 'split');
@@ -15213,7 +15209,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     renderDocumentSplitView();
     evictInactiveDocumentContent();
     requestAnimationFrame(function() {
-      markdownEditor.scrollTop = tab.scrollPos || 0;
+      if (activeTabId !== tab.id) return;
+      setSynchronizedScrollTop(markdownEditor, tab.scrollPos || 0);
       updateLiveCursorPosition();
       renderLiveCursors();
     });
@@ -15845,7 +15842,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       editorPane.classList.remove('is-loading');
     }
     requestAnimationFrame(function() {
-      if (activeTab) markdownEditor.scrollTop = activeTab.scrollPos || 0;
+      if (activeTab && activeTabId === activeTab.id) setSynchronizedScrollTop(markdownEditor, activeTab.scrollPos || 0);
     });
     renderTabBar(tabs, activeTabId);
     initDocumentSidebar();
@@ -16036,6 +16033,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function showPreviewSkeleton() {
     if (markdownPreview && !markdownPreview.querySelector('#markdown-preview-skeleton')) {
+      savePreviewScrollSnapshot(previewLastRenderedTabId, captureRenderedPreviewScroll(previewLastRenderedTabId));
+      // The placeholder has no document owner. Its clamped scroll events must
+      // never replace the position of the document whose DOM it removed.
+      previewLastRenderedTabId = null;
+      pendingPreviewScrollRestore = null;
+      previewScrollLayoutRetry = null;
       markdownPreview.setAttribute('aria-busy', 'true');
       markdownPreview.dataset.renderState = 'loading';
       markdownPreview.innerHTML = `
@@ -16130,6 +16133,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
+  function captureRenderedPreviewScroll(documentId) {
+    // The shared pane is measurable only after this document owns its visible
+    // layout and its pending restoration has finished.
+    if (
+      !documentId || documentId !== activeTabId || documentId !== previewLastRenderedTabId ||
+      !previewHasCommittedRender || pendingPreviewScrollRestore || previewScrollLayoutRetry ||
+      !previewPane || !previewPane.clientHeight || previewContainsSkeleton()
+    ) return null;
+    return capturePreviewScroll();
+  }
+
   function normalizePreviewScrollValue(value) {
     const position = Number(value);
     return Number.isFinite(position) && position >= 0 ? position : 0;
@@ -16156,9 +16170,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.previewScrollLeft = normalizePreviewScrollLeftValue(snapshot.left);
   }
 
-  function restorePreviewScroll(snapshot, context) {
+  function restorePreviewScroll(snapshot, context, layoutRetry) {
     if (!snapshot || !previewPane) return;
+    const restoration = { snapshot, context, layoutRetry };
+    previewScrollLayoutRetry = null;
+    pendingPreviewScrollRestore = restoration;
     requestAnimationFrame(function() {
+      if (pendingPreviewScrollRestore !== restoration) return;
+      pendingPreviewScrollRestore = null;
       if (
         context &&
         (
@@ -16169,11 +16188,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       ) {
         return;
       }
+      // Hidden panes report zero geometry. Keep the document's saved position
+      // until Preview is visible again rather than persisting a clamped zero.
+      if (!previewPane.clientHeight || previewContainsSkeleton()) return;
       const maxTop = Math.max(0, previewPane.scrollHeight - previewPane.clientHeight);
-      previewPane.scrollTop = Math.min(maxTop, normalizePreviewScrollValue(snapshot.top));
+      setSynchronizedScrollTop(previewPane, Math.min(maxTop, normalizePreviewScrollValue(snapshot.top)));
       previewPane.scrollLeft = normalizePreviewScrollLeftValue(snapshot.left);
+      if (snapshot.top > maxTop && (
+        Array.from(markdownPreview.querySelectorAll('img')).some(function(image) { return !image.complete; }) ||
+        previewHasUnsettledAdvancedContent(_lastRenderedContent || '')
+      )) {
+        // Images and async renderers can temporarily make the document shorter.
+        // Retain the requested position until layout settles or the user scrolls.
+        previewScrollLayoutRetry = restoration;
+        return;
+      }
       if (context) savePreviewScrollSnapshot(context.previewDocumentId, capturePreviewScroll());
     });
+  }
+
+  function retryPreviewScrollAfterLayout() {
+    const restoration = previewScrollLayoutRetry;
+    if (!restoration) return;
+    restorePreviewScroll(restoration.snapshot, restoration.context, true);
+  }
+
+  function releasePreviewScrollLayoutRetry() {
+    if (!previewScrollLayoutRetry && !(pendingPreviewScrollRestore && pendingPreviewScrollRestore.layoutRetry)) return;
+    previewScrollLayoutRetry = null;
+    pendingPreviewScrollRestore = null;
+    savePreviewScrollSnapshot(activeTabId, captureRenderedPreviewScroll(activeTabId));
   }
 
   function canReusePreviewNode(currentNode, nextNode, options) {
@@ -16312,9 +16356,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function commitPreviewHtml(sanitizedHtml, referenceData, rawVal, context) {
     const renderedDocumentId = previewLastRenderedTabId;
-    const renderedScrollSnapshot = previewHasCommittedRender && !previewContainsSkeleton()
-      ? capturePreviewScroll()
-      : null;
+    const renderedScrollSnapshot = captureRenderedPreviewScroll(renderedDocumentId);
     if (renderedScrollSnapshot) {
       savePreviewScrollSnapshot(renderedDocumentId, renderedScrollSnapshot);
     }
@@ -20156,6 +20198,7 @@ ${selector} .arrowheadPath {
 
   function syncEditorToPreview() {
     if (isSynchronizedScrollEvent(markdownEditor)) return;
+    if (currentViewMode !== 'split' || pendingPreviewScrollRestore || previewScrollLayoutRetry || previewContainsSkeleton()) return;
     // During an outline jump, the preview owns the position until the next user
     // interaction. Delayed editor scroll events must not undo a layout correction.
     if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling || documentOutlineScrollTarget) return;
@@ -20191,6 +20234,7 @@ ${selector} .arrowheadPath {
 
   function syncPreviewToEditor() {
     if (isSynchronizedScrollEvent(previewPane)) return;
+    if (currentViewMode !== 'split' || pendingPreviewScrollRestore || previewScrollLayoutRetry || previewContainsSkeleton()) return;
     if (!syncScrollingEnabled || isEditorScrolling || isProgrammaticScrolling) return;
     const sourceDocumentId = previewLastRenderedTabId;
     if (!sourceDocumentId || activeTabId !== sourceDocumentId) return;
@@ -20329,6 +20373,11 @@ ${selector} .arrowheadPath {
     if (mode === currentViewMode) return;
 
     const previousMode = currentViewMode;
+    const viewDocumentId = activeTabId;
+    const viewTab = tabs.find(function(tab) { return tab.id === viewDocumentId; });
+    if (previousMode && viewTab && markdownEditor.clientHeight) viewTab.scrollPos = markdownEditor.scrollTop;
+    savePreviewScrollSnapshot(previewLastRenderedTabId, captureRenderedPreviewScroll(previewLastRenderedTabId));
+    cancelPendingMainScrollSync();
     currentViewMode = mode;
     documentOutlineScrollTarget = null;
 
@@ -20375,6 +20424,12 @@ ${selector} .arrowheadPath {
     // Re-render markdown when switching to a view that includes preview
     if (mode === 'split' || mode === 'preview') {
       renderMarkdown({ reason: 'view-switch' });
+      if (previousMode === 'editor' && previewLastRenderedTabId === getActivePreviewDocumentId()) {
+        restorePreviewScroll(getPreviewScrollSnapshot(previewLastRenderedTabId), {
+          renderId: previewRenderGeneration,
+          previewDocumentId: previewLastRenderedTabId,
+        });
+      }
     }
 
     if (mode === 'split' || mode === 'editor') {
@@ -20382,6 +20437,17 @@ ${selector} .arrowheadPath {
       scheduleLineNumberUpdate({ force: true });
       updateFindHighlights();
       scheduleEditorOverlayScrollSync();
+      if (previousMode === 'preview' && viewTab) {
+        const editorScrollTop = viewTab.scrollPos || 0;
+        // View-button handlers persist immediately after this call, before rAF.
+        setSynchronizedScrollTop(markdownEditor, editorScrollTop);
+        requestAnimationFrame(function() {
+          if (activeTabId === viewDocumentId && currentViewMode !== 'preview') {
+            setSynchronizedScrollTop(markdownEditor, editorScrollTop);
+            syncEditorScrollOverlays();
+          }
+        });
+      }
     }
     if (secondarySplitTabId) renderDocumentSplitView();
     requestAnimationFrame(updateDocumentOutlineActiveHeading);
@@ -25114,6 +25180,7 @@ ${selector} .arrowheadPath {
   }
 
   function scrollActiveMatchIntoView(match) {
+    releasePreviewScrollLayoutRetry();
     let matchTop = null;
     let matchHeight = cachedLineHeight;
     let activeHighlight = getActiveFindHighlight();
@@ -26420,6 +26487,7 @@ ${selector} .arrowheadPath {
   function scrollToDocumentOutlineTarget() {
     const heading = documentOutlineScrollTarget;
     if (!heading || !heading.isConnected || currentViewMode === 'editor') return;
+    releasePreviewScrollLayoutRetry();
     // Reveal skipped preview blocks before measuring the heading's position.
     cancelPendingMainScrollSync();
     heading.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
@@ -27972,6 +28040,16 @@ ${selector} .arrowheadPath {
   initSlashCommandMenu();
   initEditorPageNavigation(markdownEditor);
   initEditorPageNavigation(documentSplitEditor);
+
+  ['pointerdown', 'wheel', 'touchstart', 'keydown'].forEach(function(type) {
+    previewPane.addEventListener(type, releasePreviewScrollLayoutRetry, { capture: true, passive: true });
+    markdownEditor.addEventListener(type, releasePreviewScrollLayoutRetry, { capture: true, passive: true });
+  });
+  markdownPreview.addEventListener('load', retryPreviewScrollAfterLayout, true);
+  markdownPreview.addEventListener('error', retryPreviewScrollAfterLayout, true);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(retryPreviewScrollAfterLayout).observe(markdownPreview);
+  }
   
   markdownEditor.addEventListener("scroll", function() {
     cachedScrollTop = this.scrollTop;
@@ -27985,9 +28063,9 @@ ${selector} .arrowheadPath {
   });
   previewPane.addEventListener("scroll", function() {
     const renderedDocumentId = previewLastRenderedTabId;
-    if (renderedDocumentId) {
-      savePreviewScrollSnapshot(renderedDocumentId, capturePreviewScroll());
-    }
+    const snapshot = captureRenderedPreviewScroll(renderedDocumentId);
+    if (!snapshot) return;
+    savePreviewScrollSnapshot(renderedDocumentId, snapshot);
     if (renderedDocumentId !== activeTabId) return;
     if (secondarySplitTabId && currentViewMode === 'preview') {
       syncDocumentSplitScroll(previewPane, documentSplitPreview);
@@ -32409,12 +32487,10 @@ ${selector} .arrowheadPath {
 
   function captureLiveTabSnapshot() {
     const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
-    const previewSnapshot = previewLastRenderedTabId === activeTabId
-      ? capturePreviewScroll()
-      : getPreviewScrollSnapshot(activeTabId);
+    const previewSnapshot = captureRenderedPreviewScroll(activeTabId) || getPreviewScrollSnapshot(activeTabId);
     return {
       content: markdownEditor.value || '',
-      scrollPos: markdownEditor.scrollTop || 0,
+      scrollPos: markdownEditor.clientHeight ? markdownEditor.scrollTop : ((activeTab && activeTab.scrollPos) || 0),
       previewScrollPos: previewSnapshot ? previewSnapshot.top : 0,
       previewScrollLeft: previewSnapshot ? previewSnapshot.left : 0,
       viewMode: currentViewMode || (activeTab && activeTab.viewMode) || 'split'
@@ -32939,12 +33015,10 @@ ${selector} .arrowheadPath {
       removeTabOnLeave = true;
     } else {
       const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
-      const previewSnapshot = previewLastRenderedTabId === activeTabId
-        ? capturePreviewScroll()
-        : getPreviewScrollSnapshot(activeTabId);
+      const previewSnapshot = captureRenderedPreviewScroll(activeTabId) || getPreviewScrollSnapshot(activeTabId);
       originalTabSnapshot = options.originalTabSnapshot || (activeTab ? {
         content: typeof markdownEditor.value === 'string' ? markdownEditor.value : activeTab.content,
-        scrollPos: typeof markdownEditor.scrollTop === 'number' ? markdownEditor.scrollTop : activeTab.scrollPos,
+        scrollPos: markdownEditor.clientHeight ? markdownEditor.scrollTop : activeTab.scrollPos,
         previewScrollPos: previewSnapshot ? previewSnapshot.top : activeTab.previewScrollPos,
         previewScrollLeft: previewSnapshot ? previewSnapshot.left : activeTab.previewScrollLeft,
         viewMode: currentViewMode || activeTab.viewMode
