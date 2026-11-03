@@ -54,6 +54,7 @@ Math font lifecycle tests use the real MathJax bundle, Modern, STIX Two, and Asa
 - Markdown, HTML, PNG, and browser-print PDF export paths
 - Workspace storage, migration, backup/restore, Private mode, and responsive behavior
 - Explorer, toolbar, dialogs, keyboard interaction, accessible names, and focus management
+- Per-document scroll restoration across large-document loading placeholders, hidden Editor/Preview panes, interrupted commits, forced refreshes, workspace reload, worker rendering/fallback, content shrinkage, and delayed image loading/failure/user input (`preview-scroll-lifecycle.spec.js`). Keep these regressions alongside the tab switching, reordering, closing/reopening, and Sync on/off coverage in `tab-split-sidebar-update.spec.js`.
 - Emoji category coverage, alias search, selection across filters, copying/insertion, loading retries, delayed/failed image loading without temporary emojis, viewport image requests, tile reuse, live/persisted skin tones, missing tone artwork and reset behavior, keyboard navigation, and narrow layouts (`emoji-picker.spec.js`, using bundled metadata, the locked JoyPixels runtime, and local image/API responses)
 
 Live Share tests use a local WebSocket/Yjs substitute and do not replace a Cloudflare Durable Object integration test. Production CDN availability and deployed Cloudflare bindings should be monitored separately from the deterministic local suite.

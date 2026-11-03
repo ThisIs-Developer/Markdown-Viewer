@@ -51,6 +51,9 @@ async function createPreviewDocuments(page, documents) {
   for (let index = 0; index < documents.length; index += 1) {
     if (index > 0) await page.locator('#tab-new-btn').click();
     await setEditorContent(page, scrollableMarkdown(documents[index].label, documents[index].sections));
+    // Replacing the Welcome text can retain its editor offset. These fixtures
+    // start unread, so make the independent Editor position explicit.
+    await page.locator('#markdown-editor').evaluate(editor => { editor.scrollTop = 0; });
     await page.locator('.view-toolbar [data-view-mode="preview"]').click();
     const activeTab = page.locator('#tab-list .tab-item.active');
     ids.push(await activeTab.getAttribute('data-tab-id'));
