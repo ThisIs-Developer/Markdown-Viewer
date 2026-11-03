@@ -78,7 +78,7 @@ function restoreBinaries(hidden) {
   }
 }
 
-function buildTarget(target) {
+async function buildTarget(target) {
   const sourcePath = path.join(BIN_DIR, target.sourceName);
   if (!fs.existsSync(sourcePath)) {
     throw new Error(`Missing ${target.sourceName}. Run npm run setup first.`);
@@ -129,6 +129,7 @@ function buildTarget(target) {
 
     const finalFile = path.join(FINAL_DIR, target.outputName);
     fs.copyFileSync(builtFile, finalFile);
+    if (target.outputName.endsWith(".exe")) await require("./experimental/windows/brand-executable").brandExecutable(finalFile);
     fs.chmodSync(finalFile, 0o755);
   } finally {
     restoreBinaries(hidden);
@@ -137,12 +138,12 @@ function buildTarget(target) {
   }
 }
 
-function main() {
+async function main() {
   fs.rmSync(DIST_DIR, { recursive: true, force: true });
   fs.mkdirSync(FINAL_DIR, { recursive: true });
 
   try {
-    for (const target of TARGETS) buildTarget(target);
+    for (const target of TARGETS) await buildTarget(target);
   } finally {
     fs.rmSync(TEMP_BUILD_ROOT, { recursive: true, force: true });
   }
@@ -156,9 +157,7 @@ function main() {
   for (const output of outputs) console.log(`  ${output}`);
 }
 
-try {
-  main();
-} catch (error) {
+main().catch(error => {
   console.error(`\nStandalone build failed: ${error.message}`);
-  process.exit(1);
-}
+  process.exitCode = 1;
+});

@@ -17,6 +17,7 @@ const requiredFiles = [
   'visual-settings-adapters.js',
   'visual-settings-store.js',
   'script.js',
+  'browser-drop-source.js',
   'preview-worker.js',
   'styles.css',
   'sw.js',
@@ -48,6 +49,7 @@ for (const relativePath of requiredFiles) {
 
 const syntaxCheckedFiles = [
   'src/document-toc.mjs',
+  'browser-drop-source.js',
   'assets/document-toc.js',
   'script.js',
   'workspace-storage.js',
@@ -76,6 +78,7 @@ for (const relativePath of syntaxCheckedFiles) {
 
 const syncedDesktopFiles = [
   ['script.js', 'desktop-app/resources/js/script.js'],
+  ['browser-drop-source.js', 'desktop-app/resources/js/browser-drop-source.js'],
   ['workspace-storage.js', 'desktop-app/resources/js/workspace-storage.js'],
   ['preview-worker.js', 'desktop-app/resources/js/preview-worker.js'],
   ['styles.css', 'desktop-app/resources/styles.css']

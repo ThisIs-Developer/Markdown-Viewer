@@ -1,7 +1,10 @@
 const { test, expect } = require('@playwright/test');
 const { openApp } = require('../helpers/app');
+const { installDesktopFilesystem } = require('../helpers/desktop-filesystem');
 
-test('middle-click closes active and inactive tabs without deleting drafts', async ({ page }) => {
+for (const desktop of [false, true]) {
+  test(`middle-click closes active and inactive tabs without deleting drafts (${desktop ? 'desktop' : 'web'})`, async ({ page }) => {
+    if (desktop) await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window);');
     await openApp(page);
     const firstId = await page.locator('#tab-list .tab-item.active').getAttribute('data-tab-id');
     await page.locator('#tab-new-btn').click();
@@ -30,6 +33,22 @@ test('middle-click closes active and inactive tabs without deleting drafts', asy
     await expect(tab(secondId)).toBeVisible();
     await expect(page.locator('[data-tab-context-menu="true"]')).toBeVisible();
   });
+}
+
+test('middle-click on a linked tab keeps its workspace link and original file', async ({ page }) => {
+  await page.addInitScript('(' + installDesktopFilesystem.toString() + ')(window);');
+  await openApp(page);
+  await page.evaluate(async () => {
+    window.__desktopFiles.set('C:/Original/notes.md', '# original');
+    await window.NL_IMPORT_EXTERNAL_FILE('# original', 'notes', 'C:/Original/notes.md');
+  });
+  const active = page.locator('#tab-list .tab-item.active');
+  const id = await active.getAttribute('data-tab-id');
+  await active.locator('.tab-title').click({button:'middle'});
+  await expect(page.locator(`#tab-list [data-tab-id="${id}"]`)).toHaveCount(0);
+  await expect(page.locator(`#document-tree [data-document-id="${id}"]`)).toHaveClass(/is-linked-document/);
+  expect(await page.evaluate(() => window.__desktopFiles.get('C:/Original/notes.md'))).toBe('# original');
+});
 
 test('middle mousedown is cancelled on both the tab title and nested close button', async ({ page }) => {
   await openApp(page);

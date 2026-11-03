@@ -57,7 +57,7 @@ test('formatting toolbar applies bold to the selected text', async ({ page }) =>
   await page.getByRole('button', { name: 'Bold' }).click();
 
   await expect.poll(() => editorValue(page)).toBe('**bold me**');
-  await expect(page.locator('#markdown-preview strong')).toHaveText('bold me');
+  await expect(page.locator('#markdown-preview strong').filter({ hasText: 'bold me' })).toHaveText('bold me');
 });
 
 test('right-clicking selected text keeps the editor selection active', async ({ page }) => {
@@ -87,8 +87,8 @@ test('tabs can be created, renamed, duplicated, and deleted', async ({ page }) =
   await setEditorContent(page, '# Tab Content');
   await page.locator('#tab-list .tab-item.active .tab-menu-btn').click();
   await page.locator('.tab-menu-dropdown.open [data-action="rename"]').click();
-  await page.locator('#rename-modal-input').fill('Renamed Test Tab');
-  await page.locator('#rename-modal-confirm').click();
+  await page.locator('.document-tree-rename-input').fill('Renamed Test Tab');
+  await page.locator('.document-tree-rename-input').press('Enter');
   await expect(page.locator('#tab-list .tab-item.active .tab-title')).toHaveText('Renamed Test Tab');
 
   await page.locator('#tab-list .tab-item.active .tab-menu-btn').click();

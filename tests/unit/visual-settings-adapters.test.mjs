@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import joypixels from 'emoji-toolkit';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../..');
@@ -184,6 +185,7 @@ test('resolveEmojiShortcode handles skin tones accurately', () => {
   assert.equal(adapters.resolveEmojiShortcode('thumbsup'), 'thumbsup_tone1');
   // Aliases canonicalize to JoyPixels canonical keys with tone
   assert.equal(adapters.resolveEmojiShortcode('+1'), 'thumbsup_tone1');
+  assert.equal(adapters.resolveEmojiShortcode('thumbup'), 'thumbsup_tone1');
   assert.equal(adapters.resolveEmojiShortcode('runner'), 'person_running_tone1');
   // Emoji that does NOT support tone is untouched
   assert.equal(adapters.resolveEmojiShortcode('smile'), 'smile');
@@ -197,8 +199,36 @@ test('resolveEmojiShortcode handles skin tones accurately', () => {
   assert.equal(adapters.resolveEmojiShortcode('wave'), 'wave_tone5');
   assert.equal(adapters.resolveEmojiShortcode('thumbsup'), 'thumbsup_tone5');
   assert.equal(adapters.resolveEmojiShortcode('+1'), 'thumbsup_tone5');
+  assert.equal(adapters.resolveEmojiShortcode('thumbup'), 'thumbsup_tone5');
   assert.equal(adapters.resolveEmojiShortcode('runner'), 'person_running_tone5');
   assert.equal(adapters.resolveEmojiShortcode('smile'), 'smile');
+});
+
+test('picker artwork follows preview tones, aliases, and joined emoji without changing unsupported images', () => {
+  const { context, adapters } = createAdapterContext();
+  context.joypixels = { ...joypixels };
+  const image = (code, url) => adapters.resolveEmojiImage(code, url).url;
+  const url = filename => `https://github.githubassets.com/images/icons/emoji/unicode/${filename}.png?v8`;
+  for (let tone = 1; tone <= 5; tone++) {
+    const modifier = ['1f3fb', '1f3fc', '1f3fd', '1f3fe', '1f3ff'][tone - 1];
+    adapters.applyEmojiSkinTone(`tone${tone}`);
+    assert.equal(image('wave', url('1f44b')), url(`1f44b-${modifier}`));
+    assert.equal(image('+1', url('1f44d')), url(`1f44d-${modifier}`));
+    assert.equal(image('thumbsup', url('1f44d')), url(`1f44d-${modifier}`));
+    assert.equal(image('runner', url('1f3c3')), url(`1f3c3-${modifier}`));
+    assert.equal(image('woman_technologist', url('1f469-1f4bb')), url(`1f469-${modifier}-1f4bb`));
+    assert.equal(image('people_holding_hands', url('1f9d1-1f91d-1f9d1')), url(`1f9d1-${modifier}-1f91d-1f9d1-${modifier}`));
+    assert.equal(image('v', url('270c')), url(`270c-${modifier}`));
+    assert.equal(image('smile', url('1f604')), url('1f604'));
+    assert.equal(image('mechanical_arm', url('1f9be')), url('1f9be'));
+    assert.equal(image('octocat', '/octocat.png'), '/octocat.png');
+    assert.equal(image('wave_tone3', url('1f44b-1f3fd')), url('1f44b-1f3fd'));
+  }
+  assert.equal(adapters.resolveEmojiImage('leftwards_pushing_hand', url('1faf7')).unicode, '🫷🏿');
+  adapters.applyEmojiSkinTone('default');
+  assert.equal(image('wave', url('1f44b')), url('1f44b'));
+  delete context.joypixels;
+  assert.equal(image('wave', url('1f44b')), url('1f44b'));
 });
 
 test('applyMermaid handles auto theme and look style', async () => {

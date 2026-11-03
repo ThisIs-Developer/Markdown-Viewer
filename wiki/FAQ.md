@@ -32,6 +32,10 @@ Web documents use per-document IndexedDB records. Desktop normal documents are o
 
 Markdown Viewer does not impose a document-count limit. Browser quota or available desktop filesystem capacity is the practical limit.
 
+### Can the desktop app edit external Markdown files without importing them?
+
+Yes. Use **Linked Workspace → Link file** or **Link folder**. The app keeps a separate recovery draft while you edit and writes the original only when you explicitly save. You can resolve source conflicts, Save As a new linked file, convert a draft to an independent Vault copy, or remove the link without deleting the original. Browser and Docker builds do not expose native linking. See [Desktop Application: Linked Workspace](Desktop-App.md#linked-workspace).
+
 ### What is the difference between closing and deleting a Document?
 
 Closing removes the open tab but keeps the Document in the Workspace. Deleting removes the Document. Closing all tabs can leave the Workspace files available in Explorer.
@@ -61,6 +65,8 @@ It permanently deletes all Documents, folders, review data, settings, Secret Wor
 ### What does a workspace backup include?
 
 A workspace ZIP contains normal Documents, folder organization, review data, selected preferences, and—when explicitly selected—encrypted Secret Workspace records. It does not include trash, desktop history, or recovery journals. Importing a backup permanently replaces the current workspace after confirmation.
+
+Desktop backups can also carry recoverable linked drafts, but recorded external paths do not regain write authority after import. Explicitly link the source again before saving to an original. Recovery drafts and journals protect against interrupted local writes; they are not a substitute for an independent backup.
 
 ## Privacy and Security
 
@@ -121,6 +127,10 @@ Yes. It supports regular expressions, capture replacements, preserve-case replac
 ### How do I use slash commands?
 
 In an Editor, type `/` as the first character on a line. The **Insert block** menu lets you filter and insert headings, lists, quotes, code, math, links, alerts, tables, diagrams, media, and other common blocks with the keyboard or pointer. A slash after indentation or existing text remains ordinary Markdown, so URLs and inline text are not interrupted. See [Usage Guide: Slash Commands](Usage-Guide.md#slash-commands).
+
+### How do I customize code, math, diagrams, or emoji in Preview?
+
+Open **Workspace settings → Preview Styling** and choose a code theme, math font, Mermaid theme, Mermaid style, and emoji skin tone. The settings save locally and Reset restores their defaults without editing Markdown. Optional font and theme downloads can require the network. The categorized **GitHub Emojis** picker follows the supported skin-tone setting and lets you search, collect, copy, or insert several shortcodes in order. See [Usage Guide: Preview Styling and Emoji](Usage-Guide.md#preview-styling-and-emoji).
 
 ### How do I navigate a long Document or create a table of contents?
 

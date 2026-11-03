@@ -401,7 +401,7 @@ test('desktop journals recover a new file and a move before their index commits'
           path = normalize(path);
           if (directories.has(path)) return { isDirectory: true, size: 0, modifiedAt: Date.now() };
           if (files.has(path)) return { isDirectory: false, size: files.get(path).length, modifiedAt: Date.now() };
-          throw new Error('missing');
+          throw Object.assign(new Error('missing'), { code: 'NE_FS_NOPATHE' });
         },
         createDirectory: async path => directories.add(normalize(path)),
         readFile: async path => {

@@ -118,6 +118,48 @@ for (const pane of ['primary', 'secondary']) {
         await expect(editor).toHaveValue(prefix + expected + suffix);
       }
     });
+    test('table chooser does not steal focus from an edited row field', async ({ page }) => {
+      await page.evaluate(() => {
+        const nativeFrame = window.requestAnimationFrame;
+        window.__tableFocusFrames = [];
+        window.requestAnimationFrame = function(callback) {
+          if (String(callback).includes('columnInput.focus()')) {
+            window.__tableFocusFrames.push(callback);
+            return 0;
+          }
+          return nativeFrame.call(window, callback);
+        };
+      });
+      await enterCommand(page, editor, 'table', 'table');
+      await page.locator('#table-modal-columns').fill('2');
+      await page.locator('#table-modal-rows').fill('2');
+      await page.evaluate(() => window.__tableFocusFrames.splice(0).forEach(callback => callback()));
+      await expect(page.locator('#table-modal-rows')).toBeFocused();
+      await page.locator('#table-modal-insert').click();
+      await expect(editor).toHaveValue(prefix + '| Column 1 | Column 2 |\n| --- | --- |\n| Value | Value |\n' + suffix);
+    });
+
+    test('media chooser does not steal focus from an edited field', async ({ page }) => {
+      await page.evaluate(() => {
+        const nativeFrame = window.requestAnimationFrame;
+        window.__mediaFocusFrames = [];
+        window.requestAnimationFrame = function(callback) {
+          if (String(callback).includes('fileInput.focus()')) {
+            window.__mediaFocusFrames.push(callback);
+            return 0;
+          }
+          return nativeFrame.call(window, callback);
+        };
+      });
+      await enterCommand(page, editor, 'image', 'image');
+      await page.locator('#image-modal-url').fill('https://example.com/focus.mp4');
+      await page.locator('#image-modal-alt').fill('Kept title');
+      await page.evaluate(() => window.__mediaFocusFrames.splice(0).forEach(callback => callback()));
+      await expect(page.locator('#image-modal-alt')).toBeFocused();
+      await page.locator('#image-modal-insert').click();
+      await expect(editor).toHaveValue(prefix + '<video controls preload="metadata" src="https://example.com/focus.mp4" aria-label="Kept title"></video>' + suffix);
+    });
+
     test('media upload stays in the command target editor (mock upload API)', async ({ page }) => {
       await page.route('**/api/image', route => route.fulfill({ json: { id: mediaId } }));
       await mockMediaDownload(page);
@@ -152,6 +194,29 @@ for (const pane of ['primary', 'secondary']) {
       await page.locator('#reference-modal-url').press('Enter');
       await expect(editor).toHaveValue(first + '\n[2]\n[2]: https://example.com/second');
       await expect(editor).toBeFocused();
+    });
+
+    test('reference chooser does not steal focus from a field already being edited', async ({ page }) => {
+      // Capture the chooser's deferred focus callback without delaying slash-menu
+      // opening. Flushing it after a user selects another field exposes the race.
+      await page.evaluate(() => {
+        const nativeFrame = window.requestAnimationFrame;
+        window.__referenceFocusFrames = [];
+        window.requestAnimationFrame = function(callback) {
+          if (String(callback).includes('numberInput.focus()')) {
+            window.__referenceFocusFrames.push(callback);
+            return 0;
+          }
+          return nativeFrame.call(window, callback);
+        };
+      });
+      await enterCommand(page, editor, 'reference', 'reference');
+      await page.locator('#reference-modal-url').fill('https://example.com/focus');
+      await page.evaluate(() => window.__referenceFocusFrames.splice(0).forEach(callback => callback()));
+      await expect(page.locator('#reference-modal-url')).toBeFocused();
+      await page.locator('#reference-modal-title-input').fill('Kept title');
+      await page.locator('#reference-modal-apply').click();
+      await expect(editor).toHaveValue(prefix + '[1]' + suffix + '\n[1]: https://example.com/focus "Kept title"');
     });
 
     test('cancels insertion when the target changes during upload', async ({ page }) => {

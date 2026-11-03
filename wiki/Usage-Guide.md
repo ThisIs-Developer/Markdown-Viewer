@@ -82,6 +82,12 @@ The outline is generated locally from the current document and is not saved sepa
 
 Normal Workspace storage is local. Managed media, GitHub import, remote renderers, stored Share Snapshot, Live Share, external assets, map tiles, and uncached web libraries use the network.
 
+### Desktop Linked Workspace
+
+The desktop app can keep external Markdown files and folders in **Linked Workspace** without importing them into the managed Vault. Use **Link file** or **Link folder** from the Explorer toolbar or Linked Workspace menu. Folder scans preserve nested Markdown paths and show progress; the full scan and filesystem safety limits are documented in [Desktop Application: Linked Workspace](Desktop-App.md#linked-workspace).
+
+Editing a linked document autosaves a recovery draft inside the Markdown Viewer vault, not the original file. Use **Save / Ctrl+S** to update the original after conflict and missing-source checks, **Save As…** to create another linked file, or **Convert to Workspace copy** to preserve the draft as an independent Vault document. Removing a link never deletes the original. Backups can recover linked drafts, but imported paths remain data only and must be explicitly linked again before they can be written.
+
 ## Editing Tools
 
 The toolbar can:
@@ -102,6 +108,12 @@ With the Editor focused, **Page Up** and **Page Down** scroll smoothly without s
 Type `/` at the very start of an Editor line to open **Insert block**. Type a command name to filter the list, use **Arrow Up/Down** to choose, press **Enter** to run it, or press **Escape** to close the menu. You can also click or tap a command.
 
 The menu includes headings, paragraphs, lists, quotes, horizontal rules, code and terminal blocks, math, links, references, date/time, alerts, tables, diagrams, and images/media. Reference, alert, table, diagram, and media commands open their existing chooser so you can finish the insertion. Typing `/` after indentation or other text, inside a URL, or while composing text with an IME does not open the menu. Slash commands work in either Editor of the two-Document view and follow RTL placement.
+
+### Preview Styling and Emoji
+
+Open **Workspace settings → Preview Styling** to select a code theme, math font, Mermaid theme and style, and emoji skin tone. The five choices save automatically and can be reset together. Optional theme and font downloads can require a network connection; Markdown Viewer keeps the bundled math style active until the latest requested font is ready and falls back safely if it cannot load.
+
+Open **GitHub Emojis** to browse smileys, people, nature, food, travel, activities, objects, symbols, flags, and GitHub extras. Search uses names, aliases, keywords, or emoji across every category. Selections stay ordered while you search or switch categories, and can be removed, copied, or inserted together. The picker loads nearby rows on demand, reuses finished tiles, supports keyboard navigation and retry, and follows the saved supported skin tone without changing explicitly toned emoji already in the document.
 
 ### Copying a Document
 
