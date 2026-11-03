@@ -225,7 +225,8 @@ for (const outcome of ['loaded', 'failed', 'user scroll', 'tab switch']) {
     await scrollTo(page, 2200);
     await activate(page, a, 'Image A');
     delayImage = true;
-    await page.reload();
+    // The deferred image can block page load until imageRequest() below.
+    await page.reload({ waitUntil: 'domcontentloaded' });
     await settled(page, 'Image A');
     await expect.poll(() => Boolean(imageRequest)).toBe(true);
     if (outcome === 'user scroll') {
