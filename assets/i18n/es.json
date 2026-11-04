@@ -1337,7 +1337,6 @@
   "Export theme": "Exportar tema",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Exportación rápida utilizando el cuadro de diálogo de impresión de su navegador.",
   "Fifth-level heading": "Título de quinto nivel",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Se eliminaron los enlaces de archivos, pero el cambio de carpeta no se pudo guardar. La carpeta se mantuvo para que puedas volver a intentarlo.",
   "File saved": "Archivo guardado",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "edición interrumpida",
   "Italic (Ctrl/Cmd+I)": "Cursiva (Ctrl/Cmd+I)",
   "Keep draft": "Mantener borrador",
-  "Keeps tables, diagrams, and equations together.": "Mantiene juntas tablas, diagramas y ecuaciones.",
   "kept in Trash.": "guardado en la Papelera.",
   "Large section heading": "Encabezado de sección grande",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Se conservaron la última instantánea y los borradores exitosos. Vuelva a escanear para volver a intentarlo.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Formato de párrafo",
   "permanently deleted.": "eliminado permanentemente.",
   "Post reply": "Publicar respuesta",
-  "Precision PDF": "PDF de precisión",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Vista previa (Ctrl/Cmd+E alterna Editar/Vista previa)",
   "Private mode is on. Session changes are not saved.": "El modo privado está activado. Los cambios de sesión no se guardan.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "El formato rápido cubre énfasis, citas, alineación y listas; Las herramientas de inserción avanzadas están disponibles directamente en la barra de herramientas de formato.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "¿Resolver cambio de nombre interrumpido?",
   "Connect original": "Vincular original",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Un cambio de nombre interrumpido necesita revisión. Tus borradores fueron guardados. Utilice Resolver cambio de nombre interrumpido en el menú del archivo vinculado.",
-  "Rename recovery": "Cambiar nombre de recuperación"
+  "Rename recovery": "Cambiar nombre de recuperación",
+  "Image PDF": "PDF de imágenes",
+  "Selectable text. Save as PDF from your print dialog.": "Texto seleccionable. Guarda como PDF desde el diálogo de impresión.",
+  "Image-based pages. Text is not selectable.": "Páginas como imágenes. El texto no se puede seleccionar."
 }

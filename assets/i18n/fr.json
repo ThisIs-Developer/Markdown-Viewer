@@ -1337,7 +1337,6 @@
   "Export theme": "Thème d'exportation",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Exportation rapide à l'aide de la boîte de dialogue d'impression de votre navigateur.",
   "Fifth-level heading": "Titre de cinquième niveau",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Les liens vers les fichiers ont été supprimés, mais la modification du dossier n'a pas pu être enregistrée. Le dossier a été conservé afin que vous puissiez réessayer.",
   "File saved": "Fichier enregistré",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "montage interrompu",
   "Italic (Ctrl/Cmd+I)": "Italique (Ctrl/Cmd+I)",
   "Keep draft": "Conserver le brouillon",
-  "Keeps tables, diagrams, and equations together.": "Conserve les tableaux, les diagrammes et les équations ensemble.",
   "kept in Trash.": "conservé dans la corbeille.",
   "Large section heading": "Titre de grande section",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Le dernier instantané et les brouillons réussis ont été conservés. Effectuez une nouvelle analyse pour réessayer.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Formatage des paragraphes",
   "permanently deleted.": "définitivement supprimé.",
   "Post reply": "Publier la réponse",
-  "Precision PDF": "PDF de précision",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Aperçu (Ctrl/Cmd+E bascule Édition/Aperçu)",
   "Private mode is on. Session changes are not saved.": "Le mode privé est activé. Les modifications de session ne sont pas enregistrées.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "Le formatage rapide couvre l'emphase, les guillemets, l'alignement et les listes ; des outils d'insertion avancés sont directement disponibles dans la barre d'outils de formatage.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Résoudre le changement de nom interrompu ?",
   "Connect original": "Lier l’original",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Un changement de nom interrompu doit être revu. Vos brouillons ont été conservés. Utilisez Résoudre le changement de nom interrompu dans le menu des fichiers liés.",
-  "Rename recovery": "Renommer la récupération"
+  "Rename recovery": "Renommer la récupération",
+  "Image PDF": "PDF en images",
+  "Selectable text. Save as PDF from your print dialog.": "Texte sélectionnable. Enregistrez en PDF depuis la boîte de dialogue d’impression.",
+  "Image-based pages. Text is not selectable.": "Pages sous forme d’images. Le texte ne peut pas être sélectionné."
 }

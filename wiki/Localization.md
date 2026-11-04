@@ -168,7 +168,7 @@ Font families and named code palettes retain their original names in every langu
 | Markdown export | Markdown エクスポート | Markdown 내보내기 | Markdown 导出 | Markdown 匯出 |
 | HTML export | HTML エクスポート | HTML 내보내기 | HTML 导出 | HTML 匯出 |
 | Browser Print | ブラウザー印刷 | 브라우저 인쇄 | 浏览器打印 | 瀏覽器列印 |
-| Legacy Raster PDF | 従来のラスター PDF | 레거시 래스터 PDF | 旧版栅格 PDF | 舊版點陣 PDF |
+| Image PDF | 画像 PDF | 이미지 PDF | 图像 PDF | 影像 PDF |
 | PNG export | PNG エクスポート | PNG 내보내기 | PNG 导出 | PNG 匯出 |
 | Diagram | 図表 | 다이어그램 | 图表 | 圖表 |
 | Diagram renderer | 図表レンダラー | 다이어그램 렌더러 | 图表渲染器 | 圖表轉譯器 |

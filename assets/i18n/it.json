@@ -1337,7 +1337,6 @@
   "Export theme": "Esporta tema",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Esportazione rapida utilizzando la finestra di dialogo di stampa del browser.",
   "Fifth-level heading": "Intestazione di quinto livello",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "I collegamenti ai file sono stati rimossi, ma non è stato possibile salvare la modifica della cartella. La cartella è stata conservata, quindi puoi riprovare.",
   "File saved": "File salvato",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "ha interrotto la modifica",
   "Italic (Ctrl/Cmd+I)": "Corsivo (Ctrl/Cmd+I)",
   "Keep draft": "Conserva la bozza",
-  "Keeps tables, diagrams, and equations together.": "Mantiene insieme tabelle, diagrammi ed equazioni.",
   "kept in Trash.": "conservato nel Cestino.",
   "Large section heading": "Intestazione di sezione ampia",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "L'ultima istantanea e le bozze riuscite sono state conservate. Eseguire nuovamente la scansione per riprovare.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Formattazione del paragrafo",
   "permanently deleted.": "eliminato definitivamente.",
   "Post reply": "Pubblica risposta",
-  "Precision PDF": "PDF di precisione",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Anteprima (Ctrl/Cmd+E alterna Modifica/Anteprima)",
   "Private mode is on. Session changes are not saved.": "La modalità privata è attiva. Le modifiche alla sessione non vengono salvate.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "La formattazione rapida copre l'enfasi, le virgolette, l'allineamento e gli elenchi; gli strumenti di inserimento avanzati sono direttamente disponibili nella barra degli strumenti di formattazione.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Risolvere la ridenominazione interrotta?",
   "Connect original": "Collega originale",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Una ridenominazione interrotta necessita di revisione. Le tue bozze sono state conservate. Utilizzare Risolvi la ridenominazione interrotta nel menu dei file collegati.",
-  "Rename recovery": "Rinomina la recovery"
+  "Rename recovery": "Rinomina la recovery",
+  "Image PDF": "PDF di immagini",
+  "Selectable text. Save as PDF from your print dialog.": "Testo selezionabile. Salva come PDF dalla finestra di stampa.",
+  "Image-based pages. Text is not selectable.": "Pagine come immagini. Il testo non è selezionabile."
 }

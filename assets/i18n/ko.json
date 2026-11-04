@@ -1337,7 +1337,6 @@
   "Export theme": "테마 내보내기",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "브라우저 인쇄 대화 상자를 사용하여 빠르게 내보낼 수 있습니다.",
   "Fifth-level heading": "5단계 제목",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "파일 링크가 제거되었으나 폴더 변경 내용이 저장되지 않았습니다. 다시 시도할 수 있도록 폴더가 보관되었습니다.",
   "File saved": "파일이 저장되었습니다",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "편집이 중단되었습니다.",
   "Italic (Ctrl/Cmd+I)": "기울임꼴(Ctrl/Cmd+I)",
   "Keep draft": "초안 유지",
-  "Keeps tables, diagrams, and equations together.": "표, 다이어그램, 방정식을 함께 유지합니다.",
   "kept in Trash.": "이(가) 휴지통에 보관되었습니다.",
   "Large section heading": "큰 섹션 제목",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "마지막으로 성공한 스냅샷과 초안이 보관되었습니다. 다시 검색하여 다시 시도하세요.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "단락 서식",
   "permanently deleted.": "이 영구적으로 삭제되었습니다.",
   "Post reply": "답글 게시",
-  "Precision PDF": "정밀PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "미리보기(Ctrl/Cmd+E는 편집/미리보기를 전환합니다)",
   "Private mode is on. Session changes are not saved.": "프라이빗 모드가 활성화되었습니다. 세션 변경 사항은 저장되지 않습니다.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "빠른 서식에는 강조, 인용, 정렬 및 목록이 포함됩니다. 고급 삽입 도구는 서식 도구 모음에서 직접 사용할 수 있습니다.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "이름 바꾸기가 중단된 문제를 해결하시겠습니까?",
   "Connect original": "원본 연결",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "중단된 이름 변경에 대한 검토가 필요합니다. 초안이 보관되었습니다. 연결된 파일 메뉴에서 중단된 이름 바꾸기 해결을 사용하세요.",
-  "Rename recovery": "복구 이름 바꾸기"
+  "Rename recovery": "복구 이름 바꾸기",
+  "Image PDF": "이미지 PDF",
+  "Selectable text. Save as PDF from your print dialog.": "텍스트를 선택할 수 있습니다. 인쇄 대화 상자에서 PDF로 저장하세요.",
+  "Image-based pages. Text is not selectable.": "페이지를 이미지로 저장합니다. 텍스트를 선택할 수 없습니다."
 }

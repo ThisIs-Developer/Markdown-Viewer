@@ -1337,7 +1337,6 @@
   "Export theme": "Thema exportieren",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Schneller Export über den Druckdialog Ihres Browsers.",
   "Fifth-level heading": "Überschrift der fünften Ebene",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Dateiverknüpfungen wurden entfernt, aber die Ordneränderung konnte nicht gespeichert werden. Der Ordner wurde beibehalten, sodass Sie es erneut versuchen können.",
   "File saved": "Datei gespeichert",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "hat die Bearbeitung unterbrochen",
   "Italic (Ctrl/Cmd+I)": "Kursiv (Strg/Befehl+I)",
   "Keep draft": "Entwurf beibehalten",
-  "Keeps tables, diagrams, and equations together.": "Hält Tabellen, Diagramme und Gleichungen zusammen.",
   "kept in Trash.": "wird im Papierkorb gespeichert.",
   "Large section heading": "Große Abschnittsüberschrift",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Der letzte erfolgreiche Snapshot und die letzten Entwürfe wurden aufbewahrt. Erneut scannen, um es erneut zu versuchen.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Absatzformatierung",
   "permanently deleted.": "dauerhaft gelöscht.",
   "Post reply": "Antwort posten",
-  "Precision PDF": "Präzisions-PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Vorschau (Strg/Befehl+E schaltet Bearbeiten/Vorschau um)",
   "Private mode is on. Session changes are not saved.": "Der private Modus ist aktiviert. Sitzungsänderungen werden nicht gespeichert.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "Die Schnellformatierung umfasst Hervorhebung, Anführungszeichen, Ausrichtung und Listen; Erweiterte Einfügewerkzeuge sind direkt in der Formatierungssymbolleiste verfügbar.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Unterbrochene Umbenennung beheben?",
   "Connect original": "Original verknüpfen",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Eine unterbrochene Umbenennung muss überprüft werden. Ihre Entwürfe wurden aufbewahrt. Verwenden Sie „Unterbrochene Umbenennung beheben“ im Menü „Verknüpfte Dateien“.",
-  "Rename recovery": "Wiederherstellung umbenennen"
+  "Rename recovery": "Wiederherstellung umbenennen",
+  "Image PDF": "Bild-PDF",
+  "Selectable text. Save as PDF from your print dialog.": "Auswählbarer Text. Im Druckdialog als PDF speichern.",
+  "Image-based pages. Text is not selectable.": "Seiten als Bilder. Der Text ist nicht auswählbar."
 }

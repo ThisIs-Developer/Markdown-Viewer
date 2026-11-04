@@ -1337,7 +1337,6 @@
   "Export theme": "Temayı dışa aktar",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Tarayıcınızın yazdırma iletişim kutusunu kullanarak hızlı dışa aktarma.",
   "Fifth-level heading": "Beşinci düzey başlık",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Dosya bağlantıları kaldırıldı ancak klasör değişikliği kaydedilemedi. Tekrar deneyebilmeniz için klasör tutuldu.",
   "File saved": "Dosya kaydedildi",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "kesintiye uğramış düzenleme",
   "Italic (Ctrl/Cmd+I)": "İtalik (Ctrl/Cmd+I)",
   "Keep draft": "Taslağı sakla",
-  "Keeps tables, diagrams, and equations together.": "Tabloları, diyagramları ve denklemleri bir arada tutar.",
   "kept in Trash.": "Çöp Kutusu'nda tutuldu.",
   "Large section heading": "Büyük bölüm başlığı",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Son başarılı anlık görüntü ve taslaklar saklandı. Yeniden denemek için yeniden tarayın.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Paragraf biçimlendirmesi",
   "permanently deleted.": "kalıcı olarak silindi.",
   "Post reply": "Yanıt gönder",
-  "Precision PDF": "Hassas PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Önizleme (Ctrl/Cmd+E Düzenleme/Önizleme arasında geçiş yapar)",
   "Private mode is on. Session changes are not saved.": "Özel mod açık. Oturum değişiklikleri kaydedilmez.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "Hızlı biçimlendirme vurguyu, alıntıları, hizalamayı ve listeleri kapsar; gelişmiş ekleme araçları doğrudan biçimlendirme araç çubuğunda mevcuttur.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Kesintiye uğrayan yeniden adlandırma sorunu çözülsün mü?",
   "Connect original": "Özgün dosyayı bağla",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Kesintiye uğramış bir yeniden adlandırmanın gözden geçirilmesi gerekiyor. Taslaklarınız saklandı. Bağlantılı dosya menüsünde Kesintiye uğrayan yeniden adlandırmayı çözümle seçeneğini kullanın.",
-  "Rename recovery": "Kurtarmayı yeniden adlandırın"
+  "Rename recovery": "Kurtarmayı yeniden adlandırın",
+  "Image PDF": "Görüntü PDF’si",
+  "Selectable text. Save as PDF from your print dialog.": "Metin seçilebilir. Yazdırma iletişim kutusundan PDF olarak kaydedin.",
+  "Image-based pages. Text is not selectable.": "Sayfalar görüntü olarak kaydedilir. Metin seçilemez."
 }

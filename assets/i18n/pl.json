@@ -1337,7 +1337,6 @@
   "Export theme": "Eksportuj motyw",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Szybki eksport za pomocą okna drukowania w przeglądarce.",
   "Fifth-level heading": "Nagłówek piątego poziomu",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Linki do plików zostały usunięte, ale zmiany folderu nie można zapisać. Folder został zachowany, więc możesz spróbować ponownie.",
   "File saved": "Plik zapisany",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "przerwał edycję",
   "Italic (Ctrl/Cmd+I)": "Kursywa (Ctrl/Cmd+I)",
   "Keep draft": "Zachowaj wersję roboczą",
-  "Keeps tables, diagrams, and equations together.": "Łączy tabele, diagramy i równania.",
   "kept in Trash.": "przechowywane w Koszu.",
   "Large section heading": "Nagłówek dużej sekcji",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Zachowano ostatnią udaną migawkę i wersje robocze. Przeskanuj ponownie, aby spróbować ponownie.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Formatowanie akapitu",
   "permanently deleted.": "trwale usunięte.",
   "Post reply": "Opublikuj odpowiedź",
-  "Precision PDF": "Precyzyjny plik PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Podgląd (Ctrl/Cmd+E przełącza edycję/podgląd)",
   "Private mode is on. Session changes are not saved.": "Tryb prywatny jest włączony. Zmiany sesji nie są zapisywane.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "Szybkie formatowanie obejmuje wyróżnianie, cudzysłowy, wyrównanie i listy; zaawansowane narzędzia wstawiania są dostępne bezpośrednio na pasku narzędzi formatowania.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Rozwiązać przerwaną zmianę nazwy?",
   "Connect original": "Połącz z oryginałem",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Przerwana zmiana nazwy wymaga sprawdzenia. Twoje wersje robocze zostały zachowane. Użyj opcji Rozwiąż przerwaną zmianę nazwy w menu połączonego pliku.",
-  "Rename recovery": "Zmień nazwę odzyskiwania"
+  "Rename recovery": "Zmień nazwę odzyskiwania",
+  "Image PDF": "PDF z obrazów",
+  "Selectable text. Save as PDF from your print dialog.": "Tekst można zaznaczać. Zapisz jako PDF w oknie drukowania.",
+  "Image-based pages. Text is not selectable.": "Strony w postaci obrazów. Tekstu nie można zaznaczać."
 }

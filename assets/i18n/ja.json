@@ -1337,7 +1337,6 @@
   "Export theme": "エクスポートテーマ",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "ブラウザの印刷ダイアログを使用して高速にエクスポートします。",
   "Fifth-level heading": "第5レベル見出し",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "ファイルのリンクは削除されましたが、フォルダーの変更を保存できませんでした。フォルダーは保持されているため、再試行できます。",
   "File saved": "ファイルを保存しました",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "編集中断",
   "Italic (Ctrl/Cmd+I)": "斜体 (Ctrl/Cmd+I)",
   "Keep draft": "ドラフトを保持",
-  "Keeps tables, diagrams, and equations together.": "表、図、方程式をまとめて保持します。",
   "kept in Trash.": "はゴミ箱に保管されました。",
   "Large section heading": "大きなセクション見出し",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "最後に成功したスナップショットとドラフトが保存されました。再スキャンして再試行してください。",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "段落の書式設定",
   "permanently deleted.": "は完全に削除されました。",
   "Post reply": "返信を投稿",
-  "Precision PDF": "高精度PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "プレビュー (Ctrl/Cmd+E で編集/プレビューを切り替え)",
   "Private mode is on. Session changes are not saved.": "プライベートモードがオンになっています。セッションの変更は保存されません。",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "クイック書式設定では、強調、引用符、配置、リストがカバーされます。高度な挿入ツールは書式設定ツールバーから直接利用できます。",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "中断された名前変更を解決しますか?",
   "Connect original": "元のファイルをリンク",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中断された名前変更は見直す必要があります。あなたの下書きは保管されていました。リンク ファイル メニューの [中断された名前変更を解決する] を使用します。",
-  "Rename recovery": "リカバリ名の変更"
+  "Rename recovery": "リカバリ名の変更",
+  "Image PDF": "画像 PDF",
+  "Selectable text. Save as PDF from your print dialog.": "テキストを選択できます。印刷ダイアログから PDF として保存してください。",
+  "Image-based pages. Text is not selectable.": "ページを画像として保存します。テキストは選択できません。"
 }

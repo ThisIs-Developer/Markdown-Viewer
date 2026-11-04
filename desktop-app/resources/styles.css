@@ -13630,7 +13630,7 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
 @media print {
 
   @page {
-    margin: 0;
+    margin: 15mm 20mm;
     size: auto;
   }
 
@@ -13639,7 +13639,10 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    min-height: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    display: block !important;
   }
 
   .app-header,
@@ -13686,12 +13689,12 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
-    min-height: 100vh !important;
+    min-height: 0 !important;
     overflow: visible !important;
     display: block !important;
     position: static !important;
     flex: none !important;
-    padding: 15mm 20mm !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
     margin: 0 !important;
   }
@@ -13718,12 +13721,66 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     position: static !important;
     inset: auto !important;
     width: 100% !important;
-    min-height: 100vh !important;
+    min-height: 0 !important;
     max-width: 100% !important;
     margin: 0 !important;
-    padding: 15mm 20mm !important;
+    padding: 0 !important;
     overflow: visible !important;
     box-sizing: border-box !important;
+  }
+
+  /* Let the print engine paginate text; screen scrolling/clipping containers
+     must not hide code or turn long blocks into one indivisible print box. */
+  .markdown-body p,
+  .markdown-body li {
+    orphans: 2;
+    widows: 2;
+  }
+
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4,
+  .markdown-body h5,
+  .markdown-body h6 {
+    break-inside: avoid;
+    break-after: avoid;
+  }
+
+  .markdown-body .code-preview-block,
+  .markdown-body pre,
+  .markdown-body blockquote {
+    overflow: visible !important;
+    max-height: none !important;
+    break-inside: auto;
+    box-decoration-break: clone;
+  }
+
+  .markdown-body pre,
+  .markdown-body pre code {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere;
+  }
+
+  .markdown-body table {
+    display: table !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .markdown-body thead { display: table-header-group; }
+  .markdown-body tfoot { display: table-footer-group; }
+  .markdown-body tr { break-inside: avoid; }
+  .markdown-body th,
+  .markdown-body td { overflow-wrap: anywhere; }
+
+  .markdown-body img,
+  .markdown-body svg,
+  .markdown-body canvas {
+    break-inside: avoid;
+    max-width: 100%;
+    max-height: 100vh;
+    object-fit: contain;
   }
 
   html:not([data-browser-print-export="dark"]),
