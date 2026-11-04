@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const path = require('node:path');
 const { openApp, setEditorContent } = require('../helpers/app');
 
 const markdown = `# Clipboard document
@@ -73,6 +74,10 @@ async function openSecondDocument(page, secondaryMarkdown) {
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.route(/^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/highlight\.js\/11\.9\.0\/styles\/(.+)$/, route => {
+    const filename = new URL(route.request().url()).pathname.split('/styles/')[1];
+    return route.fulfill({ path: path.join(__dirname, '../../node_modules/@highlightjs/cdn-assets/styles', filename), contentType: 'text/css' });
+  });
   await openApp(page);
   await setEditorContent(page, markdown);
   await expect(page.locator('#markdown-preview h1')).toHaveText('Clipboard document');
@@ -647,4 +652,273 @@ test.describe('Android-sized touch layout', () => {
     await page.locator('#mobile-copy-markdown').tap();
     await expect.poll(() => page.evaluate(() => window.__clipboard)).toEqual({ 'text/plain': markdown });
   });
+});
+
+// A neutral document is essential: application CSS can mask missing clipboard
+// styles when the paste target lives in the app's own DOM.
+async function readClipboardAppearance(page, surface, html) {
+  return page.evaluate(({ surface, html }) => {
+    let frame;
+    let root = document.querySelector(surface);
+    if (html !== undefined) {
+      frame = document.createElement('iframe');
+      document.body.appendChild(frame);
+      root = frame.contentDocument.body;
+      root.innerHTML = html;
+    }
+    const css = element => element.ownerDocument.defaultView.getComputedStyle(element);
+    const property = (selector, name) => css(root.querySelector(selector)).getPropertyValue(name);
+    const background = element => {
+      for (let current = element; current; current = current.parentElement) {
+        const color = css(current).backgroundColor;
+        if (color !== 'rgba(0, 0, 0, 0)') return color;
+      }
+      return 'rgb(255, 255, 255)';
+    };
+    const token = Array.from(root.querySelectorAll('pre span')).find(element => element.textContent === 'const');
+    const appearance = {
+      headingSize: property('h1', 'font-size'),
+      headingSpacing: property('h1', 'margin'),
+      headingRule: property('h1', 'border-bottom'),
+      paragraphFont: property('p', 'font-family'),
+      paragraphColor: property('p', 'color'),
+      paragraphLineHeight: property('p', 'line-height'),
+      paragraphBackground: background(root.querySelector('p')),
+      quoteBorder: property('blockquote', 'border-left'),
+      quotePadding: property('blockquote', 'padding'),
+      cellBorder: property('td', 'border-left'),
+      cellPadding: property('td', 'padding'),
+      cellColor: property('td', 'color'),
+      cellLineHeight: property('td', 'line-height'),
+      tableCollapse: property('table', 'border-collapse'),
+      codeFont: property('pre code', 'font-family'),
+      codeSize: property('pre code', 'font-size'),
+      codeLineHeight: property('pre code', 'line-height'),
+      codePadding: property('pre', 'padding'),
+      codeBackground: background(root.querySelector('pre code')),
+      tokenColor: token ? css(token).color : null
+    };
+    if (frame) frame.remove();
+    return appearance;
+  }, { surface, html });
+}
+
+async function syntheticPreviewCopy(page, surface) {
+  return page.locator(surface).evaluate(element => {
+    const event = new ClipboardEvent('copy', { bubbles: true, cancelable: true, clipboardData: new DataTransfer() });
+    element.dispatchEvent(event);
+    return { html: event.clipboardData.getData('text/html'), text: event.clipboardData.getData('text/plain'), prevented: event.defaultPrevented };
+  });
+}
+
+async function prepareStyledPreview(page, theme, pane) {
+  await page.evaluate(theme => {
+    if (document.documentElement.dataset.theme !== theme) document.querySelector('#theme-toggle').click();
+  }, theme);
+  // Theme changes load a stylesheet; wait for its local response and activation.
+  await expect.poll(() => page.locator('#markdown-preview .hljs-keyword').evaluate(element => getComputedStyle(element).color))
+    .toBe(theme === 'dark' ? 'rgb(255, 123, 114)' : 'rgb(207, 34, 46)');
+  if (pane === 'secondary') {
+    await openSecondDocument(page, markdown);
+    await page.locator('.view-toolbar [data-view-mode="preview"]').click();
+    await expect(page.locator('#document-split-preview h1')).toHaveText('Clipboard document');
+  }
+  return pane === 'secondary' ? '#document-split-preview' : '#markdown-preview';
+}
+
+for (const theme of ['light', 'dark']) {
+  for (const pane of ['primary', 'secondary']) {
+    test(`clipboard HTML preserves rendered ${theme} styles from the ${pane} Preview`, async ({ page }) => {
+      const surface = await prepareStyledPreview(page, theme, pane);
+      const before = await readClipboardAppearance(page, surface);
+      const sourceHtml = await page.locator(surface).innerHTML();
+      await selectPreview(page, surface);
+      const copied = await syntheticPreviewCopy(page, surface);
+      expect(copied.prevented).toBe(true);
+      expect(before.cellBorder).toMatch(/^1px solid/);
+      expect(before.quoteBorder).toMatch(/^4px solid/);
+      expect(before.tokenColor).not.toBeNull();
+      expect(await readClipboardAppearance(page, surface, copied.html)).toEqual(before);
+      expect(copied.text).not.toMatch(/Copy|\bJS\b/);
+      expect(await page.locator(surface).innerHTML()).toBe(sourceHtml);
+      const wrapper = await page.evaluate(html => {
+        const root = document.createElement('div'); root.innerHTML = html;
+        const code = root.querySelector('pre').parentElement;
+        return { background: code.style.backgroundColor, border: code.style.borderLeftWidth };
+      }, copied.html);
+      expect(wrapper.border).toBe('1px');
+      expect(wrapper.background).not.toBe('');
+    });
+
+    for (const mode of ['native', 'async', 'legacy', 'rejected']) {
+      test(`${theme} ${pane} Preview styles survive real paste via ${mode} Copy`, async ({ page, browserName }) => {
+        test.skip(browserName !== 'chromium', 'Clipboard read permissions are Chromium-specific.');
+        const surface = await prepareStyledPreview(page, theme, pane);
+        const before = await readClipboardAppearance(page, surface);
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await page.locator(surface).focus();
+        await page.evaluate(async mode => {
+          navigator.clipboard.write = window.__writeClipboard;
+          navigator.clipboard.writeText = window.__writeClipboardText;
+          await navigator.clipboard.writeText('Clipboard sentinel');
+          if (mode === 'legacy') navigator.clipboard.write = undefined;
+          if (mode === 'rejected') navigator.clipboard.write = async () => { throw new Error('HTML write unavailable'); };
+        }, mode);
+        await selectPreview(page, surface);
+        if (mode === 'native') await page.keyboard.press('ControlOrMeta+C');
+        else {
+          const menu = await openSurfaceMenu(page, surface);
+          await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
+        }
+        await expect.poll(() => page.evaluate(async () => (await navigator.clipboard.read())[0].types)).toContain('text/html');
+        await page.evaluate(() => {
+          const frame = document.createElement('iframe'); frame.id = 'neutral-paste';
+          frame.style.cssText = 'position:fixed;inset:20px;width:800px;height:700px;z-index:999999;';
+          document.body.appendChild(frame);
+          frame.contentDocument.body.contentEditable = 'true';
+          frame.contentDocument.body.focus();
+        });
+        await page.keyboard.press('ControlOrMeta+V');
+        const target = page.frameLocator('#neutral-paste').locator('body');
+        await expect(target.locator('h1')).toHaveText('Clipboard document');
+        await expect(target.locator('strong')).toHaveText('bold phrase');
+        await expect(target.locator('em')).toHaveText('italic text');
+        await expect(target.locator('a')).toHaveAttribute('href', /^https:\/\/example\.com\/?$/);
+        expect(await readClipboardAppearance(page, surface, await target.innerHTML())).toEqual(before);
+      });
+    }
+  }
+}
+
+test('partial copies retain inherited typography, syntax colors and inline-code line height', async ({ page }) => {
+  await setEditorContent(page, markdown + '\n\nInline `example` code.');
+  await expect(page.locator('#markdown-preview p > code')).toHaveText('example');
+  // Also exercise source-specific styling which an offscreen .markdown-body
+  // clone cannot resolve, and parent-relative line heights.
+  await page.addStyleTag({ content: '#markdown-preview { font-family: serif; font-size: 18px; line-height: 1.6; }' });
+  for (const selector of ['h1', 'blockquote p', 'td:first-child', 'pre code .hljs-keyword', 'p > code', 'strong']) {
+    const source = page.locator('#markdown-preview ' + selector).first();
+    const before = await source.evaluate(element => {
+      const style = getComputedStyle(element);
+      return { text: element.textContent, font: style.fontFamily, size: style.fontSize, line: style.lineHeight, color: style.color };
+    });
+    await selectPreview(page, '#markdown-preview ' + selector, 0, Math.min(3, before.text.length));
+    const copied = await syntheticPreviewCopy(page, '#markdown-preview');
+    expect(copied.text.trim()).toBe(before.text.slice(0, 3));
+    const after = await page.evaluate(html => {
+      const frame = document.createElement('iframe'); document.body.appendChild(frame);
+      frame.contentDocument.body.innerHTML = html;
+      const walker = frame.contentDocument.createTreeWalker(frame.contentDocument.body, NodeFilter.SHOW_TEXT);
+      let node; while ((node = walker.nextNode()) && !node.textContent.trim()) {}
+      const style = frame.contentWindow.getComputedStyle(node.parentElement);
+      const result = { font: style.fontFamily, size: style.fontSize, line: style.lineHeight, color: style.color };
+      frame.remove(); return result;
+    }, copied.html);
+    expect(after, selector).toEqual({ font: before.font, size: before.size, line: before.line, color: before.color });
+  }
+});
+
+test('partial ordered lists retain their numbers, explicit values and reversed counters', async ({ page }) => {
+  const cases = [
+    ['<ol start="3"><li>Third</li><li>Fourth</li><li>Fifth</li></ol>', 4],
+    ['<ol reversed><li>Third</li><li>Second</li><li>First</li></ol>', 2],
+    ['<ol start="3"><li value="8">Eighth</li><li>Ninth</li><li>Tenth</li></ol>', 9],
+    ['<ol reversed start="10"><li value="7">Seventh</li><li>Sixth</li><li>Fifth</li></ol>', 6]
+  ];
+  for (const [html, expectedStart] of cases) {
+    await setEditorContent(page, html);
+    await expect(page.locator('#markdown-preview ol')).toHaveCount(1);
+    await expect(page.locator('#markdown-preview')).toContainText(html.includes('Ninth') ? 'Ninth' : html.includes('Sixth') ? 'Sixth' : html.includes('Fourth') ? 'Fourth' : 'Second');
+    await selectPreview(page, '#markdown-preview li:nth-child(2)');
+    const copied = await syntheticPreviewCopy(page, '#markdown-preview');
+    const list = await page.evaluate(html => {
+      const root = document.createElement('div'); root.innerHTML = html;
+      return { start: root.querySelector('ol').start, items: root.querySelectorAll('li').length, reversed: root.querySelector('ol').reversed };
+    }, copied.html);
+    expect(list).toEqual({ start: expectedStart, items: 1, reversed: html.includes('reversed') });
+  }
+});
+
+test('cross-element selections keep boundaries and nested ordered-list positions', async ({ page }) => {
+  await setEditorContent(page, '3. Third item\n4. Fourth **bold** item\n   7. Nested seven\n   8. Nested eight\n5. Fifth item');
+  await expect(page.locator('#markdown-preview ol ol li')).toHaveCount(2);
+  await page.evaluate(() => {
+    document.activeElement.blur();
+    const start = document.querySelector('#markdown-preview > ol > li:nth-child(2)').firstChild;
+    const end = document.querySelector('#markdown-preview ol ol li:nth-child(2)').firstChild;
+    const range = document.createRange(); range.setStart(start, 2); range.setEnd(end, 6);
+    getSelection().removeAllRanges(); getSelection().addRange(range);
+  });
+  const copied = await syntheticPreviewCopy(page, '#markdown-preview');
+  expect(copied.text).toContain('urth bold item');
+  expect(copied.text.trim()).toMatch(/Nested$/);
+  expect(copied.text).not.toMatch(/Third|Fifth|eight/);
+  expect(await page.evaluate(html => {
+    const root = document.createElement('div'); root.innerHTML = html;
+    return Array.from(root.querySelectorAll('ol')).map(list => list.start);
+  }, copied.html)).toEqual([4, 7]);
+});
+
+test('clipboard sanitization removes controls and unsafe attributes without mutating Preview', async ({ page }) => {
+  await page.locator('#markdown-preview').evaluate(preview => {
+    const extra = document.createElement('div');
+    extra.innerHTML = '<button>Hidden control</button><div class="diagram-toolbar">Diagram control</div><p style="display:none">Hidden paragraph</p><a href="javascript:alert(1)" onclick="alert(1)" id="unsafe-copy" class="test-class">Safe link text</a>';
+    preview.appendChild(extra);
+  });
+  const before = await page.locator('#markdown-preview').innerHTML();
+  await selectPreview(page);
+  const copied = await syntheticPreviewCopy(page, '#markdown-preview');
+  expect(copied.html).not.toMatch(/javascript:|onclick=|\bid=|\bclass=|<button|Hidden control|Diagram control|Hidden paragraph/);
+  expect(copied.text).toContain('Safe link text');
+  expect(await page.locator('#markdown-preview').innerHTML()).toBe(before);
+});
+
+test('large selection menus defer formatting and Copy avoids per-node style recalculation', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Style recalculation metrics use the Chromium protocol.');
+  const content = '# Copy performance\n\n' + Array.from({ length: 80 }, (_, index) =>
+    `## Section ${index}\n\nParagraph **bold** and *italic*.\n\n> Quotation\n\n| Name | Value |\n| --- | --- |\n| Sample | ${index} |`).join('\n\n') + '\n\n```js\nconst answer = 42;\n```';
+  await setEditorContent(page, content);
+  await expect(page.locator('#markdown-preview table')).toHaveCount(80);
+  await selectPreview(page);
+  const session = await page.context().newCDPSession(page);
+  await session.send('Performance.enable');
+  const metrics = async () => Object.fromEntries((await session.send('Performance.getMetrics')).metrics.map(metric => [metric.name, metric.value]));
+  try {
+    const beforeMenu = await metrics();
+    const menu = await openSurfaceMenu(page, '#markdown-preview');
+    const afterMenu = await metrics();
+    expect(afterMenu.RecalcStyleCount - beforeMenu.RecalcStyleCount).toBeLessThan(20);
+    expect(await page.evaluate(() => window.__clipboard)).toBeNull();
+    const sourceBytes = await page.locator('#markdown-preview').evaluate(element => element.innerHTML.length);
+    await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('Copy performance');
+    const afterCopy = await metrics();
+    expect(afterCopy.RecalcStyleCount - afterMenu.RecalcStyleCount).toBeLessThan(20);
+    const html = await page.evaluate(() => window.__clipboard['text/html']);
+    expect(html.length).toBeLessThan(sourceBytes * 8);
+    expect(await readClipboardAppearance(page, '#markdown-preview', html)).toEqual(await readClipboardAppearance(page, '#markdown-preview'));
+  } finally { await session.detach(); }
+});
+
+test('an image-only Preview selection keeps menu Copy enabled', async ({ page }) => {
+  await setEditorContent(page, '<p><img src="/assets/icon.jpg" alt="Copy image"></p>');
+  await expect(page.locator('#markdown-preview img')).toHaveAttribute('alt', 'Copy image');
+  await page.locator('#markdown-preview img').evaluate(image => {
+    document.activeElement.blur();
+    const range = document.createRange(); range.selectNode(image);
+    getSelection().removeAllRanges(); getSelection().addRange(range);
+  });
+  const menu = await openSurfaceMenu(page, '#markdown-preview');
+  await expect(menu.getByRole('menuitem', { name: 'Copy', exact: true })).toBeEnabled();
+  await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__clipboard?.['text/html'])).toContain('alt="Copy image"');
+});
+
+test('a Preview replaced after opening its menu cannot copy a stale selection', async ({ page }) => {
+  await selectPreview(page, '#markdown-preview strong');
+  const menu = await openSurfaceMenu(page, '#markdown-preview');
+  await page.locator('#markdown-preview').evaluate(preview => { preview.textContent = 'Replacement content'; });
+  await menu.getByRole('menuitem', { name: 'Copy', exact: true }).click();
+  await expect(menu).toHaveCount(0);
+  expect(await page.evaluate(() => window.__clipboard)).toBeNull();
 });
