@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Citation de bloc (Ctrl+Maj+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "Gras (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Les deux versions ont été conservées. Votre modification est ouverte en tant que copie de conflit.",
-  "Browser Print": "Navigateur Imprimer",
+  "Standard PDF": "PDF standard",
   "Built-in Workspace guide": "Guide de l'espace de travail intégré",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Liste à puces (Ctrl+Maj+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "Choisissez un diagramme ou une visualisation",
@@ -1684,7 +1684,7 @@
   "Connect original": "Lier l’original",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Un changement de nom interrompu doit être revu. Vos brouillons ont été conservés. Utilisez Résoudre le changement de nom interrompu dans le menu des fichiers liés.",
   "Rename recovery": "Renommer la récupération",
-  "Image PDF": "PDF en images",
-  "Selectable text. Save as PDF from your print dialog.": "Texte sélectionnable. Enregistrez en PDF depuis la boîte de dialogue d’impression.",
-  "Image-based pages. Text is not selectable.": "Pages sous forme d’images. Le texte ne peut pas être sélectionné."
+  "Rendered PDF": "PDF rendu",
+  "Fast PDF export with selectable text and customizable settings.": "Exportation PDF rapide avec du texte sélectionnable et des paramètres personnalisables.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Transformez des documents complexes en PDF visuels clairs et homogènes."
 }

@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Cita en bloque (Ctrl+Mayús+Q / Cmd+Opción+Q)",
   "Bold (Ctrl/Cmd+B)": "Negrita (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Ambas versiones se mantuvieron. Su edición está abierta como una copia en conflicto.",
-  "Browser Print": "Impresión del navegador",
+  "Standard PDF": "PDF estándar",
   "Built-in Workspace guide": "Guía del espacio de trabajo incorporada",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Lista con viñetas (Ctrl+Shift+] / Cmd+Opción+U)",
   "Choose a diagram or visualization": "Elige un diagrama o visualización",
@@ -1684,7 +1684,7 @@
   "Connect original": "Vincular original",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Un cambio de nombre interrumpido necesita revisión. Tus borradores fueron guardados. Utilice Resolver cambio de nombre interrumpido en el menú del archivo vinculado.",
   "Rename recovery": "Cambiar nombre de recuperación",
-  "Image PDF": "PDF de imágenes",
-  "Selectable text. Save as PDF from your print dialog.": "Texto seleccionable. Guarda como PDF desde el diálogo de impresión.",
-  "Image-based pages. Text is not selectable.": "Páginas como imágenes. El texto no se puede seleccionar."
+  "Rendered PDF": "PDF renderizado",
+  "Fast PDF export with selectable text and customizable settings.": "Exportación rápida a PDF con texto seleccionable y ajustes personalizables.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Convierte documentos complejos en PDF visuales claros y uniformes."
 }

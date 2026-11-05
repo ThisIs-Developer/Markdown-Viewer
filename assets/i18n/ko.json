@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "인용구(Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "굵게(Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "두 버전 모두 유지되었습니다. 수정사항이 충돌 사본으로 열려 있습니다.",
-  "Browser Print": "브라우저 인쇄",
+  "Standard PDF": "표준 PDF",
   "Built-in Workspace guide": "내장 작업공간 가이드",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "글머리 기호 목록(Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "다이어그램 또는 시각화 선택",
@@ -1684,7 +1684,7 @@
   "Connect original": "원본 연결",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "중단된 이름 변경에 대한 검토가 필요합니다. 초안이 보관되었습니다. 연결된 파일 메뉴에서 중단된 이름 바꾸기 해결을 사용하세요.",
   "Rename recovery": "복구 이름 바꾸기",
-  "Image PDF": "이미지 PDF",
-  "Selectable text. Save as PDF from your print dialog.": "텍스트를 선택할 수 있습니다. 인쇄 대화 상자에서 PDF로 저장하세요.",
-  "Image-based pages. Text is not selectable.": "페이지를 이미지로 저장합니다. 텍스트를 선택할 수 없습니다."
+  "Rendered PDF": "렌더링 PDF",
+  "Fast PDF export with selectable text and customizable settings.": "선택 가능한 텍스트와 사용자 지정 설정으로 PDF를 빠르게 내보냅니다.",
+  "Turn complex documents into clean, consistent visual PDFs.": "복잡한 문서를 깔끔하고 일관된 시각적 PDF로 변환합니다."
 }

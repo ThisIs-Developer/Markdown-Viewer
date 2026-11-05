@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Blok alıntı (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "Kalın (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Her iki versiyon da tutuldu. Düzenlemeniz çakışan kopya olarak açık.",
-  "Browser Print": "Tarayıcı Yazdırma",
+  "Standard PDF": "Standart PDF",
   "Built-in Workspace guide": "Yerleşik Çalışma Alanı kılavuzu",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Madde işaretli liste (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "Bir diyagram veya görselleştirme seçin",
@@ -1684,7 +1684,7 @@
   "Connect original": "Özgün dosyayı bağla",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Kesintiye uğramış bir yeniden adlandırmanın gözden geçirilmesi gerekiyor. Taslaklarınız saklandı. Bağlantılı dosya menüsünde Kesintiye uğrayan yeniden adlandırmayı çözümle seçeneğini kullanın.",
   "Rename recovery": "Kurtarmayı yeniden adlandırın",
-  "Image PDF": "Görüntü PDF’si",
-  "Selectable text. Save as PDF from your print dialog.": "Metin seçilebilir. Yazdırma iletişim kutusundan PDF olarak kaydedin.",
-  "Image-based pages. Text is not selectable.": "Sayfalar görüntü olarak kaydedilir. Metin seçilemez."
+  "Rendered PDF": "İşlenmiş PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Seçilebilir metin ve özelleştirilebilir ayarlarla hızlı PDF dışa aktarımı.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Karmaşık belgeleri temiz ve tutarlı görsel PDF’lere dönüştürün."
 }

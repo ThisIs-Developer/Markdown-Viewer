@@ -204,7 +204,7 @@
   "Bold": "Bold",
   "Bold (Ctrl/Cmd+B)": "Bold (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Both versions were kept. Your edit is open as a conflict copy.",
-  "Browser Print": "Browser Print",
+  "Standard PDF": "Standard PDF",
   "Bubble Plot": "Bubble Plot",
   "Built-in Workspace guide": "Built-in Workspace guide",
   "Bulleted links": "Bulleted links",
@@ -1684,7 +1684,7 @@
   "Connect original": "Connect original",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.",
   "Rename recovery": "Rename recovery",
-  "Image PDF": "Image PDF",
-  "Selectable text. Save as PDF from your print dialog.": "Selectable text. Save as PDF from your print dialog.",
-  "Image-based pages. Text is not selectable.": "Image-based pages. Text is not selectable."
+  "Rendered PDF": "Rendered PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Fast PDF export with selectable text and customizable settings.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Turn complex documents into clean, consistent visual PDFs."
 }

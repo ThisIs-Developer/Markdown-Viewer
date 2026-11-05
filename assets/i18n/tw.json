@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "块引用 (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "粗体 (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "两个版本均被保留。您的编辑将作为冲突副本打开。",
-  "Browser Print": "瀏覽器列印",
+  "Standard PDF": "標準 PDF",
   "Built-in Workspace guide": "内置工作区指南",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "項目符號清單 (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "选择图表或可视化",
@@ -1684,7 +1684,7 @@
   "Connect original": "連結原始檔案",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中斷的重命名需要審核。你的草稿被保留了。使用連結檔案選單中的解決中斷的重命名。",
   "Rename recovery": "重新命名恢復",
-  "Image PDF": "影像 PDF",
-  "Selectable text. Save as PDF from your print dialog.": "文字可選取。請在列印對話框中另存為 PDF。",
-  "Image-based pages. Text is not selectable.": "頁面以影像儲存，文字無法選取。"
+  "Rendered PDF": "轉譯 PDF",
+  "Fast PDF export with selectable text and customizable settings.": "快速匯出 PDF，支援可選取的文字與自訂設定。",
+  "Turn complex documents into clean, consistent visual PDFs.": "將複雜文件轉換為清晰、視覺一致的 PDF。"
 }

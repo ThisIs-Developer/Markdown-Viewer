@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Blockquote (Strg+Umschalt+Q / Befehl+Wahl+Q)",
   "Bold (Ctrl/Cmd+B)": "Fett (Strg/Befehl+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Beide Versionen wurden beibehalten. Ihre Bearbeitung ist als Konfliktkopie geöffnet.",
-  "Browser Print": "Browserdruck",
+  "Standard PDF": "Standard-PDF",
   "Built-in Workspace guide": "Integrierter Workspace-Leitfaden",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Aufzählungsliste (Strg+Umschalt+] / Befehl+Wahl+U)",
   "Choose a diagram or visualization": "Wählen Sie ein Diagramm oder eine Visualisierung",
@@ -1684,7 +1684,7 @@
   "Connect original": "Original verknüpfen",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Eine unterbrochene Umbenennung muss überprüft werden. Ihre Entwürfe wurden aufbewahrt. Verwenden Sie „Unterbrochene Umbenennung beheben“ im Menü „Verknüpfte Dateien“.",
   "Rename recovery": "Wiederherstellung umbenennen",
-  "Image PDF": "Bild-PDF",
-  "Selectable text. Save as PDF from your print dialog.": "Auswählbarer Text. Im Druckdialog als PDF speichern.",
-  "Image-based pages. Text is not selectable.": "Seiten als Bilder. Der Text ist nicht auswählbar."
+  "Rendered PDF": "Gerendertes PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Schneller PDF-Export mit auswählbarem Text und anpassbaren Einstellungen.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Komplexe Dokumente in übersichtliche visuelle PDFs mit einheitlichem Layout umwandeln."
 }

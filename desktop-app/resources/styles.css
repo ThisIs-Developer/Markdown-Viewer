@@ -13729,6 +13729,27 @@ html[data-theme="dark"] .mobile-settings-toggle.is-active .settings-switch {
     box-sizing: border-box !important;
   }
 
+  /* Browser-generated headers/footers use the page margins. On engines with
+     fragment cloning, move that spacing inside every printed article fragment
+     so the browser has no margin area for the date, title, URL or page number.
+     Keep real page margins as the fallback for older print engines. */
+  @supports (box-decoration-break: clone) {
+    @page markdown-standard {
+      margin: 0;
+      size: auto;
+    }
+
+    html[data-browser-print-export] .browser-print-export-snapshot {
+      page: markdown-standard;
+      padding: 15mm 20mm !important;
+      box-decoration-break: clone;
+    }
+
+    html[data-browser-print-export] .browser-print-export-snapshot :is(img, svg, canvas) {
+      max-height: calc(100vh - 30mm);
+    }
+  }
+
   /* Let the print engine paginate text; screen scrolling/clipping containers
      must not hide code or turn long blocks into one indivisible print box. */
   .markdown-body p,

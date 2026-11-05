@@ -29780,7 +29780,7 @@ ${selector} .arrowheadPath {
     root.style.margin = '0';
     root.style.width = mode === 'pdf' ? '210mm' : '1000px';
     root.style.padding = mode === 'image' ? '40px' : mode === 'print' ? '45px' : '0';
-    root.style.fontSize = mode === 'pdf' ? '14px' : '16px';
+    root.style.fontSize = mode === 'print' ? '10pt' : mode === 'pdf' ? '14px' : '16px';
     root.style.backgroundColor = theme === 'dark' ? '#0d1117' : '#ffffff';
     root.style.color = theme === 'dark' ? '#c9d1d9' : '#24292e';
     document.body.appendChild(root);

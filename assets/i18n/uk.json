@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Цитата (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "Жирний (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Обидві версії були збережені. Ваша правка відкрита як конфліктна копія.",
-  "Browser Print": "Друк браузера",
+  "Standard PDF": "Стандартний PDF",
   "Built-in Workspace guide": "Посібник із вбудованого робочого середовища",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Маркований список (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "Виберіть діаграму або візуалізацію",
@@ -1684,7 +1684,7 @@
   "Connect original": "Зв’язати оригінал",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Перерване перейменування потребує перевірки. Ваші чернетки збережено. Скористайтеся пунктом «Вирішити перерване перейменування» в меню пов’язаного файлу.",
   "Rename recovery": "Перейменувати відновлення",
-  "Image PDF": "PDF із зображень",
-  "Selectable text. Save as PDF from your print dialog.": "Текст можна виділяти. Збережіть як PDF у діалоговому вікні друку.",
-  "Image-based pages. Text is not selectable.": "Сторінки у вигляді зображень. Текст не можна виділити."
+  "Rendered PDF": "Візуальний PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Швидкий експорт у PDF із текстом, який можна виділяти, та гнучкими налаштуваннями.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Перетворюйте складні документи на наочні PDF з узгодженим оформленням."
 }

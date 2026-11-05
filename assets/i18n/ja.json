@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "ブロック引用符 (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "太字 (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "両方のバージョンが保持されました。編集内容は競合コピーとして開かれています。",
-  "Browser Print": "ブラウザ印刷",
+  "Standard PDF": "標準 PDF",
   "Built-in Workspace guide": "組み込みワークスペースガイド",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "箇条書きリスト (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "図またはビジュアライゼーションを選択してください",
@@ -1684,7 +1684,7 @@
   "Connect original": "元のファイルをリンク",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中断された名前変更は見直す必要があります。あなたの下書きは保管されていました。リンク ファイル メニューの [中断された名前変更を解決する] を使用します。",
   "Rename recovery": "リカバリ名の変更",
-  "Image PDF": "画像 PDF",
-  "Selectable text. Save as PDF from your print dialog.": "テキストを選択できます。印刷ダイアログから PDF として保存してください。",
-  "Image-based pages. Text is not selectable.": "ページを画像として保存します。テキストは選択できません。"
+  "Rendered PDF": "レンダリング PDF",
+  "Fast PDF export with selectable text and customizable settings.": "選択可能なテキストとカスタマイズ可能な設定で、すばやく PDF に書き出します。",
+  "Turn complex documents into clean, consistent visual PDFs.": "複雑な文書を、見やすく一貫したレイアウトのビジュアル PDF に変換します。"
 }

@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Блок цитат (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "Получер (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "И двете версии бяха запазени. Вашата редакция е отворена като конфликтно копие.",
-  "Browser Print": "Печат от браузър",
+  "Standard PDF": "Стандартен PDF",
   "Built-in Workspace guide": "Ръководство за вградено работно пространство",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Списък с водещи символи (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "Изберете диаграма или визуализация",
@@ -1684,7 +1684,7 @@
   "Connect original": "Свързване на оригинала",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Прекъснато преименуване се нуждае от преглед. Вашите чернови бяха запазени. Използвайте Разрешаване на прекъснато преименуване в менюто на свързания файл.",
   "Rename recovery": "Преименуване на възстановяване",
-  "Image PDF": "PDF с изображения",
-  "Selectable text. Save as PDF from your print dialog.": "Текстът може да се избира. Запазете като PDF от диалоговия прозорец за печат.",
-  "Image-based pages. Text is not selectable.": "Страници като изображения. Текстът не може да се избира."
+  "Rendered PDF": "Визуален PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Бързо експортиране в PDF с избираем текст и персонализируеми настройки.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Превърнете сложните документи в ясни визуални PDF файлове с последователно оформление."
 }

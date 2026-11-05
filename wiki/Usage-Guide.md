@@ -206,8 +206,8 @@ Export names use the active tab title when possible.
 | :--- | :--- | :--- |
 | Markdown | Saves the raw `.md` text. | Browser downloads or desktop native save dialog only. |
 | HTML | Saves standalone rendered HTML with sanitized content, styles, renderer support hooks, a restrictive CSP, and a remembered Light or Dark appearance. | External content referenced by the document may still load remotely when opened. |
-| PDF: Browser Print | Builds a Light or Dark off-screen snapshot, prepares all supported rich content, then calls `window.print()` without changing the visible app theme. Choose Save as PDF for selectable, searchable text. | Browser print engines vary; author-specified colors inside diagrams, SVGs, HTML, or images are preserved. |
-| PDF: Image PDF | Saves image-based A4 pages, placing page boundaries between rendered lines and repeating standard table headers. | Text is not selectable. Very long documents can still use substantial memory; cross-origin images need CORS. |
+| PDF: Standard PDF | Builds a Light or Dark off-screen snapshot, prepares all supported rich content, then calls `window.print()` without changing the visible app theme. Choose Save as PDF for selectable, searchable text at a default body size of 10 pt. | Browser print engines vary; if browser headers or footers remain, disable Headers and footers in the print dialog. Author-specified colors are preserved. |
+| PDF: Rendered PDF | Saves image-based A4 pages, placing page boundaries between rendered lines and repeating standard table headers. | Text is not selectable. Very long documents can still use substantial memory; cross-origin images need CORS. |
 | PNG | Captures a high-resolution Light or Dark rich-content snapshot to PNG. | Browser canvas limits apply; cross-origin images need CORS. |
 
 Each export format remembers its appearance independently. PDF and PNG preparation waits for Mermaid, ABC, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, math, fonts, and images; Markmaps are fitted to printable bounds. Export progress can be cancelled where the format supports progress reporting.
