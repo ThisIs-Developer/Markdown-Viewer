@@ -52,6 +52,7 @@ Math font lifecycle tests use the real MathJax bundle, Modern, STIX Two, and Asa
 - Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, math, ABC notation, maps, and STL surfaces
 - Share Snapshot and locally mocked Live Share access behavior
 - Markdown, HTML, PNG, and browser-print PDF export paths
+- Real raster PDFs and selectable browser PDFs, measured line/page boundaries, long code/quotes/tables including multi-page cells, mixed font sizes, dark appearance, repeated headers, oversized images, bounded canvas memory, cancellation and failure cleanup (`pdf-pagination.spec.js`, using locked html2canvas, jsPDF and PDF.js development packages). Pure pagination tests cover fractional boundaries, overlapping glyphs, oversized intervals and complete source coverage.
 - Workspace storage, migration, backup/restore, Private mode, and responsive behavior
 - Explorer, toolbar, dialogs, keyboard interaction, accessible names, and focus management
 - Per-document scroll restoration across large-document loading placeholders, hidden Editor/Preview panes, interrupted commits, forced refreshes, workspace reload, worker rendering/fallback, content shrinkage, and delayed image loading/failure/user input (`preview-scroll-lifecycle.spec.js`). Keep these regressions alongside the tab switching, reordering, closing/reopening, and Sync on/off coverage in `tab-split-sidebar-update.spec.js`.

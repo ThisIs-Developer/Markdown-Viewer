@@ -169,8 +169,9 @@ The standard desktop configuration does not allow `os.execCommand`; local PlantU
 ## PDF or PNG Export Is Missing Content
 
 - The export snapshot waits for math, diagrams, maps, models, music, images, and fonts, but remote sources can still fail or time out; confirm the same content renders in Preview and that its service is reachable.
-- Use Browser Print for most long, text-heavy Documents.
-- Use Legacy Raster PDF only when screenshot-style pagination is needed.
+- Use Standard PDF for most long, text-heavy Documents. Its default body text is 10 pt; adjust Scale in the print dialog if needed.
+- If Standard PDF still includes a date, title, URL, or page numbers, turn off **Headers and footers** in the print dialog. Browser and printer settings can override the page styling.
+- Use Rendered PDF only when screenshot-style pagination is needed.
 - Confirm the intended remembered Light or Dark appearance in the export dialog; changing it does not change the visible app theme.
 - Check external images for CORS support; cross-origin images can be omitted from canvas exports.
 - Reduce Document length, image dimensions, or renderer size if the browser reaches canvas or memory limits.

@@ -441,12 +441,12 @@ test('export modals use compact segmented theme toggles and restore previous sel
   expect(pdfAppearanceLayout.methodRadioWidth).toBe(16);
   expect(pdfAppearanceLayout.selectedCardShadow).toBe('none');
   expect(pdfAppearanceLayout.methodIconCount).toBe(0);
-  expect(pdfAppearanceLayout.vectorTitle).toBe('Browser Print');
-  expect(pdfAppearanceLayout.rasterTitle).toBe('Precision PDF');
+  expect(pdfAppearanceLayout.vectorTitle).toBe('Standard PDF');
+  expect(pdfAppearanceLayout.rasterTitle).toBe('Rendered PDF');
   expect(pdfAppearanceLayout.vectorTitleFont).toBe(pdfAppearanceLayout.rasterTitleFont);
   expect(pdfAppearanceLayout.vectorDescriptionFont).toBe(pdfAppearanceLayout.rasterDescriptionFont);
-  expect(pdfAppearanceLayout.vectorDescription).toBe('Fast export using your browser print dialog.');
-  expect(pdfAppearanceLayout.rasterDescription).toBe('Keeps tables, diagrams, and equations together.');
+  expect(pdfAppearanceLayout.vectorDescription).toBe('Fast PDF export with selectable text and customizable settings.');
+  expect(pdfAppearanceLayout.rasterDescription).toBe('Turn complex documents into clean, consistent visual PDFs.');
   expect(pdfAppearanceLayout.badgeText).toBe('Recommended');
   expect(pdfAppearanceLayout.badgeFitsCard).toBe(true);
   expect(pdfAppearanceLayout.toggleWidth).toBe(132);

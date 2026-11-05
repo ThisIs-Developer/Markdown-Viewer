@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "块引用 (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "粗体 (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "两个版本均被保留。您的编辑将作为冲突副本打开。",
-  "Browser Print": "瀏覽器列印",
+  "Standard PDF": "標準 PDF",
   "Built-in Workspace guide": "内置工作区指南",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "項目符號清單 (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "选择图表或可视化",
@@ -1337,7 +1337,6 @@
   "Export theme": "匯出主題",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "使用瀏覽器列印對話方塊快速匯出。",
   "Fifth-level heading": "第五級標題",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "檔案連結已刪除，但無法儲存資料夾變更。該資料夾已保留，以便您可以重試。",
   "File saved": "文件已儲存",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "編輯中斷",
   "Italic (Ctrl/Cmd+I)": "斜體 (Ctrl/Cmd+I)",
   "Keep draft": "保持草稿",
-  "Keeps tables, diagrams, and equations together.": "將表格、圖表和方程式放在一起。",
   "kept in Trash.": "保存在垃圾箱中。",
   "Large section heading": "大標題",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "保留最後一次成功的快照和草稿。重新掃描以重試。",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "段落格式",
   "permanently deleted.": "永久刪除。",
   "Post reply": "發表回复",
-  "Precision PDF": "精密 PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "預覽（Ctrl/Cmd+E 切換編輯/預覽）",
   "Private mode is on. Session changes are not saved.": "私密模式已開啟。不保存會話變更。",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "快速格式化包括強調、引號、對齊和清單；進階插入工具可直接在格式工具列中使用。",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "解決重命名中斷問題？",
   "Connect original": "連結原始檔案",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中斷的重命名需要審核。你的草稿被保留了。使用連結檔案選單中的解決中斷的重命名。",
-  "Rename recovery": "重新命名恢復"
+  "Rename recovery": "重新命名恢復",
+  "Rendered PDF": "轉譯 PDF",
+  "Fast PDF export with selectable text and customizable settings.": "快速匯出 PDF，支援可選取的文字與自訂設定。",
+  "Turn complex documents into clean, consistent visual PDFs.": "將複雜文件轉換為清晰、視覺一致的 PDF。"
 }

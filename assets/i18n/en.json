@@ -204,7 +204,7 @@
   "Bold": "Bold",
   "Bold (Ctrl/Cmd+B)": "Bold (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Both versions were kept. Your edit is open as a conflict copy.",
-  "Browser Print": "Browser Print",
+  "Standard PDF": "Standard PDF",
   "Bubble Plot": "Bubble Plot",
   "Built-in Workspace guide": "Built-in Workspace guide",
   "Bulleted links": "Bulleted links",
@@ -586,7 +586,6 @@
   "Failed to read the file. Please check permissions and try again.": "Failed to read the file. Please check permissions and try again.",
   "Failed to start Live Share. Please check your connection and try again.": "Failed to start Live Share. Please check your connection and try again.",
   "FAQ": "FAQ",
-  "Fast export using your browser print dialog.": "Fast export using your browser print dialog.",
   "Favorite": "Favorite",
   "Favorites": "Favorites",
   "Favs": "Favs",
@@ -781,7 +780,6 @@
   "JSON Viewer": "JSON Viewer",
   "Keep draft": "Keep draft",
   "Keep the token name to 60 characters or fewer.": "Keep the token name to 60 characters or fewer.",
-  "Keeps tables, diagrams, and equations together.": "Keeps tables, diagrams, and equations together.",
   "kept in Trash.": "kept in Trash.",
   "Key Signature & Tempo": "Key Signature & Tempo",
   "Keyboard shortcuts": "Keyboard shortcuts",
@@ -1056,7 +1054,6 @@
   "PNG export failed:": "PNG export failed:",
   "Polyphony Voices": "Polyphony Voices",
   "Post reply": "Post reply",
-  "Precision PDF": "Precision PDF",
   "prefixes.": "prefixes.",
   "Preparing": "Preparing",
   "Preparing a fresh workspace…": "Preparing a fresh workspace…",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Resolve interrupted rename?",
   "Connect original": "Connect original",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.",
-  "Rename recovery": "Rename recovery"
+  "Rename recovery": "Rename recovery",
+  "Rendered PDF": "Rendered PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Fast PDF export with selectable text and customizable settings.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Turn complex documents into clean, consistent visual PDFs."
 }

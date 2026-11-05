@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Цитата (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "Жирний (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "Обидві версії були збережені. Ваша правка відкрита як конфліктна копія.",
-  "Browser Print": "Друк браузера",
+  "Standard PDF": "Стандартний PDF",
   "Built-in Workspace guide": "Посібник із вбудованого робочого середовища",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Маркований список (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "Виберіть діаграму або візуалізацію",
@@ -1337,7 +1337,6 @@
   "Export theme": "Експорт теми",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Швидкий експорт за допомогою діалогового вікна друку вашого браузера.",
   "Fifth-level heading": "Заголовок п’ятого рівня",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Посилання на файли видалено, але зміни папки не вдалося зберегти. Папку збережено, тому ви можете повторити спробу.",
   "File saved": "Файл збережено",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "перервано редагування",
   "Italic (Ctrl/Cmd+I)": "Курсив (Ctrl/Cmd+I)",
   "Keep draft": "Зберегти чернетку",
-  "Keeps tables, diagrams, and equations together.": "Зберігає разом таблиці, діаграми та рівняння.",
   "kept in Trash.": "зберігається у кошику.",
   "Large section heading": "Великий заголовок розділу",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Останній успішний знімок і чернетки збережено. Перескануйте, щоб повторити спробу.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Форматування абзацу",
   "permanently deleted.": "остаточно видалено.",
   "Post reply": "Опублікувати відповідь",
-  "Precision PDF": "Точний PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Попередній перегляд (Ctrl/Cmd+E перемикає редагування/попередній перегляд)",
   "Private mode is on. Session changes are not saved.": "Приватний режим увімкнено. Зміни сеансу не зберігаються.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "Швидке форматування охоплює виділення, лапки, вирівнювання та списки; розширені інструменти вставки доступні безпосередньо на панелі інструментів форматування.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Вирішити перерване перейменування?",
   "Connect original": "Зв’язати оригінал",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Перерване перейменування потребує перевірки. Ваші чернетки збережено. Скористайтеся пунктом «Вирішити перерване перейменування» в меню пов’язаного файлу.",
-  "Rename recovery": "Перейменувати відновлення"
+  "Rename recovery": "Перейменувати відновлення",
+  "Rendered PDF": "Візуальний PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Швидкий експорт у PDF із текстом, який можна виділяти, та гнучкими налаштуваннями.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Перетворюйте складні документи на наочні PDF з узгодженим оформленням."
 }

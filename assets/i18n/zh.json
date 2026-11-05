@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "块引用 (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "粗体 (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "两个版本均被保留。您的编辑将作为冲突副本打开。",
-  "Browser Print": "浏览器打印",
+  "Standard PDF": "标准 PDF",
   "Built-in Workspace guide": "内置工作区指南",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "项目符号列表 (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "选择图表或可视化",
@@ -1337,7 +1337,6 @@
   "Export theme": "导出主题",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "使用浏览器打印对话框快速导出。",
   "Fifth-level heading": "第五级标题",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "文件链接已删除，但无法保存文件夹更改。该文件夹已保留，以便您可以重试。",
   "File saved": "文件已保存",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "编辑中断",
   "Italic (Ctrl/Cmd+I)": "斜体 (Ctrl/Cmd+I)",
   "Keep draft": "保持草稿",
-  "Keeps tables, diagrams, and equations together.": "将表格、图表和方程放在一起。",
   "kept in Trash.": "保存在垃圾箱中。",
   "Large section heading": "大节标题",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "保留最后一次成功的快照和草稿。重新扫描以重试。",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "段落格式",
   "permanently deleted.": "永久删除。",
   "Post reply": "发表回复",
-  "Precision PDF": "精密 PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "预览（Ctrl/Cmd+E 切换编辑/预览）",
   "Private mode is on. Session changes are not saved.": "私密模式已开启。不保存会话更改。",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "快速格式化包括强调、引号、对齐和列表；高级插入工具可直接在格式工具栏中使用。",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "解决重命名中断问题？",
   "Connect original": "链接原始文件",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "中断的重命名需要审核。你的草稿被保留了。使用链接文件菜单中的解决中断的重命名。",
-  "Rename recovery": "重命名恢复"
+  "Rename recovery": "重命名恢复",
+  "Rendered PDF": "渲染 PDF",
+  "Fast PDF export with selectable text and customizable settings.": "快速导出 PDF，支持可选择的文本和自定义设置。",
+  "Turn complex documents into clean, consistent visual PDFs.": "将复杂文档转换为清晰、视觉一致的 PDF。"
 }
