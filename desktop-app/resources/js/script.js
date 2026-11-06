@@ -6608,35 +6608,150 @@ document.addEventListener("DOMContentLoaded", async function () {
     return true;
   }
 
+  const CLIPBOARD_INHERITED_STYLES = [
+    'font-family', 'font-size', 'font-style', 'font-weight', 'line-height',
+    'color', 'text-align', 'white-space', 'word-break', 'overflow-wrap',
+    'direction', 'list-style-type', 'letter-spacing', 'visibility'
+  ];
+  const CLIPBOARD_EXCLUDED_ELEMENTS =
+    '.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar, ' +
+    '.plantuml-toolbar, .d2-toolbar, .graphviz-toolbar, .stl-toolbar, .review-target-actions, ' +
+    '.code-preview-toolbar, .review-pins-layer, button, [role="toolbar"], script, style, mjx-assistive-mml';
+
   function getPreviewSelectionClipboardContent(surface, selection) {
     if (!selectionBelongsToElement(selection, surface) || selection.isCollapsed || !selection.rangeCount) return null;
     const range = selection.getRangeAt(0);
+    const styles = new WeakMap();
+    const sources = new WeakMap();
+    function readStyle(source) {
+      if (!styles.has(source)) {
+        const computed = window.getComputedStyle(source);
+        const inherited = {};
+        CLIPBOARD_INHERITED_STYLES.forEach(function(property) {
+          inherited[property] = computed.getPropertyValue(property);
+        });
+        styles.set(source, { computed: computed, inherited: inherited });
+      }
+      return styles.get(source);
+    }
+    function copyElement(source, copy) {
+      // Read only the live Preview, whose selectors, theme and ancestors are
+      // intact. Writes go to detached copies, avoiding repeated style/layout
+      // invalidation and changes to a child's inherited computed values.
+      if (!copy) copy = source === surface ? document.createElement('div') : source.cloneNode(false);
+      sources.set(copy, source);
+      const current = readStyle(source);
+      const parent = source === surface ? null : readStyle(source.parentElement).inherited;
+      const css = copy.style;
+      CLIPBOARD_INHERITED_STYLES.forEach(function(property) {
+        const value = current.inherited[property];
+        // GitHub's semibold emphasis is represented by strong/b. Serializing
+        // weight 600 makes Chromium paste replace that semantic tag with a
+        // styled span. Let receiving editors apply their native bold weight.
+        if (property === 'font-weight' && /^(STRONG|B)$/.test(source.tagName) && (value === '600' || value === '700')) {
+          css.removeProperty(property);
+          return;
+        }
+        // Some semantic elements have UA defaults instead of inheriting.
+        const semanticDefault =
+          (property === 'font-size' && /^(H[1-6]|SMALL|SUB|SUP|CODE|KBD|SAMP)$/.test(source.tagName)) ||
+          (property === 'font-family' && /^(PRE|CODE|KBD|SAMP)$/.test(source.tagName)) ||
+          (property === 'font-weight' && /^(H[1-6]|STRONG|B|TH|DT)$/.test(source.tagName)) ||
+          (property === 'font-style' && /^(EM|I|CITE|VAR)$/.test(source.tagName)) ||
+          (property === 'white-space' && source.tagName === 'PRE') ||
+          (property === 'text-align' && source.tagName === 'TH') ||
+          // Tables reset typography in some receiving documents/quirks mode.
+          (source.tagName === 'TABLE' && /^(font-|color$|line-height$)/.test(property));
+        if (value && (!parent || value !== parent[property] || semanticDefault || css.getPropertyValue(property))) {
+          css.setProperty(property, value);
+        }
+      });
+      const computed = current.computed;
+      if (source === surface || computed.backgroundColor !== 'rgba(0, 0, 0, 0)' || css.background) {
+        css.backgroundColor = computed.backgroundColor;
+      }
+      if (source !== surface) {
+        // Preserve zeroes where they reset UA spacing, without adding the same
+        // zero margin/padding to every span, table row and wrapper.
+        if (computed.margin !== '0px' || css.margin || /^(H[1-6]|P|PRE|BLOCKQUOTE|UL|OL|DL|DD|FIGURE|HR)$/.test(source.tagName)) css.margin = computed.margin;
+        if (computed.padding !== '0px' || css.padding || /^(UL|OL|TD|TH)$/.test(source.tagName)) css.padding = computed.padding;
+        const border = computed.border;
+        css.removeProperty('border');
+        if (border) {
+          if (computed.borderTopWidth !== '0px' || source.tagName === 'HR') css.border = border;
+        } else {
+          // The border shorthand is empty when sides differ (quotes/headings).
+          if (source.tagName === 'HR') css.border = '0';
+          ['top', 'right', 'bottom', 'left'].forEach(function(side) {
+            if (computed.getPropertyValue('border-' + side + '-width') !== '0px') css.setProperty('border-' + side, computed.getPropertyValue('border-' + side));
+          });
+        }
+        if (computed.borderRadius !== '0px') css.borderRadius = computed.borderRadius;
+        if (source.tagName === 'TABLE') {
+          css.borderCollapse = computed.borderCollapse;
+          css.borderSpacing = computed.borderSpacing;
+        }
+        if (computed.verticalAlign !== 'baseline') css.verticalAlign = computed.verticalAlign;
+        if (source.tagName === 'A' || computed.textDecorationLine !== 'none') css.textDecoration = computed.textDecoration;
+      }
+      return copy;
+    }
+    function preserveListStart(source, copy) {
+      if (source.tagName !== 'OL') return;
+      const first = Array.from(copy.children).find(function(child) { return child.tagName === 'LI'; });
+      if (!first) return;
+      const items = Array.from(source.children).filter(function(child) { return child.tagName === 'LI'; });
+      let ordinal = source.hasAttribute('start') ? source.start : source.reversed ? items.length : 1;
+      for (const item of items) {
+        if (item.hasAttribute('value')) ordinal = item.value;
+        if (item === sources.get(first)) {
+          copy.start = ordinal;
+          break;
+        }
+        ordinal += source.reversed ? -1 : 1;
+      }
+    }
+    // Let the browser clone exact text/element boundaries in one native pass.
+    // Its descendant elements have the same preorder as intersecting source
+    // descendants; pair them before removing any controls or hidden content.
     let fragment = range.cloneContents();
-    // cloneContents omits shared ancestors, including the bold, heading, list,
-    // or table cell that gives a partial selection its formatting.
-    let ancestor = range.commonAncestorContainer;
-    if (ancestor.nodeType !== Node.ELEMENT_NODE) ancestor = ancestor.parentElement;
-    while (ancestor && ancestor !== surface) {
-      const wrapper = ancestor.cloneNode(false);
+    const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
+      acceptNode(node) { return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; }
+    });
+    const copies = Array.from(fragment.querySelectorAll('*'));
+    for (const copy of copies) sources.set(copy, walker.nextNode());
+    for (const copy of copies) {
+      if (!fragment.contains(copy)) continue;
+      const original = sources.get(copy);
+      if (original.matches(CLIPBOARD_EXCLUDED_ELEMENTS) || readStyle(original).computed.display === 'none') copy.remove();
+      else copyElement(original, copy);
+    }
+    for (const copy of copies) {
+      if (fragment.contains(copy)) preserveListStart(sources.get(copy), copy);
+    }
+    // Include shared ancestors for partial words, headings, code and cells,
+    // plus one surface wrapper for inherited typography and theme background.
+    let source = range.commonAncestorContainer;
+    if (source.nodeType !== Node.ELEMENT_NODE) source = source.parentElement;
+    while (source) {
+      if (!source || source.matches(CLIPBOARD_EXCLUDED_ELEMENTS) || readStyle(source).computed.display === 'none') return null;
+      const wrapper = copyElement(source);
       wrapper.appendChild(fragment);
+      preserveListStart(source, wrapper);
       fragment = wrapper;
-      ancestor = ancestor.parentElement;
+      if (source === surface) break;
+      source = source.parentElement;
     }
     const container = document.createElement('div');
-    container.appendChild(fragment);
-    removeExportOnlyControls(container);
-    container.querySelectorAll(
-      '.code-preview-toolbar, .review-pins-layer, button, [role="toolbar"], ' +
-      'script, style, mjx-assistive-mml'
-    ).forEach(function(element) { element.remove(); });
-    const html = DOMPurify.sanitize(container.innerHTML, {
+    container.appendChild(DOMPurify.sanitize(fragment, {
+      RETURN_DOM_FRAGMENT: true,
       ALLOW_DATA_ATTR: false,
       FORBID_ATTR: ['id', 'class', 'contenteditable', 'tabindex'],
       ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
-    });
-    container.innerHTML = html;
-    // innerText needs a rendered node to retain paragraph, table, and code line
-    // breaks. Keep this temporary copy out of view and the accessibility tree.
+    }));
+    const html = container.innerHTML;
+    // Only sanitized content is attached, once, for native innerText line and
+    // table separators. No style measurements or per-node writes happen here.
     container.setAttribute('aria-hidden', 'true');
     container.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;';
     document.body.appendChild(container);
@@ -6654,7 +6769,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tab) return null;
     const editor = surface === markdownEditor || surface === documentSplitEditor ? surface : null;
     let selectedText = '';
-    let selectedHtml = '';
+    let previewSelection = null;
     let selectionStart = null;
     let selectionEnd = null;
     if (editor) {
@@ -6662,18 +6777,16 @@ document.addEventListener("DOMContentLoaded", async function () {
       selectionEnd = editor.selectionEnd;
       selectedText = editor.value.slice(selectionStart, selectionEnd);
     } else {
-      const content = getPreviewSelectionClipboardContent(surface, window.getSelection());
-      if (content) {
-        selectedText = content.text;
-        selectedHtml = content.html;
-      }
+      // Opening a menu must not serialize/style the entire selection. Capture
+      // its range now and generate the payload only when Copy is activated.
+      previewSelection = captureDocumentSurfaceSelection(surface);
     }
     return {
       tab: tab,
       tabId: tabId,
       editor: editor,
       selectedText: selectedText,
-      selectedHtml: selectedHtml,
+      previewSelection: previewSelection,
       selectionStart: selectionStart,
       selectionEnd: selectionEnd,
       editable: Boolean(editor && !editor.readOnly && (isSecondary || canMutateEditor()))
@@ -6694,10 +6807,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function copyDocumentSurfaceSelection(context, cut) {
-    if (!context || (!context.selectedText && !context.selectedHtml)) return;
+    if (!context || (!context.selectedText && !context.previewSelection)) return;
     try {
-      if (context.selectedHtml && !cut) {
-        await copyHtmlToClipboard(context.selectedText, context.selectedHtml);
+      if (context.previewSelection && !cut) {
+        if (!restoreDocumentSurfaceSelection(context.previewSelection, false)) return;
+        const content = getPreviewSelectionClipboardContent(context.previewSelection.surface, window.getSelection());
+        if (!content) return;
+        await copyHtmlToClipboard(content.text, content.html);
       } else {
         await copyTextToClipboard(context.selectedText);
       }
@@ -6755,7 +6871,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab(); } },
       { separator: true },
       { id: 'cut', icon: 'lucide-square-pen', label: 'Cut', disabled: !context.editable || !context.selectedText, run: function() { copyDocumentSurfaceSelection(context, true); } },
-      { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText && !context.selectedHtml, run: function() { copyDocumentSurfaceSelection(context, false); } },
+      { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText && !context.previewSelection, run: function() { copyDocumentSurfaceSelection(context, false); } },
       { id: 'paste', icon: 'lucide-file-plus-2', label: 'Paste', disabled: !context.editable, run: function() { pasteIntoDocumentSurface(context); } },
       { id: 'select-all', icon: 'lucide-scan-text', label: 'Select All', keepOpen: keepSelectionMenuOpen, run: function() {
         selectAllDocumentSurface(surface);
@@ -6763,7 +6879,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           // Touch selection actions stay available so the next tap can copy.
           context = getDocumentSurfaceContext(surface);
           menu._touchSelection = captureDocumentSurfaceSelection(surface);
-          menu.querySelector('[data-action="copy"]').disabled = !context || (!context.selectedText && !context.selectedHtml);
+          menu.querySelector('[data-action="copy"]').disabled = !context || (!context.selectedText && !context.previewSelection);
           menu.querySelector('[data-action="cut"]').disabled = !context || !context.editable || !context.selectedText;
         }
       } },

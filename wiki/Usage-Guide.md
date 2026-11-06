@@ -124,7 +124,7 @@ To copy a selection, right-click an Editor or Preview, or open its context menu 
 On touch devices, tapping the surrounding background dismisses the menu while keeping the text selected. Tap the highlighted text to reopen the menu and choose **Copy**. This also works with partial selections. Swiping still scrolls, and tapping unselected text lets you change the selection or position the Editor cursor normally. Touch presses on selected text do not drag the document text.
 
 - **Editor:** Copy provides the selected raw Markdown, including Markdown syntax. Paste inserts clipboard text at the cursor or replaces the selection; rich text is not automatically converted into Markdown.
-- **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks. Partial selections and the browser's native Copy command also retain formatting. Preview toolbars and action buttons are excluded.
+- **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks, including their fonts, spacing, borders, backgrounds, and syntax colors. Copies use the current Preview theme, with its text and background colors together. Partial selections retain their surrounding formatting and ordered-list numbers, including reversed lists. The browser's native Copy command uses the same formatting; Preview toolbars and action buttons are excluded.
 
 Ordinary **Copy** or **Ctrl/Cmd+C** with no selection leaves the clipboard unchanged. Preview is read only: it supports selection and copying, but Paste, Cut, and typing do not change the document.
 
@@ -291,7 +291,7 @@ Markdown Viewer follows familiar Typora-style formatting shortcuts and Obsidian-
 | Quick open: show Explorer and focus file search | `Ctrl+P` / `Cmd+P` |
 | Import/open Markdown | `Ctrl+O` / `Cmd+O` |
 | Save/export Markdown | `Ctrl+S` / `Cmd+S` |
-| Copy selected text, or whole Markdown when nothing is selected | `Ctrl+C` / `Cmd+C` |
+| Copy the selection from the focused Editor or Preview | `Ctrl+C` / `Cmd+C` |
 | Copy raw Markdown directly | `Ctrl+Shift+C` / `Cmd+Shift+C` |
 | Toggle Edit/Preview | `Ctrl+E` / `Cmd+E` |
 | Toggle Explorer | `Ctrl+Shift+L` / `Cmd+Shift+L` |
