@@ -17766,14 +17766,14 @@ ${selector} .arrowheadPath {
     await waitForBrowserPrintFrame();
   }
 
-  async function prepareBrowserPrintExport(exportTheme = 'light') {
+  async function prepareBrowserPrintExport(exportTheme = 'light', state) {
     const root = document.documentElement;
     const previousPrintExport = root.getAttribute('data-browser-print-export');
     const targetTheme = getExportTheme(exportTheme);
     let printSnapshot = null;
 
     try {
-      printSnapshot = await createExportRenderElement(markdownEditor.value, targetTheme, 'print');
+      printSnapshot = await createExportRenderElement(markdownEditor.value, targetTheme, 'print', state);
       printSnapshot.classList.add('browser-print-export-snapshot');
       printSnapshot.setAttribute('aria-hidden', 'true');
       root.setAttribute('data-browser-print-export', targetTheme);
@@ -17796,13 +17796,24 @@ ${selector} .arrowheadPath {
   }
 
   async function runBrowserPrintExport(exportTheme = 'light') {
+    if (activePdfExport) return;
+    const state = createPdfProgressState();
+    activePdfExport = state;
+    setPdfExportTriggersBusy(state, true);
+    document.body.appendChild(state.overlay);
+    updatePdfProgress(state, 15, 'Preparing document');
+    state.overlay.querySelector('.pdf-progress-cancel')?.focus();
     const previousDocumentTitle = document.title;
     document.title = getBrowserPrintDocumentTitle();
     let restoreBrowserPrintExport;
     try {
-      restoreBrowserPrintExport = await prepareBrowserPrintExport(exportTheme);
+      restoreBrowserPrintExport = await prepareBrowserPrintExport(exportTheme, state);
+      throwIfPdfExportAborted(state.signal);
     } catch (error) {
+      if (restoreBrowserPrintExport) restoreBrowserPrintExport();
+      cleanupPdfExport(state);
       document.title = previousDocumentTitle;
+      if (error instanceof PdfExportCancelledError) return;
       throw error;
     }
     let restored = false;
@@ -17822,6 +17833,7 @@ ${selector} .arrowheadPath {
         }
       }
       restoreBrowserPrintExport();
+      cleanupPdfExport(state);
       document.title = previousDocumentTitle;
     };
 
@@ -17845,6 +17857,8 @@ ${selector} .arrowheadPath {
     }
 
     try {
+      state.returnFocusAfterPrint = true;
+      state.overlay.remove();
       window.print();
     } catch (error) {
       restoreOnce();
@@ -29375,7 +29389,7 @@ ${selector} .arrowheadPath {
     scale: 2                // html2canvas scale factor
   };
 
-  const PDF_EXPORT_DEBUG = true;
+  const PDF_EXPORT_DEBUG = false;
   let activePdfExport = null;
 
   class PdfExportCancelledError extends Error {
@@ -29478,6 +29492,7 @@ ${selector} .arrowheadPath {
       stepText: overlay.querySelector(".pdf-progress-step"),
       etaText: overlay.querySelector(".pdf-progress-eta"),
       cancelButtons: overlay.querySelectorAll(".pdf-progress-cancel, .pdf-progress-cancel-icon"),
+      previousActiveElement: document.activeElement,
       triggerHtml: new Map(),
       tempElement: null,
       cleanedUp: false
@@ -29533,7 +29548,13 @@ ${selector} .arrowheadPath {
 
   function cleanupPdfExport(state) {
     if (!state || state.cleanedUp) return;
+    const restoreFocus = state.overlay.contains(document.activeElement) ||
+      (state.returnFocusAfterPrint && document.activeElement === document.body);
     state.cleanedUp = true;
+    if (state.rasterCapture) {
+      state.rasterCapture.canvas.width = state.rasterCapture.canvas.height = 0;
+      state.rasterCapture = null;
+    }
 
     if (state.tempElement && state.tempElement.parentNode) {
       if (window.keepTempElementForAudit) {
@@ -29548,6 +29569,9 @@ ${selector} .arrowheadPath {
     }
 
     setPdfExportTriggersBusy(state, false);
+    if (restoreFocus && state.previousActiveElement && state.previousActiveElement.isConnected) {
+      state.previousActiveElement.focus({ preventScroll: true });
+    }
     if (activePdfExport === state) {
       activePdfExport = null;
     }
@@ -29567,13 +29591,6 @@ ${selector} .arrowheadPath {
 
   function markdownLikelyContainsMath(markdown) {
     return /(^|[^\\])\$\$|\\\[|\\\(|(^|[^\\])\$[^$\n]+\$/.test(markdown) || /```math\b/.test(markdown);
-  }
-
-  function choosePdfCanvasScale(element) {
-    const pixelArea = element.offsetWidth * element.scrollHeight;
-    if (pixelArea > 14000000) return 1.25;
-    if (pixelArea > 8000000) return 1.5;
-    return PAGE_CONFIG.scale;
   }
 
   function readPixelStyle(element, propertyName) {
@@ -29601,754 +29618,178 @@ ${selector} .arrowheadPath {
     return true;
   }
 
-  /**
-   * Task 1: Identifies all graphic elements that may need page-break handling
-   * @param {HTMLElement} container - The container element to search within
-   * @returns {Array} Array of {element, type} objects
-   */
-  function identifyGraphicElements(container) {
-    const graphics = [];
+  // Raster pages are cropped at measured gaps between rendered lines. Moving
+  // whole paragraphs cannot align every boundary in a multi-page paragraph.
+  function mergePdfIntervals(intervals) {
+    const sorted = intervals.filter(item => Number.isFinite(item.top) && Number.isFinite(item.bottom) && item.bottom > item.top)
+      .map(item => ({ top: Math.max(0, item.top), bottom: item.bottom }))
+      .sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+    const merged = [];
+    for (const item of sorted) {
+      const previous = merged[merged.length - 1];
+      if (previous && item.top < previous.bottom) previous.bottom = Math.max(previous.bottom, item.bottom);
+      else merged.push(item);
+    }
+    return merged;
+  }
 
-    // Query all targeting elements in precise DOM layout flow order
-    container.querySelectorAll('img, svg, pre, table, p, li, h1, h2, h3, h4, h5, h6, blockquote, hr, .math-block, mjx-container[display="true"]').forEach(el => {
-      const tag = el.tagName.toLowerCase();
-      
-      // Skip any elements nested inside blockquotes to treat blockquotes as atomic containers
-      if (el.parentElement && el.parentElement.closest('blockquote')) {
-        return;
-      }
+  function findPdfInterval(intervals, position) {
+    let low = 0;
+    let high = intervals.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (intervals[middle].top < position) low = middle + 1;
+      else high = middle;
+    }
+    const item = intervals[low - 1];
+    return item && position < item.bottom ? { ...item, index: low - 1 } : null;
+  }
 
-      // Skip any elements nested inside list items that contain block children (treat list items as atomic)
-      if (el.parentElement) {
-        const liAncestor = el.parentElement.closest('li');
-        if (liAncestor) {
-          const hasBlockChildren = liAncestor.querySelector('p, blockquote, pre, table, ul, ol') !== null;
-          if (hasBlockChildren) {
-            return;
-          }
+  function planRasterPdfPages(layout, pageHeight) {
+    if (!Number.isFinite(pageHeight) || pageHeight <= 0 || !Number.isFinite(layout.height) || layout.height < 0) {
+      throw new Error('Invalid PDF page dimensions.');
+    }
+    const hard = mergePdfIntervals(layout.lines);
+    const preferred = mergePdfIntervals(layout.blocks.filter(item => item.bottom - item.top <= pageHeight));
+    const pages = [];
+    let start = 0;
+    while (start < layout.height) {
+      const table = layout.tables.find(item => start >= item.headerBottom && start < item.bottom && item.headerBottom - item.headerTop < pageHeight / 2);
+      const header = table ? { ...table } : null;
+      const headerHeight = header ? header.headerBottom - header.headerTop : 0;
+      const capacity = pageHeight - headerHeight;
+      let end = Math.min(layout.height, start + capacity);
+      if (end < layout.height) {
+        const block = findPdfInterval(preferred, end);
+        if (block && block.top > start && block.bottom - block.top <= capacity) end = block.top;
+        const line = findPdfInterval(hard, end);
+        if (line) {
+          // An indivisible graphic/line taller than a page gets its own scaled
+          // page. It is never clipped or placed in an overflow:hidden wrapper.
+          const previous = hard[line.index - 1];
+          const leadingSpaceOnly = line.bottom - line.top > capacity && (!previous || previous.bottom <= start);
+          end = line.top > start && !leadingSpaceOnly ? line.top : line.bottom;
         }
       }
+      end = Math.min(layout.height, end);
+      if (end <= start) throw new Error('PDF pagination did not advance.');
+      pages.push({ start, end, header });
+      start = end;
+    }
+    if (!pages.length) pages.push({ start: 0, end: 1, header: null });
+    return pages;
+  }
 
-      let type = '';
-      
-      if (tag === 'img') type = 'img';
-      else if (tag === 'svg') {
-        if (!el.closest('mjx-container, .math-block')) {
-          type = 'svg';
+  async function measureRasterPdfLayout(root, state) {
+    const origin = root.getBoundingClientRect();
+    const lines = [];
+    const blocks = [];
+    const tables = [];
+    let bottom = 0;
+    const interval = rect => ({ top: Math.max(0, Math.floor(rect.top - origin.top - 1)), bottom: Math.ceil(rect.bottom - origin.top + 1) });
+    const add = (rect, target) => {
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const item = interval(rect);
+      target.push(item);
+      bottom = Math.max(bottom, item.bottom);
+    };
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    let node;
+    let count = 0;
+    while ((node = walker.nextNode())) {
+      throwIfPdfExportAborted(state.signal);
+      if (node.textContent.trim() && !node.parentElement.closest('svg, mjx-container, script, style')) {
+        range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) add(rect, lines);
+      }
+      if (++count % 250 === 0) await waitForPdfFrame(state);
+    }
+    // Keep images, diagrams and math intact. Text containers and oversized
+    // table rows may flow between their actual lines instead of being shrunk.
+    for (const node of root.querySelectorAll('img, svg, canvas, video, hr, mjx-container')) {
+      if (!node.parentElement.closest('svg, mjx-container')) add(node.getBoundingClientRect(), lines);
+    }
+    for (const node of root.querySelectorAll('p, pre, blockquote, li, tr, h1, h2, h3, h4, h5, h6')) {
+      add(node.getBoundingClientRect(), blocks);
+    }
+    for (const row of root.querySelectorAll('tr')) {
+      const rect = row.getBoundingClientRect();
+      if (rect.height > 0 && rect.height <= origin.width * PAGE_CONFIG.contentHeight / PAGE_CONFIG.contentWidth) {
+        // Adjacent rows share a border, a valid cut; don't inflate these boxes
+        // and accidentally merge the entire table into one indivisible image.
+        lines.push({ top: Math.max(0, rect.top - origin.top), bottom: rect.bottom - origin.top });
+      }
+    }
+    for (const heading of root.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+      const next = heading.nextElementSibling;
+      if (!next) continue;
+      const headingRect = heading.getBoundingClientRect();
+      const nextRect = next.getBoundingClientRect();
+      // Keep the heading with the first line, without making a long following
+      // paragraph, table or code block indivisible.
+      blocks.push({ top: Math.max(0, Math.floor(headingRect.top - origin.top - 1)), bottom: Math.ceil(nextRect.top - origin.top + Math.min(nextRect.height, 32)) });
+    }
+    for (const table of root.querySelectorAll('table')) {
+      if (!table.tHead || !table.tHead.rows.length) continue;
+      const rect = table.getBoundingClientRect();
+      const head = table.tHead.getBoundingClientRect();
+      if (!head.height || !rect.width) continue;
+      // Rowspans and nested tables need their original continuous layout;
+      // repeating only a header for those structures would be misleading.
+      if (table.querySelector('[rowspan]:not([rowspan="1"]), table')) continue;
+      tables.push({ top: rect.top - origin.top, bottom: rect.bottom - origin.top,
+        left: rect.left - origin.left, width: rect.width,
+        headerTop: Math.max(0, Math.floor(head.top - origin.top)), headerBottom: Math.ceil(head.bottom - origin.top) });
+      add(head, lines);
+    }
+    throwIfPdfExportAborted(state.signal);
+    return { width: origin.width, height: Math.max(1, bottom, Math.ceil(origin.height), root.scrollHeight), lines, blocks, tables };
+  }
+
+  async function captureRasterPdfRegion(root, region, theme, state) {
+    // Reuse bounded strips across nearby pages: one render for a small document,
+    // bounded memory for a long one, and no repeated DOM cloning per PDF page.
+    let capture = state.rasterCapture;
+    if (!capture || region.y < capture.y || region.y + region.height > capture.y + capture.height) {
+      if (capture) capture.canvas.width = capture.canvas.height = 0;
+      const width = Math.ceil(root.getBoundingClientRect().width);
+      const scale = Math.min(PAGE_CONFIG.scale, 16384 / Math.max(width, region.height),
+        Math.sqrt(16000000 / (width * region.height)));
+      const maxHeight = Math.floor(Math.min(16384 / scale, 16000000 / (width * scale * scale)));
+      const height = Math.max(region.height, Math.min(state.rasterLayoutHeight - region.y, maxHeight));
+      const canvas = await runPdfAbortable(state, html2canvas(root, {
+        x: 0, y: region.y, width, height, scale,
+        useCORS: true, allowTaint: false, logging: false,
+        backgroundColor: theme === 'dark' ? '#0d1117' : '#ffffff',
+        windowWidth: Math.max(PAGE_CONFIG.windowWidth, width)
+      }).then(canvas => {
+        if (state.signal.aborted) {
+          canvas.width = canvas.height = 0;
+          throw new PdfExportCancelledError();
         }
-      }
-      else if (tag === 'pre') type = 'pre';
-      else if (tag === 'table') type = 'table';
-      else if (tag === 'hr') type = 'hr';
-      else if (tag === 'blockquote') {
-        type = 'blockquote';
-      }
-      else if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
-        type = 'text';
-      } else if (tag === 'li') {
-        // Treat list items with block children as atomic containers, otherwise treat as text
-        const hasBlockChildren = el.querySelector('p, blockquote, pre, table, ul, ol') !== null;
-        if (hasBlockChildren) {
-          type = 'li';
-        } else {
-          type = 'text';
-        }
-      } else if (el.classList.contains('math-block') || tag === 'mjx-container') {
-        type = 'math';
-      }
-      
-      if (type) {
-        graphics.push({ element: el, type: type });
-      }
-    });
-
-    return graphics;
-  }
-
-  /**
-   * Calculates the computed line-height of a text element, defaulting based on tag if "normal"
-   * @param {HTMLElement} element 
-   * @returns {number} The line-height in pixels
-   */
-  function getElementLineHeight(element) {
-    const style = window.getComputedStyle(element);
-    const fontSize = parseFloat(style.fontSize) || 14;
-    let lineHeight = parseFloat(style.lineHeight);
-    
-    if (isNaN(lineHeight)) {
-      const tag = element.tagName.toLowerCase();
-      if (tag.startsWith('h')) {
-        lineHeight = fontSize * 1.25;
-      } else {
-        lineHeight = fontSize * 1.5;
-      }
-    } else if (lineHeight < 10) {
-      // Handle unitless line-height (e.g. "1.5")
-      lineHeight = lineHeight * fontSize;
+        return canvas;
+      }));
+      if (!canvas.width || !canvas.height) throw new Error('PDF capture returned an empty image.');
+      capture = { canvas, y: region.y, height, scale };
+      state.rasterCapture = capture;
     }
-    return lineHeight;
-  }
-
-  /**
-   * Calculates the shift needed to align a split text element's lines with the page boundary
-   * @param {Object} item - The split element item
-   * @param {Array} pageBoundaries - Page break positions
-   * @returns {number} The shift in pixels
-   */
-  function calculateTextElementShift(item, pageBoundaries) {
-    const boundaryY = pageBoundaries[item.splitPageIndex];
-    if (boundaryY === undefined) return 0;
-
-    const element = item.element;
-    const style = window.getComputedStyle(element);
-    
-    const tag = element.tagName.toLowerCase();
-    const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
-    
-    // Safety buffer (in pixels) to ensure text rendering, glyph ascenders,
-    // and sub-pixel anti-aliasing are pushed cleanly past the slicing boundary.
-    const SAFETY_BUFFER = 4;
-
-    // Headings should never be split. Push the entire heading to the next page.
-    if (isHeading) {
-      return (boundaryY - item.top) + SAFETY_BUFFER;
-    }
-
-    const paddingTop = parseFloat(style.paddingTop) || 0;
-    const borderTop = parseFloat(style.borderTopWidth) || 0;
-    const paddingBottom = parseFloat(style.paddingBottom) || 0;
-    const borderBottom = parseFloat(style.borderBottomWidth) || 0;
-
-    const lh = getElementLineHeight(element);
-    const contentTop = item.top + paddingTop + borderTop;
-    const contentHeight = item.height - paddingTop - paddingBottom - borderTop - borderBottom;
-    if (contentHeight <= 0) return 0;
-
-    const numLines = Math.max(1, Math.round(contentHeight / lh));
-
-    for (let i = 0; i < numLines; i++) {
-      const lineTop = contentTop + i * lh;
-      const lineBottom = contentTop + (i + 1) * lh;
-
-      // Check if this line is split by boundaryY (using a small tolerance to prevent float vibrations)
-      if (lineTop < boundaryY - 0.5 && lineBottom > boundaryY + 0.5) {
-        // Calculate shift to align the line's top with boundaryY, plus a safety buffer
-        return (boundaryY - lineTop) + SAFETY_BUFFER;
-      }
-    }
-
-    // Fallback: If a short paragraph/list item is split across pages but no single line is cut
-    // (e.g. boundary falls exactly in padding/margin), push the whole element.
-    if (item.height <= lh * 3) {
-      return (boundaryY - item.top) + SAFETY_BUFFER;
-    }
-
-    return 0;
-  }
-
-  /**
-   * Task 2: Calculates element positions relative to the container
-   * @param {Array} elements - Array of {element, type} objects
-   * @param {HTMLElement} container - The container element
-   * @returns {Array} Array with position data added
-   */
-  function calculateElementPositions(elements, container) {
-    const containerRect = container.getBoundingClientRect();
-
-    return elements.map(item => {
-      const rect = item.element.getBoundingClientRect();
-      const top = rect.top - containerRect.top;
-      const height = rect.height;
-      const bottom = top + height;
-
-      return {
-        element: item.element,
-        type: item.type,
-        top: top,
-        height: height,
-        bottom: bottom
-      };
-    });
-  }
-
-  /**
-   * Task 3: Calculates page boundary positions
-   * @param {number} totalHeight - Total height of content in pixels
-   * @param {number} elementWidth - Actual width of the rendered element in pixels
-   * @param {Object} pageConfig - Page configuration object
-   * @returns {Array} Array of y-coordinates where pages end
-   */
-  function calculatePageBoundaries(totalHeight, elementWidth, pageConfig) {
-    const aspectRatio = pageConfig.contentHeight / pageConfig.contentWidth;
-    const pageHeightPx = elementWidth * aspectRatio;
-
-    const boundaries = [];
-    let y = pageHeightPx;
-
-    while (y < totalHeight) {
-      boundaries.push(y);
-      y += pageHeightPx;
-    }
-
-    return { boundaries, pageHeightPx };
-  }
-
-  /**
-   * Task 4: Detects which elements would be split across page boundaries
-   * @param {Array} elements - Array of elements with position data
-   * @param {Array} pageBoundaries - Array of page break y-coordinates
-   * @returns {Array} Array of split elements with additional split info
-   */
-  function detectSplitElements(elements, pageBoundaries) {
-    if (!elements || elements.length === 0) return [];
-    if (!pageBoundaries || pageBoundaries.length === 0) return [];
-
-    const splitElements = [];
-
-    for (const item of elements) {
-      let startPage = 0;
-      for (let i = 0; i < pageBoundaries.length; i++) {
-        if (item.top >= pageBoundaries[i]) {
-          startPage = i + 1;
-        } else {
-          break;
-        }
-      }
-
-      let endPage = 0;
-      for (let i = 0; i < pageBoundaries.length; i++) {
-        if (item.bottom > pageBoundaries[i]) {
-          endPage = i + 1;
-        } else {
-          break;
-        }
-      }
-
-      if (endPage > startPage) {
-        const boundaryY = pageBoundaries[startPage] || pageBoundaries[0];
-        const overflowAmount = item.bottom - boundaryY;
-
-        splitElements.push({
-          element: item.element,
-          type: item.type,
-          top: item.top,
-          height: item.height,
-          splitPageIndex: startPage,
-          overflowAmount: overflowAmount
-        });
-      }
-    }
-
-    return splitElements;
-  }
-
-  /**
-   * Task 5: Main entry point for analyzing graphics for page breaks
-   * @param {HTMLElement} tempElement - The rendered content container
-   * @returns {Object} Analysis result with totalElements, splitElements, pageCount
-   */
-  function analyzeGraphicsForPageBreaks(tempElement, signal) {
+    throwIfPdfExportAborted(state.signal);
+    const page = document.createElement('canvas');
+    page.width = Math.max(1, Math.ceil(region.width * capture.scale));
+    page.height = Math.max(1, Math.ceil(region.height * capture.scale));
     try {
-      throwIfPdfExportAborted(signal);
-
-      const graphics = identifyGraphicElements(tempElement);
-      const elementsWithPositions = calculateElementPositions(graphics, tempElement);
-
-      throwIfPdfExportAborted(signal);
-
-      const totalHeight = Math.ceil(tempElement.getBoundingClientRect().height);
-      const elementWidth = tempElement.offsetWidth;
-      const { boundaries: pageBoundaries, pageHeightPx } = calculatePageBoundaries(
-        totalHeight,
-        elementWidth,
-        PAGE_CONFIG
-      );
-
-      const splitElements = detectSplitElements(elementsWithPositions, pageBoundaries);
-      const pageCount = pageBoundaries.length + 1;
-
-      return {
-        totalElements: graphics.length,
-        splitElements: splitElements,
-        pageCount: pageCount,
-        pageBoundaries: pageBoundaries,
-        pageHeightPx: pageHeightPx
-      };
-    } catch (error) {
-      if (error instanceof PdfExportCancelledError) throw error;
-      console.error('Page-break analysis failed:', error);
-      return {
-        totalElements: 0,
-        splitElements: [],
-        pageCount: 1,
-        pageBoundaries: [],
-        pageHeightPx: 0
-      };
+      const context = page.getContext('2d');
+      context.fillStyle = theme === 'dark' ? '#0d1117' : '#ffffff';
+      context.fillRect(0, 0, page.width, page.height);
+      context.drawImage(capture.canvas, (region.x || 0) * capture.scale, (region.y - capture.y) * capture.scale,
+        region.width * capture.scale, region.height * capture.scale, 0, 0,
+        region.width * capture.scale, region.height * capture.scale);
+      return page.toDataURL('image/png');
+    } finally {
+      page.width = page.height = 0;
     }
   }
-
-  // ============================================
-  // End Page-Break Detection Functions
-  // ============================================
-
-  // ============================================
-  // Page-Break Insertion Functions (Story 1.2)
-  // ============================================
-
-
-
-  /**
-   * Resets temporary styles applied to graphics elements back to their original state.
-   * This is called at the start of each layout iteration in the cascade loop.
-   * @param {HTMLElement} container - The container element to process
-   */
-  function resetGraphicsStyles(container) {
-    // Remove all dynamically inserted page-break spacers
-    container.querySelectorAll('.pdf-page-break-spacer').forEach(el => el.remove());
-
-    container.querySelectorAll('[data-pdf-original-margin-top]').forEach(el => {
-      el.style.marginTop = el.dataset.pdfOriginalMarginTop;
-      el.removeAttribute('data-pdf-original-margin-top');
-    });
-    container.querySelectorAll('[data-pdf-original-margin-bottom]').forEach(el => {
-      el.style.marginBottom = el.dataset.pdfOriginalMarginBottom;
-      el.removeAttribute('data-pdf-original-margin-bottom');
-    });
-    container.querySelectorAll('[data-pdf-original-transform]').forEach(el => {
-      el.style.transform = el.dataset.pdfOriginalTransform;
-      el.style.transformOrigin = '';
-      el.removeAttribute('data-pdf-original-transform');
-    });
-    container.querySelectorAll('[data-pdf-original-width]').forEach(el => {
-      el.style.width = el.dataset.pdfOriginalWidth;
-      el.removeAttribute('data-pdf-original-width');
-    });
-    container.querySelectorAll('[data-pdf-original-height]').forEach(el => {
-      el.style.height = el.dataset.pdfOriginalHeight;
-      el.removeAttribute('data-pdf-original-height');
-    });
-    container.querySelectorAll('[data-pdf-original-max-width]').forEach(el => {
-      el.style.maxWidth = el.dataset.pdfOriginalMaxWidth;
-      el.removeAttribute('data-pdf-original-max-width');
-    });
-    container.querySelectorAll('[data-pdf-original-font-size]').forEach(el => {
-      el.style.fontSize = el.dataset.pdfOriginalFontSize;
-      el.removeAttribute('data-pdf-original-font-size');
-    });
-    container.querySelectorAll('[data-pdf-original-overflow]').forEach(el => {
-      el.style.overflow = el.dataset.pdfOriginalOverflow;
-      el.removeAttribute('data-pdf-original-overflow');
-    });
-  }
-
-  function mergeSplitTables(container) {
-    const groupIds = new Set();
-    container.querySelectorAll('table[data-split-group-id]').forEach(t => {
-      if (t.dataset.splitGroupId) {
-        groupIds.add(t.dataset.splitGroupId);
-      }
-    });
-
-    for (const groupId of groupIds) {
-      const originalTable = container.querySelector(`table[data-split-group-id="${groupId}"]:not([data-split-part="true"])`);
-      if (!originalTable) continue;
-
-      const parts = Array.from(container.querySelectorAll(`table[data-split-group-id="${groupId}"][data-split-part="true"]`));
-      const tbody = originalTable.tBodies[0] || originalTable.querySelector('tbody') || originalTable;
-
-      for (const part of parts) {
-        const partTbody = part.tBodies[0] || part.querySelector('tbody') || part;
-        const rows = Array.from(partTbody.children).filter(child => child.tagName.toLowerCase() === 'tr');
-        for (const row of rows) {
-          tbody.appendChild(row);
-        }
-        part.remove();
-      }
-
-      const spacers = Array.from(container.querySelectorAll(`div[data-split-group-id="${groupId}"][data-split-spacer="true"]`));
-      for (const spacer of spacers) {
-        spacer.remove();
-      }
-
-      originalTable.removeAttribute('data-split-group-id');
-    }
-  }
-
-  function splitTables(container, pageHeightPx) {
-    mergeSplitTables(container);
-
-    const tables = Array.from(container.querySelectorAll('table'));
-    let groupCounter = 0;
-
-    for (const table of tables) {
-      if (table.dataset.splitPart === "true") continue;
-      const tableRect = table.getBoundingClientRect();
-      if (tableRect.height <= pageHeightPx) continue;
-
-      const tbody = table.tBodies[0] || table.querySelector('tbody');
-      if (!tbody) continue;
-
-      const rows = Array.from(tbody.children).filter(child => child.tagName.toLowerCase() === 'tr');
-      if (rows.length === 0) continue;
-
-      const groupId = `table-group-${groupCounter++}`;
-      table.dataset.splitGroupId = groupId;
-      const containerRect = container.getBoundingClientRect();
-
-      const rowPositions = rows.map(row => {
-        const rect = row.getBoundingClientRect();
-        return {
-          row: row,
-          top: rect.top - containerRect.top,
-          bottom: rect.bottom - containerRect.top,
-          height: rect.height
-        };
-      });
-
-      let currentTable = table;
-      let currentTbody = tbody;
-      let accumulatedShift = 0;
-
-      for (let i = 0; i < rowPositions.length; i++) {
-        const pos = rowPositions[i];
-        const shiftedTop = pos.top + accumulatedShift;
-        const shiftedBottom = pos.bottom + accumulatedShift;
-        const currentPageIndex = Math.floor(shiftedTop / pageHeightPx);
-        const nextPageBoundary = (currentPageIndex + 1) * pageHeightPx;
-
-        if (shiftedBottom > nextPageBoundary) {
-          const spacerHeight = nextPageBoundary - shiftedTop;
-          const originalThead = table.querySelector('thead');
-          const theadHeight = originalThead ? originalThead.getBoundingClientRect().height : 0;
-          accumulatedShift += spacerHeight + theadHeight;
-
-          const nextTable = table.cloneNode(false);
-          nextTable.removeAttribute('id');
-          nextTable.dataset.splitGroupId = groupId;
-          nextTable.dataset.splitPart = "true";
-
-          if (originalThead) nextTable.appendChild(originalThead.cloneNode(true));
-          const nextTbody = document.createElement('tbody');
-          nextTable.appendChild(nextTbody);
-
-          const spacer = document.createElement('div');
-          spacer.className = 'table-page-break-spacer';
-          spacer.dataset.splitGroupId = groupId;
-          spacer.dataset.splitSpacer = "true";
-          spacer.style.height = `${spacerHeight}px`;
-          spacer.style.margin = '0';
-          spacer.style.padding = '0';
-          spacer.style.border = 'none';
-
-          currentTable.parentNode.insertBefore(spacer, currentTable.nextSibling);
-          spacer.parentNode.insertBefore(nextTable, spacer.nextSibling);
-          currentTable = nextTable;
-          currentTbody = nextTbody;
-        }
-
-        if (currentTable !== table) currentTbody.appendChild(pos.row);
-      }
-    }
-  }
-
-  function applyPageBreaksWithCascade(tempElement, pageConfig, maxIterations = 10, signal) {
-    let iteration = 0;
-    let analysis;
-
-    const elementWidth = tempElement.offsetWidth;
-    const aspectRatio = pageConfig.contentHeight / pageConfig.contentWidth;
-    const pageHeightPx = elementWidth * aspectRatio;
-
-    const lastAdjustments = new Map(); // Store {margin, scale} for each element
-
-    do {
-      throwIfPdfExportAborted(signal);
-
-      // Reset graphics element styles applied in previous iterations
-      resetGraphicsStyles(tempElement);
-
-      // Split tables at page breaks dynamically using calculated pageHeightPx
-      splitTables(tempElement, pageHeightPx);
-
-      // We must get ALL target elements in document order
-      const graphics = identifyGraphicElements(tempElement);
-      const elementsWithPositions = calculateElementPositions(graphics, tempElement);
-
-      // Get page boundaries based on current height
-      const totalHeight = Math.ceil(tempElement.getBoundingClientRect().height);
-      const { boundaries: pageBoundaries, pageHeightPx: pageHeightPxFromAnalysis } = calculatePageBoundaries(
-        totalHeight,
-        elementWidth,
-        pageConfig
-      );
-
-      let adjustmentsMade = false;
-      let accumulatedShift = 0;
-      const currentIterationAdjustments = new Map();
-
-      for (const item of elementsWithPositions) {
-        throwIfPdfExportAborted(signal);
-
-        const currentTop = item.top + accumulatedShift;
-        const currentBottom = currentTop + item.height;
-
-        let targetMargin = 0;
-        let targetScale = 1.0;
-
-        // 1. Heading Keep-With-Next Rule (must run for all headings regardless of split)
-        const tag = item.element.tagName.toLowerCase();
-        const isHeading = item.type === 'text' && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
-        
-        if (isHeading) {
-          let nextBoundaryY = null;
-          for (const boundary of pageBoundaries) {
-            if (currentTop < boundary) {
-              nextBoundaryY = boundary;
-              break;
-            }
-          }
-          if (nextBoundaryY !== null) {
-            const distanceToBoundary = nextBoundaryY - currentTop;
-            if (distanceToBoundary < 70) {
-              targetMargin = distanceToBoundary + 4; // Push heading entirely to next page
-            }
-          }
-        }
-
-        // 2. If not already pushed by Keep-With-Next, perform standard page-split calculations
-        if (targetMargin === 0) {
-          // Check if this element crosses any page boundary or starts extremely close to it (sub-pixel safety)
-          let splitPageIndex = -1;
-          for (let i = 0; i < pageBoundaries.length; i++) {
-            if (currentTop < pageBoundaries[i] + 12 && currentBottom > pageBoundaries[i]) {
-              splitPageIndex = i;
-              break;
-            }
-          }
-
-          if (splitPageIndex !== -1) {
-            const boundaryY = pageBoundaries[splitPageIndex];
-            const remainingSpace = boundaryY - currentTop;
-
-            if (item.type === 'text') {
-              const shiftedItem = { ...item, top: currentTop, splitPageIndex: splitPageIndex };
-              const shift = calculateTextElementShift(shiftedItem, pageBoundaries);
-              if (shift > 0.5) {
-                targetMargin = shift;
-              }
-            } else {
-              // Graphic element splitting (with larger buffer to ensure complete clearance)
-              const buffer = 15;
-              const scaleNeeded = (remainingSpace - buffer) / item.height;
-              const remainingSpacePercent = remainingSpace / pageHeightPxFromAnalysis;
-
-              const isTextContainer = ['blockquote', 'li', 'table', 'pre', 'math'].includes(item.type);
-
-              // Fit on current page by scaling if it's an image/svg and space/scale are acceptable.
-              // Otherwise, always push text/block containers to next page to prevent transform-scaling bugs.
-              if (!isTextContainer && remainingSpacePercent >= 0.20 && scaleNeeded >= 0.6) {
-                targetScale = Math.min(1.0, scaleNeeded);
-              } else {
-                // Push to next page
-                const marginNeeded = boundaryY - currentTop + buffer;
-                targetMargin = marginNeeded;
-
-                // Check if it fits the next page height after being pushed (Rule 3 Case C)
-                const newTop = currentTop + marginNeeded;
-                const newBottom = newTop + item.height;
-                const nextBoundaryY = pageBoundaries[splitPageIndex + 1] || (boundaryY + pageHeightPxFromAnalysis);
-                if (newBottom > nextBoundaryY) {
-                  const scaleToFitPage = (pageHeightPxFromAnalysis - 20) / item.height;
-                  targetScale = Math.max(0.5, Math.min(1.0, scaleToFitPage));
-                }
-              }
-            }
-          } else {
-            // Element is not split. But graphic elements taller than a page must still scale to fit!
-            if (item.type !== 'text' && item.height > pageHeightPxFromAnalysis) {
-              const scaleToFitPage = (pageHeightPxFromAnalysis - 20) / item.height;
-              targetScale = Math.max(0.5, Math.min(1.0, scaleToFitPage));
-            }
-          }
-        }
-
-        // Check if this calculated adjustment is different from the previous iteration
-        const prevAdjustment = lastAdjustments.get(item.element) || { margin: 0, scale: 1.0 };
-        if (Math.abs(targetMargin - prevAdjustment.margin) > 0.1 || Math.abs(targetScale - prevAdjustment.scale) > 0.001) {
-          adjustmentsMade = true;
-        }
-
-        currentIterationAdjustments.set(item.element, { margin: targetMargin, scale: targetScale });
-
-        // Apply style adjustments to the DOM
-        if (targetMargin > 0) {
-          let targetElement = item.element;
-
-          // Redirect inline image or svg margins to their parent block element if nested
-          if (item.type === 'svg' && item.element.parentElement) {
-            const parent = item.element.parentElement;
-            if (['p', 'li', 'blockquote'].includes(parent.tagName.toLowerCase())) {
-              targetElement = parent;
-            } else {
-              targetElement = parent;
-            }
-          } else if (item.type === 'img' && item.element.parentElement) {
-            const parent = item.element.parentElement;
-            if (item.element.classList.contains('mermaid-img')) {
-              if (parent.parentElement && parent.parentElement.classList.contains('mermaid-container')) {
-                targetElement = parent.parentElement;
-              } else {
-                targetElement = parent;
-              }
-            } else if (['p', 'li', 'blockquote'].includes(parent.tagName.toLowerCase())) {
-              targetElement = parent;
-            }
-          }
-
-          // If target is a list item, apply marginTop directly to avoid invalid HTML / collapsed spacers
-          if (targetElement.tagName.toLowerCase() === 'li') {
-            if (!targetElement.dataset.hasOwnProperty('pdfOriginalMarginTop')) {
-              targetElement.dataset.pdfOriginalMarginTop = targetElement.style.marginTop || '';
-            }
-            targetElement.style.marginTop = `${targetMargin}px`;
-          } else {
-            // Create a physical spacer element to avoid margin collapse issues entirely
-            const spacer = document.createElement('div');
-            spacer.className = 'pdf-page-break-spacer';
-            spacer.style.height = `${targetMargin}px`;
-            spacer.style.margin = '0';
-            spacer.style.padding = '0';
-            spacer.style.border = 'none';
-            spacer.style.display = 'block';
-
-            targetElement.parentNode.insertBefore(spacer, targetElement);
-          }
-          accumulatedShift += targetMargin;
-        }
-
-        if (targetScale < 1.0) {
-          applyGraphicScaling(item.element, targetScale, item.type);
-          const heightSaved = item.height * (1.0 - targetScale);
-          accumulatedShift -= heightSaved;
-        }
-      }
-
-      // Copy current adjustments to lastAdjustments
-      lastAdjustments.clear();
-      for (const [el, adj] of currentIterationAdjustments) {
-        lastAdjustments.set(el, adj);
-      }
-
-      if (!adjustmentsMade) {
-        break;
-      }
-
-      iteration++;
-    } while (iteration < maxIterations);
-
-    if (iteration >= maxIterations) {
-      console.warn('Page-break stabilization reached max iterations:', maxIterations);
-    }
-
-    // Return the final page boundaries and height analysis for the export flow
-    analysis = analyzeGraphicsForPageBreaks(tempElement, signal);
-    
-    logPdfExportDebug('Page-break cascade complete:', {
-      iterations: iteration,
-      finalSplitCount: analysis.splitElements.length
-    });
-
-    return analysis;
-  }
-
-  // ============================================
-  // End Page-Break Insertion Functions
-  // ============================================
-
-  // ============================================
-  // Oversized Graphics Scaling Functions (Story 1.3)
-  // ============================================
-
-  const MIN_SCALE_FACTOR = 0.5;
-
-  function calculateScaleFactor(elementHeight, availableHeight, buffer = 5) {
-    const targetHeight = availableHeight - buffer;
-    let scaleFactor = targetHeight / elementHeight;
-    let wasClampedToMin = false;
-
-    if (scaleFactor < MIN_SCALE_FACTOR) {
-      console.warn(
-        `Warning: Large graphic requires ${(scaleFactor * 100).toFixed(0)}% scaling. ` +
-        `Clamping to minimum ${MIN_SCALE_FACTOR * 100}%. Content may be cut off.`
-      );
-      scaleFactor = MIN_SCALE_FACTOR;
-      wasClampedToMin = true;
-    }
-
-    return { scaleFactor, wasClampedToMin };
-  }
-
-  function applyGraphicScaling(element, scaleFactor, elementType) {
-    if (!element.dataset.hasOwnProperty('pdfOriginalTransform')) {
-      element.dataset.pdfOriginalTransform = element.style.transform || '';
-    }
-    if (!element.dataset.hasOwnProperty('pdfOriginalMarginBottom')) {
-      element.dataset.pdfOriginalMarginBottom = element.style.marginBottom || '';
-    }
-
-    if (elementType === 'svg' || elementType === 'img') {
-      if (!element.dataset.hasOwnProperty('pdfOriginalWidth')) {
-        element.dataset.pdfOriginalWidth = element.style.width || '';
-      }
-      if (!element.dataset.hasOwnProperty('pdfOriginalHeight')) {
-        element.dataset.pdfOriginalHeight = element.style.height || '';
-      }
-      if (!element.dataset.hasOwnProperty('pdfOriginalMaxWidth')) {
-        element.dataset.pdfOriginalMaxWidth = element.style.maxWidth || '';
-      }
-
-      let origWidth = parseFloat(element.dataset.pdfOriginalClientWidth);
-      let origHeight = parseFloat(element.dataset.pdfOriginalClientHeight);
-
-      if (isNaN(origWidth) || isNaN(origHeight)) {
-        origWidth = element.clientWidth || element.getBoundingClientRect().width;
-        origHeight = element.clientHeight || element.getBoundingClientRect().height;
-        element.dataset.pdfOriginalClientWidth = String(origWidth);
-        element.dataset.pdfOriginalClientHeight = String(origHeight);
-      }
-
-      // Apply physical scale
-      element.style.width = `${origWidth * scaleFactor}px`;
-      element.style.height = `${origHeight * scaleFactor}px`;
-      if (elementType === 'svg') {
-        element.style.maxWidth = 'none';
-      }
-    } else {
-      // For pre, table, blockquote, math, li, etc.
-      // Use transform: scale combined with physical height and overflow hidden to guarantee no native splits
-      if (!element.dataset.hasOwnProperty('pdfOriginalHeight')) {
-        element.dataset.pdfOriginalHeight = element.style.height || '';
-      }
-      if (!element.dataset.hasOwnProperty('pdfOriginalOverflow')) {
-        element.dataset.pdfOriginalOverflow = element.style.overflow || '';
-      }
-
-      element.style.transform = `scale(${scaleFactor})`;
-      element.style.transformOrigin = 'top left';
-
-      let origHeight = parseFloat(element.dataset.pdfOriginalClientHeight);
-      if (isNaN(origHeight)) {
-        origHeight = element.offsetHeight || element.getBoundingClientRect().height;
-        element.dataset.pdfOriginalClientHeight = String(origHeight);
-      }
-
-      const scaledHeight = origHeight * scaleFactor;
-      element.style.height = `${scaledHeight}px`;
-      element.style.overflow = 'hidden';
-    }
-  }
-
-
 
   function waitForAllImages(container) {
     const imgs = Array.from(container.querySelectorAll('img'));
@@ -30455,7 +29896,7 @@ ${selector} .arrowheadPath {
     root.style.margin = '0';
     root.style.width = mode === 'pdf' ? '210mm' : '1000px';
     root.style.padding = mode === 'image' ? '40px' : mode === 'print' ? '45px' : '0';
-    root.style.fontSize = mode === 'pdf' ? '14px' : '16px';
+    root.style.fontSize = mode === 'print' ? '10pt' : mode === 'pdf' ? '14px' : '16px';
     root.style.backgroundColor = theme === 'dark' ? '#0d1117' : '#ffffff';
     root.style.color = theme === 'dark' ? '#c9d1d9' : '#24292e';
     document.body.appendChild(root);
@@ -30474,10 +29915,6 @@ ${selector} .arrowheadPath {
       throw error;
     }
   }
-
-  // ============================================
-  // End Oversized Graphics Scaling Functions
-  // ============================================
 
   pdfExportClose?.addEventListener("click", () => closeAppModal(pdfExportModal));
 
@@ -30542,6 +29979,7 @@ ${selector} .arrowheadPath {
 
   pdfExportConfirmBtn?.addEventListener("click", async function (event) {
     event.preventDefault();
+    if (activePdfExport) return;
     closeAppModal(pdfExportModal);
 
     const selectedMode = document.querySelector('input[name="pdf-export-mode"]:checked')?.value || 'vector';
@@ -30550,7 +29988,12 @@ ${selector} .arrowheadPath {
 
     if (selectedMode === "vector") {
       logPdfExportDebug("PDF (Vector) export button clicked with theme:", selectedTheme);
-      await runBrowserPrintExport(selectedTheme);
+      try {
+        await runBrowserPrintExport(selectedTheme);
+      } catch (error) {
+        console.error('PDF export failed:', error);
+        alert('PDF export failed: ' + error.message);
+      }
     } else if (selectedMode === "raster") {
       logPdfExportDebug("PDF export button clicked with theme:", selectedTheme);
       if (activePdfExport) {
@@ -30595,7 +30038,7 @@ ${selector} .arrowheadPath {
       fitExportElementToContent(tempElement);
       await waitForPdfFrame(progressState);
 
-      // Await loading of all images and fonts (including converted Mermaid base64 images) before cascade sizing runs
+      // Measure only after images and fonts have settled.
       updatePdfProgress(progressState, 50, "Loading document assets");
       await runPdfAbortable(progressState, Promise.all([
         waitForAllImages(tempElement),
@@ -30604,83 +30047,51 @@ ${selector} .arrowheadPath {
       throwIfPdfExportAborted(progressState.signal);
       await waitForPdfFrame(progressState);
 
-      // Analyze and apply page-breaks for graphics (Story 1.1 + 1.2)
       updatePdfProgress(progressState, 55, "Optimizing page breaks");
-      const pageBreakAnalysis = applyPageBreaksWithCascade(tempElement, PAGE_CONFIG, 10, progressState.signal);
-      throwIfPdfExportAborted(progressState.signal);
-
-      await waitForPdfFrame(progressState);
-
-      const pdfOptions = {
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-        hotfixes: ["px_scaling"]
-      };
-
-      const pdf = new jspdf.jsPDF(pdfOptions);
+      const layout = await measureRasterPdfLayout(tempElement, progressState);
+      progressState.rasterLayoutHeight = layout.height;
+      const pdf = new jspdf.jsPDF({
+        orientation: 'portrait', unit: 'mm', format: 'a4', compress: true, hotfixes: ["px_scaling"]
+      });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15;
-      const contentWidth = pageWidth - (margin * 2);
-      const captureScale = choosePdfCanvasScale(tempElement);
+      const margin = PAGE_CONFIG.margin;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - margin * 2;
+      const pages = planRasterPdfPages(layout, layout.width * contentHeight / contentWidth);
+      const headers = new Map();
 
-      updatePdfProgress(progressState, 65, "Capturing document");
-      const canvas = await runPdfAbortable(progressState, html2canvas(tempElement, {
-        scale: captureScale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: isDarkTheme ? "#0d1117" : "#ffffff",
-        windowWidth: Math.max(PAGE_CONFIG.windowWidth, Math.ceil(tempElement.getBoundingClientRect().width)),
-        windowHeight: Math.ceil(tempElement.getBoundingClientRect().height)
-      }));
-      await waitForPdfFrame(progressState);
-      throwIfPdfExportAborted(progressState.signal);
-
-      console.log(`[PDF DEBUG] canvas.width = ${canvas.width}, canvas.height = ${canvas.height}`);
-      console.log(`[PDF DEBUG] tempElement.offsetWidth = ${tempElement.offsetWidth}, rect.width = ${tempElement.getBoundingClientRect().width}`);
-      const scaleFactor = canvas.width / contentWidth;
-      console.log(`[PDF DEBUG] scaleFactor = ${scaleFactor}, PAGE_CONFIG.scale = ${PAGE_CONFIG.scale}, captureScale = ${captureScale}`);
-      const imgHeight = canvas.height / scaleFactor;
-      console.log(`[PDF DEBUG] imgHeight = ${imgHeight}, contentHeight = ${pageHeight - margin * 2}`);
-      // Introduce a 0.5mm tolerance to prevent rounding errors from creating a trailing blank page
-      const pagesCount = Math.ceil((imgHeight - 0.5) / (pageHeight - margin * 2));
-      console.log(`[PDF DEBUG] pagesCount = ${pagesCount}`);
-
-      updatePdfProgress(progressState, 76, "Rendering pages");
-      for (let page = 0; page < pagesCount; page++) {
+      for (let index = 0; index < pages.length; index++) {
         throwIfPdfExportAborted(progressState.signal);
-        const pageProgress = 76 + ((page + 1) / pagesCount) * 18;
-        updatePdfProgress(progressState, pageProgress, `Rendering page ${page + 1} of ${pagesCount}`);
-
-        if (page > 0) pdf.addPage();
-
-        if (isDarkTheme) {
-          pdf.setFillColor(13, 17, 23); // #0d1117
-          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-        } else {
-          pdf.setFillColor(255, 255, 255);
-          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-        }
-
-        const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
-        const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
-        const destHeight = sourceHeight / scaleFactor;
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
-
-        const ctx = pageCanvas.getContext('2d');
-        ctx.fillStyle = isDarkTheme ? "#0d1117" : "#ffffff";
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-
-        const imgData = pageCanvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
+        const page = pages[index];
+        updatePdfProgress(progressState, 60 + ((index + 1) / pages.length) * 36,
+          `Rendering page ${index + 1} of ${pages.length}`);
         await waitForPdfFrame(progressState);
+        const headerHeight = page.header ? page.header.headerBottom - page.header.headerTop : 0;
+        const height = page.end - page.start;
+        const mmPerPixel = Math.min(contentWidth / layout.width, contentHeight / (height + headerHeight));
+        const left = margin + (contentWidth - layout.width * mmPerPixel) / 2;
+        if (index) pdf.addPage();
+        if (isDarkTheme) pdf.setFillColor(13, 17, 23);
+        else pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+        if (page.header) {
+          const header = page.header;
+          const key = `${header.left}:${header.headerTop}:${header.width}`;
+          if (!headers.has(key)) {
+            headers.set(key, await captureRasterPdfRegion(tempElement, {
+              x: header.left, y: header.headerTop, width: header.width, height: headerHeight
+            }, selectedTheme, progressState));
+          }
+          pdf.addImage(headers.get(key), 'PNG', left + header.left * mmPerPixel, margin,
+            header.width * mmPerPixel, headerHeight * mmPerPixel);
+        }
+        const image = await captureRasterPdfRegion(tempElement, {
+          y: page.start, width: layout.width, height
+        }, selectedTheme, progressState);
+        pdf.addImage(image, 'PNG', left, margin + headerHeight * mmPerPixel,
+          layout.width * mmPerPixel, height * mmPerPixel);
       }
 
       throwIfPdfExportAborted(progressState.signal);

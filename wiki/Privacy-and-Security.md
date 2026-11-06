@@ -148,7 +148,7 @@ Sanitization reduces cross-site scripting risk. It is not a guarantee against br
 
 - Markdown export writes the raw source.
 - HTML export uses sanitized content, a restrictive Content Security Policy (CSP), and Subresource Integrity (SRI) metadata where external assets have known hashes.
-- Browser Print delegates final output to the browser or operating system.
+- Standard PDF delegates final output to the browser or operating system.
 - Legacy raster PDF and PNG use `html2canvas` with `allowTaint: false` and CORS-aware fetching.
 - An exported HTML file can still request external images, media, fonts, or renderer libraries that the document references and the CSP permits.
 

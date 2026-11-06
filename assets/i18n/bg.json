@@ -1248,7 +1248,7 @@
   "Blockquote (Ctrl+Shift+Q / Cmd+Option+Q)": "Блок цитат (Ctrl+Shift+Q / Cmd+Option+Q)",
   "Bold (Ctrl/Cmd+B)": "Получер (Ctrl/Cmd+B)",
   "Both versions were kept. Your edit is open as a conflict copy.": "И двете версии бяха запазени. Вашата редакция е отворена като конфликтно копие.",
-  "Browser Print": "Печат от браузър",
+  "Standard PDF": "Стандартен PDF",
   "Built-in Workspace guide": "Ръководство за вградено работно пространство",
   "Bulleted list (Ctrl+Shift+] / Cmd+Option+U)": "Списък с водещи символи (Ctrl+Shift+] / Cmd+Option+U)",
   "Choose a diagram or visualization": "Изберете диаграма или визуализация",
@@ -1337,7 +1337,6 @@
   "Export theme": "Експортиране на тема",
   "F11": "F11",
   "F3": "F3",
-  "Fast export using your browser print dialog.": "Бързо експортиране с помощта на диалоговия прозорец за печат на браузъра.",
   "Fifth-level heading": "Заглавие от пето ниво",
   "File links were removed, but the folder change could not be saved. The folder was kept so you can retry.": "Файловите връзки бяха премахнати, но промяната на папката не можа да бъде запазена. Папката беше запазена, така че можете да опитате отново.",
   "File saved": "Файлът е запазен",
@@ -1382,7 +1381,6 @@
   "interrupted edit": "прекъсна редактирането",
   "Italic (Ctrl/Cmd+I)": "Курсив (Ctrl/Cmd+I)",
   "Keep draft": "Запазване на чернова",
-  "Keeps tables, diagrams, and equations together.": "Поддържа таблици, диаграми и уравнения заедно.",
   "kept in Trash.": "се съхранява в кошчето.",
   "Large section heading": "Заглавие на голям раздел",
   "Last successful snapshot and drafts were kept. Rescan to retry.": "Последната успешна моментна снимка и чернови бяха запазени. Повторно сканиране, за да опитате отново.",
@@ -1446,7 +1444,6 @@
   "Paragraph formatting": "Форматиране на абзац",
   "permanently deleted.": "изтрит за постоянно.",
   "Post reply": "Публикувай отговор",
-  "Precision PDF": "Прецизен PDF",
   "Preview (Ctrl/Cmd+E toggles Edit/Preview)": "Визуализация (Ctrl/Cmd+E превключва Редактиране/Визуализация)",
   "Private mode is on. Session changes are not saved.": "Личният режим е включен. Промените в сесията не се запазват.",
   "Quick formatting covers emphasis, quotes, alignment, and lists; advanced insertion tools are directly available in the formatting toolbar.": "Бързото форматиране обхваща ударение, кавички, подравняване и списъци; разширените инструменти за вмъкване са директно достъпни в лентата с инструменти за форматиране.",
@@ -1686,5 +1683,8 @@
   "Resolve interrupted rename?": "Разрешаване на прекъснато преименуване?",
   "Connect original": "Свързване на оригинала",
   "An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.": "Прекъснато преименуване се нуждае от преглед. Вашите чернови бяха запазени. Използвайте Разрешаване на прекъснато преименуване в менюто на свързания файл.",
-  "Rename recovery": "Преименуване на възстановяване"
+  "Rename recovery": "Преименуване на възстановяване",
+  "Rendered PDF": "Визуален PDF",
+  "Fast PDF export with selectable text and customizable settings.": "Бързо експортиране в PDF с избираем текст и персонализируеми настройки.",
+  "Turn complex documents into clean, consistent visual PDFs.": "Превърнете сложните документи в ясни визуални PDF файлове с последователно оформление."
 }

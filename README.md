@@ -71,7 +71,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="3D STL Full screen" width="90%" />
 </p>
 
-- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF with remembered Light or Dark appearance and complete rich-content preparation for PDF and PNG.
+- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Standard PDF/Save as PDF, or Rendered PDF with remembered Light or Dark appearance and complete rich-content preparation for PDF and PNG.
 
 - **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
 

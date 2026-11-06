@@ -339,9 +339,10 @@ PDF export:
 
 - Opens a modal with two modes.
 - Offers a compact, remembered Light or Dark appearance control shared by both PDF methods.
-- Browser Print is recommended. It builds an off-screen export snapshot, hides app chrome and open modals, waits for fonts, images, math, maps, models, music, and every supported diagram renderer, then calls `window.print()` so the browser or OS can save or print the document without changing the visible application theme.
-- Legacy Raster PDF uses `html2canvas` and `jsPDF`. It captures the same prepared rich-content snapshot in an A4 sandbox, applies page-break rules and the selected solid background, and saves a PDF.
-- The raster exporter shows progress and has a cancel button.
+- Standard PDF is recommended for selectable, searchable document text. Choose **Save as PDF** in the browser or OS print dialog. It builds an off-screen export snapshot, hides app chrome and open modals, and waits for fonts, images, math, maps, models, music, and supported diagrams without changing the visible application theme. The default body text is 10 pt. On supported browsers, Standard PDF keeps space around the content on every page while suppressing the browser-generated title, date, URL, and page numbers. Print styles repeat table headers, wrap long code lines, and let long text flow across pages in either appearance.
+- Rendered PDF uses `html2canvas` and `jsPDF` to save image-based A4 pages. Text in this mode is not selectable or searchable. Page boundaries follow measured text lines and table rows; long paragraphs, quotes, and code blocks continue across pages without shrinking their text into clipped containers. Standard table headers repeat on continuation pages. Oversized indivisible graphics are scaled to fit a page.
+- Both methods show progress and allow cancellation while preparing the document. Once the print dialog opens, use its controls to save or cancel.
+- Rendered PDF captures bounded strips and reuses them across pages to limit canvas memory. Cancelling an export releases temporary canvases and does not save a partial PDF.
 - Raster export uses `allowTaint: false` and `useCORS: true` to avoid unsafe cross-origin canvas capture.
 
 PNG export:
@@ -352,9 +353,11 @@ PNG export:
 
 Limitations:
 
-- Browser Print output is controlled by the browser and print settings.
+- Standard PDF output is controlled by the browser and print settings. If browser-generated headers or footers still appear, turn off **Headers and footers** in the print dialog; older engines keep ordinary page margins as a fallback.
 - The selected export appearance does not rewrite colors that a document author explicitly placed inside SVG, HTML, image files, or diagram source.
-- Raster PDF and PNG are screenshots of rendered HTML, so very long documents can be memory-heavy.
+- Rendered PDF and PNG are screenshots of rendered HTML. Rendered PDF limits individual canvas sizes, but the final PDF and very large documents can still use substantial memory. PNG remains a single-image capture.
+- Images and outlined diagram/math glyphs do not become selectable text through Standard PDF. Receiving PDF software and the browser's print settings affect the result.
+- Complex tables with rowspans or nested tables retain their original layout in Rendered PDF instead of repeating a potentially misleading header. Arbitrary overlapping HTML layouts and unusually tall graphics may need scaling or manual print adjustments.
 - Cross-origin images without CORS support may fail to appear in canvas-based PDF/PNG exports.
 - Remote renderers and external assets still depend on their network availability while the export snapshot is prepared.
 - Some complex CSS, wide tables, and large diagrams may be moved, scaled, or split differently from the live preview.
@@ -624,7 +627,7 @@ Security limitations:
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.
 - The desktop vault retains up to 20 recent history copies per document.
 - Desktop linked-folder scans stop at 10,000 Markdown files, 40,000 entries, 2,000 directories, 32 levels, 20 MiB per Markdown source, 200 MiB staged content, or 60 seconds. Filesystem verification reduces accidental overwrites but is not an atomic lock against other programs.
-- Legacy raster PDF and PNG exports can fail on extremely tall documents because canvas size and memory are browser-limited.
+- Very large Rendered PDF exports can exhaust memory even with bounded capture strips. PNG uses a single canvas and can fail on extremely tall documents.
 - Remote renderer availability depends on third-party services and network conditions.
 - The service worker cannot cache assets that have never been successfully fetched.
 - The desktop application depends on the platform webview and Neutralino runtime behavior.
