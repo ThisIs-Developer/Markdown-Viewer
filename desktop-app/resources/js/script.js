@@ -7704,7 +7704,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (parent) folderNode(nodes.get(parent.locationId), parent.path).documents.push(tab);
       else individualTabs.push(tab);
     });
-    individualTabs.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
+    individualTabs.sort(function(left, right) { return compareNatural(left.title, right.title); });
     individualTabs.forEach(function(tab) {
       if (appendDocumentTreeItem(workspaceGroup, tab, 1, getLinkedDocumentMeta(tab))) renderedDocuments++;
     });
@@ -7765,7 +7765,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         node.locations.slice().sort(function(left, right) { return compareNatural(left.name, right.name); }).forEach(function(child) {
           renderLocation(child, container, depth);
         });
-        Array.from(node.folders.entries()).sort(function(left, right) { return left[0].localeCompare(right[0]); }).forEach(function(entry) {
+        Array.from(node.folders.entries()).sort(function(left, right) { return compareNatural(left[0], right[0]); }).forEach(function(entry) {
           const folderName = entry[0];
           const child = entry[1];
           if (documentSidebarSearch && !containsMatches(child)) return;
@@ -7803,7 +7803,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           appendVirtualNode(child, childGroup, depth + 1, pathParts.concat(folderName));
           container.appendChild(childGroup);
         });
-        node.documents.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); }).forEach(function(tab) {
+        node.documents.sort(function(left, right) { return compareNatural(left.title, right.title); }).forEach(function(tab) {
           if (appendDocumentTreeItem(container, tab, depth, getLinkedDocumentMeta(tab))) renderedDocuments++;
         });
       };
