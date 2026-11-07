@@ -25,6 +25,17 @@ const ALLOWED_VIDEO_TYPES = new Set([
   "video/webm"
 ]);
 const ALLOWED_MEDIA_TYPES = new Set([...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]);
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_MAX_UPLOADS = 20;
+
+async function isWithinUploadRateLimit(env, request) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const key = "ratelimit:image-upload:" + ip;
+  const current = Number(await env.SHARE_KV.get(key)) || 0;
+  if (current >= RATE_LIMIT_MAX_UPLOADS) return false;
+  await env.SHARE_KV.put(key, String(current + 1), { expirationTtl: RATE_LIMIT_WINDOW_SECONDS });
+  return true;
+}
 
 function isAllowedOrigin(origin) {
   if (!origin) return true;
@@ -156,6 +167,9 @@ export async function onRequest({ request, env, params }) {
   if (request.method === "POST" && !id) {
     const origin = request.headers.get("Origin") || "";
     if (!isAllowedOrigin(origin)) return jsonResponse({ error: "origin not allowed" }, { status: 403 }, request);
+    if (!(await isWithinUploadRateLimit(env, request))) {
+      return jsonResponse({ error: "too many upload requests, please try again later" }, { status: 429 }, request);
+    }
     const contentLength = Number(request.headers.get("Content-Length"));
     if (Number.isFinite(contentLength) && contentLength > MAX_DATA_URL_CHARS + 1024) {
       return jsonResponse({ error: "media upload is too large" }, { status: 413 }, request);
