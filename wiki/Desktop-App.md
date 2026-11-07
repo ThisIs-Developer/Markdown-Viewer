@@ -121,7 +121,8 @@ The default developer build generates seven raw executables under
 platform installers: a macOS `.dmg` containing `Markdown Viewer.app`, Ubuntu/Debian
 `.deb` packages with system dependencies and a menu launcher, and portable Linux
 `.tar.gz` archives preserving permissions. Windows keeps the existing `.exe`.
-Mac runtimes are rebuilt for macOS 12.0; the upstream 6.5.0 binaries require 14.0.
+Mac runtimes are rebuilt at their native dependency baselines: Intel 10.15 and
+Apple Silicon 11. The upstream 6.5.0 binaries require 14.0.
 See [installer build and signing instructions](../desktop-app/packaging/README.md).
 
 The shared web/desktop application code includes slash commands, natural Explorer sorting, middle-click tab closing, pane-scoped Select All, rich Preview copying, smooth Page Up/Down navigation, and native fullscreen or Expanded view fallback behavior.
@@ -181,9 +182,9 @@ See [download choices and installation steps](../desktop-app/packaging/RELEASE-D
 - **Mac:** choose `mac_x64.dmg` for Intel Macs or VMware on Intel/AMD Windows;
   `mac_arm64.dmg` for Apple Silicon; `mac_universal.dmg` for either. Open the DMG,
   drag the app to Applications, eject the image, and launch the installed app.
-  macOS 12.0 or newer is required, including Ventura, Sonoma, Sequoia and Tahoe.
-  Monterey is the minimum version; the same DMG supports newer macOS releases.
-  Allow Documents access for the vault.
+  Native builds target Intel macOS 10.15 and Apple Silicon macOS 11, with no
+  upper-version cutoff. Install available Safari/WebKit updates; older OS versions
+  require manual acceptance (CI tests macOS 15/26). Allow Documents access for the vault.
 - **Mac signing:** check `MACOS-SIGNING.txt`. Ad-hoc test builds are not notarized;
   on Monterey, Control-click the app and choose Open, or use Security & Privacy →
   Open Anyway for a trusted download. Do not disable Gatekeeper globally.

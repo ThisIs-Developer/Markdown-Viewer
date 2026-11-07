@@ -141,7 +141,7 @@ npm run build
 
 The raw results are written to `desktop-app/dist/markdown-viewer/`. End-user Mac
 and Linux downloads need the additional [platform packaging steps](../desktop-app/packaging/README.md).
-Mac installers include a runtime rebuilt for Monterey; Ubuntu installers include
+Mac installers rebuild the runtime for older Intel and Apple Silicon systems; Ubuntu installers include
 dependency declarations and application-menu integration.
 
 The development and build commands run setup automatically. Setup:

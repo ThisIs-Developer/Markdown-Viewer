@@ -75,7 +75,7 @@ jobs:
           ref: d1b3a4050f2073f236e14c4746ee8aa7dbb9bfe5
           path: desktop-app/.macos-runtime
           persist-credentials: false
-      - name: Build Intel and Apple Silicon runtimes with a macOS 12 minimum
+      - name: Build Intel and Apple Silicon runtimes at their native dependency baselines
         run: bash desktop-app/packaging/build-macos-runtime.sh desktop-app/.macos-runtime
       # Do not run setup again after replacing the incompatible upstream runtimes.
       - run: node desktop-app/build-standalone.js mac_x64 mac_arm64 mac_universal
@@ -159,7 +159,7 @@ jobs:
             arch: x64
           - os: macos-15
             arch: universal
-          # Exercise the same macOS 12-minimum binaries on the newest stable
+          # Exercise the same backwards-compatible binaries on the newest stable
           # hosted image too; macos-latest advances as GitHub rolls out releases.
           - os: macos-latest
             arch: arm64
@@ -188,7 +188,7 @@ jobs:
           ditto "$RUNNER_TEMP/dmg/Markdown Viewer.app" "$RUNNER_TEMP/installed/Markdown Viewer.app"
           hdiutil detach "$RUNNER_TEMP/dmg"
           codesign --verify --deep --strict "$RUNNER_TEMP/installed/Markdown Viewer.app"
-          python3 desktop-app/packaging/verify-macos.py "$RUNNER_TEMP/installed/Markdown Viewer.app/Contents/MacOS/markdown-viewer"
+          python3 desktop-app/packaging/verify-macos.py --arch "$ARCH" "$RUNNER_TEMP/installed/Markdown Viewer.app/Contents/MacOS/markdown-viewer"
       - name: Launch via LaunchServices, import a file and reopen the vault
         run: python3 tests/native/desktop-package-smoke.py "$RUNNER_TEMP/installed/Markdown Viewer.app"
 

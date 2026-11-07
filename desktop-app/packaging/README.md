@@ -1,28 +1,51 @@
-# Desktop installers for macOS 12 and newer, Windows and Linux
+# Desktop installers for Mac, Windows and Linux
 
-## macOS version support
+## Broad Mac compatibility
 
-The Mac packages target **macOS 12 Monterey and later**, including Ventura 13,
-Sonoma 14, Sequoia 15 and Tahoe 26. Monterey is the minimum deployment target;
-the app is not restricted to Monterey and has no configured upper-version limit.
-Use the same architecture-matching DMG on newer macOS versions. Versions before
-macOS 12 are outside this build's compatibility target.
+The goal is to let as many users as possible run the desktop app. There is no
+application-imposed macOS 12 cutoff or upper-version limit. The build targets the
+oldest native dependencies of the current runtime, separately for each CPU:
 
-CI launches the packaged app on Intel and Apple Silicon macOS 15 and the latest
-available stable hosted image (currently macOS 26). The ARM and universal checks
-also use `macos-latest` to follow GitHub's stable-image rollout; Intel currently
-uses `macos-26-intel`. Keep the explicit Intel label current when GitHub retires
-an image. macOS 12–14 require manual acceptance because hosted runners no longer
-provide them. A minimum deployment target is not evidence that every OS version,
-patch release or future release has been tested.
+| Download | Native dependency baseline | Reason |
+| --- | --- | --- |
+| Intel x64 | macOS 10.15 Catalina | Neutralino's file and vault APIs use Apple's C++ `std::filesystem`, introduced in 10.15. |
+| Apple Silicon ARM64 | macOS 11 Big Sur | Apple Silicon Macs and their native ABI start with macOS 11. |
+| Universal | 10.15 on Intel; 11 on Apple Silicon | Both slices retain their own baseline and Finder metadata. |
+
+`macos_support.py` is the shared source for compilation targets, per-architecture
+plist metadata and binary verification. CI also compiles a filesystem probe at
+these targets and confirms that the Apple SDK rejects the same dependency at
+10.14. It never disables compiler availability checks or simply edits a newer
+binary's version label. Removing all deployment-target flags would default to
+the build machine's newer OS and reduce compatibility again.
+
+These are native **build targets**, not proof of testing on every older OS. CI
+launches the real packages on Intel and Apple Silicon macOS 15 and 26, including
+`macos-latest`. Catalina, Big Sur, Monterey and other versions without hosted
+runners need manual acceptance. Install the latest OS and Safari/WebKit updates
+available for the user's Mac; on Catalina, use Safari 15.6.1. The app uses the
+system WebKit rather than shipping a separate browser. Older unpatched WebKit
+engines can lack JavaScript/DOM APIs even when the native executable loads.
+
+For example, the shared UI uses optional chaining and `replaceChildren`, and
+workspace maintenance uses `inert`. These are available in updated Catalina's
+Safari 15.6, but not all are available in its original Safari 13. Core startup
+scripts and their pinned Marked/DOMPurify/Bootstrap dependencies were inspected
+against the Safari 15.6 syntax target; this is not a substitute for testing all
+renderers, exports and dialogs in the older native WebKit.
+
+A literal promise to run on **every historical and future macOS release** is not
+technically supportable. Pre-Catalina support would require replacing/backporting
+native dependencies and qualifying the older browser engine. No compatibility is
+claimed for those systems, PowerPC/32-bit Macs or untested future OS releases.
 
 ## Why v3.10.5 failed on macOS
 
 The release workflow uploaded raw Mach-O binaries as extensionless HTTP downloads. A browser download does not preserve Unix execute permissions, and the files had no Finder-recognized `.app` bundle, `Info.plist`, or installation flow. Finder could therefore treat them as documents. `chmod` alone was not a complete fix: the pinned Neutralino 6.5.0 x64 and arm64 binaries both contain `LC_BUILD_VERSION minos 14.0`, and link ScreenCaptureKit unconditionally. Monterey cannot load that runtime. ARM64 also cannot run on an Intel/AMD VMware guest; use x64 there.
 
-The source of the runtime is pinned to Neutralino 6.5.0 commit `d1b3a4050f2073f236e14c4746ee8aa7dbb9bfe5`. `build-macos-runtime.sh` compiles both CPU architectures with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`. This selects upstream's existing CoreGraphics snapshot fallback; the unused ScreenCaptureKit link is removed because the framework was only introduced in 12.3. The application does not allow the native snapshot API. No new native permissions are granted.
+The source of the runtime is pinned to Neutralino 6.5.0 commit `d1b3a4050f2073f236e14c4746ee8aa7dbb9bfe5`. `build-macos-runtime.sh` uses the architecture-specific deployment targets from `macos_support.py`. This selects upstream's existing CoreGraphics snapshot fallback; the unused ScreenCaptureKit link is removed because the framework was only introduced in 12.3. The application does not allow the native snapshot API. No new native permissions are granted.
 
-`verify-macos.py` rejects newer minimum versions and mandatory ScreenCaptureKit links in **every** Mach-O slice, both before and after resource embedding. This checks binary compatibility metadata; it does not substitute for running on Monterey.
+`verify-macos.py` rejects newer minimum versions and mandatory ScreenCaptureKit links in **every** Mach-O slice, both before and after resource embedding. It also checks that each download contains the advertised CPU slices. These checks do not substitute for running on older macOS releases.
 
 ## Download and install
 
@@ -80,12 +103,12 @@ The **Build Desktop Installers** workflow runs for packaging PRs, manual dispatc
 CI checks:
 
 - Shared build and unit suite; Debian package metadata, permissions and extraction.
-- Regression tests rejecting the original macOS 14 load commands, including a bad universal slice.
+- Seven compatibility regression tests covering the previous 12/14 cutoffs, mixed universal slices, legacy Intel load commands, incorrect architecture labels and per-architecture Finder metadata.
 - Runtime compilation and final Mach-O, plist, signature and DMG validation.
 - On ARM and Intel Mac runners for macOS 15 and the latest stable hosted macOS: mount the actual DMG, copy the app, eject the image, launch through LaunchServices, import a Unicode Markdown filename, verify its bytes in the actual Documents vault, and reopen the app. The workflow logs `sw_vers` and CPU architecture to record the actual OS tested.
 - On Ubuntu 22.04 and 24.04: install the actual `.deb` with `apt`, validate its desktop entry, and run the same native GUI/vault check under Xvfb.
 
-GitHub-hosted runners do not provide macOS 12. Monterey UI acceptance must be performed on a physical Mac or the user's VM. CI also does not reproduce browser quarantine or an end user's Documents-permission prompt. The native smoke script refuses to run outside disposable GitHub Actions runners or against an existing vault.
+GitHub-hosted runners no longer provide macOS 10.15–14. Older macOS UI acceptance must be performed on physical Macs or suitable VMs. CI also does not reproduce browser quarantine or an end user's Documents-permission prompt. The native smoke script refuses to run outside disposable GitHub Actions runners or against an existing vault.
 
 ## macOS/Ubuntu manual acceptance
 

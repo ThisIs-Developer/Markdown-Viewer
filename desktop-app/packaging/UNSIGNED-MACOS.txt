@@ -11,6 +11,8 @@ It is intended for testing; macOS may show an unidentified-developer warning.
 
 Intel Macs / VMware on Intel or AMD Windows: mac_x64.dmg.
 Apple Silicon (M1/M2/M3/etc.): mac_arm64.dmg. Universal works on either architecture.
-Minimum macOS: 12.0. Updating Monterey to 12.7.6 and its latest Safari is recommended.
+Native build targets: Intel macOS 10.15; Apple Silicon macOS 11.
+Use the latest Safari/WebKit available for your Mac (Catalina: Safari 15.6.1).
+These older build targets still need manual native testing; CI tests macOS 15/26.
 The Vault stays in Documents/Markdown Viewer Vault when you replace the app.
 Never disable Gatekeeper globally to run this test.

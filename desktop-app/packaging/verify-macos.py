@@ -2,7 +2,8 @@
 """Check every Mach-O slice, including embedded-resource outputs, before shipping."""
 import pathlib
 import struct
-import sys
+import argparse
+from macos_support import CPU_ARCHITECTURES, DEPLOYMENT_TARGETS, PACKAGE_ARCHITECTURES, packed_version
 
 
 def inspect(data):
@@ -29,14 +30,26 @@ def inspect(data):
         elif command == 0xc:  # LC_LOAD_DYLIB (mandatory, not weak)
             start = struct.unpack_from('<I', data, offset + 8)[0]
             name = data[offset + start:offset + size].split(b'\0')[0]
-            assert b'ScreenCaptureKit' not in name, 'ScreenCaptureKit prevents macOS 12.0 launch'
+            assert b'ScreenCaptureKit' not in name, 'Mandatory ScreenCaptureKit prevents older macOS launch'
         offset += size
-    assert minimum is not None and minimum <= 0x0c0000, f'Runtime requires macOS newer than 12.0: {minimum}'
-    assert cpu in (0x1000007, 0x100000c), f'Unexpected architecture: {cpu}'
+    assert cpu in CPU_ARCHITECTURES, f'Unexpected architecture: {cpu}'
+    target = DEPLOYMENT_TARGETS[CPU_ARCHITECTURES[cpu]]
+    assert minimum is not None and 0 < minimum <= packed_version(target), f'{CPU_ARCHITECTURES[cpu]} runtime requires macOS newer than its native dependency baseline {target}: {minimum}'
     return [cpu]
 
 
+def verify(data, package_arch):
+    slices = inspect(data)
+    architectures = [CPU_ARCHITECTURES[cpu] for cpu in slices]
+    assert sorted(architectures) == sorted(PACKAGE_ARCHITECTURES[package_arch]), f'Wrong slices for {package_arch}: {architectures}'
+    return architectures
+
+
 if __name__ == '__main__':
-    for filename in sys.argv[1:]:
-        slices = inspect(pathlib.Path(filename).read_bytes())
-        print(f'PASS macOS 12.0 load commands: {filename} ({len(slices)} slices)')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--arch', choices=PACKAGE_ARCHITECTURES, required=True)
+    parser.add_argument('filenames', nargs='+')
+    args = parser.parse_args()
+    for filename in args.filenames:
+        slices = verify(pathlib.Path(filename).read_bytes(), args.arch)
+        print(f'PASS native macOS compatibility load commands: {filename} ({", ".join(slices)})')

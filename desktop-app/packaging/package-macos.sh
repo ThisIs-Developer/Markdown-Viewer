@@ -12,30 +12,14 @@ fi
 
 for arch in x64 arm64 universal; do
   INPUT="$APP_DIR/dist/markdown-viewer/markdown-viewer-mac_$arch"
-  python3 "$APP_DIR/packaging/verify-macos.py" "$INPUT"
+  python3 "$APP_DIR/packaging/verify-macos.py" --arch "$arch" "$INPUT"
   STAGING="$(mktemp -d)"
   trap 'rm -rf "$STAGING"' EXIT
   APP="$STAGING/Markdown Viewer.app"
   mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
   cp "$INPUT" "$APP/Contents/MacOS/markdown-viewer"
   chmod 755 "$APP/Contents/MacOS/markdown-viewer"
-  python3 - "$APP/Contents/Info.plist" "$VERSION" <<'PY'
-import plistlib, sys
-with open(sys.argv[1], 'wb') as target:
-    plistlib.dump({
-        'CFBundleExecutable': 'markdown-viewer',
-        'CFBundleIdentifier': 'com.markdownviewer.desktop',
-        'CFBundleName': 'Markdown Viewer',
-        'CFBundleDisplayName': 'Markdown Viewer',
-        'CFBundlePackageType': 'APPL',
-        'CFBundleShortVersionString': sys.argv[2],
-        'CFBundleVersion': sys.argv[2].split('-')[0],
-        'CFBundleIconFile': 'MarkdownViewer',
-        'LSMinimumSystemVersion': '12.0',
-        'NSHighResolutionCapable': True,
-        'NSDocumentsFolderUsageDescription': 'Markdown Viewer saves your documents in the Markdown Viewer Vault in Documents.',
-    }, target)
-PY
+  python3 "$APP_DIR/packaging/macos_support.py" plist "$VERSION" "$arch" "$APP/Contents/Info.plist"
   ICONSET="$STAGING/MarkdownViewer.iconset"
   mkdir "$ICONSET"
   for size in 16 32 128 256 512; do
@@ -63,7 +47,7 @@ PY
   ln -s /Applications "$STAGING/Applications"
   DMG="$OUTPUT/markdown-viewer-mac_$arch.dmg"
   rm -f "$DMG"
-  hdiutil create -volname 'Markdown Viewer' -srcfolder "$STAGING" -ov -format UDZO "$DMG"
+  hdiutil create -volname 'Markdown Viewer' -srcfolder "$STAGING" -ov -fs HFS+ -format UDZO "$DMG"
   if [[ "$IDENTITY" != - ]]; then
     codesign --sign "$IDENTITY" --timestamp "$DMG"
     xcrun notarytool submit "$DMG" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
@@ -77,5 +61,7 @@ done
 if [[ "$IDENTITY" == - ]]; then
   cp "$APP_DIR/packaging/UNSIGNED-MACOS.txt" "$OUTPUT/MACOS-SIGNING.txt"
 else
-  printf 'Developer ID signed and Apple notarized. Minimum macOS: 12.0.\n' > "$OUTPUT/MACOS-SIGNING.txt"
+  printf 'Developer ID signed and Apple notarized. Native runtime baselines: Intel %s; Apple Silicon %s.\n' \
+    "$(python3 "$APP_DIR/packaging/macos_support.py" target x86_64)" \
+    "$(python3 "$APP_DIR/packaging/macos_support.py" target arm64)" > "$OUTPUT/MACOS-SIGNING.txt"
 fi

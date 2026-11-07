@@ -74,7 +74,7 @@ npm run build
 
 The build script runs `build-standalone.js`. It invokes Neutralino once per target with embedded resources so Node.js does not need to package every platform in one memory-heavy pass.
 
-The default developer build writes seven raw executables to `desktop-app/dist/markdown-viewer/`. End-user releases package macOS as `.dmg` installers containing `Markdown Viewer.app`, Linux as `.deb` installers and portable `.tar.gz` archives, and Windows as the existing `.exe`. macOS runtimes are rebuilt for Monterey 12.0 before packaging. See [installer build, signing and testing instructions](packaging/README.md); a raw Mac developer binary is not a Finder application.
+The default developer build writes seven raw executables to `desktop-app/dist/markdown-viewer/`. End-user releases package macOS as `.dmg` installers containing `Markdown Viewer.app`, Linux as `.deb` installers and portable `.tar.gz` archives, and Windows as the existing `.exe`. Mac runtimes are rebuilt for their native dependency baselines (Intel 10.15; Apple Silicon 11), with no Monterey-only restriction. Older OS/WebKit combinations still need manual acceptance. See [installer build, signing and testing instructions](packaging/README.md); a raw Mac developer binary is not a Finder application.
 
 ## Configuration Highlights
 
