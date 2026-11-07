@@ -133,15 +133,16 @@ npm install
 npm run dev
 ```
 
-Build the seven self-contained platform binaries with:
+Build raw developer executables with:
 
 ```bash
 npm run build
 ```
 
-The results are written to `desktop-app/dist/markdown-viewer/`. Each Windows,
-Linux, and macOS binary embeds the application resources, so users can download
-only the file matching their operating system and architecture.
+The raw results are written to `desktop-app/dist/markdown-viewer/`. End-user Mac
+and Linux downloads need the additional [platform packaging steps](../desktop-app/packaging/README.md).
+Mac installers include a runtime rebuilt for Monterey; Ubuntu installers include
+dependency declarations and application-menu integration.
 
 The development and build commands run setup automatically. Setup:
 
@@ -174,22 +175,19 @@ Desktop:
 
 Windows desktop binaries may trigger SmartScreen because they are unsigned. Choose More info, then Run anyway if you trust the build.
 
-Linux binaries may need execute permission:
+For macOS, download the appropriate `.dmg`, drag **Markdown Viewer.app** to
+**Applications**, eject the image and launch the app. On an Intel/AMD VMware host,
+choose `mac_x64.dmg`. Check `MACOS-SIGNING.txt` for notarization status and the
+per-app Open Anyway instructions for test builds. Allow Documents access for the vault.
 
-```bash
-chmod +x markdown-viewer-linux_x64
-./markdown-viewer-linux_x64
-```
+For Ubuntu/Debian, install the matching `.deb` with Software Install, then open
+**Markdown Viewer** from Applications. If needed, use
+`sudo apt install ./markdown-viewer-linux_amd64.deb`. Dependencies and executable
+permissions are handled by the package. Portable `.tar.gz` builds preserve
+permissions but require system libraries separately.
 
-macOS binaries may need quarantine removal:
-
-```bash
-xattr -d com.apple.quarantine markdown-viewer-mac_universal
-chmod +x markdown-viewer-mac_universal
-./markdown-viewer-mac_universal
-```
-
-Run quarantine-removal commands only for a binary you trust.
+See [all download choices](../desktop-app/packaging/RELEASE-DOWNLOADS.md).
+The old v3.10.5 raw Mac downloads require macOS 14 and cannot run on Monterey.
 
 ## Official Platform Documentation
 

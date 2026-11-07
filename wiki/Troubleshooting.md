@@ -247,8 +247,8 @@ Clearing site data removes both the cache and locally saved Documents for that o
 - Run `npm install` and allow setup to download Neutralino binaries and libraries.
 - Confirm that preparation generated `desktop-app/resources/libs/`.
 - On Windows, review SmartScreen only if you trust the downloaded binary.
-- On Linux, add execute permission.
-- On macOS, use the documented quarantine command only if you trust the binary.
+- On Ubuntu/Debian, install the `.deb` with Software Install or `apt` so runtime dependencies and permissions are configured.
+- On macOS, use the architecture-matching `.dmg` and install the app in Applications. Check the signing-status file for the per-app Open Anyway instructions for test builds. The v3.10.5 raw Mac binaries require macOS 14 and cannot run on Monterey.
 - Check that the executable matches the operating system and architecture.
 - Re-run `npm run build` when prepared resources and root source are out of sync.
 

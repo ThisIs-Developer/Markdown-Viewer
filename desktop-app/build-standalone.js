@@ -139,18 +139,25 @@ async function buildTarget(target) {
 }
 
 async function main() {
-  fs.rmSync(DIST_DIR, { recursive: true, force: true });
+  const requested = process.argv.slice(2);
+  const targets = requested.length ? requested.map(key => {
+    const target = TARGETS.find(item => item.buildKey === key);
+    if (!target) throw new Error(`Unknown target: ${key}`);
+    return target;
+  }) : TARGETS;
+  // Keep sibling installers when building another platform in the same tree.
+  fs.rmSync(FINAL_DIR, { recursive: true, force: true });
   fs.mkdirSync(FINAL_DIR, { recursive: true });
 
   try {
-    for (const target of TARGETS) await buildTarget(target);
+    for (const target of targets) await buildTarget(target);
   } finally {
     fs.rmSync(TEMP_BUILD_ROOT, { recursive: true, force: true });
   }
 
   const outputs = fs.readdirSync(FINAL_DIR).sort();
-  if (outputs.length !== TARGETS.length) {
-    throw new Error(`Expected ${TARGETS.length} binaries, generated ${outputs.length}.`);
+  if (outputs.length !== targets.length) {
+    throw new Error(`Expected ${targets.length} binaries, generated ${outputs.length}.`);
   }
 
   console.log(`\nGenerated ${outputs.length} standalone binaries in ${FINAL_DIR}:`);
