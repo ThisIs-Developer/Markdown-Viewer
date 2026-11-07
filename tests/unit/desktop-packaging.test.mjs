@@ -55,19 +55,37 @@ test('assembled checksums verify with the system tool and detect changed install
   }
 });
 
+test('recommended download keeps all CPU installers and excludes optional portable archives', t => {
+  const directory = releaseFiles(t);
+  for (const name of fs.readdirSync(directory).filter(name => name.endsWith('.tar.gz'))) {
+    fs.unlinkSync(path.join(directory, name));
+  }
+  writeManifest(directory, { installersOnly: true });
+  const manifest = fs.readFileSync(path.join(directory, 'SHA256SUMS.txt'), 'utf8');
+  assert.equal(manifest.trim().split('\n').length, 9);
+  assert.doesNotMatch(manifest, /\.tar\.gz/);
+  for (const arch of ['amd64', 'arm64', 'armhf']) assert.match(manifest, new RegExp(`linux_${arch}\\.deb`));
+  assert.throws(() => writeManifest(directory), /Unexpected release assets/);
+});
+
 test('Debian packages preserve launcher permissions, desktop integration and runtime dependencies', t => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-package-'));
   t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
   const binary = path.join(temp, 'input');
+  const icon = new URL('../../assets/icon.png', import.meta.url);
   fs.writeFileSync(binary, 'binary fixture', { mode: 0o644 });
   for (const [arch, expected] of Object.entries({ x64: 'amd64', arm64: 'arm64', armhf: 'armhf' })) {
     const root = path.join(temp, arch);
-    stagePackage(root, arch, binary, binary, '3.10.5-test.1');
+    stagePackage(root, arch, binary, icon, '3.10.5-test.1');
     const control = fs.readFileSync(path.join(root, 'DEBIAN/control'), 'utf8');
     assert.match(control, new RegExp(`Architecture: ${expected}\\n`));
     assert.match(control, /Version: 3\.10\.5~test\.1/);
     assert.match(control, /libwebkit2gtk-4\.1-0 \| libwebkit2gtk-4\.0-37/);
     assert.match(control, /libayatana-appindicator3-1 \| libappindicator3-1/);
+    assert.match(control, /Maintainer: Baivab Sarkar <109382325\+ThisIs-Developer@users.noreply.github.com>/);
+    assert.match(control, /Publisher: ThisIs-Developer\n License: Apache-2\.0/);
+    assert.match(control, /Homepage: https:\/\/markdownviewer\.pages\.dev\//);
+    assert.match(control, /Installed-Size: [1-9][0-9]*\n/);
     const desktop = fs.readFileSync(path.join(root, 'usr/share/applications/com.markdownviewer.desktop.desktop'), 'utf8');
     assert.match(desktop, /Exec=markdown-viewer %F/);
     assert.match(desktop, /Terminal=false/);
@@ -84,6 +102,28 @@ test('Debian packages preserve launcher permissions, desktop integration and run
       const extracted = path.join(temp, `${arch}-extracted`);
       execFileSync('dpkg-deb', ['--extract', deb, extracted]);
       assert.equal(fs.statSync(path.join(extracted, 'usr/lib/markdown-viewer/markdown-viewer')).mode & 0o777, 0o755);
+      for (const location of ['usr/share/icons/hicolor/256x256/apps', 'usr/share/pixmaps']) {
+        assert.deepEqual(fs.readFileSync(path.join(extracted, location, 'markdown-viewer.png')), fs.readFileSync(icon));
+      }
+      const metainfo = path.join(extracted, 'usr/share/metainfo/com.markdownviewer.desktop.metainfo.xml');
+      // Parse the extracted XML with an independent parser; verify desktop/icon links resolve.
+      execFileSync('python3', ['-c', `
+import pathlib, sys, xml.etree.ElementTree as ET
+root = pathlib.Path(sys.argv[1])
+component = ET.parse(sys.argv[2]).getroot()
+assert component.attrib['type'] == 'desktop-application'
+assert component.findtext('id') == 'com.markdownviewer.desktop'
+assert component.findtext('name') == 'Markdown Viewer'
+assert component.findtext('developer_name') == 'ThisIs-Developer'
+assert component.findtext('project_license') == 'Apache-2.0'
+assert component.findtext('pkgname') == 'markdown-viewer'
+desktop = root / 'usr/share/applications' / component.findtext('launchable')
+assert desktop.is_file()
+icon = component.findtext('icon')
+assert 'Icon=' + icon in desktop.read_text()
+assert (root / 'usr/share/icons/hicolor/256x256/apps' / (icon + '.png')).is_file()
+assert component.find('releases/release').attrib['version'] == '3.10.5-test.1'
+`, extracted, metainfo]);
     }
   }
   assert.throws(() => stagePackage(path.join(temp, 'invalid'), 'mips', binary, binary), /Unsupported/);

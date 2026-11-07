@@ -15,6 +15,7 @@ for arch in x64 arm64 universal; do
   python3 "$APP_DIR/packaging/verify-macos.py" --arch "$arch" "$INPUT"
   STAGING="$(mktemp -d)"
   trap 'rm -rf "$STAGING"' EXIT
+  chmod 755 "$STAGING"
   APP="$STAGING/Markdown Viewer.app"
   mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
   cp "$INPUT" "$APP/Contents/MacOS/markdown-viewer"
@@ -29,6 +30,11 @@ for arch in x64 arm64 universal; do
   done
   iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/MarkdownViewer.icns"
   rm -rf "$ICONSET"
+  cp "$APP_DIR/../LICENSE" "$APP/Contents/Resources/LICENSE.txt"
+  cp "$APP_DIR/LICENSE" "$APP/Contents/Resources/Neutralino-LICENSE.txt"
+  cp "$APP_DIR/packaging/RELEASE-DOWNLOADS.md" "$STAGING/README.md"
+  cp "$APP/Contents/Resources/MarkdownViewer.icns" "$STAGING/.VolumeIcon.icns"
+  xcrun SetFile -a C "$STAGING"
   chmod -R u+rwX,go+rX "$APP"
   plutil -lint "$APP/Contents/Info.plist"
   # Resource embedding changes Mach-O bytes. Sign the FINAL bundle, never the input.

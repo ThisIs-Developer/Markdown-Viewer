@@ -3,6 +3,7 @@
 import json
 import os
 import pathlib
+import plistlib
 import signal
 import subprocess
 import sys
@@ -12,6 +13,15 @@ import time
 assert os.environ.get('GITHUB_ACTIONS') == 'true', 'Run only on a disposable GitHub Actions runner'
 application = pathlib.Path(sys.argv[1]).resolve()
 is_mac = sys.platform == 'darwin'
+if is_mac:
+    contents = application / 'Contents'
+    with (contents / 'Info.plist').open('rb') as source:
+        metadata = plistlib.load(source)
+    assert metadata['CFBundleDisplayName'] == 'Markdown Viewer'
+    assert metadata['NSHumanReadableCopyright'] == 'Copyright 2024 ThisIs-Developer'
+    assert metadata['LSApplicationCategoryType'] == 'public.app-category.productivity'
+    assert (contents / 'Resources' / (metadata['CFBundleIconFile'] + '.icns')).stat().st_size > 0
+    assert 'Apache License' in (contents / 'Resources/LICENSE.txt').read_text()
 vault = pathlib.Path.home() / 'Documents' / 'Markdown Viewer Vault'
 assert not vault.exists(), 'Refusing to touch a pre-existing vault'
 fixture_dir = pathlib.Path(tempfile.mkdtemp(prefix='markdown-viewer-smoke-'))

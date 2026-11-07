@@ -77,6 +77,10 @@ class Compatibility(unittest.TestCase):
                 self.assertEqual(metadata['LSMinimumSystemVersionByArchitecture'], expected)
                 self.assertEqual(metadata['CFBundleIdentifier'], 'com.markdownviewer.desktop')
                 self.assertEqual(metadata['CFBundleExecutable'], 'markdown-viewer')
+                self.assertEqual(metadata['CFBundleIconFile'], 'MarkdownViewer')
+                self.assertEqual(metadata['NSHumanReadableCopyright'], 'Copyright 2024 ThisIs-Developer')
+                self.assertEqual(metadata['LSApplicationCategoryType'], 'public.app-category.productivity')
+                self.assertEqual(metadata['CFBundleGetInfoString'], 'Markdown Viewer 3.10.5, ThisIs-Developer, Apache-2.0')
 
 
 if __name__ == '__main__':

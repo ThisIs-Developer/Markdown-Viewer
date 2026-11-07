@@ -7,6 +7,10 @@ also requires testing its installed WebKit; load commands alone cannot prove it.
 """
 import plistlib
 import sys
+import json
+import pathlib
+
+METADATA = json.loads(pathlib.Path(__file__).with_name('metadata.json').read_text())
 
 DEPLOYMENT_TARGETS = {'x86_64': '10.15', 'arm64': '11.0'}
 CPU_ARCHITECTURES = {0x1000007: 'x86_64', 0x100000c: 'arm64'}
@@ -25,12 +29,15 @@ def app_metadata(version, package_arch):
     return {
         'CFBundleExecutable': 'markdown-viewer',
         'CFBundleIdentifier': 'com.markdownviewer.desktop',
-        'CFBundleName': 'Markdown Viewer',
-        'CFBundleDisplayName': 'Markdown Viewer',
+        'CFBundleName': METADATA['name'],
+        'CFBundleDisplayName': METADATA['name'],
         'CFBundlePackageType': 'APPL',
         'CFBundleShortVersionString': version,
         'CFBundleVersion': version.split('-')[0],
         'CFBundleIconFile': 'MarkdownViewer',
+        'CFBundleGetInfoString': f"{METADATA['name']} {version}, {METADATA['developer']}, {METADATA['license']}",
+        'NSHumanReadableCopyright': METADATA['copyright'],
+        'LSApplicationCategoryType': 'public.app-category.productivity',
         'LSMinimumSystemVersion': min(minimums.values(), key=packed_version),
         'LSMinimumSystemVersionByArchitecture': minimums,
         'NSHighResolutionCapable': True,

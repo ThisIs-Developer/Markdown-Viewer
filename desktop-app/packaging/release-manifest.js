@@ -2,13 +2,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const expected = [
+const installerAssets = [
   'markdown-viewer-win_x64.exe', 'MACOS-SIGNING.txt', 'README.md',
   ...['x64', 'arm64', 'universal'].map(arch => `markdown-viewer-mac_${arch}.dmg`),
   ...['amd64', 'arm64', 'armhf'].map(arch => `markdown-viewer-linux_${arch}.deb`),
-  ...['x64', 'arm64', 'armhf'].map(arch => `markdown-viewer-linux_${arch}.tar.gz`),
 ].sort();
-function writeManifest(directory) {
+function writeManifest(directory, { installersOnly = false } = {}) {
+  const expected = installersOnly ? installerAssets : [...installerAssets,
+    ...['x64', 'arm64', 'armhf'].map(arch => `markdown-viewer-linux_${arch}.tar.gz`),
+  ].sort();
   const actual = fs.readdirSync(directory).filter(name => name !== 'SHA256SUMS.txt').sort();
   if (JSON.stringify(expected) !== JSON.stringify(actual)) throw new Error(`Unexpected release assets: ${actual.join(', ')}`);
   const checksums = expected.map(name => {
@@ -22,7 +24,9 @@ function writeManifest(directory) {
 }
 
 if (require.main === module) {
-  if (process.argv.length !== 3) throw new Error('Usage: release-manifest.js <installer-directory>');
-  writeManifest(path.resolve(process.argv[2]));
+  if (process.argv.length < 3 || process.argv.length > 4 || (process.argv[3] && process.argv[3] !== '--installers-only')) {
+    throw new Error('Usage: release-manifest.js <installer-directory> [--installers-only]');
+  }
+  writeManifest(path.resolve(process.argv[2]), { installersOnly: process.argv[3] === '--installers-only' });
 }
 module.exports = { writeManifest };

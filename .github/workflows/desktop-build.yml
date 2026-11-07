@@ -142,8 +142,13 @@ jobs:
       - name: Install the actual Debian package and its dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ./installers/markdown-viewer-linux_amd64.deb xvfb desktop-file-utils
+          sudo apt-get install -y ./installers/markdown-viewer-linux_amd64.deb xvfb desktop-file-utils appstream
           desktop-file-validate /usr/share/applications/com.markdownviewer.desktop.desktop
+      - name: Validate the installed application metadata and icon integration
+        run: |
+          appstreamcli validate --no-net /usr/share/metainfo/com.markdownviewer.desktop.metainfo.xml
+          dpkg-deb --extract installers/markdown-viewer-linux_amd64.deb "$RUNNER_TEMP/package-metadata"
+          appstreamcli validate-tree --no-net "$RUNNER_TEMP/package-metadata"
       - name: Launch native WebKit GUI, import a file and reopen the vault
         run: xvfb-run -a python3 tests/native/desktop-package-smoke.py /usr/bin/markdown-viewer
 
@@ -185,6 +190,7 @@ jobs:
           uname -m
           mkdir -p "$RUNNER_TEMP/dmg" "$RUNNER_TEMP/installed"
           hdiutil attach "installers/markdown-viewer-mac_$ARCH.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
+          test -s "$RUNNER_TEMP/dmg/.VolumeIcon.icns"
           ditto "$RUNNER_TEMP/dmg/Markdown Viewer.app" "$RUNNER_TEMP/installed/Markdown Viewer.app"
           hdiutil detach "$RUNNER_TEMP/dmg"
           codesign --verify --deep --strict "$RUNNER_TEMP/installed/Markdown Viewer.app"
@@ -220,6 +226,19 @@ jobs:
         with:
           name: desktop-release
           path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Prepare the recommended installer download
+        run: |
+          mkdir installer-download
+          cp release-assets/*.deb release-assets/*.dmg release-assets/*.exe release-assets/MACOS-SIGNING.txt release-assets/README.md installer-download/
+          node desktop-app/packaging/release-manifest.js installer-download --installers-only
+          cd installer-download
+          sha256sum --check SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-installers
+          path: installer-download/*
           if-no-files-found: error
           retention-days: 30
 

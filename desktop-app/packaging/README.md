@@ -53,6 +53,54 @@ See [release download instructions](RELEASE-DOWNLOADS.md). Mac users download a 
 
 All packages use the same application id, native API allowlist, shared application code and fixed `Documents/Markdown Viewer Vault` as Windows. Installation never creates, replaces or deletes a user's vault. The running application creates it and saves normal documents under `Workspace`. Removing/replacing the installed app leaves the vault intact.
 
+## Linux formats and application identity
+
+There are **two Linux formats for three CPU architectures**, rather than six
+formats. Keep DEB as the recommended Ubuntu/Debian installer: it handles native
+dependencies, package removal and desktop integration. The portable tarballs
+remain optional for users who manage their own libraries; they are excluded
+from the recommended `desktop-installers` ZIP. All existing CPU choices remain.
+
+There is no single package format used by every Linux distribution. For example,
+[VS Code](https://code.visualstudio.com/docs/setup/linux) distributes DEB, RPM
+and Snap, and [Slack](https://slack.com/help/articles/212924728-Download-Slack-for-Linux--beta-)
+documents DEB for Ubuntu and RPM for RHEL. This project currently packages DEB;
+RPM, AppImage, Flatpak and Snap are not built or qualified by this workflow.
+Publishing a package repository or store listing is a separate distribution task.
+
+`metadata.json` supplies the product name, developer, project license, website,
+copyright and description for native packaging. The application remains
+Apache-2.0; the runtime's MIT license is preserved separately. Generated AppStream
+metadata is CC0-1.0. Linux packages include a matching desktop entry, hicolor and
+pixmap icons, AppStream component, maintainer, installed size and a useful control
+description. The AppStream release date comes from `RELEASE_NOTES`, not the build
+date. Its legacy `developer_name` element supports Ubuntu 22.04's AppStream;
+newer validators may emit informational deprecation notices.
+
+Mac bundles include the application icon, version, copyright, productivity
+category and license files; the mounted DMG has the application volume icon.
+Windows PE resources include the product/version, developer, copyright, license
+and website while preserving the existing application icon and embedded content.
+Native trust dialogs still depend on code signing, independently of these fields.
+
+### Ubuntu App Center's local-file limitation
+
+The App Center local-DEB screen passes only the package name to its title widget
+and no icon to its title bar. It obtains description/license/size from PackageKit,
+and its local-package model returns no publication date. It does not read the
+DEB's AppStream component on this screen. Adding metainfo cannot make that screen
+show the custom logo, verified publisher or a release date. The long description
+therefore includes the actual publisher, Apache-2.0 license and project links
+even when those dedicated fields remain unknown. Installed icons and metadata
+are provided for desktop environments/software managers that use them.
+
+Source reviewed at Ubuntu App Center commit `a07818f0388a1ebe7c7d5e0156fc4aca846cb22e`:
+[local title](https://github.com/ubuntu/app-center/blob/a07818f0388a1ebe7c7d5e0156fc4aca846cb22e/packages/app_center/lib/widgets/app_title.dart#L44),
+[local title bar](https://github.com/ubuntu/app-center/blob/a07818f0388a1ebe7c7d5e0156fc4aca846cb22e/packages/app_center/lib/apps/app_title_bar.dart#L53),
+[local metadata](https://github.com/ubuntu/app-center/blob/a07818f0388a1ebe7c7d5e0156fc4aca846cb22e/packages/app_center/lib/deb/local_deb_model.dart).
+Store listing/catalog support is different from opening a local DEB. We do not
+claim to remove App Center's third-party warning or change OS file-type icons.
+
 ## Build locally
 
 Windows/Linux raw executables (Node 24, npm, Linux packaging also needs `dpkg-deb` and `tar`):
@@ -98,17 +146,17 @@ Only tag-push release jobs read these secrets. With no identity configured, rele
 
 ## CI and complete application downloads
 
-The **Build Desktop Installers** workflow runs for packaging PRs, manual dispatches and version tags. After all native package checks pass, `assemble-release` verifies the complete asset set and produces the **`desktop-release`** artifact: the three Mac DMGs, Linux DEBs and portable archives, Windows EXE, signing status, installation instructions and SHA-256 checksums. GitHub wraps it in a ZIP: extract it first, then open the installer for your computer. These are the complete application packages, with normal editing and durable vault storage, built through the same packaging path used for releases. They contain no smoke-test fixtures or special test mode. Mac PR/manual packages remain ad-hoc signed; Apple signing/notarization is a separate tag-release step when credentials are configured.
+The **Build Desktop Installers** workflow runs for packaging PRs, manual dispatches and version tags. After all native package checks pass, `assemble-release` verifies the complete asset set and produces two downloads: **`desktop-installers`** (recommended: three Mac DMGs, three Linux DEBs and the Windows EXE) and **`desktop-release`** (the same installers plus three optional Linux portable archives). Both include signing status, installation instructions and their own SHA-256 checksums. GitHub wraps each in a ZIP: extract it first, then open the installer for your computer. These are the complete application packages, with normal editing and durable vault storage, built through the same packaging path used for releases. They contain no smoke-test fixtures or special test mode. Mac PR/manual packages remain ad-hoc signed; Apple signing/notarization is a separate tag-release step when credentials are configured.
 
-Artifacts are kept for 30 days. A version tag publishes the exact assembled files only after verifying their checksums again; it does not rebuild them during publication. Merging the PR alone does not create a public release. No tag or release is needed to install the complete packages from the PR. The individual `desktop-macos` and `desktop-linux-windows` artifacts are also retained for diagnosing failed acceptance runs; use `desktop-release` for the fully checked download set.
+Artifacts are kept for 30 days. A version tag publishes the exact assembled files from `desktop-release` only after verifying their checksums again; it does not rebuild them during publication. Merging the PR alone does not create a public release. No tag or release is needed to install the complete packages from the PR. The individual `desktop-macos` and `desktop-linux-windows` artifacts are also retained for diagnosing failed acceptance runs; use `desktop-installers` for the recommended fully checked download.
 
 CI checks:
 
-- Shared build and unit suite; Debian package metadata, permissions and extraction.
+- Shared build and unit suite; Debian package metadata, permissions and extraction; Windows version/icon preservation and Mac Finder metadata.
 - Seven compatibility regression tests covering the previous 12/14 cutoffs, mixed universal slices, legacy Intel load commands, incorrect architecture labels and per-architecture Finder metadata.
 - Runtime compilation and final Mach-O, plist, signature and DMG validation.
 - On ARM and Intel Mac runners for macOS 15 and the latest stable hosted macOS: mount the actual DMG, copy the app, eject the image, launch through LaunchServices, import a Unicode Markdown filename, verify its bytes in the actual Documents vault, and reopen the app. The workflow logs `sw_vers` and CPU architecture to record the actual OS tested.
-- On Ubuntu 22.04 and 24.04: install the actual `.deb` with `apt`, validate its desktop entry, and run the same native GUI/vault check under Xvfb.
+- On Ubuntu 22.04 and 24.04: install the actual `.deb` with `apt`, validate its desktop entry and AppStream metadata/file tree, and run the same native GUI/vault check under Xvfb. App Center's graphical local-DEB page is not exercised by these checks.
 - On every PR/manual/tag run: require the exact complete asset set, reject empty or non-file assets, and verify checksums before making the assembled download available.
 
 GitHub-hosted runners no longer provide macOS 10.15–14. Older macOS UI acceptance must be performed on physical Macs or suitable VMs. CI also does not reproduce browser quarantine or an end user's Documents-permission prompt. The native smoke script refuses to run outside disposable GitHub Actions runners or against an existing vault.
