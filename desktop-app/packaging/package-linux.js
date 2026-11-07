@@ -37,7 +37,6 @@ ${metadata.description.map(paragraph => `    <p>${xml(paragraph)}</p>`).join('\n
   <url type="homepage">${xml(metadata.homepage)}</url>
   <url type="bugtracker">${xml(metadata.repository)}/issues</url>
   <url type="help">${xml(metadata.repository)}/blob/main/wiki/Desktop-App.md</url>
-  <url type="vcs-browser">${xml(metadata.repository)}</url>
   <provides><binary>markdown-viewer</binary><mediatype>text/markdown</mediatype><mediatype>text/x-markdown</mediatype></provides>
   <releases><release version="${xml(version)}" date="${date}"/></releases>
 </component>
