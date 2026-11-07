@@ -1,5 +1,9 @@
 ### Desktop downloads
 
+These installers contain the complete desktop application with normal editing,
+exports and persistent vault storage. No developer tools or separate resource
+files are needed. For a workflow artifact download, extract the ZIP first.
+
 | Your computer | Download |
 | --- | --- |
 | Windows x64 | `markdown-viewer-win_x64.exe` |
@@ -14,3 +18,8 @@
 **Ubuntu:** open the `.deb` with Software Install and install, then launch **Markdown Viewer** from Applications. If your Ubuntu installation has no graphical package installer, run `sudo apt install ./markdown-viewer-linux_amd64.deb`. The package installs WebKitGTK and other runtime dependencies. Portable `.tar.gz` downloads preserve execute permission but require those libraries to be installed separately.
 
 Documents remain in **Documents/Markdown Viewer Vault** when replacing or uninstalling the app. `SHA256SUMS.txt` covers the files above. GitHub's automatically generated **Source code** archives are for developers, not application installers.
+
+To verify a download, run `shasum -a 256 <filename>` on macOS or
+`sha256sum <filename>` on Linux and compare it with `SHA256SUMS.txt`.
+When all files are extracted together, `shasum -a 256 -c SHA256SUMS.txt` (Mac)
+or `sha256sum -c SHA256SUMS.txt` (Linux) verifies the complete download set.

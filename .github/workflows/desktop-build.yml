@@ -192,21 +192,54 @@ jobs:
       - name: Launch via LaunchServices, import a file and reopen the vault
         run: python3 tests/native/desktop-package-smoke.py "$RUNNER_TEMP/installed/Markdown Viewer.app"
 
+  assemble-release:
+    needs: [test-linux, test-macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-windows
+          path: release-assets
+      - name: Verify asset set and write checksums
+        run: |
+          cp desktop-app/packaging/RELEASE-DOWNLOADS.md release-assets/README.md
+          node desktop-app/packaging/release-manifest.js release-assets
+          cd release-assets
+          sha256sum --check SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
-    needs: [test-linux, test-macos]
+    needs: assemble-release
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          pattern: desktop-*
+          name: desktop-release
           path: release-assets
-          merge-multiple: true
-      - name: Verify asset set and write checksums
-        run: node desktop-app/packaging/release-manifest.js release-assets
+      - name: Verify the assembled packages before publishing
+        working-directory: release-assets
+        run: sha256sum --check SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           name: Markdown Viewer ${{ github.ref_name }}

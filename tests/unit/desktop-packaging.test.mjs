@@ -7,6 +7,53 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { stagePackage } = require('../../desktop-app/packaging/package-linux.js');
+const { writeManifest } = require('../../desktop-app/packaging/release-manifest.js');
+
+function releaseFiles(t) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-release-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const names = [
+    'markdown-viewer-win_x64.exe', 'MACOS-SIGNING.txt', 'README.md',
+    'markdown-viewer-mac_x64.dmg', 'markdown-viewer-mac_arm64.dmg', 'markdown-viewer-mac_universal.dmg',
+    'markdown-viewer-linux_amd64.deb', 'markdown-viewer-linux_arm64.deb', 'markdown-viewer-linux_armhf.deb',
+    'markdown-viewer-linux_x64.tar.gz', 'markdown-viewer-linux_arm64.tar.gz', 'markdown-viewer-linux_armhf.tar.gz',
+  ];
+  for (const name of names) fs.writeFileSync(path.join(directory, name), `Packaged bytes for ${name}\n`);
+  return directory;
+}
+
+test('release assembly rejects incomplete, unexpected, empty and non-file downloads', t => {
+  const directory = releaseFiles(t);
+  const installer = path.join(directory, 'markdown-viewer-mac_x64.dmg');
+  const contents = fs.readFileSync(installer);
+  fs.unlinkSync(installer);
+  assert.throws(() => writeManifest(directory), /Unexpected release assets/);
+  fs.writeFileSync(installer, contents);
+  const unexpected = path.join(directory, 'markdown-viewer-mac_x64');
+  fs.writeFileSync(unexpected, 'unpackaged binary');
+  assert.throws(() => writeManifest(directory), /Unexpected release assets/);
+  fs.unlinkSync(unexpected);
+  fs.writeFileSync(installer, '');
+  assert.throws(() => writeManifest(directory), /non-empty regular file/);
+  fs.unlinkSync(installer);
+  fs.mkdirSync(installer);
+  assert.throws(() => writeManifest(directory), /non-empty regular file/);
+  assert.equal(fs.existsSync(path.join(directory, 'SHA256SUMS.txt')), false);
+});
+
+test('assembled checksums verify with the system tool and detect changed installer bytes', t => {
+  const directory = releaseFiles(t);
+  writeManifest(directory);
+  const first = fs.readFileSync(path.join(directory, 'SHA256SUMS.txt'), 'utf8');
+  assert.equal(first.trim().split('\n').length, 12);
+  writeManifest(directory);
+  assert.equal(fs.readFileSync(path.join(directory, 'SHA256SUMS.txt'), 'utf8'), first);
+  if (process.platform === 'linux') {
+    execFileSync('sha256sum', ['--check', '--status', 'SHA256SUMS.txt'], { cwd: directory });
+    fs.appendFileSync(path.join(directory, 'markdown-viewer-linux_amd64.deb'), 'changed');
+    assert.throws(() => execFileSync('sha256sum', ['--check', '--status', 'SHA256SUMS.txt'], { cwd: directory }));
+  }
+});
 
 test('Debian packages preserve launcher permissions, desktop integration and runtime dependencies', t => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-package-'));

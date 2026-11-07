@@ -1,5 +1,6 @@
 This build is locally (ad-hoc) signed, not Apple Developer ID signed or notarized.
-It is intended for testing; macOS may show an unidentified-developer warning.
+It contains the complete desktop application, with normal editing and vault storage.
+macOS may show an unidentified-developer warning because Apple has not notarized it.
 
 1. Open the .dmg and drag Markdown Viewer.app to Applications.
 2. Eject the disk image and open the app from Applications.
@@ -15,4 +16,4 @@ Native build targets: Intel macOS 10.15; Apple Silicon macOS 11.
 Use the latest Safari/WebKit available for your Mac (Catalina: Safari 15.6.1).
 These older build targets still need manual native testing; CI tests macOS 15/26.
 The Vault stays in Documents/Markdown Viewer Vault when you replace the app.
-Never disable Gatekeeper globally to run this test.
+Never disable Gatekeeper globally to run the application.

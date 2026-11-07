@@ -96,9 +96,11 @@ For the normal trusted public-download experience, the repository owner needs an
 
 Only tag-push release jobs read these secrets. With no identity configured, releases are explicitly identified as ad-hoc signed; partially configured credentials or signing/notarization failures fail the build. PR code never receives these credentials. The workflow imports a temporary keychain, signs with hardened runtime and a timestamp, notarizes and staples the app and DMG, and removes the temporary keychain/certificate. For a local signed build, set `MACOS_SIGNING_IDENTITY` and `MACOS_NOTARY_PROFILE` to an existing `notarytool` keychain profile. No Apple credentials were available to validate that optional path while developing this change.
 
-## CI and testing downloads
+## CI and complete application downloads
 
-The **Build Desktop Installers** workflow runs for packaging PRs, manual dispatches and version tags. The `desktop-macos` artifact contains the three DMGs and signing status. GitHub wraps it in a ZIP: extract it first, then open the appropriate DMG. Artifacts are kept for 30 days; a tag release publishes durable assets only after native smoke checks pass. No tag/release is needed to test a PR.
+The **Build Desktop Installers** workflow runs for packaging PRs, manual dispatches and version tags. After all native package checks pass, `assemble-release` verifies the complete asset set and produces the **`desktop-release`** artifact: the three Mac DMGs, Linux DEBs and portable archives, Windows EXE, signing status, installation instructions and SHA-256 checksums. GitHub wraps it in a ZIP: extract it first, then open the installer for your computer. These are the complete application packages, with normal editing and durable vault storage, built through the same packaging path used for releases. They contain no smoke-test fixtures or special test mode. Mac PR/manual packages remain ad-hoc signed; Apple signing/notarization is a separate tag-release step when credentials are configured.
+
+Artifacts are kept for 30 days. A version tag publishes the exact assembled files only after verifying their checksums again; it does not rebuild them during publication. Merging the PR alone does not create a public release. No tag or release is needed to install the complete packages from the PR. The individual `desktop-macos` and `desktop-linux-windows` artifacts are also retained for diagnosing failed acceptance runs; use `desktop-release` for the fully checked download set.
 
 CI checks:
 
@@ -107,6 +109,7 @@ CI checks:
 - Runtime compilation and final Mach-O, plist, signature and DMG validation.
 - On ARM and Intel Mac runners for macOS 15 and the latest stable hosted macOS: mount the actual DMG, copy the app, eject the image, launch through LaunchServices, import a Unicode Markdown filename, verify its bytes in the actual Documents vault, and reopen the app. The workflow logs `sw_vers` and CPU architecture to record the actual OS tested.
 - On Ubuntu 22.04 and 24.04: install the actual `.deb` with `apt`, validate its desktop entry, and run the same native GUI/vault check under Xvfb.
+- On every PR/manual/tag run: require the exact complete asset set, reject empty or non-file assets, and verify checksums before making the assembled download available.
 
 GitHub-hosted runners no longer provide macOS 10.15–14. Older macOS UI acceptance must be performed on physical Macs or suitable VMs. CI also does not reproduce browser quarantine or an end user's Documents-permission prompt. The native smoke script refuses to run outside disposable GitHub Actions runners or against an existing vault.
 
