@@ -79,7 +79,7 @@ test('Debian packages preserve launcher permissions, desktop integration and run
     stagePackage(root, arch, binary, icon, '3.10.5-test.1');
     const control = fs.readFileSync(path.join(root, 'DEBIAN/control'), 'utf8');
     assert.match(control, new RegExp(`Architecture: ${expected}\\n`));
-    assert.match(control, /Version: 3\.10\.5~test\.1/);
+    assert.match(control, /Version: 3\.10\.5~test\.1-1\n/);
     assert.match(control, /libwebkit2gtk-4\.1-0 \| libwebkit2gtk-4\.0-37/);
     assert.match(control, /libayatana-appindicator3-1 \| libappindicator3-1/);
     assert.match(control, /Maintainer: Baivab Sarkar <109382325\+ThisIs-Developer@users.noreply.github.com>/);
@@ -99,6 +99,9 @@ test('Debian packages preserve launcher permissions, desktop integration and run
       const deb = path.join(temp, `${arch}.deb`);
       execFileSync('dpkg-deb', ['--root-owner-group', '--build', root, deb]);
       assert.equal(execFileSync('dpkg-deb', ['--field', deb, 'Architecture'], { encoding: 'utf8' }).trim(), expected);
+      const packageVersion = execFileSync('dpkg-deb', ['--field', deb, 'Version'], { encoding: 'utf8' }).trim();
+      execFileSync('dpkg', ['--compare-versions', packageVersion, 'gt', '3.10.5~test.1']);
+      execFileSync('dpkg', ['--compare-versions', '3.10.5-1', 'gt', '3.10.5']);
       const extracted = path.join(temp, `${arch}-extracted`);
       execFileSync('dpkg-deb', ['--extract', deb, extracted]);
       assert.equal(fs.statSync(path.join(extracted, 'usr/lib/markdown-viewer/markdown-viewer')).mode & 0o777, 0o755);

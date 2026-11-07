@@ -6,6 +6,8 @@ const appDir = path.resolve(__dirname, '..');
 const config = require('../neutralino.config.json');
 const metadata = require('./metadata.json');
 const architectures = { x64: 'amd64', arm64: 'arm64', armhf: 'armhf' };
+// Distinguish the corrected package from the earlier revision-less DEBs.
+const packageRevision = 1;
 
 function xml(value) {
   return String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]);
@@ -63,7 +65,7 @@ function stagePackage(root, arch, binary, icon, version = config.version) {
     'usr/bin/markdown-viewer': '#!/bin/sh\nexec /usr/lib/markdown-viewer/markdown-viewer "$@"\n',
     [`usr/share/applications/${config.applicationId}.desktop`]: `[Desktop Entry]\nVersion=1.0\nType=Application\nName=${metadata.name}\nGenericName=Markdown Editor\nComment=${metadata.summary}\nExec=markdown-viewer %F\nTryExec=markdown-viewer\nIcon=markdown-viewer\nTerminal=false\nCategories=Office;TextEditor;\nKeywords=Markdown;Editor;Preview;Notes;Documents;\nMimeType=text/markdown;text/x-markdown;\nStartupNotify=true\n`,
     [`usr/share/metainfo/${config.applicationId}.metainfo.xml`]: appStream(version),
-    'DEBIAN/control': `Package: markdown-viewer\nVersion: ${version.replace('-', '~')}\nSection: editors\nPriority: optional\nArchitecture: ${architectures[arch]}\nMaintainer: ${metadata.maintainer}\nHomepage: ${metadata.homepage}\nDepends: libc6 (>= 2.35), libstdc++6 (>= 12), libgcc-s1, libgtk-3-0 (>= 3.24) | libgtk-3-0t64, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37, libayatana-appindicator3-1 | libappindicator3-1, libx11-6, libxcb1, libxrandr2, libpng16-16 | libpng16-16t64\nDescription: ${metadata.name} - ${metadata.summary}\n ${metadata.description.join('\n .\n ')}\n .\n Publisher: ${metadata.developer}\n License: ${metadata.license}\n Website: ${metadata.homepage}\n Support: ${metadata.repository}/issues\n`,
+    'DEBIAN/control': `Package: markdown-viewer\nVersion: ${version.replace('-', '~')}-${packageRevision}\nSection: editors\nPriority: optional\nArchitecture: ${architectures[arch]}\nMaintainer: ${metadata.maintainer}\nHomepage: ${metadata.homepage}\nDepends: libc6 (>= 2.35), libstdc++6 (>= 12), libgcc-s1, libgtk-3-0 (>= 3.24) | libgtk-3-0t64, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37, libayatana-appindicator3-1 | libappindicator3-1, libx11-6, libxcb1, libxrandr2, libpng16-16 | libpng16-16t64\nDescription: ${metadata.name} - ${metadata.summary}\n ${metadata.description.join('\n .\n ')}\n .\n Publisher: ${metadata.developer}\n License: ${metadata.license}\n Website: ${metadata.homepage}\n Support: ${metadata.repository}/issues\n`,
   };
   for (const [name, content] of Object.entries(files)) {
     const destination = path.join(root, name);
