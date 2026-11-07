@@ -1,76 +1,268 @@
-name: Build Desktop App Binaries
+name: Build Desktop Installers
 
 on:
   push:
-    tags:
-      - "v*"
+    tags: ['v*']
+  pull_request:
+    paths:
+      - '.github/workflows/desktop-build.yml'
+      - 'desktop-app/**'
+      - 'tests/native/desktop-package-smoke.py'
+      - 'tests/native/test_macos_load_commands.py'
+      - 'tests/unit/desktop-packaging.test.mjs'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: desktop-installers-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  linux-windows:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: "lts/*"
-
-      # PERF-022: Cache Neutralino binaries and downloaded CDN libraries
-      - name: Cache Neutralino binaries
-        uses: actions/cache@v4
+          persist-credentials: false
+      - uses: actions/setup-node@v4
         with:
-          path: |
-            desktop-app/bin
-            desktop-app/resources/libs
-          key: neutralino-${{ hashFiles('desktop-app/neutralino.config.json') }}
-
-      - name: Install desktop packaging dependencies
-        working-directory: desktop-app
-        run: npm ci
-
-      - name: Setup Neutralinojs binaries
-        working-directory: desktop-app
-        run: npm run setup
-
-      - name: Build desktop bundles
-        working-directory: desktop-app
-        run: npm run build
-
-      - name: Stage release assets
-        working-directory: desktop-app
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix desktop-app
+      - run: npm run build && npm run test:unit
+      - run: python3 tests/native/test_macos_load_commands.py
+      - uses: actions/cache@v4
+        with:
+          path: desktop-app/resources/libs
+          key: desktop-resources-${{ runner.os }}-${{ hashFiles('desktop-app/prepare.js', 'index.html', 'package-lock.json') }}
+      - name: Prepare and embed Windows and Linux resources
+        run: npm --prefix desktop-app run build -- linux_x64 linux_arm64 linux_armhf win_x64
+      - name: Package Linux installers and portable archives
         run: |
-          STAGING="release-assets"
-          mkdir -p "$STAGING"
-
-          # Publish every platform as a separate self-contained download.
-          EXPECTED_BINARIES=(
-            markdown-viewer-linux_arm64
-            markdown-viewer-linux_armhf
-            markdown-viewer-linux_x64
-            markdown-viewer-mac_arm64
-            markdown-viewer-mac_universal
-            markdown-viewer-mac_x64
-            markdown-viewer-win_x64.exe
-          )
-          for filename in "${EXPECTED_BINARIES[@]}"; do
-            test -f "dist/markdown-viewer/$filename"
-            cp "dist/markdown-viewer/$filename" "$STAGING/$filename"
-          done
-
-          # SHA256 checksums
-          cd "$STAGING"
-          sha256sum * > SHA256SUMS.txt
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+          node desktop-app/packaging/package-linux.js
+          cp desktop-app/dist/markdown-viewer/markdown-viewer-win_x64.exe desktop-app/dist/installers/
+      - uses: actions/upload-artifact@v4
         with:
-          name: "Markdown Viewer ${{ github.ref_name }}"
+          name: desktop-linux-windows
+          path: desktop-app/dist/installers/*
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --prefix desktop-app
+      - uses: actions/cache@v4
+        with:
+          path: desktop-app/resources/libs
+          key: desktop-resources-${{ runner.os }}-${{ hashFiles('desktop-app/prepare.js', 'index.html', 'package-lock.json') }}
+      - run: npm --prefix desktop-app run setup
+      - name: Checkout pinned Neutralino 6.5.0 source
+        uses: actions/checkout@v4
+        with:
+          repository: neutralinojs/neutralinojs
+          ref: d1b3a4050f2073f236e14c4746ee8aa7dbb9bfe5
+          path: desktop-app/.macos-runtime
+          persist-credentials: false
+      - name: Build Intel and Apple Silicon runtimes at their native dependency baselines
+        run: bash desktop-app/packaging/build-macos-runtime.sh desktop-app/.macos-runtime
+      # Do not run setup again after replacing the incompatible upstream runtimes.
+      - run: node desktop-app/build-standalone.js mac_x64 mac_arm64 mac_universal
+      - name: Import optional Developer ID identity (tag releases only)
+        if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          if [[ -z "$CERTIFICATE" && -z "$SIGNING_IDENTITY" && -z "$APPLE_ID" ]]; then
+            echo '::warning::No Developer ID configured; creating explicitly documented ad-hoc signed builds.'
+            exit 0
+          fi
+          : "${CERTIFICATE:?}" "${CERTIFICATE_PASSWORD:?}" "${SIGNING_IDENTITY:?}"
+          : "${APPLE_ID:?}" "${APPLE_TEAM_ID:?}" "${APPLE_APP_PASSWORD:?}"
+          KEYCHAIN="$RUNNER_TEMP/desktop-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/desktop-signing.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/desktop-signing.p12" -P "$CERTIFICATE_PASSWORD" -k "$KEYCHAIN" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          xcrun notarytool store-credentials markdown-viewer --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
+          printf 'MACOS_SIGNING_IDENTITY=%s\nMACOS_NOTARY_PROFILE=markdown-viewer\n' "$SIGNING_IDENTITY" >> "$GITHUB_ENV"
+      - name: Package, sign and verify DMGs
+        run: bash desktop-app/packaging/package-macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: desktop-app/dist/installers/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary signing credentials
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/desktop-signing.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/desktop-signing.keychain-db"
+          fi
+          rm -f "$RUNNER_TEMP/desktop-signing.p12"
+
+  test-linux:
+    needs: linux-windows
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-windows
+          path: installers
+      - name: Install the actual Debian package and its dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ./installers/markdown-viewer-linux_amd64.deb xvfb desktop-file-utils appstream
+          desktop-file-validate /usr/share/applications/com.markdownviewer.desktop.desktop
+      - name: Validate the installed application metadata and icon integration
+        run: |
+          appstreamcli validate --no-net /usr/share/metainfo/com.markdownviewer.desktop.metainfo.xml
+          dpkg-deb --extract installers/markdown-viewer-linux_amd64.deb "$RUNNER_TEMP/package-metadata"
+          appstreamcli validate-tree --no-net "$RUNNER_TEMP/package-metadata"
+      - name: Launch native WebKit GUI, import a file and reopen the vault
+        run: xvfb-run -a python3 tests/native/desktop-package-smoke.py /usr/bin/markdown-viewer
+
+  test-macos:
+    needs: macos
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: arm64
+          - os: macos-15-intel
+            arch: x64
+          - os: macos-15
+            arch: universal
+          # Exercise the same backwards-compatible binaries on the newest stable
+          # hosted image too; macos-latest advances as GitHub rolls out releases.
+          - os: macos-latest
+            arch: arm64
+          - os: macos-26-intel
+            arch: x64
+          - os: macos-latest
+            arch: universal
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos
+          path: installers
+      - name: Install the app from its disk image
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          sw_vers
+          uname -m
+          mkdir -p "$RUNNER_TEMP/dmg" "$RUNNER_TEMP/installed"
+          hdiutil attach "installers/markdown-viewer-mac_$ARCH.dmg" -nobrowse -mountpoint "$RUNNER_TEMP/dmg"
+          test -s "$RUNNER_TEMP/dmg/.VolumeIcon.icns"
+          ditto "$RUNNER_TEMP/dmg/Markdown Viewer.app" "$RUNNER_TEMP/installed/Markdown Viewer.app"
+          hdiutil detach "$RUNNER_TEMP/dmg"
+          codesign --verify --deep --strict "$RUNNER_TEMP/installed/Markdown Viewer.app"
+          python3 desktop-app/packaging/verify-macos.py --arch "$ARCH" "$RUNNER_TEMP/installed/Markdown Viewer.app/Contents/MacOS/markdown-viewer"
+      - name: Launch via LaunchServices, import a file and reopen the vault
+        run: python3 tests/native/desktop-package-smoke.py "$RUNNER_TEMP/installed/Markdown Viewer.app"
+
+  assemble-release:
+    needs: [test-linux, test-macos]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-macos
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux-windows
+          path: release-assets
+      - name: Verify asset set and write checksums
+        run: |
+          cp desktop-app/packaging/RELEASE-DOWNLOADS.md release-assets/README.md
+          node desktop-app/packaging/release-manifest.js release-assets
+          cd release-assets
+          sha256sum --check SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Prepare the recommended installer download
+        run: |
+          mkdir installer-download
+          cp release-assets/*.deb release-assets/*.dmg release-assets/*.exe release-assets/MACOS-SIGNING.txt release-assets/README.md installer-download/
+          node desktop-app/packaging/release-manifest.js installer-download --installers-only
+          cd installer-download
+          sha256sum --check SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-installers
+          path: installer-download/*
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
+    needs: assemble-release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-release
+          path: release-assets
+      - name: Verify the assembled packages before publishing
+        working-directory: release-assets
+        run: sha256sum --check SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Markdown Viewer ${{ github.ref_name }}
+          body_path: desktop-app/packaging/RELEASE-DOWNLOADS.md
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: desktop-app/release-assets/*
+          files: release-assets/*

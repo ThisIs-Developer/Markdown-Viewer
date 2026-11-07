@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const metadata = require('../../packaging/metadata.json');
 
 // neu sets OriginalFilename to its staging binaryName. Set the final filename
 // after packaging, preserving all other resources, including the embedded app.
@@ -21,10 +22,12 @@ async function brandExecutable(file) {
     version.setProductVersion(appVersion);
     for (const language of version.getAllLanguagesForStringValues()) {
       version.setStringValues(language, {
-        ProductName: 'Markdown Viewer', FileDescription: 'Markdown Viewer',
-        OriginalFilename: path.basename(file)
+        ProductName: metadata.name, FileDescription: metadata.name,
+        OriginalFilename: path.basename(file),
+        CompanyName: metadata.developer,
+        LegalCopyright: metadata.copyright,
+        Comments: `${metadata.summary}. ${metadata.license}. ${metadata.homepage}`
       });
-      version.removeStringValue(language, 'CompanyName');
     }
     version.outputToResourceEntries(resources.entries);
   }
