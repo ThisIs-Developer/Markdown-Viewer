@@ -116,11 +116,14 @@ npm run dev
 npm run build
 ```
 
-The build generates seven platform-specific executables under
-`desktop-app/dist/markdown-viewer/`. Each executable is built separately with
-`--embed-resources`, so every download is self-contained and does not require a
-neighboring `resources.neu` file. Release publishing uploads the seven binaries
-individually rather than creating a portable application ZIP.
+The default developer build generates seven raw executables under
+`desktop-app/dist/markdown-viewer/`, each with embedded resources. Releases add
+platform installers: a macOS `.dmg` containing `Markdown Viewer.app`, Ubuntu/Debian
+`.deb` packages with system dependencies and a menu launcher, and portable Linux
+`.tar.gz` archives preserving permissions. Windows keeps the existing `.exe`.
+Mac runtimes are rebuilt at their native dependency baselines: Intel 10.15 and
+Apple Silicon 11. The upstream 6.5.0 binaries require 14.0.
+See [installer build and signing instructions](../desktop-app/packaging/README.md).
 
 The shared web/desktop application code includes slash commands, natural Explorer sorting, middle-click tab closing, pane-scoped Select All, rich Preview copying, smooth Page Up/Down navigation, and native fullscreen or Expanded view fallback behavior.
 
@@ -173,22 +176,26 @@ This is why the prepared desktop application can load core bundled renderer libr
 
 ## Platform Notes
 
-Windows may show SmartScreen warnings because binaries are unsigned.
+See [download choices and installation steps](../desktop-app/packaging/RELEASE-DOWNLOADS.md).
 
-Linux:
+- **Windows:** download the x64 `.exe`. Unsigned builds may show SmartScreen.
+- **Mac:** choose `mac_x64.dmg` for Intel Macs or VMware on Intel/AMD Windows;
+  `mac_arm64.dmg` for Apple Silicon; `mac_universal.dmg` for either. Open the DMG,
+  drag the app to Applications, eject the image, and launch the installed app.
+  Native builds target Intel macOS 10.15 and Apple Silicon macOS 11, with no
+  upper-version cutoff. Install available Safari/WebKit updates; older OS versions
+  require manual acceptance (CI tests macOS 15/26). Allow Documents access for the vault.
+- **Mac signing:** check `MACOS-SIGNING.txt`. Ad-hoc test builds are not notarized;
+  on Monterey, Control-click the app and choose Open, or use Security & Privacy →
+  Open Anyway for a trusted download. Do not disable Gatekeeper globally.
+- **Ubuntu/Debian:** install the matching `.deb` with Software Install, then launch
+  from Applications. If no graphical installer is present, use
+  `sudo apt install ./markdown-viewer-linux_amd64.deb` (Intel/AMD). The installer
+  resolves WebKitGTK and other dependencies. Portable `.tar.gz` archives need the
+  same system libraries installed separately.
 
-```bash
-chmod +x markdown-viewer-linux_x64
-./markdown-viewer-linux_x64
-```
-
-macOS:
-
-```bash
-xattr -d com.apple.quarantine markdown-viewer-mac_universal
-chmod +x markdown-viewer-mac_universal
-./markdown-viewer-mac_universal
-```
+v3.10.5 raw Mac binaries are not suitable for Monterey: they lack app bundles and
+require macOS 14. Changing permissions alone cannot fix that release.
 
 ## Data Handling
 

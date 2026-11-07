@@ -1,0 +1,15 @@
+{
+  "name": "Markdown Viewer",
+  "summary": "Edit and preview Markdown with a local document vault",
+  "developer": "ThisIs-Developer",
+  "maintainer": "Baivab Sarkar <109382325+ThisIs-Developer@users.noreply.github.com>",
+  "homepage": "https://markdownviewer.pages.dev/",
+  "repository": "https://github.com/ThisIs-Developer/Markdown-Viewer",
+  "license": "Apache-2.0",
+  "copyright": "Copyright 2024 ThisIs-Developer",
+  "description": [
+    "Write and preview Markdown side by side, with syntax highlighting, diagrams and mathematical notation.",
+    "Keep documents in a local vault, reopen your workspace, link existing Markdown files and export to HTML, PDF or PNG.",
+    "Core editing and bundled previews work offline. Sharing, remote imports and other network features require an internet connection."
+  ]
+}
