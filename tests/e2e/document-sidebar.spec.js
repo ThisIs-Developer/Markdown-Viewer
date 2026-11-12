@@ -183,6 +183,7 @@ test('Explorer supports modifier selection, contextual bulk delete, and selectio
   await expect(contextMenu).toHaveCount(1);
   await expect(contextMenu.getByRole('menuitem')).toHaveText([
     'Open all',
+    'Download',
     'Move to…',
     'Delete 3 selected items'
   ]);

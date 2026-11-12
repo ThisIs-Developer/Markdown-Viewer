@@ -110,6 +110,13 @@ The compose build copies the generated files to `desktop-app/output/`.
 
 Prebuilt desktop assets are published through GitHub Releases. Release workflows run setup, preparation, build, and checksum generation.
 
+v3.10.6 makes PR #289 the distribution milestone: three Finder-ready Mac DMGs,
+three dependency-aware Linux DEBs, three optional portable Linux archives, and the
+Windows x64 EXE are assembled behind native installed-package checks. The workflow
+requires the exact asset set, verifies `SHA256SUMS.txt`, and publishes the tested files
+without rebuilding them. The release description provides an architecture-first download
+table plus application identity, compatibility, trust, and managed-deployment guidance.
+
 Windows SmartScreen may warn about unsigned executables. Mac test builds are ad-hoc signed; trusted public distribution requires Apple Developer ID signing and notarization, supported by the release workflow. See `MACOS-SIGNING.txt` alongside the DMGs for the actual signing status. See [../wiki/Desktop-App.md](../wiki/Desktop-App.md) for platform launch notes.
 
 ## License

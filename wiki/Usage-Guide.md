@@ -18,6 +18,8 @@ The app has seven main areas:
 
 Use the view buttons to switch between Editor, Split, and Preview. Split view is the main live Markdown preview workflow: type, paste, or open Markdown on one side and read the rendered result on the other. Sync scrolling can keep the source and preview aligned while you write. Drag the divider to change the pane widths. The app prevents either side from becoming too narrow. On small screens, the document sidebar opens as a full-height drawer and the mobile menu exposes the remaining main actions without forcing a cramped split layout.
 
+Preview position is stored per document. Loading skeletons, hidden panes, view changes, deferred images, and obsolete renders do not replace the last settled position; direct user scrolling or navigation always takes priority over a pending restoration.
+
 To compare or edit two files, open a file menu and choose **Open in split view**, then select the second document. A shared control switches both sides between Edit and Preview. Preview mode supports Markdown, math, diagrams, maps, STL, and ABC rendering. Use the combined tab menu to exit this view.
 
 ## Fullscreen on Safari and Mobile
@@ -77,6 +79,7 @@ The outline is generated locally from the current document and is not saved sepa
 - Use **Storage and Backup** to inspect usage and file counts, view the browser's read-only persistence status, export or import a folder-preserving ZIP, or open the fixed desktop vault.
 - Use **Reset workspace** only when you intend to permanently delete all workspace files, folders, settings, Secret Workspace data, history, and trash. The confirmation links directly to Backup.
 - Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
+- Drop a browser folder to import its Markdown hierarchy, including empty folders, at the selected Explorer destination. Use inline Rename or F2 for files and folders. Select several documents and choose **Download**, or use a folder's **Download folder** action, to create a ZIP containing current drafts and safe duplicate names.
 
 > **Backup:** Browser site-data clearing remains destructive. Use **Storage and Backup** to export a portable ZIP. Importing a ZIP permanently replaces the current workspace. Secret Workspace records remain encrypted and still require the original access key after import. Trash, desktop history, and recovery journals are not included.
 
@@ -211,6 +214,8 @@ Export names use the active tab title when possible.
 | PNG | Captures a high-resolution Light or Dark rich-content snapshot to PNG. | Browser canvas limits apply; cross-origin images need CORS. |
 
 Each export format remembers its appearance independently. PDF and PNG preparation waits for Mermaid, ABC, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, math, fonts, and images; Markmaps are fitted to printable bounds. Export progress can be cancelled where the format supports progress reporting.
+
+Both PDF paths track complete source coverage across fractional line boundaries, long paragraphs, tables, code, lists, tall images, and mixed font sizes. Standard PDF remains the recommended selectable result; use Rendered PDF when visual page consistency matters more than selectable text.
 
 ## Share Markdown with Snapshot Links
 

@@ -43,8 +43,9 @@ Other supported entry points:
 | PWA | Open the HTTPS site and use the browser's install action |
 | Docker image | `docker run -d --name markdown-viewer -p 8080:80 ghcr.io/thisis-developer/markdown-viewer:latest` |
 | Docker Compose | `docker compose up -d` |
+| Desktop installation | Choose the architecture-matching package from the [latest GitHub release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/latest) |
 | Desktop development | Run `npm install` and `npm run dev` in `desktop-app/` |
-| Desktop build | Run `npm run build` in `desktop-app/` |
+| Desktop build | Run `npm run build` in `desktop-app/`; end-user DMG/DEB packaging has additional platform steps |
 
 See [Installation](Installation.md) before deploying. The stock Docker image has a documented Worker/PWA packaging limitation.
 
@@ -58,7 +59,7 @@ See [Installation](Installation.md) before deploying. The stock Docker image has
 | Visual content | Mermaid, PlantUML, Graphviz/DOT, D2, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, and ABC |
 | Import/export | Local and GitHub branch/tag/commit import, with optional encrypted local private-repository access; Markdown plus remembered Light/Dark HTML, Standard PDF, Rendered PDF, and PNG export, with complete rich-content preparation for PDF and PNG |
 | Sharing | URL-hash or KV-backed Share Snapshot; WebSocket Live Share with host/edit/view capabilities |
-| Delivery | Static web, PWA, Docker, Cloudflare, and seven Neutralino desktop targets |
+| Delivery | Static web, PWA, Docker, Cloudflare, Windows x64 EXE, three macOS DMGs, three Linux DEBs, and optional portable Linux archives |
 
 The public root and 14 translated `?lang=` URLs serve language-matched initial content, metadata, and starter documents before JavaScript runs. User-authored Markdown stays unchanged when the interface language changes.
 

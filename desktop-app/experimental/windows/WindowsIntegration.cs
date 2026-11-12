@@ -13,7 +13,7 @@ using Microsoft.Win32;
 [assembly: AssemblyTitle("Markdown Viewer Windows integration")]
 [assembly: AssemblyDescription("Markdown Viewer Windows integration")]
 [assembly: AssemblyProduct("Markdown Viewer")]
-[assembly: AssemblyVersion("3.10.5.0")]
+[assembly: AssemblyVersion("3.10.6.0")]
 
 // Explicit per-user registration. Never writes UserChoice, extension defaults,
 // or machine-wide keys. A link to this portable executable is not an installation.

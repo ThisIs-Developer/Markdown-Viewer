@@ -149,7 +149,7 @@ Markdown documents, nested folders and empty folders. Current editor drafts are
 included; duplicate export names receive numeric suffixes. A Secret Workspace
 download is abandoned if the workspace locks while the archive is being prepared.
 
-Both packaged Windows executables use **Markdown Viewer**, version 3.10.5, and
+Both packaged Windows executables use **Markdown Viewer**, version 3.10.6, and
 the official app icon. The trial title also reads **Markdown Viewer**; its filename,
 application ID and separate Vault continue to distinguish it from a normal release.
 Explorer itself controls tooltip property labels, size and creation-date fields.

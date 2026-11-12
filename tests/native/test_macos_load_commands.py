@@ -72,7 +72,7 @@ class Compatibility(unittest.TestCase):
         ]:
             with self.subTest(arch=arch):
                 # Round-trip the actual plist data used by the disk-image packager.
-                metadata = plistlib.loads(plistlib.dumps(app_metadata('3.10.5', arch)))
+                metadata = plistlib.loads(plistlib.dumps(app_metadata('3.10.6', arch)))
                 self.assertEqual(metadata['LSMinimumSystemVersion'], minimum)
                 self.assertEqual(metadata['LSMinimumSystemVersionByArchitecture'], expected)
                 self.assertEqual(metadata['CFBundleIdentifier'], 'com.markdownviewer.desktop')
@@ -80,7 +80,7 @@ class Compatibility(unittest.TestCase):
                 self.assertEqual(metadata['CFBundleIconFile'], 'MarkdownViewer')
                 self.assertEqual(metadata['NSHumanReadableCopyright'], 'Copyright 2024 ThisIs-Developer')
                 self.assertEqual(metadata['LSApplicationCategoryType'], 'public.app-category.productivity')
-                self.assertEqual(metadata['CFBundleGetInfoString'], 'Markdown Viewer 3.10.5, ThisIs-Developer, Apache-2.0')
+                self.assertEqual(metadata['CFBundleGetInfoString'], 'Markdown Viewer 3.10.6, ThisIs-Developer, Apache-2.0')
 
 
 if __name__ == '__main__':

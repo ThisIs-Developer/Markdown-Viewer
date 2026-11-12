@@ -76,8 +76,9 @@ pixmap icons, AppStream component, maintainer, installed size and a useful contr
 description. The AppStream release date comes from `RELEASE_NOTES`, not the build
 date. Its legacy `developer_name` element supports Ubuntu 22.04's AppStream;
 newer validators may emit informational deprecation notices.
-The DEB includes packaging revision `-1` (for example, `3.10.5-1`) so it upgrades
-the earlier revision-less `3.10.5` package. The application's version stays 3.10.5;
+The DEB includes packaging revision `-1` (for example, `3.10.6-1`) so a later
+packaging-only correction can sort above a revision-less `3.10.6` package. The
+application's version stays 3.10.6;
 subsequent packaging-only changes for the same app version must raise the revision.
 
 Mac bundles include the application icon, version, copyright, productivity

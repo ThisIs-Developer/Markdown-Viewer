@@ -42,7 +42,7 @@ test('Windows packaging sets app/version metadata and preserves resources', asyn
     assert.equal(values.LegalCopyright, 'Copyright 2024 ThisIs-Developer');
     assert.match(values.Comments, /Apache-2\.0/);
     assert.match(values.Comments, /https:\/\/markdownviewer\.pages\.dev\//);
-    assert.equal(values.FileVersion, '3.10.5.0');
+    assert.equal(values.FileVersion, '3.10.6.0');
     assert.deepEqual(Buffer.from(entries.find(entry => entry.type === 14 && entry.id === 1).bin), originalIcon);
     assert.deepEqual([...new Uint8Array(entries.find(entry => entry.type === 10).bin)], [1, 2, 3, 4]);
   } finally {

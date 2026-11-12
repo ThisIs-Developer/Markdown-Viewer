@@ -76,6 +76,14 @@ Clearing site data in the browser removes Markdown Viewer IndexedDB, `localStora
 
 In the desktop application, replacing or deleting the binary does not remove `Documents/Markdown Viewer Vault`. Every binary checks that fixed location at startup and restores the existing vault automatically. App-managed workspace files, metadata, encrypted records, history, and trash stay inside the vault; explicit user exports can still be saved to a user-selected destination. The Backup action creates a portable ZIP containing normal documents, organization, review data, selected preferences, and optional encrypted Secret Workspace records. Trash, desktop history, and recovery journals are not included. Importing a backup replaces the current workspace after confirmation. Users can also copy the complete vault with normal filesystem tools.
 
+Desktop releases publish `SHA256SUMS.txt` for the assembled application assets and verify
+the complete manifest before publication. macOS releases also include
+`MACOS-SIGNING.txt`, which states whether the package is Developer ID signed/notarized or
+ad-hoc signed. Product name, publisher, license, icons, desktop entries, and AppStream or
+Finder metadata improve identification but are not a cryptographic publisher guarantee.
+Organizations should verify checksums and signing state and test the selected package on
+representative devices before broad deployment.
+
 ## Data That Can Leave the Device
 
 | Feature | Data sent | Destination and retention | Access model |

@@ -250,6 +250,7 @@ Clearing site data removes both the cache and locally saved Documents for that o
 - On Ubuntu/Debian, install the `.deb` with Software Install or `apt` so runtime dependencies and permissions are configured.
 - On macOS, use the architecture-matching `.dmg` and install the app in Applications. Check the signing-status file for the per-app Open Anyway instructions for test builds. The v3.10.5 raw Mac binaries require macOS 14 and cannot run on Monterey.
 - Check that the executable matches the operating system and architecture.
+- Verify the downloaded file against the release's `SHA256SUMS.txt`. For v3.10.6 and later, use the DMG or DEB installer rather than a raw Mac/Linux developer executable; Linux portable archives require runtime libraries to be installed separately.
 - Re-run `npm run build` when prepared resources and root source are out of sync.
 
 See [Desktop Application](Desktop-App.md).

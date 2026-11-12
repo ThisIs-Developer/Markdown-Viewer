@@ -124,7 +124,7 @@ Cloudflare Pages must include `/live-room/*` in `_routes.json` so WebSocket upgr
 
 ## Desktop Application
 
-Published desktop binaries are available from [GitHub Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases). Use a published build for a stable release, or build from `main` when you need to test changes that have not yet been released.
+Published desktop binaries are available from [GitHub Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases). v3.10.6 adds the first complete Mac DMGs and Ubuntu/Debian DEBs; its release page includes an architecture-first download table, exact asset sizes, application identity, managed-deployment limits, signing state, and SHA-256 verification. Use a published build for a stable release, or build from `main` when you need to test changes that have not yet been released.
 
 From `desktop-app/`:
 
@@ -188,6 +188,12 @@ permissions but require system libraries separately.
 
 See [all download choices](../desktop-app/packaging/RELEASE-DOWNLOADS.md).
 The old v3.10.5 raw Mac downloads require macOS 14 and cannot run on Monterey.
+
+For organization deployment, pilot the exact CPU/OS package first. The release does not
+provide a Mac PKG/App Store listing, Windows MSI/MSIX, Linux repository, RPM, AppImage,
+Flatpak, or Snap. Review `MACOS-SIGNING.txt`, Windows SmartScreen state, Linux package
+metadata, and `SHA256SUMS.txt`; embedded publisher metadata does not itself certify a
+binary or remove operating-system trust prompts.
 
 ## Official Platform Documentation
 

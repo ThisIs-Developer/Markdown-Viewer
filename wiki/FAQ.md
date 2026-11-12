@@ -22,6 +22,10 @@ No. You edit plain Markdown source. The formatting toolbar inserts or transforms
 
 You can use a modern browser, install the PWA where the browser supports it, self-host the static application, run the Docker image, or use/build the Neutralino desktop application. Exact behavior still depends on browser, webview, operating system, GPU, audio, print engine, and network support.
 
+### Which desktop download should I choose?
+
+Use the [latest GitHub release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/latest). Choose `mac_arm64.dmg` for Apple Silicon, `mac_x64.dmg` for Intel Macs or Intel/AMD-hosted macOS virtual machines, and `mac_universal.dmg` when one Mac package must support both. On Ubuntu/Debian, prefer the architecture-matching `.deb` because it installs dependencies and desktop integration; portable `.tar.gz` archives are for managed systems that already provide those libraries. Windows uses the x64 `.exe`. Verify the file with the release's `SHA256SUMS.txt` before organization-wide deployment.
+
 ## Workspace and Storage
 
 ### Where are my Documents stored?

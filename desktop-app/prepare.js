@@ -278,7 +278,7 @@ async function prepareOfflineDependencies() {
       hash: "sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab"
     },
     {
-      url: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+      url: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js",
       dest: path.join(LIBS_DIR, "jspdf.umd.min.js"),
       hash: null
     },

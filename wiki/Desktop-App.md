@@ -75,8 +75,11 @@ drafts. Save/conversion/export operations verify recoverable data and report par
 failures, but filesystem writes are not atomic transactions and cannot eliminate every
 race with another process. Keep independent backups of important originals.
 
-The application integration uses standard desktop filesystem APIs. Windows is the
-manually tested development platform; native macOS/Linux behavior requires testing.
+The application integration uses standard desktop filesystem APIs. Release CI installs
+and launches the actual packages on Ubuntu 22.04/24.04 and Intel/Apple Silicon macOS
+15/26, imports a Unicode-named Markdown file, verifies its bytes in the real Vault, and
+reopens the application. Older macOS/WebKit combinations and ARM Linux packages still
+need representative hardware acceptance.
 
 ## Directory Structure
 
@@ -124,6 +127,12 @@ platform installers: a macOS `.dmg` containing `Markdown Viewer.app`, Ubuntu/Deb
 Mac runtimes are rebuilt at their native dependency baselines: Intel 10.15 and
 Apple Silicon 11. The upstream 6.5.0 binaries require 14.0.
 See [installer build and signing instructions](../desktop-app/packaging/README.md).
+
+The v3.10.6 publication gate requires the exact Windows, Mac, and Linux asset set,
+rejects empty or unexpected files, writes `SHA256SUMS.txt`, verifies every checksum,
+and republishes the already-tested assembly without rebuilding it. Native package
+metadata identifies the product, publisher, license, website, support links, icon,
+and stable application id; operating-system trust and store warnings remain separate.
 
 The shared web/desktop application code includes slash commands, natural Explorer sorting, middle-click tab closing, pane-scoped Select All, rich Preview copying, smooth Page Up/Down navigation, and native fullscreen or Expanded view fallback behavior.
 
@@ -177,6 +186,10 @@ This is why the prepared desktop application can load core bundled renderer libr
 ## Platform Notes
 
 See [download choices and installation steps](../desktop-app/packaging/RELEASE-DOWNLOADS.md).
+
+The [v3.10.6 release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.6)
+contains the first packaged DMG and DEB application downloads plus organization-oriented
+identity, checksum, signing, compatibility, and managed-deployment guidance.
 
 - **Windows:** download the x64 `.exe`. Unsigned builds may show SmartScreen.
 - **Mac:** choose `mac_x64.dmg` for Intel Macs or VMware on Intel/AMD Windows;
