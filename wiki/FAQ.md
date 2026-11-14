@@ -90,23 +90,23 @@ Yes. Preview HTML is sanitized with DOMPurify before insertion. Remote SVG outpu
 
 ### Are Share Snapshot links private?
 
-No. They are bearer links. Anyone with the complete link can use its View only or Can edit capability. Stored snapshots expire after 90 days.
+New snapshots are encrypted on the device. Anyone with the complete link, including its decryption key, can read the snapshot. Stored snapshots expire after 90 days; existing links retain their original lifetime.
 
 ### Can I delete a stored Share Snapshot early?
 
-The API supports deletion with the token returned at creation. The current UI does not display that token or provide a Delete snapshot action, so normal UI-created snapshots remain until their 90-day expiry. See [Share Snapshot](Share-Snapshot.md).
+Yes. Select **Delete snapshot** while the generated-link modal still retains its creation credential. Closing/resetting it loses that credential; expiry remains available. See [Share Snapshot](Share-Snapshot.md).
 
 ### Are managed-media URLs private?
 
-No. They are content-addressed and difficult to guess, but anyone with the URL can retrieve the media until its 90-day expiry. There is no early-delete control.
+New managed media is encrypted before upload. The complete URL includes its decryption key; anyone with that URL can read the media. Each upload expires after 90 days. Existing URLs retain their original lifetime. There is no early-delete control.
 
 ### Is Live Share end-to-end encrypted?
 
-No. Treat every invitation as a sensitive bearer link.
+Yes, for new rooms. Document and Review updates, names, presence, cursors, and session controls are encrypted in clients and signed by role. Protect the complete invite link. Operational metadata remains visible to the relay; encryption does not protect a compromised client or prevent recipients copying content.
 
 ### Does Live Share store the Document?
 
-It does not persist Markdown or Review content server-side. Connected clients exchange it through a Durable Object WebSocket relay. The Durable Object does persist host/edit/view capability values and `createdAt` without an application TTL or deletion route.
+The relay does not persist document or Review content. New rooms store capability hashes, public verification keys, expiry, and ended status for at most 24 hours. Existing rooms keep their compatibility path.
 
 ## Markdown, Renderers, and Editing
 

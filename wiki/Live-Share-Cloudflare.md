@@ -1,98 +1,45 @@
-# Live Share Rooms for Markdown Collaboration on Cloudflare
+# Encrypted Live Share on Cloudflare
 
-Live Share is the temporary Markdown collaboration feature in Markdown Viewer. It is separate from Share Snapshot. Share Snapshot creates a point-in-time link; Live Share relays Yjs updates through a WebSocket room.
+Live Share provides temporary collaboration with end-to-end encrypted document updates, Review threads, display names, presence, cursor positions, and session controls. It uses a WebSocket relay and locally bundled Yjs.
 
-## User Flow
+## Start and Join
 
-1. The host clicks Live Share.
-2. The host enters or accepts a display name.
-3. The host chooses Can edit or View only.
-4. The app creates a random room id and a random room secret.
-5. The app creates separate Yjs documents for Markdown/session state and Review threads.
-6. The host opens a WebSocket to `/live-room/<room-id>?secret=<secret>`.
-7. The host connection establishes separate host, edit, and view capabilities before the invite link is shown.
-8. The invite link includes the selected role and capability for the recipient. Participants open it, join a temporary live tab, request the current Yjs state, and render participant avatars/cursors.
-9. The host can end the room for everyone.
+1. Open a Document, select **Live Share**, and choose **Can edit** or **View only**.
+2. Start the room. The browser creates a read key, independent role signing keys, and separate host/edit/view connection capabilities.
+3. After the relay authenticates the host, copy the complete invite link to a trusted recipient.
+4. Participants decrypt and synchronize locally in temporary tabs. Their role controls whether they can edit Markdown; both roles can contribute Review feedback.
+5. Export any needed copies and let the host **End session** when finished.
 
-The invite URL contains the room id, secret, title, selected role, and that role's bearer capability. It does not embed the full Markdown Document body.
+The invite fragment carries the read key, the selected guest role's signing key and capability, and public verification information. It never includes the host signing key. Anyone receiving an invite can use or forward its authority, so protect complete links.
 
-## Cloudflare Runtime
+## Runtime and Authorization
 
-There are two checked-in Cloudflare entry points:
+The Pages route `functions/live-room/[[room]].js` and standalone `workers/live-room-worker.js` route new `room2_` rooms into a separate Durable Object namespace. Connections use `/live-room/<room>?v=2`; no key or capability is in the request URL. An initial WebSocket authentication frame carries the role capability and public room configuration. Only capability hashes, public verification keys, expiry, and ended status persist in `live-room-auth-v2`.
 
-- `functions/live-room/[[room]].js` is the Pages Function endpoint for `/live-room/<room>`.
-- `workers/live-room-worker.js` contains the `LiveRoom` Durable Object class and a Worker export.
+Each client derives a fresh per-session AES-GCM key from the room read key with HKDF-SHA-256. Monotonic counters form unique nonces within that session. Frames bind room, sender, session, role, type, and sequence as authenticated data and are signed with the role's ECDSA P-256 key. The relay and recipients verify signatures and allowed message types; recipients also authenticate ciphertext and reject replays. Host-only controls use a separate Yjs document.
 
-The Pages Function:
+Viewers can send presence, synchronization requests, and Review changes. Editors can also send document updates. Only the host can send room controls, full Review state, or end the room. Unsupported or malformed encrypted traffic closes the connection without a fallback.
 
-- Requires a WebSocket upgrade request.
-- Allows the production app, HTTPS `*.markdownviewer.pages.dev` preview deployments, `null`, and localhost/127.0.0.1 development `Origin` values.
-- Requires a `LIVE_ROOMS` Durable Object binding.
-- Rejects room names over 160 characters.
-- Rejects secrets over 256 characters.
-- Uses `roomName + ":" + secret` to select the Durable Object id.
-- Returns `Cache-Control: no-store` for non-upgrade status responses.
+## Retention and Limits
 
-The Durable Object:
-
-- Accepts the WebSocket pair.
-- Authenticates the host capability when the room is first created and checks edit/view capabilities against the stored room credentials for later connections.
-- Persists the raw host, edit, and view capability values plus `createdAt` in Durable Object storage under `live-room-auth-v1`.
-- Assigns a temporary socket participant id.
-- Relays only known message types: `hello`, `presence`, `sync-request`, `sync-state`, `y-update`, `review-sync-request`, `review-sync-state`, `review-update`, `leave`, and `session-end`.
-- Filters messages by role: viewers can send presence, sync requests, and Review updates but not Markdown updates or session-end; editors can send Markdown and Review updates; only the host can publish full Review state and every supported message type.
-- Adds `roomId` and `sentAt` to normalized messages.
-- Broadcasts messages to other sockets in the same room.
-- Broadcasts `leave` when a socket closes or errors.
-
-## Limits
-
-| Limit | Value |
+| Item | Behavior |
 | :--- | :--- |
-| Max live message size | 8 MB |
-| Max WebSocket participants per room | 64 |
-| Participant stale timeout in client UI | 45 seconds |
-| Client join timeout | 8 seconds |
-| Room name length at Pages Function | 160 characters |
-| Secret length at Pages Function | 256 characters |
+| Document and Review history | Not persisted by the relay |
+| Room authentication record | Expires 24 hours after creation; an alarm removes it |
+| End session | Persists ended status, relays the signed end event, and closes peers; rejoining is rejected |
+| Maximum participants | 64, including pending authentication |
+| Authentication deadline | 5 seconds |
+| Application payload | Up to 8 MiB before encryption; bounded encoded frames and queues |
+| Participant stale timeout | 45 seconds |
+| Initial state timeout | 8 seconds |
 
-If the room is full, the Durable Object returns HTTP 429. If credentials or bindings are missing, the endpoints return a plain error response.
+The host supplies initial state. Once no client retains content, the relay cannot recover it. Existing rooms continue through the compatibility path; their records and lifetime are not rewritten. New legacy room creation is disabled.
 
-## Data Handling
+## Privacy Boundaries
 
-Live Share relays:
+The relay handles ciphertext and operational metadata, including room identifiers, roles, message types, timing, and sizes. TLS protects transport and connection capabilities. Encryption does not hide metadata, prevent recipients copying content, provide forward secrecy, or protect a compromised browser/device/application delivery path. There is no account-based recipient verification.
 
-- Yjs document updates.
-- Anchored comments, threaded replies, participant identities, and thread status updates through a separate Yjs document.
-- Initial sync state.
-- Display names.
-- Participant presence.
-- Cursor positions.
-- Leave events.
-- Host session-end events.
-
-Live Share does not write Markdown or Review Document content to Cloudflare KV or Durable Object storage. Those updates exist in connected clients and WebSocket relay traffic. The Durable Object does persist the role capability record described above. The normal local Workspace remains local, and joined live tabs are temporary so they are not saved into the participant's tab storage.
-
-## Room Lifecycle and Recovery
-
-- The host's client supplies the initial Yjs state to joining participants.
-- If no active client can supply initial state, the participant times out after 8 seconds and sees an ended/expired/unavailable message.
-- The server does not retain a Markdown or Review copy for recovery after all content-bearing clients leave.
-- The host's **End session** action broadcasts `session-end` and disconnects active clients.
-- Ending a session does not delete the Durable Object capability record.
-- No application TTL, alarm, or deletion route is implemented for that capability record.
-
-“Expired room” in the client is therefore an availability message, not proof that all server-side capability metadata was deleted.
-
-## Privacy and Security Notes
-
-- The room secret is part of the invite URL. Anyone with the link can try to join while the room is active.
-- No end-to-end encryption is implemented in the app.
-- View only and Can edit roles are checked by the Durable Object, which filters message types by capability. Each capability is still a bearer credential, so treat role-specific invite links as sensitive and do not paste them into public channels.
-- The server rejects unsupported WebSocket origins, but origin checks do not replace authentication or end-to-end encryption.
-- The host should end the room when collaboration is finished and every participant should export any copy they need before leaving.
-- Capability metadata remains in Durable Object storage after the active session ends.
-- Cloudflare deployment logs and platform behavior are controlled by the deployer's Cloudflare account configuration.
+Encrypted shared previews block automatic external assets and remote rendering; advanced diagrams/maps display local source. Keys stay in the client and private invite fragment. Keep exports and complete links private. See [Privacy and Security](Privacy-and-Security.md) and [protocol and rollout notes](../docs/ENCRYPTED_SHARING.md).
 
 ## Required Configuration
 

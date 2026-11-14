@@ -247,7 +247,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     markmapLib: 'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js',
     markmapView: 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js',
     jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
-    yjs: 'https://esm.sh/yjs@13.6.10/es2022/yjs.mjs'
+    yjs: './assets/yjs.mjs'
   };
 
   // Resolve local paths for desktop (Neutralinojs) offline support
@@ -270,6 +270,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     CDN.markmapLib = '/libs/markmap-lib.iife.js';
     CDN.markmapView = '/libs/markmap-view.js';
     CDN.jszip = '/libs/jszip.min.js';
+    CDN.yjs = '/assets/yjs.mjs';
   }
 
   // Active WebGL / Three.js 3D STL renderers Map for memory cleanup
@@ -543,6 +544,16 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function isShareSnapshotActive() {
     return Boolean(activeTabId && isShareSnapshotTabId(activeTabId));
+  }
+
+  function isEncryptedSharingActive() {
+    const tab = tabs.find(item => item.id === activeTabId);
+    return Boolean((tab && tab.encryptedSharing) ||
+      (liveCollaboration && liveCollaboration.encryption && liveCollaboration.tabId === activeTabId));
+  }
+
+  function prepareSharedPreviewHtml(html) {
+    return MarkdownShareMedia.prepareHtml(html, { base: getShareApiBaseUrl(), privateContent: isEncryptedSharingActive() });
   }
 
   function isReleaseNotesTab(tab) {
@@ -1059,7 +1070,6 @@ document.addEventListener("DOMContentLoaded", async function () {
   const EMBEDDED_IMAGE_MAX_DIMENSION = 1600;
   const MANAGED_GIF_MAX_BYTES = 5 * 1024 * 1024;
   const MANAGED_VIDEO_MAX_BYTES = 10 * 1024 * 1024;
-  const MANAGED_IMAGE_ID_PATTERN = /^[A-Za-z0-9_-]{20,32}$/;
   const managedImageMigrationOfferedTabIds = new Set();
   const managedImageMigrationInProgressTabIds = new Set();
   const EMOJI_API_URL = 'https://api.github.com/emojis';
@@ -3533,6 +3543,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function fetchDiagramSvgRequest(url, options, engine, attempts = DIAGRAM_REQUEST_RETRIES) {
+    if (isEncryptedSharingActive()) throw new Error('Remote rendering is disabled for encrypted shared documents.');
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const controller = new AbortController();
@@ -14992,6 +15003,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function disposeDocumentSplitPreviewResources() {
+    if (documentSplitPreview) MarkdownShareMedia.release(documentSplitPreview);
     if (!documentSplitPreview) return;
     documentSplitPreview.querySelectorAll('.geojson-map, .topojson-map').forEach(function(node) {
       disposeMapNode(node);
@@ -15023,14 +15035,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     const referenceData = extractReferenceDefinitions(parsed.body);
     const html = tableHtml + marked.parse(referenceData.cleanedMarkdown);
     disposeDocumentSplitPreviewResources();
-    documentSplitPreview.innerHTML = sanitizePreviewHtml(html);
+    const privateContent = Boolean(tab.encryptedSharing || (liveCollaboration && liveCollaboration.encryption && liveCollaboration.tabId === tab.id));
+    documentSplitPreview.innerHTML = MarkdownShareMedia.prepareHtml(sanitizePreviewHtml(html), { base: getShareApiBaseUrl(), privateContent });
+    MarkdownShareMedia.resolve(documentSplitPreview, { base: getShareApiBaseUrl() }).catch(function() {});
     applyReferencePreviewLinks(documentSplitPreview, referenceData.definitions);
     enhanceGitHubAlerts(documentSplitPreview);
     enhancePreviewCodeBlocks(documentSplitPreview);
-    processEmojis(documentSplitPreview);
+    if (!privateContent) processEmojis(documentSplitPreview);
     namespaceSplitPreviewIds(documentSplitPreview, tab.id);
     documentSplitPreviewTabId = tab.id;
     documentSplitPreviewContent = content;
+    if (privateContent) return;
     const context = {
       isCurrent: function() {
         return (
@@ -16471,6 +16486,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function commitPreviewHtml(sanitizedHtml, referenceData, rawVal, context) {
+    sanitizedHtml = prepareSharedPreviewHtml(sanitizedHtml);
+    const hasEncryptedMedia = sanitizedHtml.includes('data-encrypted-media=') || Boolean(markdownPreview.querySelector('[data-encrypted-media]'));
+    MarkdownShareMedia.release(markdownPreview);
     const renderedDocumentId = previewLastRenderedTabId;
     const renderedScrollSnapshot = captureRenderedPreviewScroll(renderedDocumentId);
     if (renderedScrollSnapshot) {
@@ -16483,13 +16501,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     mathJaxTypesetRunId += 1;
     clearMathJaxPreviewState(markdownPreview);
     const patchResult = patchPreviewDom(markdownPreview, sanitizedHtml, {
-      reusePreviewBlocks: context.previewEngineMode === 'segmented' && !context.force,
+      reusePreviewBlocks: context.previewEngineMode === 'segmented' && !context.force && !hasEncryptedMedia && !isEncryptedSharingActive(),
     });
     invalidateReviewTargetSourceSnapshots(
       patchResult && patchResult.fullReplace ? [markdownPreview] : ((patchResult && patchResult.updatedNodes) || [])
     );
     applyReferencePreviewLinks(markdownPreview, referenceData.definitions);
     enhanceGitHubAlerts(markdownPreview);
+    MarkdownShareMedia.resolve(markdownPreview, { base: getShareApiBaseUrl() }).catch(() => {});
 
     _lastRenderedContent = rawVal;
     previewHasCommittedRender = true;
@@ -17706,6 +17725,7 @@ ${selector} .arrowheadPath {
   }
 
   async function renderThemeSensitivePreviewContentForPrint() {
+    if (isEncryptedSharingActive()) return;
     const context = {
       renderId: previewRenderGeneration,
       previewDocumentId: getActivePreviewDocumentId(),
@@ -17980,6 +18000,14 @@ ${selector} .arrowheadPath {
 
   function postProcessPreview(rawVal, context, patchResult) {
     const roots = getPreviewPostProcessRoots(patchResult, context);
+    if (isEncryptedSharingActive()) {
+      roots.forEach(root => { enhancePreviewCodeBlocks(root); enhanceGitHubAlerts(root); });
+      refreshDocumentOutline();
+      decorateReviewTargets();
+      updateFindHighlights();
+      scheduleLineNumberUpdate();
+      return;
+    }
 
     // Clean up orphaned STL views that are no longer present in the document
     activeStlViews.forEach((view, id) => {
@@ -20793,7 +20821,7 @@ ${selector} .arrowheadPath {
   async function requestManagedImageUploadConsent() {
     if (loadGlobalState().managedImageUploadAcknowledged === true) return true;
     const accepted = await showAppToastConfirmation(
-      'Images, GIFs, and videos are uploaded to Markdown Viewer public media storage for up to 90 days. Anyone with a media URL can view it during that time.',
+      'Images, GIFs, and videos are encrypted on this device before upload and kept for up to 90 days. Keep the complete media link private; it includes the key needed to open the media.',
       { title: 'Upload media?', confirmLabel: 'Continue', cancelLabel: 'Cancel', dedupeKey: 'managed-media-consent' }
     );
     if (accepted) saveGlobalState({ managedImageUploadAcknowledged: true });
@@ -20802,12 +20830,15 @@ ${selector} .arrowheadPath {
 
   async function uploadManagedImageDataUrl(dataUrl, endpoint) {
     const apiPath = endpoint === '/api/media' ? '/api/media' : '/api/image';
+    MarkdownShareMedia.validateDataUrl(dataUrl);
+    const mediaKey = MarkdownShareCrypto.random();
+    const encrypted = await MarkdownShareCrypto.seal({ dataUrl }, mediaKey, 'media', MarkdownShareCrypto.MEDIA_LIMIT);
     let response;
     try {
       response = await fetch(getShareApiBaseUrl() + apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dataUrl: dataUrl })
+        body: JSON.stringify({ encrypted })
       });
     } catch (_) {
       throw new Error('The media file could not be uploaded. Check your connection and try again, or use External Media (URL).');
@@ -20820,7 +20851,7 @@ ${selector} .arrowheadPath {
     if (!response.ok) {
       throw new Error((payload && payload.error) || 'The media host rejected this file. Try a smaller file or use External Media (URL).');
     }
-    if (!payload || !MANAGED_IMAGE_ID_PATTERN.test(payload.id || '')) {
+    if (!payload || !/^e2_[A-Za-z0-9_-]{24}$/.test(payload.id || '')) {
       throw new Error('The media host returned an invalid short link. Please try again.');
     }
 
@@ -20835,6 +20866,8 @@ ${selector} .arrowheadPath {
     if (managedUrl.origin !== expectedBase.origin || managedUrl.pathname !== apiPath + '/' + payload.id) {
       throw new Error('The media host returned an invalid short link. Please try again.');
     }
+    managedUrl.search = '';
+    managedUrl.hash = 'key=' + mediaKey;
     return managedUrl.toString();
   }
 
@@ -28847,7 +28880,7 @@ ${selector} .arrowheadPath {
     }
   });
 
-  exportMd.addEventListener("click", function () {
+  exportMd.addEventListener("click", async function () {
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
     if (blockShareSnapshotSourceAccess()) return;
@@ -28856,7 +28889,8 @@ ${selector} .arrowheadPath {
       return;
     }
     try {
-      const blob = new Blob([markdownEditor.value], {
+      const portableMarkdown = await MarkdownShareMedia.inlineMarkdown(markdownEditor.value, getShareApiBaseUrl());
+      const blob = new Blob([portableMarkdown], {
         type: "text/markdown;charset=utf-8",
       });
       saveAs(blob, getExportFilename("md", "document.md"));
@@ -28920,10 +28954,11 @@ ${selector} .arrowheadPath {
     generateHtmlExport(selectedTheme);
   });
 
-  function generateHtmlExport(exportTheme = 'light') {
+  async function generateHtmlExport(exportTheme = 'light') {
     if (!hasActiveOpenDocument()) return;
     if (isReleaseNotesActive()) return;
     try {
+      const privateExport = isEncryptedSharingActive();
       const { frontmatter, body } = parseFrontmatter(markdownEditor.value);
       const tableHtml = frontmatter ? renderFrontmatterTable(frontmatter) : '';
       const referenceData = extractReferenceDefinitions(body);
@@ -28934,7 +28969,13 @@ ${selector} .arrowheadPath {
         ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
       });
       const tempContainer = document.createElement("div");
-      tempContainer.innerHTML = sanitizedHtml;
+      tempContainer.innerHTML = prepareSharedPreviewHtml(sanitizedHtml);
+      await MarkdownShareMedia.resolve(tempContainer, { base: getShareApiBaseUrl(), inline: true });
+      if (privateExport) {
+        const secureHtml = '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; media-src data:; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>Shared document</title><style>body{font:16px/1.6 system-ui;max-width:900px;margin:40px auto;padding:24px}pre{white-space:pre-wrap}img,video{max-width:100%}</style></head><body>' + tempContainer.innerHTML + '</body></html>';
+        saveAs(new Blob([secureHtml], { type: 'text/html;charset=utf-8' }), getExportFilename('html', 'document.html'));
+        return;
+      }
       applyReferencePreviewLinks(tempContainer, referenceData.definitions);
       enhanceGitHubAlerts(tempContainer);
       tempContainer.querySelectorAll('.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar').forEach(function(el) {
@@ -29832,6 +29873,7 @@ ${selector} .arrowheadPath {
 
   function disposeExportRenderElement(root) {
     if (!root) return;
+    MarkdownShareMedia.release(root);
     root.querySelectorAll('.geojson-map, .topojson-map').forEach(disposeMapNode);
     root.querySelectorAll('.stl-viewer[id]').forEach(node => disposeStlView(node.id));
     clearMathJaxPreviewState(root);
@@ -29843,6 +29885,11 @@ ${selector} .arrowheadPath {
   }
 
   async function renderExportRichContent(root, markdown, exportTheme, state) {
+    await MarkdownShareMedia.resolve(root, { base: getShareApiBaseUrl() });
+    if (isEncryptedSharingActive()) {
+      await waitForExportWork(state, waitForAllImages(root));
+      return;
+    }
     const theme = getExportTheme(exportTheme);
     const context = {
       theme,
@@ -29888,7 +29935,7 @@ ${selector} .arrowheadPath {
     root.className = `markdown-body pdf-export theme-${theme} export-render-root`;
     root.setAttribute('data-theme', theme);
     root.setAttribute('data-export-render-mode', mode);
-    root.innerHTML = html;
+    root.innerHTML = prepareSharedPreviewHtml(html);
     root.style.boxSizing = 'border-box';
     root.style.position = 'fixed';
     root.style.left = '-12000px';
@@ -30376,18 +30423,8 @@ ${selector} .arrowheadPath {
   const MAX_SHARE_URL_LENGTH = 32000;
   const MAX_LEGACY_SHARE_URL_LENGTH = 4096;
   const SERVER_SHARE_THRESHOLD_BYTES = 3000;
-  const SERVER_SHARE_ID_PATTERN = /^[a-z2-9]{6,20}$/;
+  const SERVER_SHARE_ID_PATTERN = /^(?:[a-z2-9]{6,20}|s2_[A-Za-z0-9_-]{24})$/;
 
-  function encodeMarkdownForShare(text) {
-    if (typeof pako === 'undefined') throw new Error('pako not loaded');
-    const compressed = pako.deflate(new TextEncoder().encode(text));
-    const chunkSize = 0x8000;
-    let binary = '';
-    for (let i = 0; i < compressed.length; i += chunkSize) {
-      binary += String.fromCharCode.apply(null, compressed.subarray(i, i + chunkSize));
-    }
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
 
   function decodeMarkdownFromShare(encoded) {
     if (typeof pako === 'undefined') throw new Error('pako not loaded');
@@ -30431,13 +30468,14 @@ ${selector} .arrowheadPath {
     return cleanTitle || 'Shared Snapshot';
   }
 
-  async function openShareSnapshotTab(content, title, mode) {
+  async function openShareSnapshotTab(content, title, mode, encrypted = false) {
     const shareMode = mode === 'edit' ? 'edit' : 'view';
     const viewMode = shareMode === 'edit' ? 'split' : 'preview';
     const snapshotTab = createTab(typeof content === 'string' ? content : '', getSafeShareSnapshotTitle(title), viewMode);
     snapshotTab.kind = SHARE_SNAPSHOT_TAB_KIND;
     snapshotTab.temporary = true;
     snapshotTab.shareSnapshotMode = shareMode;
+    snapshotTab.encryptedSharing = encrypted;
     tabs.push(snapshotTab);
     await switchTab(snapshotTab.id);
     applyShareSnapshotAccessMode(shareMode);
@@ -30447,18 +30485,11 @@ ${selector} .arrowheadPath {
     return true;
   }
 
-  function getShareHashForMode(id, mode) {
-    return 'id=' + encodeURIComponent(id) + (mode === 'edit' ? '&edit=1' : '');
-  }
 
   function getShareSnapshotTitleParam(title) {
     return '&title=' + encodeURIComponent(getSafeShareSnapshotTitle(title));
   }
 
-  function shouldUseServerShare(markdownText, legacyUrl) {
-    const byteLength = new TextEncoder().encode(markdownText || '').length;
-    return byteLength >= SERVER_SHARE_THRESHOLD_BYTES || !legacyUrl || legacyUrl.length > MAX_LEGACY_SHARE_URL_LENGTH;
-  }
 
   // ============================================
   // Share Modal
@@ -30475,6 +30506,7 @@ ${selector} .arrowheadPath {
   const shareUrlInput     = document.getElementById('share-url-input');
   const shareGenerateBtn  = document.getElementById('share-generate-btn');
   const shareCopyBtn      = document.getElementById('share-copy-btn');
+  const shareDeleteBtn    = document.getElementById('share-delete-btn');
   const shareInviteState  = document.getElementById('share-invite-state');
   const shareModeView     = document.getElementById('share-mode-view');
   const shareModeEdit     = document.getElementById('share-mode-edit');
@@ -30485,34 +30517,24 @@ ${selector} .arrowheadPath {
   let generatedShareSnapshotId = '';
   let generatedShareSnapshotDeleteToken = '';
 
-  function buildShareUrl(mode) {
+  async function buildShareUrl(mode) {
     generatedShareSnapshotExpiresIn = null;
     generatedShareSnapshotId = '';
     generatedShareSnapshotDeleteToken = '';
-    const markdownText = markdownEditor.value;
-    let encoded;
-    try {
-      encoded = encodeMarkdownForShare(markdownText);
-    } catch (e) {
-      console.error('Share encoding failed:', e);
-      return null;
-    }
-    const base = getPublicAppBaseUrl() + '#share=' + encoded + getShareSnapshotTitleParam(getActiveShareTitle());
-    return mode === 'edit' ? base + '&edit=1' : base;
+    const key = MarkdownShareCrypto.random();
+    const payload = { content: markdownEditor.value || '', title: getActiveShareTitle(), mode };
+    const encrypted = await MarkdownShareCrypto.seal(payload, key, 'snapshot');
+    const inlineUrl = getPublicAppBaseUrl() + '#share=v2.' + MarkdownShareCrypto.pack(encrypted) + '&key=' + key;
+    return { key, encrypted, inlineUrl, byteLength: new TextEncoder().encode(payload.content).length };
   }
 
-  async function createStoredShareUrl(mode) {
-    const markdownText = markdownEditor.value || '';
+  async function createStoredShareUrl(prepared) {
     const response = await fetch(getShareApiBaseUrl() + '/api/share', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        content: markdownText,
-        mode,
-        title: getActiveShareTitle()
-      })
+      body: JSON.stringify({ encrypted: prepared.encrypted })
     });
 
     let payload = null;
@@ -30523,14 +30545,14 @@ ${selector} .arrowheadPath {
     if (!response.ok) {
       throw new Error((payload && payload.error) || ('HTTP ' + response.status));
     }
-    if (!payload || !SERVER_SHARE_ID_PATTERN.test(payload.id || '')) {
+    if (!payload || !/^s2_[A-Za-z0-9_-]{24}$/.test(payload.id || '')) {
       throw new Error('Invalid share id returned');
     }
     generatedShareSnapshotExpiresIn = Number.isFinite(payload.expiresIn) ? payload.expiresIn : null;
     generatedShareSnapshotId = payload.id;
     generatedShareSnapshotDeleteToken = typeof payload.deleteToken === 'string' ? payload.deleteToken : '';
 
-    return getPublicAppBaseUrl() + '#' + getShareHashForMode(payload.id, mode);
+    return getPublicAppBaseUrl() + '#id=' + payload.id + '&key=' + prepared.key;
   }
 
   function formatShareExpiry(seconds) {
@@ -30562,6 +30584,7 @@ ${selector} .arrowheadPath {
   }
 
   function resetShareSnapshotLink() {
+    if (shareDeleteBtn) shareDeleteBtn.hidden = true;
     generatedShareSnapshotUrl = '';
     generatedShareSnapshotExpiresIn = null;
     generatedShareSnapshotId = '';
@@ -30585,16 +30608,11 @@ ${selector} .arrowheadPath {
 
   async function createShareSnapshotLink() {
     const mode = getCurrentShareMode();
-    const url = buildShareUrl(mode);
-    if (!url) {
-      shareUrlInput.value = 'Error generating link.';
-      shareCopyBtn.disabled = true;
-      throw new Error('Unable to create share link');
+    const prepared = await buildShareUrl(mode);
+    if (prepared.byteLength >= SERVER_SHARE_THRESHOLD_BYTES || prepared.inlineUrl.length > MAX_LEGACY_SHARE_URL_LENGTH) {
+      return await createStoredShareUrl(prepared);
     }
-    if (shouldUseServerShare(markdownEditor.value || '', url)) {
-      return await createStoredShareUrl(mode);
-    }
-    return url;
+    return prepared.inlineUrl;
   }
 
   function openShareModal() {
@@ -30602,16 +30620,6 @@ ${selector} .arrowheadPath {
     if (isReleaseNotesActive()) return;
     if (blockTemporarySnapshotShare()) return;
     if (blockLiveDocumentShareSnapshot()) return;
-    // PERF-002: Lazy-load pako on first share
-    if (typeof pako === 'undefined') {
-      loadScript(CDN.pako).then(function() {
-        openShareModal();
-      }).catch(function(e) {
-        console.error('Failed to load pako:', e);
-        alert('Failed to load sharing library. Please check your internet connection.');
-      });
-      return;
-    }
     // Reset to view-only by default each time
     shareModeView.checked = true;
     syncShareCardStyles();
@@ -30657,6 +30665,7 @@ ${selector} .arrowheadPath {
       const originalHTML = shareGenerateBtn.innerHTML;
       shareGenerateBtn.disabled = true;
       shareCopyBtn.disabled = true;
+      if (shareDeleteBtn) shareDeleteBtn.hidden = true;
       shareGenerateBtn.textContent = 'Sharing...';
       if (shareInviteSection) {
         shareInviteSection.hidden = false;
@@ -30669,6 +30678,7 @@ ${selector} .arrowheadPath {
         generatedShareSnapshotUrl = url;
         shareUrlInput.value = url;
         shareCopyBtn.disabled = false;
+        if (shareDeleteBtn) shareDeleteBtn.hidden = !generatedShareSnapshotId || !generatedShareSnapshotDeleteToken;
         if (shareInviteSection) {
           shareInviteSection.dataset.state = 'active';
         }
@@ -30710,6 +30720,24 @@ ${selector} .arrowheadPath {
     } finally {
       shareCopyBtn.disabled = false;
     }
+  });
+
+  if (shareDeleteBtn) shareDeleteBtn.addEventListener('click', async function() {
+    const id = generatedShareSnapshotId, deleteToken = generatedShareSnapshotDeleteToken;
+    if (!id || !deleteToken || shareDeleteBtn.disabled) return;
+    shareDeleteBtn.disabled = true;
+    try {
+      const accepted = await showAppToastConfirmation('Delete this stored snapshot? Its link will stop working. Downloaded copies are unaffected.',
+        { title: 'Delete snapshot', confirmLabel: 'Delete', cancelLabel: 'Cancel' });
+      if (!accepted) return;
+      const response = await fetch(getShareApiBaseUrl() + '/api/share/' + encodeURIComponent(id), {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deleteToken })
+      });
+      if (!response.ok) throw new Error('Deletion failed');
+      if (generatedShareSnapshotId === id) resetShareSnapshotLink();
+      showAppToast('Snapshot deleted.');
+    } catch (_) { showShareErrorModal('The snapshot could not be deleted. Please try again.'); }
+    finally { shareDeleteBtn.disabled = false; }
   });
 
   shareModalCloseX.addEventListener('click', closeShareModal);
@@ -30928,6 +30956,7 @@ ${selector} .arrowheadPath {
 
   function getCurrentLiveAccessMode() {
     if (!liveCollaboration) return getSelectedLiveAccessMode();
+    if (liveCollaboration.encryption && liveCollaboration.socketRole === 'view') return LIVE_SHARE_ACCESS_VIEW;
     return normalizeLiveAccessMode(liveCollaboration.accessMode || (liveCollaboration.sessionMap && liveCollaboration.sessionMap.get('accessMode')));
   }
 
@@ -31226,10 +31255,11 @@ ${selector} .arrowheadPath {
   function getLiveRoomSocketUrl(roomId, secret, auth) {
     const encodedRoom = encodeURIComponent(roomId);
     const params = new URLSearchParams();
-    params.set('secret', secret);
-    if (auth && auth.role) params.set('role', normalizeLiveSocketRole(auth.role));
-    if (auth && auth.capability) params.set('cap', auth.capability);
-    if (auth && auth.capabilities) {
+    if (auth && auth.encrypted) params.set('v', '2');
+    else params.set('secret', secret);
+    if (auth && !auth.encrypted && auth.role) params.set('role', normalizeLiveSocketRole(auth.role));
+    if (auth && !auth.encrypted && auth.capability) params.set('cap', auth.capability);
+    if (auth && !auth.encrypted && auth.capabilities) {
       params.set('hostCap', auth.capabilities.host || '');
       params.set('editCap', auth.capabilities.edit || '');
       params.set('viewCap', auth.capabilities.view || '');
@@ -31282,6 +31312,13 @@ ${selector} .arrowheadPath {
   }
 
   function createLiveRoomConnection(options) {
+    if (options.encryption) {
+      return MarkdownShareLive.connect(Object.assign({}, options, {
+        socketUrl: getLiveRoomSocketUrl(options.roomId, '', { encrypted: true }),
+        relayOrigin: LIVE_RELAY_ORIGIN,
+        reviewRelayOrigin: LIVE_REVIEW_RELAY_ORIGIN
+      }));
+    }
     const pendingMessages = [];
     const socketUrl = getLiveRoomSocketUrl(options.roomId, options.secret, {
       role: options.role,
@@ -31461,7 +31498,7 @@ ${selector} .arrowheadPath {
     return (normalized || 'Live Share').slice(0, 120);
   }
 
-  function buildLiveInviteUrl(roomId, secret, title, accessMode, capabilities) {
+  function buildLiveInviteUrl(roomId, secret, title, accessMode, capabilities, encryption) {
     const isLocal = window.location.origin.includes('localhost') ||
                     window.location.origin.startsWith('file://') ||
                     typeof Neutralino !== 'undefined';
@@ -31470,6 +31507,14 @@ ${selector} .arrowheadPath {
       ? 'https://markdownviewer.pages.dev/'
       : window.location.origin + window.location.pathname;
 
+    if (encryption) {
+      const role = normalizeLiveAccessMode(accessMode);
+      if (!capabilities || !encryption.signing) return '';
+      const params = new URLSearchParams({ live: roomId, v: '2', key: encryption.key,
+        sig: encryption.signing[role], pub: MarkdownShareCrypto.pack(encryption.config, 4096),
+        access: role, role, cap: capabilities[role] });
+      return baseUrl + '#' + params.toString();
+    }
     const base = baseUrl + '#live=' + encodeURIComponent(roomId + '.' + secret);
     const params = [];
     const normalizedAccess = normalizeLiveAccessMode(accessMode);
@@ -31491,6 +31536,16 @@ ${selector} .arrowheadPath {
   function parseLiveHash() {
     const hash = window.location.hash || '';
     if (!hash.startsWith('#live=')) return null;
+    const encryptedParams = new URLSearchParams(hash.slice(1));
+    if (encryptedParams.has('v')) {
+      if (encryptedParams.get('v') !== '2' || hash.length > 8192) throw new Error('Unsupported encrypted invite.');
+      const roomId = encryptedParams.get('live');
+      const role = encryptedParams.get('role');
+      if (!/^room2_[A-Za-z0-9_-]{24}$/.test(roomId || '') || !['view', 'edit'].includes(role)) throw new Error('Invalid encrypted invite.');
+      const config = MarkdownShareCrypto.publicConfig(MarkdownShareCrypto.unpack(encryptedParams.get('pub'), 4096), roomId);
+      return { roomId, secret: '', title: 'Live Share', role, accessMode: role, capability: encryptedParams.get('cap'),
+        encryption: { key: encryptedParams.get('key'), config, signingKey: encryptedParams.get('sig') } };
+    }
     const rest = hash.slice('#live='.length);
     const paramsIndex = rest.indexOf('&');
     const roomSecretPart = decodeURIComponent(paramsIndex === -1 ? rest : rest.slice(0, paramsIndex));
@@ -31550,7 +31605,8 @@ ${selector} .arrowheadPath {
         liveCollaboration.secret,
         safeTitle,
         liveCollaboration.accessMode,
-        liveCollaboration.capabilities
+        liveCollaboration.capabilities,
+        liveCollaboration.encryption
       );
     }
     if (liveCollaboration.tabId) {
@@ -31696,9 +31752,10 @@ ${selector} .arrowheadPath {
     const liveTab = createTab(typeof markdown === 'string' ? markdown : '', getSafeLiveTitle(liveCollaboration.roomTitle), 'split');
     liveTab.kind = 'live-share';
     liveTab.temporary = true;
+    liveTab.encryptedSharing = Boolean(liveCollaboration.encryption);
     tabs.push(liveTab);
-    switchTab(liveTab.id);
     liveCollaboration.tabId = liveTab.id;
+    switchTab(liveTab.id);
     liveCollaboration.pendingJoinTab = false;
     liveCollaboration.removeTabOnLeave = true;
     if (liveCollaboration.joinTimeoutId) {
@@ -32301,6 +32358,7 @@ ${selector} .arrowheadPath {
     if (!sender || sender === liveCollaboration.localParticipantId) return;
 
     if (message.type === 'sync-request') {
+      if (transport.publishControlState) transport.publishControlState();
       transport.publishCurrentState();
       transport.publishPresence(liveCollaboration.localCursor);
       return;
@@ -32308,6 +32366,12 @@ ${selector} .arrowheadPath {
 
     if (message.type === 'review-sync-request') {
       if (liveCollaboration.isHost) transport.publishReviewState();
+      return;
+    }
+
+    if (message.type === 'control-state' && liveCollaboration.encryption && message.role === 'host' && message.update) {
+      try { liveCollaboration.Y.applyUpdate(liveCollaboration.controlDoc, decodeLiveBytes(message.update), LIVE_RELAY_ORIGIN); }
+      catch (_) { setLiveShareStatus('Unable to apply encrypted room controls.', 'error'); }
       return;
     }
 
@@ -32409,6 +32473,9 @@ ${selector} .arrowheadPath {
       if (liveCollaboration.reviewDoc && typeof liveCollaboration.reviewDoc.destroy === 'function') {
         liveCollaboration.reviewDoc.destroy();
       }
+      if (liveCollaboration.controlDoc && liveCollaboration.controlDoc !== liveCollaboration.ydoc && typeof liveCollaboration.controlDoc.destroy === 'function') {
+        liveCollaboration.controlDoc.destroy();
+      }
     } catch (error) {
       console.warn('Failed to fully close live session:', error);
     }
@@ -32437,7 +32504,7 @@ ${selector} .arrowheadPath {
     }
   }
 
-  function endLiveSessionForEveryone() {
+  async function endLiveSessionForEveryone() {
     if (!liveCollaboration) return;
     if (!liveCollaboration.isHost) {
       leaveLiveSession({ restoreOriginal: true });
@@ -32452,7 +32519,7 @@ ${selector} .arrowheadPath {
         endingSession.sessionMap.set('endedBy', endingSession.localParticipantId);
       }, LIVE_EDIT_ORIGIN);
       if (endingSession.connection) {
-        endingSession.connection.send({ type: 'session-end' });
+        await endingSession.connection.send({ type: 'session-end' });
       }
     } catch (error) {
       console.warn('Failed to broadcast live session end:', error);
@@ -32469,15 +32536,17 @@ ${selector} .arrowheadPath {
   async function startLiveSession(options) {
     options = options || {};
     const isHost = options.isHost !== false;
-    const roomId = options.roomId || ('room-' + getRandomBase64Url(9));
-    const secret = options.secret || ('secret-' + getRandomBase64Url(32));
+    const roomId = options.roomId || ('room2_' + getRandomBase64Url(18));
+    const encryption = isHost ? await MarkdownShareCrypto.createRoom(roomId) : options.encryption || null;
+    const secret = encryption ? '' : options.secret;
     const displayName = getLiveDisplayName({
       forceGeneratedName: options.forceGeneratedName === true
     });
     const modules = await loadLiveCollaborationModules();
     const ydoc = new modules.Y.Doc();
     const yText = ydoc.getText('markdown');
-    const sessionMap = ydoc.getMap('session');
+    const controlDoc = encryption ? new modules.Y.Doc() : ydoc;
+    const sessionMap = controlDoc.getMap('session');
     const reviewDoc = new modules.Y.Doc();
     const reviewMap = reviewDoc.getMap('reviewThreads');
     const hostActiveTab = tabs.find(function(t) { return t.id === activeTabId; });
@@ -32509,7 +32578,7 @@ ${selector} .arrowheadPath {
     const liveCapability = isHost
       ? liveCapabilities.host
       : (options.capability || '');
-    const inviteUrl = buildLiveInviteUrl(roomId, secret, hostTitle, requestedAccessMode, liveCapabilities);
+    const inviteUrl = buildLiveInviteUrl(roomId, secret, hostTitle, requestedAccessMode, liveCapabilities, encryption);
     if (isHost && yText.length === 0) {
       yText.insert(0, markdownEditor.value || '');
     }
@@ -32553,6 +32622,10 @@ ${selector} .arrowheadPath {
     }
 
     const localParticipantId = 'participant-' + getRandomBase64Url(12);
+    if (encryption) {
+      encryption.transport = await MarkdownShareCrypto.liveSession({ roomId, sender: localParticipantId, role: liveRole,
+        key: encryption.key, config: encryption.config, signingKey: isHost ? encryption.signing.host : encryption.signingKey });
+    }
     const localColor = getLiveParticipantColor(displayName + '-' + getRandomBase64Url(2));
     const localParticipant = {
       name: displayName,
@@ -32570,6 +32643,8 @@ ${selector} .arrowheadPath {
     liveCollaboration = {
       roomId,
       secret,
+      encryption,
+      controlDoc,
       inviteUrl,
       ydoc,
       Y: modules.Y,
@@ -32674,6 +32749,8 @@ ${selector} .arrowheadPath {
     liveCollaboration.connection = createLiveRoomConnection({
       roomId,
       secret,
+      encryption,
+      controlDoc,
       role: liveCollaboration.socketRole,
       capability: liveCollaboration.socketCapability,
       capabilities: liveCollaboration.isHost ? liveCollaboration.capabilities : null,
@@ -32717,6 +32794,17 @@ ${selector} .arrowheadPath {
 
     publishLocalParticipant();
     liveCollaboration.participantHeartbeatId = setInterval(publishLocalParticipant, 15000);
+
+    if (encryption) {
+      const activeSession = liveCollaboration;
+      try { await activeSession.connection.ready; }
+      catch (error) {
+        if (liveCollaboration === activeSession) disconnectLiveCollaboration({ restoreOriginal: true });
+        throw error;
+      }
+      if (liveCollaboration !== activeSession) return;
+      if (activeSession.tabId) renderMarkdown({ reason: 'live-encrypted', force: true });
+    }
 
     if (liveShareUrlInput) {
       liveShareUrlInput.value = inviteUrl;
@@ -32787,7 +32875,9 @@ ${selector} .arrowheadPath {
   }
 
   async function loadFromLiveHash() {
-    const parsed = parseLiveHash();
+    let parsed;
+    try { parsed = parseLiveHash(); }
+    catch (_) { alert('The encrypted invite is incomplete or unsupported.'); return; }
     if (!parsed) return;
     try {
       const originalTabSnapshot = captureLiveTabSnapshot();
@@ -32807,6 +32897,7 @@ ${selector} .arrowheadPath {
         accessMode: parsed.accessMode,
         role: parsed.role,
         capability: parsed.capability,
+        encryption: parsed.encryption,
         isHost: false,
         forceGeneratedName: true,
         originalTabSnapshot,
@@ -32970,6 +33061,14 @@ ${selector} .arrowheadPath {
         return;
       }
 
+      if (id.startsWith('s2_')) {
+        const params = new URLSearchParams(ampIdx === -1 ? '' : rest.slice(ampIdx + 1));
+        const decrypted = await MarkdownShareCrypto.open(payload && payload.encrypted, params.get('key'), 'snapshot');
+        if (!decrypted || typeof decrypted.content !== 'string' || typeof decrypted.title !== 'string' ||
+            !['view', 'edit'].includes(decrypted.mode)) throw new Error('Invalid encrypted snapshot.');
+        await openShareSnapshotTab(decrypted.content, decrypted.title, decrypted.mode, true);
+        return;
+      }
       const shareMode = payload && payload.mode === 'edit' ? 'edit' : 'view';
       await openShareSnapshotTab(
         payload && typeof payload.content === 'string' ? payload.content : '',
@@ -32977,8 +33076,7 @@ ${selector} .arrowheadPath {
         shareMode
       );
     } catch (e) {
-      console.error('Failed to load stored shared content:', e);
-      alert('Network error while loading shared content.');
+      alert(id.startsWith('s2_') ? 'Unable to open the encrypted snapshot. Check the complete link and connection.' : 'Network error while loading shared content.');
     }
   }
 
@@ -32989,6 +33087,18 @@ ${selector} .arrowheadPath {
       return;
     }
     if (!hash.startsWith('#share=')) return;
+
+    if (hash.startsWith('#share=v2.')) {
+      try {
+        const params = new URLSearchParams(hash.slice(1));
+        const encrypted = MarkdownShareCrypto.unpack(params.get('share').slice(3), MAX_SHARE_URL_LENGTH);
+        const payload = await MarkdownShareCrypto.open(encrypted, params.get('key'), 'snapshot');
+        if (!payload || typeof payload.content !== 'string' || typeof payload.title !== 'string' ||
+            !['view', 'edit'].includes(payload.mode)) throw new Error('Invalid encrypted snapshot.');
+        await openShareSnapshotTab(payload.content, payload.title, payload.mode, true);
+      } catch (_) { alert('Unable to open the encrypted snapshot. Check that the complete link is present.'); }
+      return;
+    }
 
     // PERF-002: Lazy-load pako when loading shared URL content
     if (typeof pako === 'undefined') {

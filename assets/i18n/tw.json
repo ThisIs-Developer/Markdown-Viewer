@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "加密分享。請將完整連結保密，其中包含解密金鑰。",
+  "Delete snapshot": "刪除快照",
+  "Snapshot deleted.": "快照已刪除。",
+  "Connected to encrypted live room": "已連線至加密的即時協作房間",
   "Linking folder": "正在連結資料夾",
   "Scanning folder…": "正在掃描資料夾…",
   "Reading files…": "正在讀取檔案…",

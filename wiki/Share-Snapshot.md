@@ -1,124 +1,50 @@
 # Share Snapshot
 
-Share Snapshot creates a point-in-time copy of the active Document. Use it when a recipient needs to read or edit a copy without joining a Live Share room.
+Share Snapshot creates an encrypted, point-in-time copy of the active Document. Choose **View only** or **Can edit**, select **Share**, and send the complete link through a trusted channel. Changes to a snapshot do not synchronize with the sender.
 
-Share Snapshot is not real-time collaboration. Changes made by the sender or recipient after link creation do not synchronize.
+## Encryption and Access
 
-## Create a Snapshot
+New snapshots encrypt the Markdown, title, and access mode on the device with AES-256-GCM. Each snapshot has an independent random key carried in the URL fragment. The application never sends that key to the share API. Recipients decrypt locally.
 
-1. Open the Document you want to share.
-2. Select **Share Snapshot**.
-3. Choose **View only** or **Can edit**.
-4. Select **Share**.
-5. Copy the generated URL and send it through a channel you trust.
+Anyone with the complete link can decrypt its content; keep it private. View only restricts the application interface, while Can edit permits changes to a temporary local copy. Neither prevents a recipient from copying content or forwarding the link. Temporary snapshot tabs are excluded from normal Workspace persistence. Export edits before leaving.
 
-The application selects URL-hash or Cloudflare KV storage automatically according to content size and encoded URL length.
+## Storage and Retention
 
-> **Privacy:** A Share Snapshot is a bearer link. Anyone who obtains the complete URL can open the capability it contains. There is no account check or recipient allowlist.
-
-## Access Modes
-
-| Mode | Recipient experience | What it does not provide |
+| Property | Inline snapshot | Stored snapshot |
 | :--- | :--- | :--- |
-| **View only** | Opens a temporary tab in Preview with editing actions blocked | Authentication, access revocation, or protection against link forwarding |
-| **Can edit** | Opens a temporary tab in Split view and lets the recipient edit that local copy | Real-time synchronization or write access to the sender's original Document |
+| URL | `#share=v2.<encrypted-envelope>&key=<key>` | `#id=s2_<id>&key=<key>` |
+| Selection | Below 3,000 UTF-8 content bytes and at most 4,096 URL characters | Larger content or URL |
+| Stored data | Ciphertext in the link | Ciphertext, creation time, format version, and deletion-token hash in Cloudflare KV |
+| Lifetime | The link itself remains usable | 90 days from creation |
+| Payload limit | Constrained by URL size | 8 MiB of UTF-8 JSON, including title and mode |
+| Early deletion | No server record to delete | **Delete snapshot** in the current generated-link modal |
 
-The recipient's temporary snapshot tab is not written into normal Workspace tab storage. Closing or reloading can discard edits unless the recipient exports the Markdown.
+Fragments are excluded from normal HTTP requests, but complete links can appear in browser history, clipboard managers, extensions, and messaging systems. Losing the key means the content cannot be recovered through the service.
 
-The application blocks creating another Share Snapshot from a temporary snapshot. Only the host can create a snapshot from a Live Share Document.
-
-## Storage Modes
-
-| Property | URL-hash snapshot | Stored snapshot |
-| :--- | :--- | :--- |
-| URL form | `#share=<compressed-content>` | `#id=<snapshot-id>` |
-| Selection rule | Used when Markdown is below 3,000 UTF-8 bytes and the encoded URL is no longer than 4,096 characters | Used at 3,000 bytes or more, or when the encoded URL exceeds 4,096 characters |
-| Content location | Compressed and base64url-encoded inside the link | Cloudflare KV through `/api/share` |
-| Retention | No server-side record created by Markdown Viewer; the copied URL itself remains usable | 90 days |
-| Maximum content | Constrained by practical browser, clipboard, and URL handling | 8,000,000 characters |
-| Early deletion | Delete every copy of the link that you control | Available through the API only when the caller retained the creation deletion token |
-| Server request when opening | The URL hash is not part of the normal HTTP request; the page processes it locally | The application requests `/api/share/<id>` |
-
-The URL-hash title and access flag are also stored in the fragment. Hash fragments can still be exposed through copied messages, browser synchronization/history, extensions, screenshots, logs from surrounding tools, or a person who forwards the URL.
-
-## Stored Snapshot Record
-
-The Share API stores:
-
-- Markdown content;
-- access mode;
-- sanitized title;
-- creation time;
-- character count; and
-- a hash of the deletion token.
-
-The record is written to `SHARE_KV` with a 90-day time to live. The API response uses `Cache-Control: no-store`.
-
-Creating a stored snapshot returns:
-
-- a random snapshot id;
-- a deletion token; and
-- the expiry duration.
-
-The deletion token is returned only at creation. The stored record contains its SHA-256 hash, not the original token.
+Existing links keep their existing format and expiry. Reading them does not rewrite records or extend their lifetime. New creation requires the encrypted format; refresh an older client if creation requests an upgrade.
 
 ## Delete a Stored Snapshot
 
-The API supports:
+The creator can select **Delete snapshot** while the generated-link modal retains its deletion credential. Closing/resetting the modal or leaving the page loses that in-memory credential. The deletion token is independent of the decryption key and is never included in recipient links.
 
-```http
-DELETE /api/share/<id>
-Content-Type: application/json
+API clients can retain the creation response's `deleteToken` separately and submit `DELETE /api/share/<id>` with JSON `{"deleteToken":"..."}`. The service stores only its hash. Deletion removes the stored snapshot, not previously downloaded copies or separately stored media. Without the token, the original 90-day expiry applies.
 
-{"deleteToken":"<token returned at creation>"}
-```
+## Media and Rendering
 
-> **Important:** The current Markdown Viewer UI does not display or export the deletion token and does not provide a Delete snapshot action. It keeps the token only in page memory while the generated link state exists. Closing/resetting the modal or leaving the session loses normal UI access to it.
+New managed images, GIFs, and videos are encrypted separately before upload. Their complete URLs, including media keys, are inside the encrypted Markdown. The browser retrieves ciphertext without the key and renders decrypted bytes locally. Media expires 90 days after its own upload.
 
-An API client that needs early deletion must call `POST /api/share`, securely capture the `deleteToken` from the response, keep it separate from the shared URL, and later submit it to the `DELETE` route. Without the token, wait for the 90-day expiry.
+Encrypted shared previews block automatic external media and remote diagram requests. Advanced diagrams/maps are shown as local source; explicit link navigation remains available. Upload required images through the encrypted media flow before sharing. Older managed URLs are preserved for existing documents but are not automatically loaded in encrypted shared previews. Review comments are not included in snapshots.
 
-Deleting a snapshot does not delete managed images, GIFs, or videos referenced by the Markdown. Managed media has separate content-addressed records and its own 90-day expiry.
-
-## Images and Other External Content
-
-Share Snapshot copies Markdown, not every referenced resource.
-
-- Managed media remains available through its public-by-link URL until that media record expires.
-- External images, media, fonts, and links are requested from their original hosts.
-- Legacy inline data images increase the snapshot size and can force stored-snapshot mode.
-- Comments are not included.
-- A remote diagram fence is re-rendered by the recipient's browser and can send its source to a renderer.
-
-## Security Boundaries
-
-- Snapshot ids and encoded content are difficult to guess but are not authentication.
-- View only is enforced by the client interface; it does not encrypt or hide the Markdown from someone who controls their browser.
-- Origin checks restrict supported browser origins for API creation and access, but requests without an `Origin` header are accepted and bearer-link secrecy remains essential.
-- Allowed application origins include the production site, HTTPS `*.markdownviewer.pages.dev` previews, `null`, and local `localhost`/`127.0.0.1` development origins.
-- Stored snapshots are not end-to-end encrypted by the application.
-- Cloudflare and the deployer can process normal platform and request logs.
-
-Do not use Share Snapshot as a confidential-document access-control system.
+Web Markdown exports inline decrypted managed media. Encrypted-share HTML exports use local content, inline media, and a restrictive content security policy without scripts. Exported files contain readable content: protect them as documents.
 
 ## Failure and Recovery
 
-| Symptom | Likely cause | Action |
-| :--- | :--- | :--- |
-| “Failed to create share link” | Pako or `/api/share` unavailable, missing `SHARE_KV`, disallowed origin, network error, or oversized content | Check the console/network request, configuration, origin, and 8,000,000-character limit |
-| Stored link returns not found | Invalid id, early deletion, or 90-day expiry | Ask the sender for a new snapshot |
-| Can edit copy disappeared | Snapshot tabs are temporary | Export Markdown before closing or reloading |
-| Image is missing | Managed-media expiry, unavailable external host, or blocked request | Replace the resource and create a new snapshot |
-| Remote diagram is missing | Renderer unavailable, CSP restriction, or invalid source | Check the renderer network request and fence syntax |
-
-See [Troubleshooting](Troubleshooting.md) for broader diagnostics.
-
-## API Summary
-
-| Method and route | Purpose |
+| Symptom | Action |
 | :--- | :--- |
-| `POST /api/share` | Create a stored snapshot |
-| `GET /api/share/<id>` | Load a stored snapshot |
-| `DELETE /api/share/<id>` | Delete a stored snapshot with its deletion token |
-| `OPTIONS /api/share[/<id>]` | CORS preflight |
+| Incomplete link or decryption failure | Ask for the entire original link, including everything after `#`; there is no plaintext fallback |
+| Stored snapshot missing | Check expiry or deletion; ask the sender for a new snapshot |
+| Creation unavailable | Refresh the app and check connectivity, secure-context Web Crypto support, deployment bindings, and payload size |
+| External image or diagram source shown | Expected private preview behavior; use encrypted managed attachments |
+| Managed attachment missing | Check the complete media key, connection, and its separate expiry |
 
-Deployment details are in [Configuration](Configuration.md#share-api). For the product-wide data boundary, see [Privacy and Security](Privacy-and-Security.md).
+See [Privacy and Security](Privacy-and-Security.md), [Configuration](Configuration.md#share-api), and the [protocol and rollout notes](../docs/ENCRYPTED_SHARING.md).

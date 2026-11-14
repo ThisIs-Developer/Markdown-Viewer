@@ -574,7 +574,7 @@ async function stubExportLibraries(page) {
 }
 
 async function stubLiveShareRuntime(page) {
-  await page.route('https://esm.sh/yjs@13.6.10/es2022/yjs.mjs', route => {
+  await page.route('**/assets/yjs.mjs', route => {
     route.fulfill({
       contentType: 'application/javascript',
       body: `
@@ -652,6 +652,13 @@ async function stubLiveShareRuntime(page) {
         }, 0);
       }
       send(payload) {
+        const message = JSON.parse(payload);
+        window.__liveWireMessages = window.__liveWireMessages || [];
+        window.__liveWireMessages.push(message);
+        if (message.type === 'authenticate') {
+          setTimeout(() => this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'ready', v: 2 }) })), 0);
+          return;
+        }
         this.channel.postMessage({ sender: this.id, payload });
       }
       close() {

@@ -11,9 +11,9 @@ Markdown Viewer is local-first: normal editing, Preview rendering, local file im
 - Secret Workspace encrypts its stored files and folder names on the device.
 - Network-backed features send only the data needed for that feature, but the receiving service or deployment platform can log requests according to its own policy.
 - Share Snapshot and Live Share URLs are bearer links. Possession of a valid link grants the capability encoded in it.
-- Live Share is not end-to-end encrypted.
+- New Share Snapshot, managed-media, and Live Share payloads are encrypted on the device before transmission.
 
-> **Privacy:** Do not place sensitive Markdown in a remote-rendered diagram, managed-media upload, stored Share Snapshot, or Live Share room unless you accept the stated service and bearer-link boundaries.
+> **Privacy:** Protect complete share links: their fragments contain decryption keys. Encrypted shared previews block automatic external assets and remote renderers. Ordinary documents can still contact remote services when those features are used.
 
 ## Data Stored on the Device
 
@@ -94,55 +94,37 @@ representative devices before broad deployment.
 | Remote diagrams | Diagram source or encoded source | PlantUML, Kroki, or mermaid.ink; response can be browser-cached | Remote renderer receives the source |
 | GeoJSON/TopoJSON maps | Tile and external-asset requests | Configured map-tile or asset host | Remote host |
 | External Markdown assets | Image, media, font, and link requests | Author-specified host | Remote host |
-| Managed media | Optimized image, GIF, or video after first-use consent | Cloudflare KV for 90 days from the latest upload of identical content | Public to anyone with the unguessable URL |
-| Stored Share Snapshot | Markdown content, mode, title, creation time, and size | Cloudflare KV for 90 days | Bearer snapshot URL |
-| Live Share | Yjs Markdown/Review updates, display name, presence, cursor, sync, leave, and session-end messages | Cloudflare Durable Object relay while clients are connected | Room secret plus host/edit/view capability |
-| Live Share capability metadata | Host, edit, and view bearer capability values plus `createdAt` | Durable Object storage; no application TTL or deletion path is implemented | Used by the Durable Object to authenticate roles |
+| Managed media | Encrypted image, GIF, or video after first-use consent | Cloudflare KV for 90 days per upload | Complete URL includes the client decryption key |
+| Stored Share Snapshot | Encrypted Markdown, mode, and title; creation metadata and deletion-token hash | Cloudflare KV for 90 days | Complete URL includes the client decryption key |
+| Live Share | Encrypted and signed document/Review updates, names, presence, cursors, and controls | Cloudflare Durable Object relay while clients are connected | Read key, role signing key, and role capability |
+| Live Share authentication metadata | Capability hashes, public role keys, room expiry, ended status | Durable Object storage for 24 hours in new rooms | Used to authenticate connections and verify signatures |
 
 The local GitHub credential vault protects PAT values from plaintext storage and keeps them out of workspace backups. It is not an operating-system keychain: malicious code running in the application origin, a compromised browser/app profile, a hostile extension, or malware on the unlocked device could still use the locally stored key. Remove the local entry and revoke the PAT in GitHub if the device, profile, or token may be compromised.
 
 Cloudflare, CDN, GitHub, renderer, map, external-asset, reverse-proxy, and self-hosting operators can retain normal service logs independently of Markdown Viewer's application-level storage.
 
-## Managed Media
+## Encrypted Sharing and Managed Media
 
-Supported managed media includes AVIF, BMP, GIF, JPEG, PNG, WebP, MP4, WebM, and Ogg. The client asks for consent before its first managed upload.
+New snapshots encrypt Markdown, titles, and access mode using AES-256-GCM with an independent random key. New managed uploads encrypt validated image/video data before transmission, including its media type. New live rooms encrypt document and Review updates, identities, presence, cursors, and controls, and verify role-based signatures. Keys remain in clients and complete share-link fragments; API requests and WebSocket URLs do not carry decryption or private signing keys.
 
-- Source files are limited to 25 MiB before processing.
-- Stored still images are limited to 300 KiB after optimization.
-- Stored GIFs are limited to 5 MiB.
-- Stored videos are limited to 10 MiB.
-- The API validates declared media type and file signature.
-- The content-derived URL is difficult to guess but is not an authorization mechanism.
-- Uploading identical content reuses its identifier and refreshes the 90-day expiry.
-- Share Snapshot and Live Share include the URL in Markdown; they do not make a second media copy.
-- After expiry, the Markdown reference remains but the media stops loading.
+Managed media supports AVIF, BMP, GIF, JPEG, PNG, WebP, MP4, WebM, and Ogg. The client validates file types and signatures. Source files are limited to 25 MiB, optimized still images to 300 KiB, GIFs to 5 MiB, and videos to 10 MiB. Each upload has a random identifier and expires after 90 days; repeated content creates a separate record. There is no managed-media deletion control.
 
-There is no user deletion token for managed media. Expiry is the implemented removal mechanism.
+Small snapshots carry ciphertext in the fragment. Larger snapshots store ciphertext in Cloudflare KV for 90 days, with a separate deletion-token hash. **Delete snapshot** is available while the current generated-link modal retains its token. Closing/resetting it loses that in-memory credential. Deletion cannot remove copies already downloaded or separately stored media.
 
-## Share Snapshot
+New live rooms store only capability hashes, public verification keys, expiry, and ended status. Their 24-hour deadline is fixed at creation. The relay does not persist document history. Ending a room rejects rejoining; an expiry alarm removes its authentication record. Existing shares, media, and rooms retain their compatibility behavior and original lifetime, with no migration or expiry extension.
 
-Small Share Snapshot content remains in the URL hash as `#share=...`. A hash fragment is not included in the normal HTTP request to open the page, although it can be exposed when a user copies the URL into another system, browser history is synchronized, extensions inspect the page, or the page itself processes the hash.
+Encrypted shared previews block automatic external images/media, remote diagrams, maps, and renderer-specific network loading. Advanced content is shown as local source, and managed encrypted media decrypts to local blob URLs. Explicit link navigation and user-selected exports remain available. Web Markdown and encrypted-share HTML exports inline decrypted attachments; exported documents are readable files.
 
-Stored snapshots use `#id=...` and Cloudflare KV. They expire after 90 days. The Share API returns a deletion token to the creating client and stores only its hash. The current application UI does not display the token or offer an early-delete control; an API client must capture the creation response and call `DELETE /api/share/<id>` with that token.
+## Encryption Boundaries
 
-View only prevents normal editing in the client. Can edit lets the recipient change their temporary local copy. Neither mode is an authentication boundary, and Can edit snapshots are not real-time collaboration.
+- Anyone with a complete valid link can decrypt content and forward that authority. View-only UI controls do not prevent copying or screenshots.
+- Lost keys cannot be recovered by the service. Missing keys, unsupported versions, or failed authentication do not fall back to another format.
+- Room identifiers, roles, message types, ciphertext sizes, timing, network addresses, and normal platform logs remain operational metadata.
+- TLS remains necessary for transport and connection capabilities. Encryption does not provide forward secrecy or protect a compromised device, browser extension, application origin, or application delivery path.
+- Role signatures distinguish host/editor/viewer authority; they do not verify a person's real-world identity. Participants sharing the same role credential share that authority.
+- The implementation has automated security and integration coverage; it is not a claim of an independent cryptographic audit.
 
-See [Share Snapshot](Share-Snapshot.md).
-
-## Live Share
-
-The Live Share relay does not persist Markdown or Review document state to KV or Durable Object storage. It does persist the host/edit/view capability record and `createdAt` in Durable Object storage so sockets can be authenticated.
-
-- Hosts, editors, and viewers use distinct bearer capabilities.
-- The server filters supported message types by role.
-- Viewers cannot send Markdown updates or end the session; they can send presence, sync requests, and Review updates.
-- The room secret and selected role capability are included in the invite URL.
-- Anyone with a valid invite can attempt to join while a host is available.
-- There is no end-to-end encryption.
-- Ending a session broadcasts a client event and disconnects participants; it does not delete the stored capability record.
-- No application TTL, explicit capability-record deletion, or server-side document history is implemented.
-
-See [Live Share](Live-Share-Cloudflare.md).
+See [Share Snapshot](Share-Snapshot.md), [Live Share](Live-Share-Cloudflare.md), and [protocol and rollout notes](../docs/ENCRYPTED_SHARING.md).
 
 ## Content Sanitization
 
@@ -215,8 +197,8 @@ See the [Security Policy](../SECURITY.md) for supported versions and vulnerabili
 ## Known Limitations
 
 - Bearer links can be forwarded, logged by surrounding systems, copied into chat, or exposed through browser synchronization.
-- Live Share is not end-to-end encrypted and persists capability metadata without an application TTL.
-- The current Share Snapshot UI does not expose the early-deletion token.
+- New live rooms encrypt content and retain authentication metadata for 24 hours; complete links still grant bearer access.
+- Snapshot deletion authority is kept only in the current generated-link modal; closing/resetting it loses that credential.
 - Managed media has no early-delete control.
 - Private mode preserves persisted Secret Workspace data. Reset workspace and Reset Secret Workspace are irreversible after confirmation.
 - Security headers differ by deployment target and can be weakened by self-hosting changes.

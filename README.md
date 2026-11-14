@@ -48,7 +48,7 @@
 
 Markdown Viewer is an open source, local-first workspace for developers, writers, students, researchers, and anyone working with `.md` or `.markdown` files. Go beyond plain text. Organize multiple documents, review with anchored comments without changing the Markdown, and render diagrams, maps, charts, math, 3D models, and music—all in one focused workspace.
 
-Turn a document into a Share Snapshot link for quick handoffs, or start access-controlled Live Share for real-time co-editing, live cursors, anchored comments, and threaded replies. Everyday editing stays on your device. No account is required, and the application includes no ads, analytics, telemetry, or subscriptions.
+Turn a document into an encrypted Share Snapshot link for quick handoffs, or start encrypted Live Share for real-time co-editing, live cursors, anchored comments, and threaded replies. Everyday editing stays on your device. No account is required, and the application includes no ads, analytics, telemetry, or subscriptions.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/5a0d6fda-96f0-4baf-bf7a-0ffbe5119eab" alt="Application UI" width="90%" />
@@ -74,7 +74,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 - **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Standard PDF/Save as PDF, or Rendered PDF with remembered Light or Dark appearance and complete rich-content preparation for PDF and PNG.
 
-- **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
+- **Optional sharing:** create an encrypted Share Snapshot with View only or Can edit access, or start an encrypted Live Share room with role-based signatures. Keep complete links private: they carry decryption keys. Existing shares retain their original expiry.
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live share" width="90%" />
@@ -115,12 +115,12 @@ Markdown Viewer is local-first, not network-free. The following table shows the 
 | Web libraries and uncached renderer dependencies | CDN requests in the web/PWA build |
 | GitHub import and emoji lookup | Public content uses GitHub APIs and raw-content hosts; private content uses an optional PAT only with `api.github.com` |
 | PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, and some diagram previews | Diagram source can be sent to PlantUML, Kroki, or mermaid.ink |
-| Consented image, GIF, and video insertion | Public, content-addressed Cloudflare media storage for 90 days |
+| Consented image, GIF, and video insertion | Encrypted Cloudflare media storage for 90 days |
 | Large Share Snapshot | Cloudflare KV for 90 days |
 | Live Share | WebSocket relay through a Cloudflare Durable Object; document content is not persisted server-side |
 | External images, media, links, and map tiles | The referenced external host |
 
-Share Snapshot and Live Share URLs are bearer links. Anyone who obtains a valid link and capability can use the access it grants. Live Share is not end-to-end encrypted. See [Privacy and Security](wiki/Privacy-and-Security.md) before using network features with sensitive content.
+Share Snapshot and Live Share URLs are bearer links. Anyone who obtains a valid link and capability can use the access it grants. New snapshots, managed media, and live rooms use client-side encryption; complete links contain decryption keys. See [Privacy and Security](wiki/Privacy-and-Security.md) before using network features with sensitive content.
 
 ## Visual Renderer Summary
 
@@ -164,7 +164,7 @@ Remote renderer services receive the source of the diagram they render. Do not s
 - A local Markdown file larger than 10 MB is rejected.
 - The GitHub credential vault stores up to 50 named PAT entries; each token name is limited to 60 characters.
 - Managed source media is limited to 25 MiB before processing; stored payload limits are 300 KiB for still images, 5 MiB for GIFs, and 10 MiB for videos.
-- Stored Share Snapshot content is limited to 8,000,000 characters and expires after 90 days.
+- Stored Share Snapshot payloads are limited to 8 MiB before encryption and expire after 90 days.
 - Live Share allows up to 64 WebSocket participants and 8 MB per live message.
 - STL source is limited to 2 MiB and rendered geometry to 300,000 vertices.
 - The desktop vault retains up to 20 recent history copies per document.

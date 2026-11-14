@@ -9,12 +9,17 @@
   "overrides": {
     "jspdf": {
       "dompurify": "3.4.17"
+    },
+    "miniflare": {
+      "sharp": "0.35.5",
+      "undici": "7.30.1"
     }
   },
   "scripts": {
     "start": "node tests/helpers/static-server.mjs",
     "dev": "node tests/helpers/static-server.mjs",
-    "build": "npm run build:toc && npm run check:static && npm run check:seo",
+    "build": "npm run build:sharing && npm run build:toc && npm run check:static && npm run check:seo",
+    "build:sharing": "node scripts/build-sharing.mjs",
     "build:toc": "node scripts/build-document-toc.mjs",
     "check:static": "node tests/helpers/static-build-check.mjs",
     "check:seo": "node seo/generate-sitemap.mjs --check",
@@ -50,7 +55,9 @@
     "mathjax": "4.0.0-beta.7",
     "mathjax-asana-font": "4.0.0-beta.7",
     "mathjax-stix2-font": "4.0.0-beta.7",
+    "miniflare": "4.20260730.0",
     "pako": "2.1.0",
-    "pdfjs-dist": "5.4.624"
+    "pdfjs-dist": "5.4.624",
+    "yjs": "13.6.31"
   }
 }

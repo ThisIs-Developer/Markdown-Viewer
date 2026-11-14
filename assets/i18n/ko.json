@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "암호화된 공유입니다. 전체 링크에는 복호화 키가 포함되어 있으므로 비공개로 유지하세요.",
+  "Delete snapshot": "스냅샷 삭제",
+  "Snapshot deleted.": "스냅샷이 삭제되었습니다.",
+  "Connected to encrypted live room": "암호화된 라이브 룸에 연결됨",
   "Linking folder": "폴더 연결 중",
   "Scanning folder…": "폴더 검색 중…",
   "Reading files…": "파일 읽는 중…",

@@ -1,4 +1,8 @@
+import '../sharing-crypto.js';
+const Sharing = globalThis.MarkdownShareCrypto;
 const MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
+const MAX_ENCRYPTED_MESSAGE_BYTES = Math.ceil((Sharing.LIVE_LIMIT + 16) * 4 / 3) + 4096;
+const ENCRYPTED_AUTH_KEY = 'live-room-auth-v2';
 const MAX_PARTICIPANTS = 64;
 const AUTH_STORAGE_KEY = "live-room-auth-v1";
 const CAPABILITY_PATTERN = /^[A-Za-z0-9_-]{24,160}$/;
@@ -132,6 +136,7 @@ export class LiveRoom {
     const session = this.sessions.get(socket);
     if (!session) return;
     this.sessions.delete(socket);
+    if (session.encrypted) return;
     this.broadcast({
       type: "leave",
       sender: session.participantId,
@@ -155,10 +160,8 @@ export class LiveRoom {
         return null;
       }
 
-      if (!auth) {
-        auth = { hostCap, editCap, viewCap, createdAt: Date.now() };
-        await this.state.storage.put(AUTH_STORAGE_KEY, auth);
-      }
+      // Existing rooms remain compatible. New rooms require protocol v2.
+      if (!auth) return null;
       if (auth.hostCap !== capability) return null;
       return ROLE_HOST;
     }
@@ -189,6 +192,8 @@ export class LiveRoom {
         headers: secureHeaders({ "Cache-Control": "no-store" })
       });
     }
+
+    if (url.searchParams.get('v') === '2') return this.fetchEncrypted(request);
 
     const roomId = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || "");
     const secret = url.searchParams.get("secret") || "";
@@ -254,6 +259,106 @@ export class LiveRoom {
       webSocket: client
     });
   }
+
+  async authenticateEncrypted(message, roomId) {
+    const role = message.role;
+    if (!Sharing.exactKeys(message, role === 'host'
+      ? ['type', 'v', 'role', 'sender', 'session', 'config', 'capability', 'capabilities']
+      : ['type', 'v', 'role', 'sender', 'session', 'config', 'capability'])) return null;
+    if (!['host', 'edit', 'view'].includes(role) || !isValidCapability(message.capability) ||
+        typeof message.sender !== 'string' || !/^[A-Za-z0-9_-]{16,120}$/.test(message.sender) ||
+        typeof message.session !== 'string' || !/^[A-Za-z0-9_-]{22}$/.test(message.session)) return null;
+    let config;
+    try { config = Sharing.publicConfig(message.config, roomId); } catch (_) { return null; }
+    if (config.expiresAt <= Date.now() || config.expiresAt > Date.now() + 86400000) return null;
+    const providedHash = await Sharing.hash(message.capability);
+    let hashes = null;
+    if (role === 'host') {
+      const caps = message.capabilities;
+      if (!Sharing.exactKeys(caps, ['host', 'edit', 'view']) || !['host', 'edit', 'view'].every(name => isValidCapability(caps[name])) ||
+          new Set(Object.values(caps)).size !== 3 || caps.host !== message.capability) return null;
+      hashes = {};
+      for (const name of ['host', 'edit', 'view']) hashes[name] = await Sharing.hash(caps[name]);
+    }
+    const auth = await this.state.storage.transaction(async txn => {
+      let current = await txn.get(ENCRYPTED_AUTH_KEY);
+      if (!current) {
+        if (role !== 'host') return null;
+        current = { config, hashes, expiresAt: config.expiresAt, ended: false };
+        await txn.put(ENCRYPTED_AUTH_KEY, current);
+      }
+      if (current.ended || current.expiresAt <= Date.now() || current.hashes[role] !== providedHash ||
+          JSON.stringify(current.config) !== JSON.stringify(config)) return null;
+      return current;
+    });
+    if (auth) await this.state.storage.setAlarm(auth.expiresAt);
+    return auth;
+  }
+
+  async fetchEncrypted(request) {
+    const roomId = new URL(request.url).pathname.split('/').filter(Boolean).pop() || '';
+    if (!/^room2_[A-Za-z0-9_-]{24}$/.test(roomId)) return new Response('Invalid room', { status: 400 });
+    if (this.sessions.size >= MAX_PARTICIPANTS) return new Response('Room is full', { status: 429 });
+    const [client, socket] = Object.values(new WebSocketPair());
+    socket.accept();
+    const session = { encrypted: true, roomId, authenticated: false, pending: 0, pendingBytes: 0, sequence: 0, chain: Promise.resolve() };
+    this.sessions.set(socket, session);
+    const timeout = setTimeout(() => {
+      if (!session.authenticated) { socket.close(1008, 'Authentication timeout'); this.sessions.delete(socket); }
+    }, 5000);
+    const close = () => { clearTimeout(timeout); this.sessions.delete(socket); };
+    socket.addEventListener('close', close);
+    socket.addEventListener('error', close);
+    socket.addEventListener('message', event => {
+      if (typeof event.data !== 'string' || event.data.length > (session.authenticated ? MAX_ENCRYPTED_MESSAGE_BYTES : 16384) ||
+          session.pending >= 100 || session.pendingBytes + event.data.length > MAX_ENCRYPTED_MESSAGE_BYTES * 2) {
+        socket.close(1009, 'Message limit'); close(); return;
+      }
+      session.pending += 1;
+      session.pendingBytes += event.data.length;
+      session.chain = session.chain.then(async () => {
+        if (!this.sessions.has(socket)) return;
+        const message = JSON.parse(event.data);
+        if (!session.authenticated) {
+          if (message.type !== 'authenticate' || message.v !== 2) throw new Error('Authentication required');
+          const auth = await this.authenticateEncrypted(message, roomId);
+          if (!auth) throw new Error('Invalid credentials');
+          Object.assign(session, { authenticated: true, role: message.role, participantId: message.sender,
+            cryptoSession: message.session, config: auth.config, expiresAt: auth.expiresAt });
+          clearTimeout(timeout);
+          safeSend(socket, { type: 'ready', v: 2 });
+          return;
+        }
+        if (session.expiresAt <= Date.now()) throw new Error('Room expired');
+        Sharing.liveFrame(message);
+        if (message.roomId !== roomId || message.role !== session.role || message.sender !== session.participantId ||
+            message.session !== session.cryptoSession || message.seq <= session.sequence) throw new Error('Invalid frame');
+        await Sharing.verifyFrame(message, session.config);
+        session.sequence = message.seq;
+        if (message.type === 'session-end') {
+          await this.state.storage.transaction(async txn => {
+            const auth = await txn.get(ENCRYPTED_AUTH_KEY);
+            if (auth) { auth.ended = true; await txn.put(ENCRYPTED_AUTH_KEY, auth); }
+          });
+        }
+        this.sessions.forEach((peer, peerSocket) => {
+          if (peerSocket !== socket && peer.authenticated) safeSend(peerSocket, message);
+        });
+        if (message.type === 'session-end') {
+          for (const peerSocket of this.sessions.keys()) peerSocket.close(1000, 'Session ended');
+          this.sessions.clear();
+        }
+      }).catch(() => { socket.close(1008, 'Invalid encrypted room message'); close(); })
+        .finally(() => { session.pending -= 1; session.pendingBytes -= event.data.length; });
+    });
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async alarm() {
+    for (const socket of this.sessions.keys()) socket.close(1000, 'Session expired');
+    this.sessions.clear();
+    await this.state.storage.deleteAll();
+  }
 }
 
 export default {
@@ -282,15 +387,20 @@ export default {
       });
     }
 
+    const encrypted = url.searchParams.get('v') === '2';
+    if ((url.searchParams.has('v') && !encrypted) ||
+        (encrypted && (url.searchParams.size !== 1 || !/^room2_[A-Za-z0-9_-]{24}$/.test(roomId)))) {
+      return new Response('Unsupported live room protocol', { status: 400 });
+    }
     const secret = url.searchParams.get("secret") || "";
-    if (!secret) {
+    if (!encrypted && !secret) {
       return new Response("Missing live room credentials", {
         status: 400,
         headers: secureHeaders({ "Cache-Control": "no-store" })
       });
     }
 
-    const id = env.LIVE_ROOMS.idFromName(roomId + ":" + secret);
+    const id = env.LIVE_ROOMS.idFromName(encrypted ? 'encrypted-v2:' + roomId : roomId + ":" + secret);
     return env.LIVE_ROOMS.get(id).fetch(request);
   }
 };

@@ -1,12 +1,15 @@
+import '../../../sharing-crypto.js';
+const Sharing = globalThis.MarkdownShareCrypto;
 const MAX_IMAGE_BYTES = 300 * 1024;
 const MAX_GIF_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 10 * 1024 * 1024;
-const MAX_DATA_URL_CHARS = 14_100_000;
 const MEDIA_TTL_SECONDS = 60 * 60 * 24 * 90;
 const MEDIA_TTL_MILLISECONDS = MEDIA_TTL_SECONDS * 1000;
 const MEDIA_ID_PATTERN = /^[A-Za-z0-9_-]{20,32}$/;
 // Keep the established prefix so links created before video support remain valid.
 const MEDIA_KEY_PREFIX = "managed-image-v1:";
+const ENCRYPTED_MEDIA_ID = /^e2_[A-Za-z0-9_-]{24}$/;
+const ENCRYPTED_MEDIA_PREFIX = 'managed-media-v2:';
 const ALLOWED_ORIGINS = new Set([
   "https://markdownviewer.pages.dev",
   "null"
@@ -104,27 +107,7 @@ function getMediaByteLimit(mimeType) {
   return MAX_IMAGE_BYTES;
 }
 
-function parseMediaDataUrl(value) {
-  if (typeof value !== "string" || value.length > MAX_DATA_URL_CHARS) return null;
-  const match = value.match(/^data:((?:image\/(?:avif|bmp|gif|jpeg|png|webp))|(?:video\/(?:mp4|ogg|webm)));base64,([A-Za-z0-9+/]+={0,2})$/i);
-  if (!match) return null;
-  const mimeType = match[1].toLowerCase();
-  if (!ALLOWED_MEDIA_TYPES.has(mimeType)) return null;
-  const bytes = decodeBase64(match[2]);
-  if (!bytes || bytes.byteLength > getMediaByteLimit(mimeType) || !hasValidMediaSignature(mimeType, bytes)) return null;
-  return { mimeType, base64: match[2], bytes };
-}
 
-async function createMediaId(mimeType, bytes) {
-  const typeBytes = new TextEncoder().encode(mimeType + "\0");
-  const input = new Uint8Array(typeBytes.length + bytes.length);
-  input.set(typeBytes, 0);
-  input.set(bytes, typeBytes.length);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
-  let binary = "";
-  digest.forEach(byte => { binary += String.fromCharCode(byte); });
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").slice(0, 24);
-}
 
 function getPublicMediaUrl(request, id) {
   const url = new URL(request.url);
@@ -156,29 +139,25 @@ export async function onRequest({ request, env, params }) {
   if (request.method === "POST" && !id) {
     const origin = request.headers.get("Origin") || "";
     if (!isAllowedOrigin(origin)) return jsonResponse({ error: "origin not allowed" }, { status: 403 }, request);
-    const contentLength = Number(request.headers.get("Content-Length"));
-    if (Number.isFinite(contentLength) && contentLength > MAX_DATA_URL_CHARS + 1024) {
-      return jsonResponse({ error: "media upload is too large" }, { status: 413 }, request);
-    }
     let body;
     try {
-      body = await request.json();
+      body = await Sharing.readJson(request, Math.ceil((Sharing.MEDIA_LIMIT + 16) * 4 / 3) + 1024);
     } catch (_) {
       return jsonResponse({ error: "invalid json" }, { status: 400 }, request);
     }
-    const media = parseMediaDataUrl(body && body.dataUrl);
-    if (!media) return jsonResponse({ error: "invalid or oversized image, GIF, or video" }, { status: 400 }, request);
-
-    const mediaId = await createMediaId(media.mimeType, media.bytes);
-    const storageKey = MEDIA_KEY_PREFIX + mediaId;
-    const existing = await env.SHARE_KV.get(storageKey);
+    if (!Sharing.exactKeys(body, ['encrypted'])) {
+      return jsonResponse({ error: 'Update Markdown Viewer to upload encrypted media.' }, { status: 426 }, request);
+    }
+    let encrypted;
+    try { encrypted = Sharing.envelope(body.encrypted, Sharing.MEDIA_LIMIT); }
+    catch (_) { return jsonResponse({ error: 'invalid encrypted media' }, { status: 400 }, request); }
+    const mediaId = 'e2_' + Sharing.random(18);
+    const storageKey = ENCRYPTED_MEDIA_PREFIX + mediaId;
     const createdAt = Date.now();
     const expiresAt = createdAt + MEDIA_TTL_MILLISECONDS;
     await env.SHARE_KV.put(storageKey, JSON.stringify({
-      version: 2,
-      mimeType: media.mimeType,
-      base64: media.base64,
-      size: media.bytes.byteLength,
+      version: 3,
+      encrypted,
       createdAt,
       expiresAt
     }), { expirationTtl: MEDIA_TTL_SECONDS });
@@ -186,10 +165,22 @@ export async function onRequest({ request, env, params }) {
     return jsonResponse({
       id: mediaId,
       url: getPublicMediaUrl(request, mediaId),
-      mimeType: media.mimeType,
-      size: media.bytes.byteLength,
       expiresAt
-    }, { status: existing ? 200 : 201 }, request);
+    }, { status: 201 }, request);
+  }
+
+  if ((request.method === 'GET' || request.method === 'HEAD') && ENCRYPTED_MEDIA_ID.test(id)) {
+    const raw = await env.SHARE_KV.get(ENCRYPTED_MEDIA_PREFIX + id);
+    if (!raw) return jsonResponse({ error: 'media not found' }, { status: 404 }, request);
+    try {
+      const record = JSON.parse(raw);
+      if (!Number.isFinite(record.expiresAt) || record.expiresAt <= Date.now()) {
+        return jsonResponse({ error: 'media expired' }, { status: 404 }, request);
+      }
+      const response = jsonResponse({ encrypted: Sharing.envelope(record.encrypted, Sharing.MEDIA_LIMIT) }, {}, request);
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      return request.method === 'HEAD' ? new Response(null, { headers: response.headers }) : response;
+    } catch (_) { return jsonResponse({ error: 'media unavailable' }, { status: 500 }, request); }
   }
 
   if ((request.method === "GET" || request.method === "HEAD") && MEDIA_ID_PATTERN.test(id)) {
@@ -213,15 +204,10 @@ export async function onRequest({ request, env, params }) {
       return jsonResponse({ error: "media unavailable" }, { status: 500 }, request);
     }
     const remainingTtl = Math.floor((expiresAt - Date.now()) / 1000);
-    if (remainingTtl < 60) {
-      await env.SHARE_KV.delete(MEDIA_KEY_PREFIX + id);
+    if (remainingTtl <= 0) {
       return jsonResponse({ error: "media expired" }, { status: 404 }, request);
     }
-    if (!Number.isFinite(storedExpiresAt) || storedExpiresAt <= 0) {
-      record.version = 2;
-      record.expiresAt = expiresAt;
-      await env.SHARE_KV.put(MEDIA_KEY_PREFIX + id, JSON.stringify(record), { expirationTtl: remainingTtl });
-    }
+    // Legacy media keeps its original expiry; reading never extends retention.
     const bytes = decodeBase64(record.base64);
     if (!bytes || bytes.byteLength > getMediaByteLimit(record.mimeType) || !hasValidMediaSignature(record.mimeType, bytes)) {
       return jsonResponse({ error: "media unavailable" }, { status: 500 }, request);

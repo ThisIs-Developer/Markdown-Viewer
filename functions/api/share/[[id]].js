@@ -1,9 +1,9 @@
+import '../../../sharing-crypto.js';
+const Sharing = globalThis.MarkdownShareCrypto;
 const SHARE_TTL_SECONDS = 60 * 60 * 24 * 90;
-const MAX_CONTENT_CHARS = 8000000;
-const SHARE_ID_LENGTH = 10;
 const SHARE_DELETE_TOKEN_BYTES = 18;
-const SHARE_ID_PATTERN = /^[a-z2-9]{6,20}$/;
-const SHARE_ID_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+const SHARE_ID_PATTERN = /^(?:[a-z2-9]{6,20}|s2_[A-Za-z0-9_-]{24})$/;
+const storageKey = id => id.startsWith('s2_') ? 'share-v2:' + id : id;
 const ALLOWED_ORIGINS = new Set([
   "https://markdownviewer.pages.dev",
   "null"
@@ -68,14 +68,7 @@ function getShareId(params) {
   return typeof raw === "string" ? raw : "";
 }
 
-function generateShareId(length = SHARE_ID_LENGTH) {
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
-  let id = "";
-  for (let i = 0; i < bytes.length; i += 1) {
-    id += SHARE_ID_ALPHABET[bytes[i] % SHARE_ID_ALPHABET.length];
-  }
-  return id;
-}
+function generateShareId() { return 's2_' + Sharing.random(18); }
 
 function generateShareDeleteToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(SHARE_DELETE_TOKEN_BYTES));
@@ -99,7 +92,7 @@ async function hashDeleteToken(token) {
 async function createUniqueShareId(kv) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const id = generateShareId();
-    const existing = await kv.get(id);
+    const existing = await kv.get(storageKey(id));
     if (!existing) return id;
   }
   throw new Error("Unable to allocate share id");
@@ -131,31 +124,28 @@ export async function onRequest({ request, env, params }) {
   if (request.method === "POST" && !id) {
     let body;
     try {
-      body = await request.json();
+      body = await Sharing.readJson(request, Math.ceil((Sharing.SNAPSHOT_LIMIT + 16) * 4 / 3) + 1024);
     } catch (_) {
       return jsonResponse({ error: "invalid json" }, { status: 400 }, request);
     }
 
-    const content = body && body.content;
-    if (typeof content !== "string" || content.length === 0) {
-      return jsonResponse({ error: "content required" }, { status: 400 }, request);
+    if (!Sharing.exactKeys(body, ['encrypted'])) {
+      return jsonResponse({ error: 'Update Markdown Viewer to create an encrypted share.' }, { status: 426 }, request);
     }
-    if (content.length > MAX_CONTENT_CHARS) {
-      return jsonResponse({ error: "content too large" }, { status: 413 }, request);
-    }
+    let encrypted;
+    try { encrypted = Sharing.envelope(body.encrypted, Sharing.SNAPSHOT_LIMIT); }
+    catch (_) { return jsonResponse({ error: 'invalid encrypted snapshot' }, { status: 400 }, request); }
 
     const shareId = await createUniqueShareId(env.SHARE_KV);
     const deleteToken = generateShareDeleteToken();
     const record = {
-      content,
-      mode: sanitizeMode(body.mode),
-      title: sanitizeTitle(body.title),
+      version: 2,
+      encrypted,
       createdAt: Date.now(),
-      size: content.length,
       deleteTokenHash: await hashDeleteToken(deleteToken)
     };
 
-    await env.SHARE_KV.put(shareId, JSON.stringify(record), {
+    await env.SHARE_KV.put(storageKey(shareId), JSON.stringify(record), {
       expirationTtl: SHARE_TTL_SECONDS
     });
 
@@ -173,7 +163,7 @@ export async function onRequest({ request, env, params }) {
 
     let body;
     try {
-      body = await request.json();
+      body = await Sharing.readJson(request, 1024);
     } catch (_) {
       return jsonResponse({ error: "invalid json" }, { status: 400 }, request);
     }
@@ -183,7 +173,7 @@ export async function onRequest({ request, env, params }) {
       return jsonResponse({ error: "delete token required" }, { status: 400 }, request);
     }
 
-    const raw = await env.SHARE_KV.get(id);
+    const raw = await env.SHARE_KV.get(storageKey(id));
     if (!raw) {
       return jsonResponse({ error: "not found" }, { status: 404 }, request);
     }
@@ -199,7 +189,7 @@ export async function onRequest({ request, env, params }) {
       return jsonResponse({ error: "not found" }, { status: 404 }, request);
     }
 
-    await env.SHARE_KV.delete(id);
+    await env.SHARE_KV.delete(storageKey(id));
     return jsonResponse({ deleted: true }, {}, request);
   }
 
@@ -208,7 +198,7 @@ export async function onRequest({ request, env, params }) {
       return jsonResponse({ error: "invalid id" }, { status: 400 }, request);
     }
 
-    const raw = await env.SHARE_KV.get(id);
+    const raw = await env.SHARE_KV.get(storageKey(id));
     if (!raw) {
       return jsonResponse({ error: "not found" }, { status: 404 }, request);
     }
@@ -220,6 +210,11 @@ export async function onRequest({ request, env, params }) {
       return jsonResponse({ error: "invalid record" }, { status: 500 }, request);
     }
 
+    if (id.startsWith('s2_')) {
+      try {
+        return jsonResponse({ encrypted: Sharing.envelope(record.encrypted, Sharing.SNAPSHOT_LIMIT) }, {}, request);
+      } catch (_) { return jsonResponse({ error: 'invalid encrypted snapshot' }, { status: 500 }, request); }
+    }
     return jsonResponse({
       content: record.content || "",
       mode: sanitizeMode(record.mode),
