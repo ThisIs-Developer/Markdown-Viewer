@@ -42,6 +42,30 @@ jobs:
           type=sha,prefix=sha-
           type=raw,value=latest,enable={{is_default_branch}}
 
+    - name: Install app and browser test dependencies
+      run: |
+        npm ci
+        npx playwright install --with-deps chromium
+
+    - name: Verify static build and unit tests
+      run: |
+        npm run build
+        npm run test:unit
+
+    - name: Test Docker HTTP and local HTTPS end to end
+      run: bash tests/docker-smoke.sh
+
+    - name: Run existing Chromium browser smoke
+      run: npm run test:e2e:smoke
+
+    - name: Save HTTP and HTTPS screenshots
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-http-https-ui
+        path: docker-artifacts/docker-*.png
+        if-no-files-found: ignore
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
