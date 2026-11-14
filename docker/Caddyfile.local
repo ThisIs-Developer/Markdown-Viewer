@@ -1,0 +1,4 @@
+# Local HTTPS uses Caddy's private CA. Trust its root certificate on each client.
+localhost {
+    reverse_proxy markdown-viewer:80
+}

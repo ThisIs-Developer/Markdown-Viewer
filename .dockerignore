@@ -7,6 +7,8 @@ desktop-app
 wiki
 node_modules
 *.md
+!sample.md
+!assets/linked-workspace-guide.md
 LICENSE
 docker-compose.yml
 Dockerfile

@@ -1,0 +1,5 @@
+# Public HTTPS requires MDV_DOMAIN DNS resolving to this host; Caddy handles ACME.
+{$MDV_DOMAIN} {
+    header Strict-Transport-Security "max-age=31536000"
+    reverse_proxy markdown-viewer:80
+}
