@@ -1,3 +1,4 @@
+name: markdown-viewer-https-public
 # Optional public HTTPS. Set MDV_DOMAIN to a DNS name you control.
 # Only Caddy publishes ports; plain HTTP is confined to the Docker network.
 services:

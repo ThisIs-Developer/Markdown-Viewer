@@ -44,6 +44,54 @@ Stop:
 docker compose down
 ```
 
+## Optional HTTPS (no changes to the default port 8080)
+
+The default `docker-compose.yml` is still plain HTTP on **http://localhost:8080**. Its port mapping `8080:80` remains unchanged. Keep HTTP for local testing; do not expose this plain HTTP port to untrusted networks. To bind it only to localhost, customize the mapping to `127.0.0.1:8080:80`.
+
+### Local HTTPS on your own machine
+
+```bash
+docker compose -f docker-compose.https.yml up -d --build
+```
+
+Open **https://localhost:8443**. Caddy supplies HTTPS using its **private local certificate authority** and proxies to Markdown Viewer's Nginx over the internal Docker network. The Nginx HTTP port is **not published** to the host in this mode.
+
+For browser trust without certificate warnings, export Caddy's local CA certificate:
+
+```bash
+docker compose -f docker-compose.https.yml cp caddy:/data/caddy/pki/authorities/local/root.crt ./mdv-local-ca.crt
+```
+
+Trust this root CA **only on machines you control**, using the operating system's certificate-authority trust settings. Do not share its private key or install an untrusted third-party CA. For command-line *diagnostics only*, `curl -k https://localhost:8443` will connect without CA verification; do not disable TLS validation for real users.
+
+Stop without deleting the persisted CA:
+
+```bash
+docker compose -f docker-compose.https.yml down
+```
+
+### Public HTTPS with your own domain
+
+Create a DNS record pointing a hostname you control (for example, `md.example.com`) to your Docker host, allow inbound TCP **80 and 443**, and set `MDV_DOMAIN` to the hostname **without** `https://`:
+
+```bash
+MDV_DOMAIN=md.example.com docker compose -f docker-compose.https-public.yml up -d --build
+```
+
+Windows PowerShell: set `$env:MDV_DOMAIN = "md.example.com"` before running the `docker compose -f docker-compose.https-public.yml up -d --build` command.
+
+Open **https://md.example.com**. Caddy automatically requests and renews a publicly trusted certificate; its port 80 listener handles certificate validation and redirects to HTTPS. The reverse-proxied Nginx container is reachable **only inside the Docker network**. Caddy persists certificates and account state in Docker named volumes; preserve these volumes across upgrades. A public domain must resolve to your host and be reachable for certificate issuance. Existing `markdownviewer.pages.dev` points to Cloudflare Pages and is **not** automatically assigned to your Docker installation.
+
+Public HTTPS applies to the browser-to-Caddy connection. The private Docker-network hop from Caddy to Nginx remains HTTP; configure an additional TLS layer if your threat model requires encryption on that internal hop.
+
+To stop:
+
+```bash
+MDV_DOMAIN=md.example.com docker compose -f docker-compose.https-public.yml down
+```
+
+The HTTPS configurations do not modify the ordinary `docker-compose.yml`, do not require a Markdown Viewer account, and do not change Cloudflare Pages hosting. If you operate an existing TLS reverse proxy, keep it and route it to the container's HTTP port instead of launching another Caddy on the same public ports.
+
 ## Building Locally
 
 ```bash
@@ -61,21 +109,13 @@ On `localhost`, managed-media and stored Share Snapshot requests use the product
 
 The container alone does not provide Cloudflare KV or Durable Objects. Self-hosted stored Share Snapshot and Live Share require separately deployed compatible endpoints.
 
-## Known Stock Image Limitation
+## Docker Runtime and Offline Asset Integrity
 
-The checked-in root `Dockerfile` does not copy:
+The image now includes the editor's root-level runtime dependencies (`browser-drop-source.js`, `native-markdown-source.js`, `preview-worker.js`, and `sample.md`) as well as the in-app linked-workspace guide. The Service Worker includes the native Markdown source in its critical asset list, so the expected local assets can precache successfully. JavaScript modules with the `.mjs` extension are served with `application/javascript`.
 
-- `preview-worker.js`; or
-- `sample.md`.
+Mutable JS, CSS, and MJS assets use revalidation rather than an immutable one-year cache; images use a bounded seven-day cache. Security headers are inherited by static responses, and the HTTP-only Nginx listener does not send `upgrade-insecure-requests`.
 
-Both files are listed in `sw.js` as critical precache assets. The consequences are:
-
-- Documents eligible for Preview Worker rendering receive a Worker load failure and fall back to main-thread rendering; and
-- Service Worker installation can fail because `cache.addAll()` rejects the complete precache when either asset returns `404`.
-
-This is an implementation packaging limitation, not a documentation configuration step. The documentation audit records it without changing Docker behavior.
-
-If you maintain a custom image, copy both files to `/usr/share/nginx/html/`, rebuild, and verify that every `CRITICAL_ASSETS` URL in `sw.js` returns `200` with the correct MIME type.
+The Docker CI suite validates actual HTTP and local HTTPS containers, static asset status/MIME/headers, browser editor/Preview, and Service Worker activation. These tests don't guarantee correctness in every custom reverse proxy, domain, or browser setup.
 
 ## Nginx and Headers
 
@@ -85,7 +125,7 @@ The Docker image uses `nginx:alpine`. Production deployments should keep these b
 - Serve `sample.md` because the Service Worker includes it in the critical precache.
 - Serve JavaScript files with correct MIME types.
 - Allow Service Worker registration from the app origin.
-- Send security headers that match the app's CSP and deployment policy. The current Docker image includes:
+- Send security headers that match the app's CSP and deployment policy. The Docker image includes:
 
 ```nginx
 add_header X-Frame-Options "SAMEORIGIN" always;
@@ -98,7 +138,7 @@ The Dockerfile also sets a Content-Security-Policy with the external origins req
 
 Cloudflare Pages deployments use the stricter root `_headers` and `_redirects` files, including CSP, HSTS, clickjacking, permissions, cross-origin, and sensitive-path protections. When self-hosting behind Docker or another reverse proxy, keep the CSP compatible with `index.html`, lazy-loaded renderers, Share Snapshot, and Live Share instead of copying a wildcard policy.
 
-Use long caching carefully. `sw.js`, `index.html`, `workspace-storage.js`, `script.js`, and `styles.css` are update-sensitive; stale versions can keep old app behavior alive.
+The Docker image requires revalidation for JS/CSS/MJS rather than making unversioned application code immutable. Other local caches, including Service Worker caches, still require testing during upgrades.
 
 ## Reverse Proxy Examples
 

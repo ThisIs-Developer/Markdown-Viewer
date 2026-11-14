@@ -1,3 +1,4 @@
+name: markdown-viewer-https-local
 # Optional local HTTPS: https://localhost:8443 (self-signed local CA).
 # The Nginx application has no published host HTTP port in this mode.
 services:
