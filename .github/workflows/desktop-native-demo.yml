@@ -41,6 +41,8 @@ jobs:
       - run: npm ci
       - run: npm ci --prefix desktop-app
       - run: npm run build
+      - name: Prepare desktop dependencies
+        run: npm --prefix desktop-app run setup
       - run: npm run test:unit
       - run: node assets/i18n/audit-ui-locales.mjs
       - name: Checkout pinned single-instance runtime
@@ -59,8 +61,6 @@ jobs:
           cmake -S desktop-app/.native-runtime -B desktop-app/.native-runtime/build -G Ninja -DCMAKE_BUILD_TYPE=Release
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cmake --build desktop-app/.native-runtime/build --parallel 4
-      - name: Prepare desktop dependencies
-        run: npm --prefix desktop-app run setup
       - name: Package isolated native demo
         run: node desktop-app/build-native-demo.js
       - name: Validate native rename with real Windows files

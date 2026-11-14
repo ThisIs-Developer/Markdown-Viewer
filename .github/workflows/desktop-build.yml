@@ -33,6 +33,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm ci --prefix desktop-app
+      - name: Prepare Neutralino SDK for unit tests
+        run: node desktop-app/setup-binaries.js
       - run: npm run build && npm run test:unit
       - run: python3 tests/native/test_macos_load_commands.py
       - uses: actions/cache@v4
