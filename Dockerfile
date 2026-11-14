@@ -1,6 +1,10 @@
 # Serve the privacy-first Markdown Viewer web application with Nginx.
 # Public HTTPS is terminated by an optional Caddy reverse proxy.
-FROM nginx:alpine
+FROM nginx:1.31.8-alpine3.24-slim
+
+# Reduce attack surface by omitting optional Nginx modules, and apply
+# all available security updates from the Alpine release repositories.
+RUN apk upgrade --no-cache
 
 COPY index.html /usr/share/nginx/html/
 COPY workspace-storage.js /usr/share/nginx/html/

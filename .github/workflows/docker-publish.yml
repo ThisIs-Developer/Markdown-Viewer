@@ -66,6 +66,39 @@ jobs:
         path: docker-artifacts/docker-*.png
         if-no-files-found: ignore
 
+    - name: Build fresh Docker image for security scan
+      run: docker build --pull -t markdown-viewer:security-audit .
+
+    - name: Scan image for all known OS and library vulnerabilities
+      uses: aquasecurity/trivy-action@0.36.0
+      with:
+        image-ref: markdown-viewer:security-audit
+        format: json
+        output: docker-artifacts/trivy-vulnerabilities.json
+        scanners: vuln
+        vuln-type: os,library
+        severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+        exit-code: '0'
+
+    - name: Block fixable critical and high vulnerabilities
+      uses: aquasecurity/trivy-action@0.36.0
+      with:
+        image-ref: markdown-viewer:security-audit
+        format: table
+        scanners: vuln
+        vuln-type: os,library
+        severity: CRITICAL,HIGH
+        ignore-unfixed: true
+        exit-code: '1'
+
+    - name: Upload full Docker vulnerability report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-security-report
+        path: docker-artifacts/trivy-vulnerabilities.json
+        if-no-files-found: ignore
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
