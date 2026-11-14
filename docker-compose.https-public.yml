@@ -1,0 +1,29 @@
+# Optional public HTTPS. Set MDV_DOMAIN to a DNS name you control.
+# Only Caddy publishes ports; plain HTTP is confined to the Docker network.
+services:
+  markdown-viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "80"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - markdown-viewer
+    environment:
+      MDV_DOMAIN: ${MDV_DOMAIN:?Set MDV_DOMAIN to your publicly resolving hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile.public:/etc/caddy/Caddyfile:ro
+      - mdv_caddy_data:/data
+      - mdv_caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  mdv_caddy_data:
+  mdv_caddy_config:
