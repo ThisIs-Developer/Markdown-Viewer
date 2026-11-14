@@ -66,7 +66,7 @@ The web build loads core libraries from CDN with Subresource Integrity where che
 | STLLoader / OrbitControls | CDN or prepared desktop copy | STL loading and controls | Lazy |
 | D3 | CDN or prepared desktop copy | Markmap | Lazy |
 | Markmap | CDN or prepared desktop copy | Markmap diagrams | Lazy |
-| Yjs | CDN or prepared desktop copy | Live Share document sync | Lazy |
+| Yjs | Pinned local bundle (`assets/yjs.mjs`) | Live Share document sync | Lazy |
 
 When running inside Neutralino, dynamic library URLs are rewritten to local `/libs/...` files prepared by `desktop-app/prepare.js`.
 
@@ -91,15 +91,16 @@ When running inside Neutralino, dynamic library URLs are rewritten to local `/li
 | Share URL warning ceiling | 32,000 characters |
 | Legacy share URL ceiling | 4,096 characters |
 | Server share threshold | 3,000 bytes |
-| Stored Share Snapshot max content | 8,000,000 characters |
+| Stored Share Snapshot max payload | 8 MiB UTF-8 JSON before encryption |
 | Stored Share Snapshot TTL | 90 days |
 | Managed media max source file | 25 MiB |
 | Managed still-image optimized payload | 300 KiB |
 | Managed GIF payload | 5 MiB |
 | Managed video payload | 10 MiB |
-| Managed media TTL | 90 days from the most recent upload of that content |
+| Managed media TTL | 90 days per encrypted upload |
 | Live Share max participants | 64 |
-| Live Share max message | 8 MB |
+| Live Share max payload | 8 MiB before encryption; bounded envelope overhead |
+| New Live Share room lifetime | 24 hours |
 | STL source limit | 2 MiB |
 | STL geometry limit | 300,000 vertices |
 
@@ -152,11 +153,9 @@ class_name = "LiveRoom"
 script_name = "markdown-viewer-live-room"
 ```
 
-`SHARE_KV` stores large Share Snapshot records and content-addressed managed media for 90 days. Re-uploading identical content refreshes that media item's 90-day expiry. The snapshot and media record types use separate key prefixes. `LIVE_ROOMS` routes Live Share WebSocket rooms to Durable Objects.
+`SHARE_KV` stores new encrypted snapshots under `share-v2:` and encrypted attachments under `managed-media-v2:` for 90 days. Every upload receives an independent random id. `LIVE_ROOMS` routes new rooms through the `encrypted-v2:` namespace and stores capability hashes, public verification keys, expiry, and ended status for 24 hours. Document and Review state is not persisted by the relay. Existing keys/records remain readable without rewriting or extending their expiry.
 
-Live Share does not persist Markdown or Review content server-side. Its Durable Object does persist the host, edit, and view bearer capability values plus `createdAt` under `live-room-auth-v1`; the current implementation defines no application TTL or deletion route for that record. Share Snapshot, managed media storage, and Live Share are separate data paths.
-
-`wrangler.live-room.toml` deploys `workers/live-room-worker.js` with the `LiveRoom` Durable Object migration.
+Deploy the updated Pages Functions, browser assets, and Durable Object Worker together; refresh older clients before creating new shares. New plaintext creation is rejected with an upgrade response. See the [rollout notes](../docs/ENCRYPTED_SHARING.md).
 
 ## Share API
 
@@ -169,24 +168,24 @@ Live Share does not persist Markdown or Review content server-side. Its Durable 
 
 Responses set `Cache-Control: no-store` and vary CORS by request origin. The allowed origins are the production app, HTTPS `*.markdownviewer.pages.dev` previews, `null`, and localhost/127.0.0.1 development origins; unsupported origins receive `403`. Requests without an `Origin` header are accepted, so origin filtering is not an access-control substitute.
 
-Stored records contain content, mode, title, creation time, size, and a hash of the creator deletion token. The token is returned only when the snapshot is created. The current UI does not display the token or expose a Delete snapshot action; API clients must capture the response to use early deletion. Invalid ids, missing content, oversized content, invalid deletion tokens, missing KV binding, and unknown routes return JSON errors. See [Share Snapshot](Share-Snapshot.md).
+New POST requests accept only `{ "encrypted": { "v": 2, "alg": "A256GCM", "iv": "...", "ct": "..." } }`. Stored records contain the encrypted envelope, format version, creation time, and a deletion-token hash. GET returns the envelope for client decryption. The independent deletion token is returned once and powers **Delete snapshot** while the generated-link modal retains it. See [Share Snapshot](Share-Snapshot.md).
 
 ## Managed Media API
 
 `functions/api/image/[[id]].js` and its video-friendly route alias `functions/api/media/[[id]].js` support:
 
-- `POST /api/image` for AVIF, BMP, GIF, JPEG, PNG, and WebP data URLs.
-- `POST /api/media` for MP4, WebM, and Ogg video data URLs.
-- `GET` and `HEAD` on `/api/image/<id>` or `/api/media/<id>` to serve content through its content-addressed public URL.
+- `POST /api/image` for encrypted AVIF, BMP, GIF, JPEG, PNG, and WebP envelopes.
+- `POST /api/media` for encrypted MP4, WebM, and Ogg video envelopes.
+- `GET` and `HEAD` on `/api/image/<id>` or `/api/media/<id>` to retrieve the encrypted envelope.
 - `OPTIONS` for CORS preflight.
 
-The API accepts still images up to 300 KiB after client-side optimization, GIFs up to 5 MiB, and videos up to 10 MiB. It validates both the declared media type and file signature, derives an unguessable 24-character id from SHA-256 content, and stores the record in `SHARE_KV` with a 90-day TTL. Duplicate content returns the existing id and refreshes its TTL. Responses are public, immutable, and cross-origin until expiry; possession of the URL is sufficient to retrieve the media. This is the same 90-day retention duration used for stored Share Snapshot links, though the two features store separate records.
+The client validates media types, signatures, and size before encrypting: 300 KiB optimized still images, 5 MiB GIFs, and 10 MiB videos. The API bounds and validates the ciphertext envelope, uses a random `e2_` id, and stores it for 90 days. It cannot inspect decrypted file types. GET responses for new uploads are `no-store`. Legacy media reads preserve their original records and expiry.
 
 Upload and preflight requests use the same production, Cloudflare preview, local-file, and localhost origin checks as Share Snapshot.
 
 ## Live Room API
 
-`functions/live-room/[[room]].js` supports WebSocket upgrades only. It validates the WebSocket `Origin`, room and secret length, requires `LIVE_ROOMS`, and forwards to a Durable Object chosen by `roomName + ":" + secret`. The Durable Object authenticates host, edit, and view capabilities, filters message types by role, enforces the participant/message limits, and persists the capability record described above.
+`functions/live-room/[[room]].js` supports WebSocket upgrades. It validates Origin and protocol, requires `LIVE_ROOMS`, and routes `?v=2` rooms by `encrypted-v2:<roomId>`. The Durable Object authenticates role capabilities in the first frame, stores hashes, verifies role signatures, enforces limits, and forwards ciphertext. Client read keys and private signing keys never reach these endpoints.
 
 See [Live Share](Live-Share-Cloudflare.md) for runtime flow and limits.
 
@@ -204,7 +203,7 @@ Security headers configured in Docker/Nginx documentation include:
 - `Permissions-Policy`
 - `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`
 
-Cloudflare Pages reads the root `_headers`, `_redirects`, and `_routes.json` files. `_routes.json` sends the application root, `/api/*`, and `/live-room/*` through Pages Functions so Live Share WebSocket upgrades reach the Durable Object relay while static files remain direct. `_redirects` consolidates legacy `/tips` and `/index.html` paths on the root URL, and the checked-in `404.html` returns a real noindex missing-page response. Self-hosters should preserve equivalent policies and make sure `workspace-storage.js`, `preview-worker.js`, `sample.md`, `sw.js`, `manifest.json`, `script.js`, `styles.css`, `404.html`, `robots.txt`, `sitemap.xml`, `seo/`, `assets/`, `workers/`, and `functions/` or their platform equivalents are deployed according to the features they intend to use.
+Cloudflare Pages reads the root `_headers`, `_redirects`, and `_routes.json` files. `_routes.json` sends the application root, `/api/*`, and `/live-room/*` through Pages Functions so Live Share WebSocket upgrades reach the Durable Object relay while static files remain direct. `_redirects` consolidates legacy `/tips` and `/index.html` paths on the root URL, and the checked-in `404.html` returns a real noindex missing-page response. Self-hosters should preserve equivalent policies and make sure `workspace-storage.js`, `preview-worker.js`, `sample.md`, `sw.js`, `manifest.json`, `script.js`, `sharing-crypto.js`, `sharing-media.js`, `sharing-live.js`, `styles.css`, `404.html`, `robots.txt`, `sitemap.xml`, `seo/`, `assets/`, `workers/`, and `functions/` or their platform equivalents are deployed according to the features they intend to use.
 
 Search metadata is generated for the root English URL and every supported `?lang=` URL. Each page has a self-canonical URL, reciprocal `hreflang` links, localized Open Graph/Twitter metadata, and localized structured data; `sitemap.xml` contains the complete alternate-language matrix. Run `npm run check:seo` to verify the committed sitemap or `npm run seo:sitemap` after changing `seo/locales.mjs`.
 

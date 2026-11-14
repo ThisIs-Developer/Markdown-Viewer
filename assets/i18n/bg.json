@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "Шифровано споделяне. Пазете цялата връзка в тайна; тя съдържа ключа за дешифриране.",
+  "Delete snapshot": "Изтриване на моментната снимка",
+  "Snapshot deleted.": "Моментната снимка е изтрита.",
+  "Connected to encrypted live room": "Свързано с шифрована стая на живо",
   "Linking folder": "Свързване на папка",
   "Scanning folder…": "Сканиране на папката…",
   "Reading files…": "Четене на файлове…",

@@ -80,7 +80,7 @@ test('Share Snapshot edit links open with editable source', async ({ browser, pa
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/edit=1/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/#share=v2\..*&key=/);
 
   const generatedUrl = await page.locator('#share-url-input').inputValue();
   const sharedContext = await browser.newContext();

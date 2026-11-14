@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { openApp, setEditorContent, stubRemoteDiagramServices, stubLazyRendererLibraries, storedDocuments, waitForAppReady } = require('../helpers/app');
 test.use({ timezoneId: 'UTC' });
 
-const mediaId = 'slashAuditMedia0000000001';
+const mediaId = 'e2_' + 'A'.repeat(24);
 const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
 async function chooseUpload(page, editor) {
@@ -12,7 +12,11 @@ async function chooseUpload(page, editor) {
 }
 
 async function mockMediaDownload(page) {
-  await page.route('**/api/image/' + mediaId, route => route.fulfill({ contentType: 'image/gif', body: gif }));
+  let uploaded;
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().endsWith('/api/image')) uploaded = request.postDataJSON();
+  });
+  await page.route('**/api/image/' + mediaId, route => route.fulfill({ json: uploaded }));
 }
 
 async function expectPersistedAfterReload(page, content) {
@@ -166,7 +170,7 @@ for (const pane of ['primary', 'secondary']) {
       await chooseUpload(page, editor);
       await page.getByRole('button', { name: 'Continue', exact: true }).click();
       await expect(page.locator('#image-modal')).toBeHidden();
-      await expect(editor).toHaveValue(new RegExp('^Before\\n\\n!\\[alt text\\]\\(https?://[^)]+/api/image/' + mediaId + '\\)\\n\\nAfter$'));
+      await expect(editor).toHaveValue(new RegExp('^Before\\n\\n!\\[alt text\\]\\(https?://[^)]+/api/image/' + mediaId + '#key=[A-Za-z0-9_-]{43}\\)\\n\\nAfter$'));
       const insertedValue = await editor.inputValue();
       await expectPersistedAfterReload(page, insertedValue);
     });

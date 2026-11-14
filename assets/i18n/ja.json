@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "暗号化された共有です。完全なリンクには復号キーが含まれるため、秘密にしてください。",
+  "Delete snapshot": "スナップショットを削除",
+  "Snapshot deleted.": "スナップショットを削除しました。",
+  "Connected to encrypted live room": "暗号化されたライブルームに接続しました",
   "Linking folder": "フォルダーをリンク中",
   "Scanning folder…": "フォルダーをスキャン中…",
   "Reading files…": "ファイルを読み込み中…",

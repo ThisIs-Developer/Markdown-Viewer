@@ -17,6 +17,10 @@ const requiredFiles = [
   'visual-settings-adapters.js',
   'visual-settings-store.js',
   'script.js',
+  'sharing-crypto.js',
+  'sharing-media.js',
+  'sharing-live.js',
+  'assets/yjs.mjs',
   'browser-drop-source.js',
   'preview-worker.js',
   'styles.css',
@@ -48,6 +52,9 @@ for (const relativePath of requiredFiles) {
 }
 
 const syntaxCheckedFiles = [
+  'sharing-crypto.js',
+  'sharing-media.js',
+  'sharing-live.js',
   'src/document-toc.mjs',
   'browser-drop-source.js',
   'assets/document-toc.js',
@@ -77,12 +84,19 @@ for (const relativePath of syntaxCheckedFiles) {
 }
 
 const syncedDesktopFiles = [
+  ['sharing-crypto.js', 'desktop-app/resources/js/sharing-crypto.js'],
+  ['sharing-media.js', 'desktop-app/resources/js/sharing-media.js'],
+  ['sharing-live.js', 'desktop-app/resources/js/sharing-live.js'],
   ['script.js', 'desktop-app/resources/js/script.js'],
   ['browser-drop-source.js', 'desktop-app/resources/js/browser-drop-source.js'],
   ['workspace-storage.js', 'desktop-app/resources/js/workspace-storage.js'],
   ['preview-worker.js', 'desktop-app/resources/js/preview-worker.js'],
   ['styles.css', 'desktop-app/resources/styles.css']
 ];
+// Bundled desktop assets are generated/ignored and absent in a fresh checkout.
+if (fs.existsSync(path.join(rootDir, 'desktop-app/resources/assets/yjs.mjs'))) {
+  syncedDesktopFiles.push(['assets/yjs.mjs', 'desktop-app/resources/assets/yjs.mjs']);
+}
 if (fs.existsSync(path.join(rootDir, 'visual-settings-store.js'))) {
   syncedDesktopFiles.push(['visual-settings-store.js', 'desktop-app/resources/js/visual-settings-store.js']);
 }
@@ -105,6 +119,13 @@ for (const relativePath of ['manifest.json', 'vercel.json', ...fs.readdirSync(pa
 }
 
 const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
+const desktopHtml = fs.readFileSync(path.join(rootDir, 'desktop-app/resources/index.html'), 'utf8');
+let previousDesktopScript = -1;
+for (const name of ['neutralino', 'main', 'workspace-storage', 'visual-settings-adapters', 'visual-settings-store', 'sharing-crypto', 'sharing-media', 'sharing-live', 'script']) {
+  const position = desktopHtml.indexOf(`src="/js/${name}.js"`);
+  if (position <= previousDesktopScript) throw new Error(`Missing or out-of-order desktop script: ${name}`);
+  previousDesktopScript = position;
+}
 const appJs = fs.readFileSync(path.join(rootDir, 'script.js'), 'utf8');
 const storageJs = fs.readFileSync(path.join(rootDir, 'workspace-storage.js'), 'utf8');
 const sitemapXml = fs.readFileSync(path.join(rootDir, 'sitemap.xml'), 'utf8');
@@ -271,7 +292,7 @@ const requiredScriptMarkers = [
   'exportHtml.addEventListener',
   'exportPdf.addEventListener',
   'exportPng.addEventListener',
-  'function encodeMarkdownForShare',
+  'function buildShareUrl',
   'function startLiveSession',
   'function loadFromShareHash',
   'function loadFromLiveHash'

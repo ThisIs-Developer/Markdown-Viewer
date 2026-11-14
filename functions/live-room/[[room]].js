@@ -37,12 +37,18 @@ export async function onRequest(context) {
   if (!roomName || roomName.length > 160) {
     return new Response("Invalid live room", { status: 400 });
   }
-  const secret = new URL(request.url).searchParams.get("secret") || "";
-  if (!secret || secret.length > 256) {
+  const url = new URL(request.url);
+  const encrypted = url.searchParams.get('v') === '2';
+  if ((url.searchParams.has('v') && !encrypted) || (encrypted && url.searchParams.size !== 1)) {
+    return new Response('Unsupported live room protocol', { status: 400 });
+  }
+  const secret = url.searchParams.get("secret") || "";
+  if (!encrypted && (!secret || secret.length > 256)) {
     return new Response("Invalid live room credentials", { status: 400 });
   }
 
-  const id = env.LIVE_ROOMS.idFromName(roomName + ":" + secret);
+  if (encrypted && !/^room2_[A-Za-z0-9_-]{24}$/.test(roomName)) return new Response('Invalid encrypted room', { status: 400 });
+  const id = env.LIVE_ROOMS.idFromName(encrypted ? 'encrypted-v2:' + roomName : roomName + ":" + secret);
   return env.LIVE_ROOMS.get(id).fetch(request);
 }
 

@@ -7,6 +7,7 @@ COPY workspace-storage.js /usr/share/nginx/html/
 COPY visual-settings-adapters.js /usr/share/nginx/html/
 COPY visual-settings-store.js /usr/share/nginx/html/
 COPY script.js /usr/share/nginx/html/
+COPY sharing-crypto.js sharing-media.js sharing-live.js /usr/share/nginx/html/
 COPY styles.css /usr/share/nginx/html/
 COPY sw.js /usr/share/nginx/html/
 COPY RELEASE_NOTES /usr/share/nginx/html/
@@ -39,6 +40,9 @@ RUN echo 'server { \
     } \
     \
     # Cache static assets \
+    location ~* \.mjs$ { \
+    default_type application/javascript; \
+    } \
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ { \
     expires 1y; \
     add_header Cache-Control "public, immutable"; \

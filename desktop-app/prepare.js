@@ -49,6 +49,9 @@ console.log("✓ Copied script.js → resources/js/script.js");
 fs.copyFileSync(path.join(ROOT_DIR, "workspace-storage.js"), path.join(jsDest, "workspace-storage.js"));
 fs.copyFileSync(path.join(ROOT_DIR, "native-markdown-source.js"), path.join(jsDest, "native-markdown-source.js"));
 fs.copyFileSync(path.join(ROOT_DIR, "browser-drop-source.js"), path.join(jsDest, "browser-drop-source.js"));
+for (const name of ['sharing-crypto.js', 'sharing-media.js', 'sharing-live.js']) {
+  fs.copyFileSync(path.join(ROOT_DIR, name), path.join(jsDest, name));
+}
 console.log("✓ Copied workspace-storage.js → resources/js/workspace-storage.js");
 
 if (fs.existsSync(path.join(ROOT_DIR, "visual-settings-store.js"))) {
@@ -352,22 +355,14 @@ async function prepareOfflineDependencies() {
 
   html = html.replace(/<script src="native-markdown-source\.js" defer><\/script>/g, '<script src="/js/native-markdown-source.js"></script>');
   html = html.replace(/<script src="browser-drop-source\.js" defer><\/script>/g, '<script src="/js/browser-drop-source.js"></script>');
+  html = html.replace(/<script src="(sharing-(?:crypto|media|live)\.js)" defer><\/script>/g, '<script src="/js/$1"></script>');
 
-  // Inject Neutralino script tags
-  html = html.replace(
-    /<script\s+src="workspace-storage\.js"[^>]*><\/script>(?:\s*<script\s+src="visual-settings-adapters\.js"[^>]*><\/script>)?(?:\s*<script\s+src="visual-settings-store\.js"[^>]*><\/script>)?\s*<script\s+src="script\.js"[^>]*><\/script>/i,
-    (match) => {
-      let tags = '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/workspace-storage.js"></script>';
-      if (match.includes('visual-settings-adapters.js')) {
-        tags += '\n    <script src="/js/visual-settings-adapters.js"></script>';
-      }
-      if (match.includes('visual-settings-store.js')) {
-        tags += '\n    <script src="/js/visual-settings-store.js"></script>';
-      }
-      tags += '\n    <script src="/js/script.js"></script>';
-      return tags;
-    }
-  );
+  // Preserve script order without requiring adjacent tags: sharing modules load
+  // between settings and the application entry point.
+  html = html.replace(/<script\s+src="workspace-storage\.js"[^>]*><\/script>/i,
+    '<script src="/js/neutralino.js"></script>\n    <script src="/js/main.js"></script>\n    <script src="/js/workspace-storage.js"></script>');
+  html = html.replace(/<script\s+src="(visual-settings-adapters\.js|visual-settings-store\.js|script\.js)"[^>]*><\/script>/g,
+    '<script src="/js/$1"></script>');
 
   // Explicit desktop demo opt-in; the official runtime pin remains unchanged.
   // Default desktop and web builds
