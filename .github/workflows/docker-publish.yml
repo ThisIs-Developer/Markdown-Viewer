@@ -70,7 +70,7 @@ jobs:
       run: docker build --pull -t markdown-viewer:security-audit .
 
     - name: Scan image for all known OS and library vulnerabilities
-      uses: aquasecurity/trivy-action@0.36.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: markdown-viewer:security-audit
         format: json
@@ -81,7 +81,7 @@ jobs:
         exit-code: '0'
 
     - name: Block fixable critical and high vulnerabilities
-      uses: aquasecurity/trivy-action@0.36.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: markdown-viewer:security-audit
         format: table
