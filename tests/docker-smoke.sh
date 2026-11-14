@@ -85,6 +85,15 @@ check_site() {
     [[ "$status" == 404 ]] || { echo "FAIL: $asset returned $status instead of 404" >&2; return 1; }
   done
   check_all_critical_assets "$url"
+  # A SPA index.html fallback is a false positive for a missing .md file.
+  curl -kfsS "$url/sample.md" | grep -Fq 'title: Welcome to Markdown Viewer' || {
+    echo "FAIL: packaged sample.md is missing or is HTML fallback" >&2
+    return 1
+  }
+  curl -kfsS "$url/assets/linked-workspace-guide.md" | grep -Fq '# Welcome to Linked Workspace' || {
+    echo "FAIL: packaged linked-workspace guide is missing or is HTML fallback" >&2
+    return 1
+  }
 }
 
 echo "== Docker HTTP / default port 8080 =="
@@ -92,8 +101,8 @@ echo "== Docker HTTP / default port 8080 =="
 wait_for "http://127.0.0.1:8080/"
 check_site "http://127.0.0.1:8080"
 DOCKER_SMOKE_URL=http://localhost:8080 node tests/docker-browser-smoke.cjs
-"${http[@]}" down --remove-orphans
 
+# Keep HTTP running while starting HTTPS to verify the two published ports coexist.
 echo "== Docker local HTTPS / port 8443 =="
 "${https[@]}" up -d --build
 wait_for "https://localhost:8443/"
@@ -102,6 +111,8 @@ check_site "https://localhost:8443"
 "${https[@]}" cp caddy:/data/caddy/pki/authorities/local/root.crt "$scratch/local-root.crt"
 curl --cacert "$scratch/local-root.crt" -fsS --max-time 12 -o /dev/null https://localhost:8443/
 DOCKER_SMOKE_URL=https://localhost:8443 node tests/docker-browser-smoke.cjs
+check_site "http://127.0.0.1:8080"
+echo "PASS: HTTP 8080 and HTTPS 8443 work concurrently"
 
 echo "== Validate optional public HTTPS config and Caddyfile without attempting certificate issuance =="
 MDV_DOMAIN=example.com "${public[@]}" config --quiet
