@@ -1,13 +1,13 @@
 # Cloud validation
 
-Cloud-only branch based on upstream v3.10.5. Personal runtime patches and personal release/deployment metadata are excluded.
+Cloud-only branch based on upstream v3.10.6. Personal runtime patches and personal release/deployment metadata are excluded.
 
 Review fixes preserve locked/expired web-session cleanup, explicit remembered-account unlock, portable copy-name suggestions, visible Unicode text and the minimum official runtime needed for command restrictions. Existing cloud identities, draft metadata and per-account preferences retain their formats.
 
 Validation on the clean branch:
 
-- 277 unit tests and 38 connector/API/browser/template cases passed (including nine self-hosted browser scenarios).
-- 88 Chromium cloud/copy/smoke/web-desktop isolation scenarios passed.
+- 344 unit tests passed, one skipped, and 38 connector/API/browser/template cases passed (including nine self-hosted browser scenarios).
+- 97 Chromium cases passed across Nextcloud, WebDAV, copy and existing Linked Workspace/Explorer workflows.
 - Official Neutralino 6.10.0 with the actual SDK/helper passed zero automatic startup, concurrent launch, stdin bootstrap, stop/crash recovery and command restriction checks in a disposable headless profile.
 - Real helper tests passed bounded DAV, conditional mutations, TLS/redirect restrictions, Unicode, credential scoping/restart/removal and exit-with-live-socket regressions.
 - `npm run build:cloud` produced the Windows executable and helper from the official runtime. Static mirror checks passed.

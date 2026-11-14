@@ -45,13 +45,14 @@ Users can work with multiple documents at once.
 - The sidebar has explicit **New file** and **New folder** actions for the selected location. Files can be dragged onto another folder or workspace; the Move dialog remains available for keyboard and touch workflows.
 - Deleting a folder tree moves every file inside it to the workspace root before removing the folders, so document content is not lost.
 - New files can be created from the sidebar, tab bar, mobile menu, imports, shared snapshots, and Live Share joins. Multi-file imports show a compact bottom progress indicator.
-- The sidebar supports file open, rename, duplicate, favorite, move, Markdown download, and delete actions. Recent and Favorites are filtered references to the original files, not copies.
+- The sidebar supports file open, inline rename (including F2), duplicate, favorite, move, Markdown download, folder ZIP download, and delete actions. Multi-selected documents can be downloaded together as a ZIP. Recent and Favorites are filtered references to the original files, not copies.
 - Multi-selected files can be opened or moved together. Dragging any selected file moves the complete file selection, and expanded folders accept a drop across their visible contents instead of only on the folder label. Deleting selected files moves them directly to Trash; a mixed selection containing folders asks for confirmation and returns files inside removed folders to the workspace root.
 - Document titles, folder names, and Move-dialog destinations use natural numeric ordering. For example, `Untitled 2` appears before `Untitled 10` instead of being sorted lexically after it.
 - Tabs can be reordered by drag and drop. Their menus support rename, duplicate, favorite, two-document split, Markdown download, and close; the tab context menu also provides Close others, Close to the right, Close to the left, and Close all.
 - Both documents in a two-document split use matching Editor and Preview pane spacing. Empty Editors show the same typing, paste, and import hint.
 - **Scroll-wheel button (middle-click):** Point at a document tab and press the mouse's scroll wheel down to close that tab. Its saved Workspace document and draft remain available in Explorer. Rotating the wheel over the tab strip scrolls through tabs instead. Pressing the wheel on a tab closes it rather than starting browser autoscroll; left-click activation and right-click menus are unchanged.
 - Right-clicking the no-document workspace opens the same five Quick Start commands shown in the empty state. Right-clicking an editor or preview surface opens New file, selection-aware clipboard commands, and the current document's management actions; unavailable editing commands remain visible but disabled in preview and read-only contexts.
+- Browser folder drops preserve nested and empty folders, target the visible Explorer destination, stage bounded Markdown reads, and report progress. Desktop linked renames update the external original only after collision and recovery checks; reveal actions use the operating system's File Explorer, Finder, or file manager name.
 - Hovering a tab shows its containing folder path and filename. Files stored directly at the Workspace root show only their filename.
 - The app does not impose a document-count limit. Available browser quota or filesystem capacity is the practical limit.
 - Each normal tab stores a title, content, workspace/folder location, favorite state, recent activity metadata, independent Editor and Preview scroll positions, view mode, local review threads, and creation time.
@@ -339,9 +340,10 @@ PDF export:
 
 - Opens a modal with two modes.
 - Offers a compact, remembered Light or Dark appearance control shared by both PDF methods.
-- Browser Print is recommended. It builds an off-screen export snapshot, hides app chrome and open modals, waits for fonts, images, math, maps, models, music, and every supported diagram renderer, then calls `window.print()` so the browser or OS can save or print the document without changing the visible application theme.
-- Legacy Raster PDF uses `html2canvas` and `jsPDF`. It captures the same prepared rich-content snapshot in an A4 sandbox, applies page-break rules and the selected solid background, and saves a PDF.
-- The raster exporter shows progress and has a cancel button.
+- Standard PDF is recommended for selectable, searchable document text. Choose **Save as PDF** in the browser or OS print dialog. It builds an off-screen export snapshot, hides app chrome and open modals, and waits for fonts, images, math, maps, models, music, and supported diagrams without changing the visible application theme. The default body text is 10 pt. On supported browsers, Standard PDF keeps space around the content on every page while suppressing the browser-generated title, date, URL, and page numbers. Print styles repeat table headers, wrap long code lines, and let long text flow across pages in either appearance.
+- Rendered PDF uses `html2canvas` and `jsPDF` to save image-based A4 pages. Text in this mode is not selectable or searchable. Page boundaries follow measured text lines and table rows; long paragraphs, quotes, and code blocks continue across pages without shrinking their text into clipped containers. Standard table headers repeat on continuation pages. Oversized indivisible graphics are scaled to fit a page.
+- Both methods show progress and allow cancellation while preparing the document. Once the print dialog opens, use its controls to save or cancel.
+- Rendered PDF captures bounded strips and reuses them across pages to limit canvas memory. Cancelling an export releases temporary canvases and does not save a partial PDF.
 - Raster export uses `allowTaint: false` and `useCORS: true` to avoid unsafe cross-origin canvas capture.
 
 PNG export:
@@ -352,9 +354,11 @@ PNG export:
 
 Limitations:
 
-- Browser Print output is controlled by the browser and print settings.
+- Standard PDF output is controlled by the browser and print settings. If browser-generated headers or footers still appear, turn off **Headers and footers** in the print dialog; older engines keep ordinary page margins as a fallback.
 - The selected export appearance does not rewrite colors that a document author explicitly placed inside SVG, HTML, image files, or diagram source.
-- Raster PDF and PNG are screenshots of rendered HTML, so very long documents can be memory-heavy.
+- Rendered PDF and PNG are screenshots of rendered HTML. Rendered PDF limits individual canvas sizes, but the final PDF and very large documents can still use substantial memory. PNG remains a single-image capture.
+- Images and outlined diagram/math glyphs do not become selectable text through Standard PDF. Receiving PDF software and the browser's print settings affect the result.
+- Complex tables with rowspans or nested tables retain their original layout in Rendered PDF instead of repeating a potentially misleading header. Arbitrary overlapping HTML layouts and unusually tall graphics may need scaling or manual print adjustments.
 - Cross-origin images without CORS support may fail to appear in canvas-based PDF/PNG exports.
 - Remote renderers and external assets still depend on their network availability while the export snapshot is prepared.
 - Some complex CSS, wide tables, and large diagrams may be moved, scaled, or split differently from the live preview.
@@ -438,7 +442,7 @@ Privacy implications:
 - **Copy Markdown** in the navbar or mobile menu, and **Ctrl/Cmd+Shift+C**, copy the entire active document as raw Markdown in every view, even when only part of it is selected. In a two-Document view, they use the document whose Editor or Preview was last focused; clicking toolbar controls keeps that document as the target.
 - The Editor and Preview context menus include **Select All** for that pane's complete document, including either side of a two-Document view. With a mouse or keyboard, the menu closes after selection and focus returns to the pane. With touch, Select All keeps the menu available for the next tap on **Copy**; Copy closes it. **Ctrl/Cmd+A** also selects within the focused pane. Read-only documents support selection and copying.
 - On touch devices, dismissing the menu onto the surrounding background preserves the selection. Tapping highlighted text reopens the menu, including for partial selections and secondary document panes. Swiping scrolls, tapping unselected text keeps normal selection/cursor behavior, and touching selected text does not start a text drag.
-- Preview Copy provides formatted HTML and plain text for pasting into apps such as Google Docs. Headings, emphasis, links, lists, tables, and code are retained where the receiving app supports them. Partial selections and native Copy use the same rich content; preview controls are excluded. Editor Copy remains raw Markdown.
+- Preview Copy provides formatted HTML and plain text for pasting into apps such as Google Docs. Headings, emphasis, links, lists, tables, and code retain their supported fonts, spacing, borders, backgrounds, and syntax colors. Copies include the current Preview theme's text and background colors together. Partial selections retain surrounding formatting and ordered-list positions, including reversed lists. Native Copy uses the same rich content; preview controls are excluded. The receiving app determines which formatting it accepts. Editor Copy remains raw Markdown.
 - **Copy** and **Ctrl/Cmd+C** copy only the selection in its original context: raw source in an Editor, formatted content in a Preview, and native text in other controls. With no selection, ordinary Copy leaves the clipboard unchanged.
 - Editor **Paste** and **Ctrl/Cmd+V** insert clipboard text at the cursor or replace the selection; they do not automatically convert rich text to Markdown. Preview supports selection and copying without allowing Paste, Cut, or typing to modify the document. Existing image-paste actions in the Editor are unchanged.
 - Diagram and ABC copy actions attempt to write PNG image data to the clipboard.
@@ -624,7 +628,7 @@ Security limitations:
 - STL source is limited to 2 MiB and parsed geometry to 300,000 vertices.
 - The desktop vault retains up to 20 recent history copies per document.
 - Desktop linked-folder scans stop at 10,000 Markdown files, 40,000 entries, 2,000 directories, 32 levels, 20 MiB per Markdown source, 200 MiB staged content, or 60 seconds. Filesystem verification reduces accidental overwrites but is not an atomic lock against other programs.
-- Legacy raster PDF and PNG exports can fail on extremely tall documents because canvas size and memory are browser-limited.
+- Very large Rendered PDF exports can exhaust memory even with bounded capture strips. PNG uses a single canvas and can fail on extremely tall documents.
 - Remote renderer availability depends on third-party services and network conditions.
 - The service worker cannot cache assets that have never been successfully fetched.
 - The desktop application depends on the platform webview and Neutralino runtime behavior.

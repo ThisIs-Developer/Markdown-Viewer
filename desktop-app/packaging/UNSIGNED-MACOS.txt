@@ -1,0 +1,19 @@
+This build is locally (ad-hoc) signed, not Apple Developer ID signed or notarized.
+It contains the complete desktop application, with normal editing and vault storage.
+macOS may show an unidentified-developer warning because Apple has not notarized it.
+
+1. Open the .dmg and drag Markdown Viewer.app to Applications.
+2. Eject the disk image and open the app from Applications.
+3. On Monterey, if blocked, Control-click the app, choose Open, then Open again.
+   You can also use System Preferences > Security & Privacy > General > Open Anyway.
+   On newer macOS use System Settings > Privacy & Security > Open Anyway.
+   Only approve a build you downloaded from the project's own release or CI run.
+4. Allow Documents folder access if macOS asks; this is where the Vault is saved.
+
+Intel Macs / VMware on Intel or AMD Windows: mac_x64.dmg.
+Apple Silicon (M1/M2/M3/etc.): mac_arm64.dmg. Universal works on either architecture.
+Native build targets: Intel macOS 10.15; Apple Silicon macOS 11.
+Use the latest Safari/WebKit available for your Mac (Catalina: Safari 15.6.1).
+These older build targets still need manual native testing; CI tests macOS 15/26.
+The Vault stays in Documents/Markdown Viewer Vault when you replace the app.
+Never disable Gatekeeper globally to run the application.

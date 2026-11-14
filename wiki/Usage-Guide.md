@@ -18,6 +18,8 @@ The app has seven main areas:
 
 Use the view buttons to switch between Editor, Split, and Preview. Split view is the main live Markdown preview workflow: type, paste, or open Markdown on one side and read the rendered result on the other. Sync scrolling can keep the source and preview aligned while you write. Drag the divider to change the pane widths. The app prevents either side from becoming too narrow. On small screens, the document sidebar opens as a full-height drawer and the mobile menu exposes the remaining main actions without forcing a cramped split layout.
 
+Preview position is stored per document. Loading skeletons, hidden panes, view changes, deferred images, and obsolete renders do not replace the last settled position; direct user scrolling or navigation always takes priority over a pending restoration.
+
 To compare or edit two files, open a file menu and choose **Open in split view**, then select the second document. A shared control switches both sides between Edit and Preview. Preview mode supports Markdown, math, diagrams, maps, STL, and ABC rendering. Use the combined tab menu to exit this view.
 
 ## Fullscreen on Safari and Mobile
@@ -77,6 +79,7 @@ The outline is generated locally from the current document and is not saved sepa
 - Use **Storage and Backup** to inspect usage and file counts, view the browser's read-only persistence status, export or import a folder-preserving ZIP, or open the fixed desktop vault.
 - Use **Reset workspace** only when you intend to permanently delete all workspace files, folders, settings, Secret Workspace data, history, and trash. The confirmation links directly to Backup.
 - Right-click blank Explorer space to create a file or folder. Right-click the empty Quick Start area to open its five actions. Right-click an editor or preview to use the relevant clipboard and document commands.
+- Drop a browser folder to import its Markdown hierarchy, including empty folders, at the selected Explorer destination. Use inline Rename or F2 for files and folders. Select several documents and choose **Download**, or use a folder's **Download folder** action, to create a ZIP containing current drafts and safe duplicate names.
 
 > **Backup:** Browser site-data clearing remains destructive. Use **Storage and Backup** to export a portable ZIP. Importing a ZIP permanently replaces the current workspace. Secret Workspace records remain encrypted and still require the original access key after import. Trash, desktop history, and recovery journals are not included.
 
@@ -124,7 +127,7 @@ To copy a selection, right-click an Editor or Preview, or open its context menu 
 On touch devices, tapping the surrounding background dismisses the menu while keeping the text selected. Tap the highlighted text to reopen the menu and choose **Copy**. This also works with partial selections. Swiping still scrolls, and tapping unselected text lets you change the selection or position the Editor cursor normally. Touch presses on selected text do not drag the document text.
 
 - **Editor:** Copy provides the selected raw Markdown, including Markdown syntax. Paste inserts clipboard text at the cursor or replaces the selection; rich text is not automatically converted into Markdown.
-- **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks. Partial selections and the browser's native Copy command also retain formatting. Preview toolbars and action buttons are excluded.
+- **Preview:** Copy provides formatted HTML and a plain-text alternative. Paste into a rich-text app such as Google Docs to retain supported headings, emphasis, links, lists, tables, and code blocks, including their fonts, spacing, borders, backgrounds, and syntax colors. Copies use the current Preview theme, with its text and background colors together. Partial selections retain their surrounding formatting and ordered-list numbers, including reversed lists. The browser's native Copy command uses the same formatting; Preview toolbars and action buttons are excluded.
 
 Ordinary **Copy** or **Ctrl/Cmd+C** with no selection leaves the clipboard unchanged. Preview is read only: it supports selection and copying, but Paste, Cut, and typing do not change the document.
 
@@ -206,11 +209,13 @@ Export names use the active tab title when possible.
 | :--- | :--- | :--- |
 | Markdown | Saves the raw `.md` text. | Browser downloads or desktop native save dialog only. |
 | HTML | Saves standalone rendered HTML with sanitized content, styles, renderer support hooks, a restrictive CSP, and a remembered Light or Dark appearance. | External content referenced by the document may still load remotely when opened. |
-| PDF: Browser Print | Builds a Light or Dark off-screen snapshot, prepares all supported rich content, then calls `window.print()` without changing the visible app theme. Recommended for most long documents. | Browser print engines vary; author-specified colors inside diagrams, SVGs, HTML, or images are preserved. |
-| PDF: Legacy Raster | Captures the same prepared Light or Dark snapshot with `html2canvas` and `jsPDF`, using page-break planning. | Memory-heavy for very long documents; cross-origin images need CORS. |
+| PDF: Standard PDF | Builds a Light or Dark off-screen snapshot, prepares all supported rich content, then calls `window.print()` without changing the visible app theme. Choose Save as PDF for selectable, searchable text at a default body size of 10 pt. | Browser print engines vary; if browser headers or footers remain, disable Headers and footers in the print dialog. Author-specified colors are preserved. |
+| PDF: Rendered PDF | Saves image-based A4 pages, placing page boundaries between rendered lines and repeating standard table headers. | Text is not selectable. Very long documents can still use substantial memory; cross-origin images need CORS. |
 | PNG | Captures a high-resolution Light or Dark rich-content snapshot to PNG. | Browser canvas limits apply; cross-origin images need CORS. |
 
 Each export format remembers its appearance independently. PDF and PNG preparation waits for Mermaid, ABC, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap, GeoJSON, TopoJSON, STL, math, fonts, and images; Markmaps are fitted to printable bounds. Export progress can be cancelled where the format supports progress reporting.
+
+Both PDF paths track complete source coverage across fractional line boundaries, long paragraphs, tables, code, lists, tall images, and mixed font sizes. Standard PDF remains the recommended selectable result; use Rendered PDF when visual page consistency matters more than selectable text.
 
 ## Share Markdown with Snapshot Links
 
@@ -291,7 +296,7 @@ Markdown Viewer follows familiar Typora-style formatting shortcuts and Obsidian-
 | Quick open: show Explorer and focus file search | `Ctrl+P` / `Cmd+P` |
 | Import/open Markdown | `Ctrl+O` / `Cmd+O` |
 | Save/export Markdown | `Ctrl+S` / `Cmd+S` |
-| Copy selected text, or whole Markdown when nothing is selected | `Ctrl+C` / `Cmd+C` |
+| Copy the selection from the focused Editor or Preview | `Ctrl+C` / `Cmd+C` |
 | Copy raw Markdown directly | `Ctrl+Shift+C` / `Cmd+Shift+C` |
 | Toggle Edit/Preview | `Ctrl+E` / `Cmd+E` |
 | Toggle Explorer | `Ctrl+Shift+L` / `Cmd+Shift+L` |

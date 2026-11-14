@@ -65,13 +65,16 @@ npm run dev
 
 ## Build
 
+For the opt-in Windows native drop/single-instance trial executable, see the
+[native runtime demo instructions](experimental/README.md).
+
 ```bash
 npm run build
 ```
 
 The build script runs `build-standalone.js`. It invokes Neutralino once per target with embedded resources so Node.js does not need to package every platform in one memory-heavy pass.
 
-Seven self-contained executables are written to `desktop-app/dist/markdown-viewer/`: Linux ARM64, ARMHF, and x64; macOS ARM64, universal, and x64; and Windows x64. They do not need a neighboring `resources.neu` file.
+The default developer build writes seven raw executables to `desktop-app/dist/markdown-viewer/`. End-user releases package macOS as `.dmg` installers containing `Markdown Viewer.app`, Linux as `.deb` installers and portable `.tar.gz` archives, and Windows as the existing `.exe`. Mac runtimes are rebuilt for their native dependency baselines (Intel 10.15; Apple Silicon 11), with no Monterey-only restriction. Older OS/WebKit combinations still need manual acceptance. See [installer build, signing and testing instructions](packaging/README.md); a raw Mac developer binary is not a Finder application.
 
 ## Configuration Highlights
 
@@ -107,7 +110,14 @@ The compose build copies the generated files to `desktop-app/output/`.
 
 Prebuilt desktop assets are published through GitHub Releases. Release workflows run setup, preparation, build, and checksum generation.
 
-Unsigned desktop binaries may trigger Windows SmartScreen or macOS quarantine prompts. See [../wiki/Desktop-App.md](../wiki/Desktop-App.md) for platform launch notes.
+v3.10.6 makes PR #289 the distribution milestone: three Finder-ready Mac DMGs,
+three dependency-aware Linux DEBs, three optional portable Linux archives, and the
+Windows x64 EXE are assembled behind native installed-package checks. The workflow
+requires the exact asset set, verifies `SHA256SUMS.txt`, and publishes the tested files
+without rebuilding them. The release description provides an architecture-first download
+table plus application identity, compatibility, trust, and managed-deployment guidance.
+
+Windows SmartScreen may warn about unsigned executables. Mac test builds are ad-hoc signed; trusted public distribution requires Apple Developer ID signing and notarization, supported by the release workflow. See `MACOS-SIGNING.txt` alongside the DMGs for the actual signing status. See [../wiki/Desktop-App.md](../wiki/Desktop-App.md) for platform launch notes.
 
 ## License
 

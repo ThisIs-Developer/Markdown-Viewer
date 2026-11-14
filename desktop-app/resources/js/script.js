@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const sessionStorage = window.MarkdownCloudBrowserStorage?.session || window.sessionStorage;
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
-  const APP_VERSION = '3.10.5';
+  const APP_VERSION = '3.10.6';
   const RELEASE_NOTES_TAB_KIND = 'release-notes';
   const LINKED_WORKSPACE_GUIDE_KIND = 'linked-workspace-guide';
   const WORKSPACE_GUIDE_KIND = 'workspace-guide';
@@ -41,6 +41,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     'markdownViewerSecretWorkspace'
   ]);
   let privateStorageModeEnabled = false;
+  // Native callbacks can arrive while asynchronous startup is still running.
+  let dragDepth = 0;
   try {
     localStorage.removeItem(PRIVATE_MODE_KEY);
   } catch (_) {}
@@ -83,6 +85,15 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
 
+  function useExperimentalSidebarPointerDrag() {
+    return hasDesktopFileAccess() && window.NL_OS === 'Windows' &&
+      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.sidebarPointerDrag === true;
+  }
+
+  function useExperimentalNativeFileDrop() {
+    return hasDesktopFileAccess() && window.NL_OS === 'Windows' &&
+      window.MARKDOWN_VIEWER_DESKTOP_RUNTIME_FEATURES?.nativeFileDrop === true;
+  }
 
   const workspaceStorage = typeof window.MarkdownWorkspaceStorage === 'function'
     ? new window.MarkdownWorkspaceStorage()
@@ -153,7 +164,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js': 'sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF',
     'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js': 'sha384-2f5bAKjuFIbbQ+0O9aSu5W1OyLA4q80QrDEvjXDwJexjU9VqoJhMgw19pYVpSJab',
     'https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js': 'sha384-M5jmNxKC9EVnuqeMwRHvFuYUE8Hhp0TgBruj/GZRkYtiMrCRgH7yvv5KY+Owi7TW',
-    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js': 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js': 'sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3',
     'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js': 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H',
     'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js': 'sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j',
     'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js': 'sha384-1+n1eMmP5I08CibRJ6JmycJ0hP3G6C0fuUtTb4bEuQgl9uFdS9pnPePfpmrXl9ll',
@@ -230,7 +241,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   const CDN = {
     mermaid: 'https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js',
     mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@4.0.0-beta.7/tex-mml-chtml.js',
-    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+    jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js',
     html2canvas: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
     pako: 'https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js',
     joypixels: 'https://cdn.jsdelivr.net/npm/emoji-toolkit@9.0.1/lib/js/joypixels.min.js',
@@ -315,6 +326,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   let previewRenderGeneration = 0;
   let previewHasCommittedRender = false;
   let previewLastRenderedTabId = null;
+  let pendingPreviewScrollRestore = null;
+  let previewScrollLayoutRetry = null;
   // PERF-003: Track last rendered content to skip redundant renders
   let _lastRenderedContent = null;
   const LARGE_DOCUMENT_THRESHOLD = 15000;
@@ -4318,12 +4331,14 @@ document.addEventListener("DOMContentLoaded", async function () {
   let linkedSourceMonitoringChain = Promise.resolve();
   const linkedSourceSavePaths = new Set();
   let linkedReadEpoch = 0;
+  let explorerRename = null;
   const linkedSourceRefreshTimers = new Map();
   const linkedLocationScanTokens = new Map();
   const linkedLocationMutations = new Map();
   const linkedLocationMutationChains = new Map();
   let linkedSourceMonitoringReady = false;
   let secretWorkspaceKey = null;
+  let secretWorkspaceLockInProgress = false;
   let secretWorkspaceSalt = null;
   let secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
   let secretWorkspaceDocumentCount = 0;
@@ -4828,8 +4843,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     const key = secretWorkspaceKey;
     const salt = new Uint8Array(secretWorkspaceSalt);
     secretWorkspaceSaveChain = secretWorkspaceSaveChain.catch(function() {}).then(async function() {
+      // A queued save must not interpret a locked (or newly unlocked) session's
+      // tabs as deletions from the session that originally requested the save.
+      if (!isSecretWorkspaceUnlocked() || secretWorkspaceKey !== key) return false;
       if (!workspaceStorage) throw new Error('Workspace storage is unavailable.');
       for (let attempt = 0; attempt < 4; attempt += 1) {
+        if (!isSecretWorkspaceUnlocked() || secretWorkspaceKey !== key) return false;
         const payload = getSecretWorkspacePayload();
         secretWorkspaceDocumentCount = payload.documents.length;
         const currentIds = new Set();
@@ -4872,6 +4891,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           updatedAt: Date.now()
         };
         try {
+          if (!isSecretWorkspaceUnlocked() || secretWorkspaceKey !== key) return false;
           const result = await workspaceStorage.applySecretRecordChanges({
             upserts: upserts,
             deletions: deletions
@@ -5055,40 +5075,56 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function lockSecretWorkspace() {
-    if (!isSecretWorkspaceUnlocked()) return;
-    saveCurrentTabState();
-    saveSecondarySplitState();
-    await flushSecretWorkspaceToStorage();
-    const secretTabIds = new Set(tabs.filter(function(tab) {
-      return !isTemporaryDocument(tab) && tab.workspaceId === SECRET_WORKSPACE_ID;
-    }).map(function(tab) { return tab.id; }));
-    if (secretTabIds.has(secondarySplitTabId)) closeDocumentSplitView({ silent: true, renderTabs: false });
-    tabs = tabs.filter(function(tab) { return !secretTabIds.has(tab.id); });
-    secretTabIds.forEach(function(tabId) {
-      if (typeof tabHistories !== 'undefined' && tabHistories[tabId]) delete tabHistories[tabId];
-    });
-    documentOrganization.folders = documentOrganization.folders.filter(function(folder) {
-      return folder.workspaceId !== SECRET_WORKSPACE_ID;
-    });
-    secretWorkspaceKey = null;
-    secretWorkspaceSalt = null;
-    secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
-    const workspace = getWorkspaceById(SECRET_WORKSPACE_ID);
-    if (workspace) workspace.expanded = false;
-    documentOrganization.ui.lastWorkspaceId = DEFAULT_WORKSPACE_ID;
-    documentOrganization.ui.lastFolderId = null;
+    if (!isSecretWorkspaceUnlocked() || secretWorkspaceLockInProgress) return;
+    const key = secretWorkspaceKey;
+    secretWorkspaceLockInProgress = true;
+    // Cancel pending imports before taking the final encrypted snapshot. Inert
+    // prevents new UI edits while encryption/storage yields to the event loop.
+    linkedReadEpoch++;
+    const container = document.querySelector('.app-container');
+    const previousInert = Boolean(container && container.inert);
+    if (container) container.inert = true;
+    try {
+      saveCurrentTabState();
+      saveSecondarySplitState();
+      const saved = await flushSecretWorkspaceToStorage();
+      if (secretWorkspaceKey !== key || (!saved && !isPrivateStorageMode())) {
+        throw new Error('Secret Workspace changed while locking. Nothing was locked.');
+      }
+      const secretTabIds = new Set(tabs.filter(function(tab) {
+        return !isTemporaryDocument(tab) && tab.workspaceId === SECRET_WORKSPACE_ID;
+      }).map(function(tab) { return tab.id; }));
+      if (secretTabIds.has(secondarySplitTabId)) closeDocumentSplitView({ silent: true, renderTabs: false });
+      tabs = tabs.filter(function(tab) { return !secretTabIds.has(tab.id); });
+      secretTabIds.forEach(function(tabId) {
+        if (typeof tabHistories !== 'undefined' && tabHistories[tabId]) delete tabHistories[tabId];
+      });
+      documentOrganization.folders = documentOrganization.folders.filter(function(folder) {
+        return folder.workspaceId !== SECRET_WORKSPACE_ID;
+      });
+      secretWorkspaceKey = null;
+      secretWorkspaceSalt = null;
+      secretWorkspaceIterations = SECRET_KDF_ITERATIONS;
+      const workspace = getWorkspaceById(SECRET_WORKSPACE_ID);
+      if (workspace) workspace.expanded = false;
+      documentOrganization.ui.lastWorkspaceId = DEFAULT_WORKSPACE_ID;
+      documentOrganization.ui.lastFolderId = null;
 
-    if (secretTabIds.has(activeTabId)) {
-      const nextTab = getOpenTabs().find(function(tab) { return !isTemporaryDocument(tab); }) || getOpenTabs()[0];
-      if (nextTab) switchTab(nextTab.id);
-      else clearActiveDocument();
-    } else {
-      renderTabBar(tabs, activeTabId);
+      if (secretTabIds.has(activeTabId)) {
+        const nextTab = getOpenTabs().find(function(tab) { return !isTemporaryDocument(tab); }) || getOpenTabs()[0];
+        if (nextTab) switchTab(nextTab.id);
+        else clearActiveDocument();
+      } else {
+        renderTabBar(tabs, activeTabId);
+      }
+      _flushTabsToStorage(tabs);
+      saveDocumentOrganization();
+      renderDocumentSidebar();
+      announceToScreenReader('Secret Workspace locked.');
+    } finally {
+      secretWorkspaceLockInProgress = false;
+      if (container) container.inert = previousInert;
     }
-    _flushTabsToStorage(tabs);
-    saveDocumentOrganization();
-    renderDocumentSidebar();
-    announceToScreenReader('Secret Workspace locked.');
   }
 
   async function resetSecretWorkspaceData() {
@@ -5317,7 +5353,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!documentOrganization) return null;
     const workspace = getWorkspaceById(workspaceId);
     const normalizedName = String(folderName || '').trim();
-    if (!workspace || !normalizedName) return null;
+    if (!workspace || !normalizedName ||
+        (workspaceId === SECRET_WORKSPACE_ID && secretWorkspaceLockInProgress)) return null;
 
     const parent = getFolderById(parentFolderId);
     const normalizedParentId = parent && parent.workspaceId === workspace.id ? parent.id : null;
@@ -5621,10 +5658,114 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
+  function openExplorerRename(options) {
+    if (explorerRename && explorerRename.busy) return;
+    closeDocumentSidebarMenus();
+    openDocumentSidebar();
+    explorerRename = Object.assign({ error: '', busy: false, select: true }, options);
+    // Keep the current view when its row is already visible. Renaming from a
+    // tab menu may first need to expose a filtered/collapsed Explorer row.
+    const visible = Array.from(document.querySelectorAll('#document-tree .document-tree-row')).some(function(row) {
+      return row.dataset.treeType === options.type && row.dataset.treeId === options.id && row.offsetParent !== null;
+    });
+    if (!visible) {
+      documentSidebarSearch = '';
+      const search = document.getElementById('document-sidebar-search');
+      if (search) search.value = '';
+      documentOrganization.ui.filter = 'all';
+      getExpandableDocumentTreeItems().forEach(function(item) { item.expanded = true; });
+    }
+    renderDocumentSidebar();
+  }
+
+  function renderExplorerRename() {
+    const state = explorerRename;
+    if (!state) return;
+    const row = Array.from(document.querySelectorAll('#document-tree .document-tree-row')).find(function(item) {
+      return item.dataset.treeType === state.type && item.dataset.treeId === state.id;
+    });
+    if (!row) { explorerRename = null; return; }
+    const main = row.querySelector('.document-tree-main');
+    const edit = document.createElement('div');
+    edit.className = 'document-tree-rename';
+    const icon = main.querySelector('i');
+    if (icon) edit.appendChild(icon.cloneNode(true));
+    const field = document.createElement('div');
+    field.className = 'document-tree-rename-field';
+    const input = document.createElement('input');
+    input.className = 'document-tree-rename-input';
+    input.setAttribute('aria-label', state.title || 'Rename');
+    input.value = state.value;
+    input.disabled = state.busy;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    field.appendChild(input);
+    if (state.error) {
+      const error = document.createElement('span');
+      error.id = 'explorer-rename-error';
+      error.className = 'document-tree-rename-error';
+      error.setAttribute('role', 'alert');
+      error.textContent = state.error;
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', error.id);
+      field.appendChild(error);
+    }
+    edit.appendChild(field);
+    main.replaceWith(edit);
+    row.classList.add('is-renaming');
+    row.draggable = false;
+    ['pointerdown', 'click', 'dblclick', 'contextmenu'].forEach(function(name) {
+      edit.addEventListener(name, function(event) { event.stopPropagation(); });
+    });
+    function finish() {
+      if (explorerRename !== state) return;
+      explorerRename = null;
+      renderDocumentSidebar();
+      const current = Array.from(document.querySelectorAll('#document-tree .document-tree-row')).find(function(item) {
+        return item.dataset.treeType === state.type && item.dataset.treeId === state.id;
+      });
+      if (current) current.focus();
+    }
+    input.addEventListener('input', function() { state.value = input.value; });
+    input.addEventListener('blur', function() {
+      // Detached inputs blur during a sidebar refresh; that is not cancellation.
+      if (input.isConnected && !input._explorerRefreshing && !state.busy && explorerRename === state) finish();
+    });
+    input.addEventListener('keydown', async function(event) {
+      event.stopPropagation();
+      if (event.isComposing) return;
+      if (event.key === 'Escape') { event.preventDefault(); finish(); return; }
+      if (event.key !== 'Enter' || state.busy) return;
+      event.preventDefault();
+      const value = input.value.trim();
+      state.error = state.validate ? state.validate(value) : (!value ? 'Enter a name.' : '');
+      if (state.error) { renderDocumentSidebar(); return; }
+      state.busy = true;
+      input.disabled = true;
+      try { await state.onConfirm(value); finish(); }
+      catch (error) {
+        console.error('Explorer rename failed:', error);
+        state.error = error.userMessage || 'Rename failed. The original was kept. Try again.';
+        state.busy = false;
+        renderDocumentSidebar();
+      }
+    });
+    if (!state.busy) {
+      input.focus({ preventScroll: true });
+      if (state.select) {
+        input.select();
+        state.select = false;
+      } else if (state.selection) input.setSelectionRange(state.selection[0], state.selection[1]);
+      row.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   function renameFolder(folderId) {
     const folder = getFolderById(folderId);
     if (!folder) return;
-    openDocumentNameDialog({
+    const original = { name: folder.name, workspaceId: folder.workspaceId, parentFolderId: folder.parentFolderId || null };
+    openExplorerRename({
+      type: 'folder', id: folder.id,
       title: 'Rename folder',
       label: 'Folder name',
       value: folder.name,
@@ -5640,7 +5781,13 @@ document.addEventListener("DOMContentLoaded", async function () {
         return '';
       },
       onConfirm: function(value) {
-        folder.name = value;
+        const current = getFolderById(folderId);
+        if (!current || current.name !== original.name || current.workspaceId !== original.workspaceId ||
+            (current.parentFolderId || null) !== original.parentFolderId) {
+          throw Object.assign(new Error('Folder changed during rename'), { userMessage: 'Item changed. Start Rename again.' });
+        }
+        if (current.name === value) return;
+        current.name = value;
         saveDocumentOrganization();
         renderDocumentSidebar();
         announceToScreenReader('Folder renamed to ' + value);
@@ -6166,7 +6313,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (tab && tab.kind === LINKED_WORKSPACE_GUIDE_KIND) {
       return [
-        { id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'favorite', icon: tab.favorite ? 'lucide-star-filled' : 'lucide-star', label: tab.favorite ? 'Remove from Favorites' : 'Add to Favorites', run: function() { toggleDocumentFavorite(tab.id); } },
         { id: 'download', icon: 'lucide-download', label: 'Download Markdown', run: function() { downloadTabMarkdown(tab.id); } },
         { id: 'delete', icon: 'lucide-trash-2', label: 'Delete', danger: true, run: function() { deleteTab(tab.id); } }
@@ -6174,20 +6321,29 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     if (isLinkedDocument(tab) && !isTemporaryDocument(tab)) {
       const linkedActions = [
-        { id: 'open', icon: 'lucide-file-symlink', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
+        { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
         { id: 'save', icon: 'lucide-save', label: 'Save', run: function() { void nativeSaveMarkdown({ tabId: tab.id, useLinkedSource: true }); } },
         { id: 'save-as', icon: 'lucide-save-plus', label: 'Save As…', run: function() { void nativeSaveMarkdown({ tabId: tab.id, createLinked: true }); } },
         { id: 'reload-source', icon: 'lucide-refresh-cw', label: 'Reload from disk', run: function() { void reloadLinkedDocument(tab.id, { force: true }); } },
-        { id: 'reveal-source', icon: 'lucide-folder-input', label: 'Open containing folder', run: function() { void revealLinkedSource(tab); } },
+        { id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameTab(tab.id); } },
+        { id: 'reveal-source', icon: 'lucide-folder-input', label: getFileManagerActionLabel(), run: function() { void revealLinkedSource(tab); } },
         { separator: true },
         { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedDocumentToVault(tab.id); } },
         { id: 'remove-link', icon: 'lucide-x', label: 'Remove linked file', danger: true, run: function() { void removeLinkedDocument(tab.id); } }
       ];
+      if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+        linkedActions.splice(1, 0, {
+          id: 'resolve-rename', icon: 'lucide-refresh-cw', label: 'Resolve interrupted rename…',
+          run: function() { void resolveLinkedRenameRecovery(tab).catch(function(error) {
+            showAppToast(error.message || 'The recovery link could not be saved. Your draft was kept.', { tone: 'error' });
+          }); }
+        });
+      }
       if(canCopyLocalToCloud(tab))linkedActions.splice(-1,0,copyLocalAction({type:'file',id:tab.id}));
       return linkedActions;
     }
     const actions = [
-      { id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } }, {
+      { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } }, {
       id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameTab(tab.id); }
     }];
     if (!isTemporaryDocument(tab)) {
@@ -6236,22 +6392,32 @@ document.addEventListener("DOMContentLoaded", async function () {
       }];
     }
     const actions = [
-      { id: 'new-document', icon: 'lucide-file-text', label: 'New file', run: function() { newTab('', null, { workspaceId: workspace.id }); } },
+      { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab('', null, { workspaceId: workspace.id }); } },
       { id: 'new-folder', icon: 'lucide-folder-plus', label: 'New folder', run: function() { createFolder(workspace.id); } }
     ];
     if (workspace.id === SECRET_WORKSPACE_ID) {
-      actions.push({ id: 'lock', icon: 'lucide-lock-keyhole', label: 'Lock workspace', run: function() { lockSecretWorkspace(); } });
+      actions.push({ id: 'lock', icon: 'lucide-lock-keyhole', label: 'Lock workspace', run: function() {
+        lockSecretWorkspace().catch(function(error) {
+          console.warn('Secret Workspace lock failed:', error);
+          showAppToast('Secret Workspace could not be locked. Your documents remain open; retry when storage is available.', {
+            tone: 'error', title: 'Workspace not locked'
+          });
+        });
+      } });
     }
     return actions;
   }
 
   function getFolderMenuActions(folder) {
     const actions = [
-      { id: 'new-document', icon: 'lucide-file-text', label: 'New file', run: function() { newTab('', null, { workspaceId: folder.workspaceId, folderId: folder.id }); } },
+      { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab('', null, { workspaceId: folder.workspaceId, folderId: folder.id }); } },
       { id: 'new-folder', icon: 'lucide-folder-plus', label: 'New folder', run: function() { createFolder(folder.workspaceId, folder.id); } },
       { id: 'rename', icon: 'lucide-square-pen', label: 'Rename', run: function() { renameFolder(folder.id); } },
       { id: 'delete', icon: 'lucide-trash-2', label: 'Delete', danger: true, run: function() { deleteFolder(folder.id); } }
     ];
+    if (!hasDesktopFileAccess()) {
+      actions.splice(3, 0, { id: 'download-folder', icon: 'lucide-download', label: 'Download folder', run: function() { void downloadWorkspaceFolder(folder.id); } });
+    }
     if(window.MarkdownCloudUI?.available() && folder.workspaceId===DEFAULT_WORKSPACE_ID)actions.splice(-1,0,copyLocalAction({type:'vault-folder',id:folder.id}));
     if (hasDesktopFileAccess() && folder.workspaceId === DEFAULT_WORKSPACE_ID) {
       actions.splice(3, 0, { id: 'save-linked-folder', icon: 'lucide-save-plus', label: 'Save As linked folder…', run: function() { void nativeSaveVaultFolderAsLinked(folder.id); } });
@@ -6418,9 +6584,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       actions.push(
         {
           id: 'open-selected',
-          icon: 'lucide-files',
+          icon: 'lucide-folder-open',
           label: 'Open all',
           run: openSelectedDocuments
+        },
+        {
+          id: 'download-selected',
+          icon: 'lucide-download',
+          label: 'Download',
+          run: function() { void downloadSelectedDocuments(); }
         },
         {
           id: 'move-selected',
@@ -6480,7 +6652,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const actions = [
       {
         id: 'new-document',
-        icon: 'lucide-file-text',
+        icon: 'lucide-file-plus-2',
         label: 'New file',
         run: function() { newTab('', null, location); }
       },
@@ -6574,35 +6746,150 @@ document.addEventListener("DOMContentLoaded", async function () {
     return true;
   }
 
+  const CLIPBOARD_INHERITED_STYLES = [
+    'font-family', 'font-size', 'font-style', 'font-weight', 'line-height',
+    'color', 'text-align', 'white-space', 'word-break', 'overflow-wrap',
+    'direction', 'list-style-type', 'letter-spacing', 'visibility'
+  ];
+  const CLIPBOARD_EXCLUDED_ELEMENTS =
+    '.diagram-status, .diagram-toolbar, .mermaid-toolbar, .abc-toolbar, ' +
+    '.plantuml-toolbar, .d2-toolbar, .graphviz-toolbar, .stl-toolbar, .review-target-actions, ' +
+    '.code-preview-toolbar, .review-pins-layer, button, [role="toolbar"], script, style, mjx-assistive-mml';
+
   function getPreviewSelectionClipboardContent(surface, selection) {
     if (!selectionBelongsToElement(selection, surface) || selection.isCollapsed || !selection.rangeCount) return null;
     const range = selection.getRangeAt(0);
+    const styles = new WeakMap();
+    const sources = new WeakMap();
+    function readStyle(source) {
+      if (!styles.has(source)) {
+        const computed = window.getComputedStyle(source);
+        const inherited = {};
+        CLIPBOARD_INHERITED_STYLES.forEach(function(property) {
+          inherited[property] = computed.getPropertyValue(property);
+        });
+        styles.set(source, { computed: computed, inherited: inherited });
+      }
+      return styles.get(source);
+    }
+    function copyElement(source, copy) {
+      // Read only the live Preview, whose selectors, theme and ancestors are
+      // intact. Writes go to detached copies, avoiding repeated style/layout
+      // invalidation and changes to a child's inherited computed values.
+      if (!copy) copy = source === surface ? document.createElement('div') : source.cloneNode(false);
+      sources.set(copy, source);
+      const current = readStyle(source);
+      const parent = source === surface ? null : readStyle(source.parentElement).inherited;
+      const css = copy.style;
+      CLIPBOARD_INHERITED_STYLES.forEach(function(property) {
+        const value = current.inherited[property];
+        // GitHub's semibold emphasis is represented by strong/b. Serializing
+        // weight 600 makes Chromium paste replace that semantic tag with a
+        // styled span. Let receiving editors apply their native bold weight.
+        if (property === 'font-weight' && /^(STRONG|B)$/.test(source.tagName) && (value === '600' || value === '700')) {
+          css.removeProperty(property);
+          return;
+        }
+        // Some semantic elements have UA defaults instead of inheriting.
+        const semanticDefault =
+          (property === 'font-size' && /^(H[1-6]|SMALL|SUB|SUP|CODE|KBD|SAMP)$/.test(source.tagName)) ||
+          (property === 'font-family' && /^(PRE|CODE|KBD|SAMP)$/.test(source.tagName)) ||
+          (property === 'font-weight' && /^(H[1-6]|STRONG|B|TH|DT)$/.test(source.tagName)) ||
+          (property === 'font-style' && /^(EM|I|CITE|VAR)$/.test(source.tagName)) ||
+          (property === 'white-space' && source.tagName === 'PRE') ||
+          (property === 'text-align' && source.tagName === 'TH') ||
+          // Tables reset typography in some receiving documents/quirks mode.
+          (source.tagName === 'TABLE' && /^(font-|color$|line-height$)/.test(property));
+        if (value && (!parent || value !== parent[property] || semanticDefault || css.getPropertyValue(property))) {
+          css.setProperty(property, value);
+        }
+      });
+      const computed = current.computed;
+      if (source === surface || computed.backgroundColor !== 'rgba(0, 0, 0, 0)' || css.background) {
+        css.backgroundColor = computed.backgroundColor;
+      }
+      if (source !== surface) {
+        // Preserve zeroes where they reset UA spacing, without adding the same
+        // zero margin/padding to every span, table row and wrapper.
+        if (computed.margin !== '0px' || css.margin || /^(H[1-6]|P|PRE|BLOCKQUOTE|UL|OL|DL|DD|FIGURE|HR)$/.test(source.tagName)) css.margin = computed.margin;
+        if (computed.padding !== '0px' || css.padding || /^(UL|OL|TD|TH)$/.test(source.tagName)) css.padding = computed.padding;
+        const border = computed.border;
+        css.removeProperty('border');
+        if (border) {
+          if (computed.borderTopWidth !== '0px' || source.tagName === 'HR') css.border = border;
+        } else {
+          // The border shorthand is empty when sides differ (quotes/headings).
+          if (source.tagName === 'HR') css.border = '0';
+          ['top', 'right', 'bottom', 'left'].forEach(function(side) {
+            if (computed.getPropertyValue('border-' + side + '-width') !== '0px') css.setProperty('border-' + side, computed.getPropertyValue('border-' + side));
+          });
+        }
+        if (computed.borderRadius !== '0px') css.borderRadius = computed.borderRadius;
+        if (source.tagName === 'TABLE') {
+          css.borderCollapse = computed.borderCollapse;
+          css.borderSpacing = computed.borderSpacing;
+        }
+        if (computed.verticalAlign !== 'baseline') css.verticalAlign = computed.verticalAlign;
+        if (source.tagName === 'A' || computed.textDecorationLine !== 'none') css.textDecoration = computed.textDecoration;
+      }
+      return copy;
+    }
+    function preserveListStart(source, copy) {
+      if (source.tagName !== 'OL') return;
+      const first = Array.from(copy.children).find(function(child) { return child.tagName === 'LI'; });
+      if (!first) return;
+      const items = Array.from(source.children).filter(function(child) { return child.tagName === 'LI'; });
+      let ordinal = source.hasAttribute('start') ? source.start : source.reversed ? items.length : 1;
+      for (const item of items) {
+        if (item.hasAttribute('value')) ordinal = item.value;
+        if (item === sources.get(first)) {
+          copy.start = ordinal;
+          break;
+        }
+        ordinal += source.reversed ? -1 : 1;
+      }
+    }
+    // Let the browser clone exact text/element boundaries in one native pass.
+    // Its descendant elements have the same preorder as intersecting source
+    // descendants; pair them before removing any controls or hidden content.
     let fragment = range.cloneContents();
-    // cloneContents omits shared ancestors, including the bold, heading, list,
-    // or table cell that gives a partial selection its formatting.
-    let ancestor = range.commonAncestorContainer;
-    if (ancestor.nodeType !== Node.ELEMENT_NODE) ancestor = ancestor.parentElement;
-    while (ancestor && ancestor !== surface) {
-      const wrapper = ancestor.cloneNode(false);
+    const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT, {
+      acceptNode(node) { return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; }
+    });
+    const copies = Array.from(fragment.querySelectorAll('*'));
+    for (const copy of copies) sources.set(copy, walker.nextNode());
+    for (const copy of copies) {
+      if (!fragment.contains(copy)) continue;
+      const original = sources.get(copy);
+      if (original.matches(CLIPBOARD_EXCLUDED_ELEMENTS) || readStyle(original).computed.display === 'none') copy.remove();
+      else copyElement(original, copy);
+    }
+    for (const copy of copies) {
+      if (fragment.contains(copy)) preserveListStart(sources.get(copy), copy);
+    }
+    // Include shared ancestors for partial words, headings, code and cells,
+    // plus one surface wrapper for inherited typography and theme background.
+    let source = range.commonAncestorContainer;
+    if (source.nodeType !== Node.ELEMENT_NODE) source = source.parentElement;
+    while (source) {
+      if (!source || source.matches(CLIPBOARD_EXCLUDED_ELEMENTS) || readStyle(source).computed.display === 'none') return null;
+      const wrapper = copyElement(source);
       wrapper.appendChild(fragment);
+      preserveListStart(source, wrapper);
       fragment = wrapper;
-      ancestor = ancestor.parentElement;
+      if (source === surface) break;
+      source = source.parentElement;
     }
     const container = document.createElement('div');
-    container.appendChild(fragment);
-    removeExportOnlyControls(container);
-    container.querySelectorAll(
-      '.code-preview-toolbar, .review-pins-layer, button, [role="toolbar"], ' +
-      'script, style, mjx-assistive-mml'
-    ).forEach(function(element) { element.remove(); });
-    const html = DOMPurify.sanitize(container.innerHTML, {
+    container.appendChild(DOMPurify.sanitize(fragment, {
+      RETURN_DOM_FRAGMENT: true,
       ALLOW_DATA_ATTR: false,
       FORBID_ATTR: ['id', 'class', 'contenteditable', 'tabindex'],
       ALLOWED_URI_REGEXP: SAFE_MARKDOWN_URI_REGEXP
-    });
-    container.innerHTML = html;
-    // innerText needs a rendered node to retain paragraph, table, and code line
-    // breaks. Keep this temporary copy out of view and the accessibility tree.
+    }));
+    const html = container.innerHTML;
+    // Only sanitized content is attached, once, for native innerText line and
+    // table separators. No style measurements or per-node writes happen here.
     container.setAttribute('aria-hidden', 'true');
     container.style.cssText = 'position:fixed;left:-10000px;top:0;pointer-events:none;';
     document.body.appendChild(container);
@@ -6620,7 +6907,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!tab) return null;
     const editor = surface === markdownEditor || surface === documentSplitEditor ? surface : null;
     let selectedText = '';
-    let selectedHtml = '';
+    let previewSelection = null;
     let selectionStart = null;
     let selectionEnd = null;
     if (editor) {
@@ -6628,18 +6915,16 @@ document.addEventListener("DOMContentLoaded", async function () {
       selectionEnd = editor.selectionEnd;
       selectedText = editor.value.slice(selectionStart, selectionEnd);
     } else {
-      const content = getPreviewSelectionClipboardContent(surface, window.getSelection());
-      if (content) {
-        selectedText = content.text;
-        selectedHtml = content.html;
-      }
+      // Opening a menu must not serialize/style the entire selection. Capture
+      // its range now and generate the payload only when Copy is activated.
+      previewSelection = captureDocumentSurfaceSelection(surface);
     }
     return {
       tab: tab,
       tabId: tabId,
       editor: editor,
       selectedText: selectedText,
-      selectedHtml: selectedHtml,
+      previewSelection: previewSelection,
       selectionStart: selectionStart,
       selectionEnd: selectionEnd,
       editable: Boolean(editor && !editor.readOnly && (isSecondary || canMutateEditor()))
@@ -6660,10 +6945,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function copyDocumentSurfaceSelection(context, cut) {
-    if (!context || (!context.selectedText && !context.selectedHtml)) return;
+    if (!context || (!context.selectedText && !context.previewSelection)) return;
     try {
-      if (context.selectedHtml && !cut) {
-        await copyHtmlToClipboard(context.selectedText, context.selectedHtml);
+      if (context.previewSelection && !cut) {
+        if (!restoreDocumentSurfaceSelection(context.previewSelection, false)) return;
+        const content = getPreviewSelectionClipboardContent(context.previewSelection.surface, window.getSelection());
+        if (!content) return;
+        await copyHtmlToClipboard(content.text, content.html);
       } else {
         await copyTextToClipboard(context.selectedText);
       }
@@ -6721,7 +7009,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'new-document', icon: 'lucide-file-plus-2', label: 'New file', run: function() { newTab(); } },
       { separator: true },
       { id: 'cut', icon: 'lucide-square-pen', label: 'Cut', disabled: !context.editable || !context.selectedText, run: function() { copyDocumentSurfaceSelection(context, true); } },
-      { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText && !context.selectedHtml, run: function() { copyDocumentSurfaceSelection(context, false); } },
+      { id: 'copy', icon: 'lucide-copy', label: 'Copy', disabled: !context.selectedText && !context.previewSelection, run: function() { copyDocumentSurfaceSelection(context, false); } },
       { id: 'paste', icon: 'lucide-file-plus-2', label: 'Paste', disabled: !context.editable, run: function() { pasteIntoDocumentSurface(context); } },
       { id: 'select-all', icon: 'lucide-scan-text', label: 'Select All', keepOpen: keepSelectionMenuOpen, run: function() {
         selectAllDocumentSurface(surface);
@@ -6729,7 +7017,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           // Touch selection actions stay available so the next tap can copy.
           context = getDocumentSurfaceContext(surface);
           menu._touchSelection = captureDocumentSurfaceSelection(surface);
-          menu.querySelector('[data-action="copy"]').disabled = !context || (!context.selectedText && !context.selectedHtml);
+          menu.querySelector('[data-action="copy"]').disabled = !context || (!context.selectedText && !context.previewSelection);
           menu.querySelector('[data-action="cut"]').disabled = !context || !context.editable || !context.selectedText;
         }
       } },
@@ -6866,8 +7154,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function clearDocumentDropTargets() {
-    document.querySelectorAll('#document-tree .is-drop-target').forEach(function(target) {
-      target.classList.remove('is-drop-target');
+    document.querySelectorAll('#document-tree .is-drop-target, #document-tree .is-drop-invalid').forEach(function(target) {
+      target.classList.remove('is-drop-target', 'is-drop-invalid');
     });
   }
 
@@ -6914,6 +7202,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function expandDocumentTreeRowForDrag(row, location) {
     if (!row || !location || row.getAttribute('aria-expanded') !== 'false') return;
+    if (location.mode === 'link') {
+      const toggle = row.querySelector('.document-tree-toggle');
+      if (row.isConnected && toggle) toggle.click();
+      return;
+    }
     const item = location.folderId ? getFolderById(location.folderId) : getWorkspaceById(location.workspaceId);
     if (!item || (location.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked())) return;
     item.expanded = true;
@@ -7050,21 +7343,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (location.workspaceId === DEFAULT_WORKSPACE_ID) void convertLinkedFolderToVault(linkedFolder.locationId, linkedFolder.path, location);
         return;
       }
-      const files = event.dataTransfer && event.dataTransfer.files;
-      if (files && files.length) {
-        dragDepth = 0;
-        if (dragOverlay) {
-          dragOverlay.classList.remove('active');
-          dragOverlay.setAttribute('aria-hidden', 'true');
-        }
-        const importFiles = function() {
-          handleIncomingDroppedFiles(files, { location: location, source: 'drop' });
-        };
-        if (location.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) {
-          withUnlockedSecretWorkspace(importFiles);
-        } else {
-          importFiles();
-        }
+      if (event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files')) {
+        clearExternalDragFeedback();
+        void handleDrop(event);
         return;
       }
       const tabIds = getDraggedSidebarDocumentIds(event.dataTransfer);
@@ -7096,6 +7377,91 @@ document.addEventListener("DOMContentLoaded", async function () {
           (!value.path || !value.path.split('/').some(function(part) { return !part || part === '.' || part === '..'; }))) return value;
     } catch (_) {}
     return null;
+  }
+
+  // Pointer-based internal dragging stays inside the UI: native WebView drop
+  // targets used for Explorer files cannot intercept it.
+  function attachSidebarPointerDrag(row, options) {
+    row.addEventListener('pointerdown', function(start) {
+      if (start.button !== 0 || start.pointerType !== 'mouse' || start.target.closest('.document-menu-btn, input')) return;
+      const controller = new AbortController();
+      const listenerOptions = { signal: controller.signal, capture: true };
+      let dragging = false;
+      let destination = null;
+      function finish() {
+        if (dragging) {
+          // Escape/blur must also consume the click from the still-held mouse.
+          // A fresh press clears the guard so it cannot swallow a later click.
+          const clear = function() {
+            document.removeEventListener('click', suppressClick, true);
+            document.removeEventListener('pointerdown', clear, true);
+            document.removeEventListener('pointerup', released, true);
+          };
+          const suppressClick = function(click) { clear(); click.preventDefault(); click.stopImmediatePropagation(); };
+          const released = function() { setTimeout(clear, 0); };
+          document.addEventListener('click', suppressClick, { capture: true, once: true });
+          document.addEventListener('pointerdown', clear, { capture: true, once: true });
+          document.addEventListener('pointerup', released, { capture: true, once: true });
+        }
+        controller.abort();
+        draggedSidebarDocumentIds = [];
+        draggedSidebarLinkedFolder = null;
+        document.querySelectorAll('#document-tree .is-dragging').forEach(function(item) { item.classList.remove('is-dragging'); });
+        removeDocumentDragPreview();
+        resetDocumentTreeDragFeedback();
+        document.body.classList.remove('sidebar-pointer-dragging');
+      }
+      document.addEventListener('pointermove', function(event) {
+        if (event.pointerId !== start.pointerId) return;
+        if (!dragging && Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) < 6) return;
+        event.preventDefault();
+        if (!dragging) {
+          dragging = true;
+          const selected = !options.linkedFolder && selectedDocumentTreeIds.has(getDocumentTreeSelectionKey('document', options.documentId)) ? getSelectedDocuments() : [];
+          draggedSidebarLinkedFolder = options.linkedFolder || null;
+          draggedSidebarDocumentIds = options.linkedFolder ? [] : (selected.length > 1 ? selected.map(function(tab) { return tab.id; }) : [options.documentId]);
+          if (draggedSidebarDocumentIds.length === 1) setSingleDocumentTreeSelection('document', options.documentId);
+          createDocumentDragPreview(options.label, draggedSidebarDocumentIds.length, !!options.linkedFolder);
+          document.body.classList.add('sidebar-pointer-dragging');
+          draggedSidebarDocumentIds.forEach(function(id) {
+            const item = document.querySelector('#document-tree [data-document-id="' + id + '"]');
+            if (item) item.classList.add('is-dragging');
+          });
+        }
+        activeDocumentDragPreview.style.left = (event.clientX + 14) + 'px';
+        activeDocumentDragPreview.style.top = (event.clientY + 14) + 'px';
+        const hit = document.elementFromPoint(event.clientX, event.clientY);
+        const target = hit && hit.closest('#document-tree [data-drop-workspace-id]');
+        const hasLinked = !!draggedSidebarLinkedFolder || draggedSidebarDocumentIds.some(function(id) { return tabs.some(function(tab) { return tab.id === id && tab.sourcePath; }); });
+        destination = target ? { workspaceId: target.dataset.dropWorkspaceId, folderId: target.dataset.dropFolderId || null } : null;
+        if (destination && hasLinked && destination.workspaceId !== DEFAULT_WORKSPACE_ID) destination = null;
+        clearDocumentDropTargets();
+        if (destination) {
+          target.classList.add('is-drop-target');
+          scheduleDocumentTreeDragExpansion(target, destination);
+        } else clearDocumentTreeDragExpansion();
+        activeDocumentDragPreview.dataset.dropAction = translateUiString(destination ? (hasLinked ? 'Convert to Workspace copy' : 'Move here') : 'Cannot drop here');
+        if (hit && hit.closest('#document-tree')) updateDocumentTreeAutoScroll(event);
+        else stopDocumentTreeAutoScroll();
+      }, listenerOptions);
+      document.addEventListener('pointerup', function(event) {
+        if (event.pointerId !== start.pointerId) return;
+        const ids = draggedSidebarDocumentIds.slice();
+        const linkedFolder = draggedSidebarLinkedFolder;
+        const location = destination;
+        if (dragging) {
+          event.preventDefault();
+        }
+        finish();
+        if (dragging && location) {
+          if (linkedFolder) void convertLinkedFolderToVault(linkedFolder.locationId, linkedFolder.path, location);
+          else void dropSidebarDocuments(ids, location);
+        }
+      }, listenerOptions);
+      document.addEventListener('pointercancel', finish, listenerOptions);
+      window.addEventListener('blur', finish, { signal: controller.signal });
+      document.addEventListener('keydown', function(event) { if (event.key === 'Escape') finish(); }, listenerOptions);
+    });
   }
 
   function createDocumentTreeRow(options) {
@@ -7192,7 +7558,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       openDocumentTreeContextMenu(row, event);
     });
     if ((options.documentId || options.linkedFolder) && !options.temporary && !options.disableDrag) {
-      row.draggable = true;
+      row.draggable = !useExperimentalSidebarPointerDrag();
+      if (useExperimentalSidebarPointerDrag()) {
+        row.setAttribute('data-pointer-draggable', 'true');
+        attachSidebarPointerDrag(row, options);
+      }
       row.addEventListener('dragstart', function(event) {
         if (options.linkedFolder) {
           draggedSidebarLinkedFolder = options.linkedFolder;
@@ -7236,12 +7606,16 @@ document.addEventListener("DOMContentLoaded", async function () {
         resetDocumentTreeDragFeedback();
       });
     }
+    if (options.linkedFolder) {
+      row.dataset.dropLinkedLocationId = options.linkedFolder.locationId;
+      row.dataset.dropLinkedPath = options.linkedFolder.path || '';
+    }
     if (options.dropLocation) attachDocumentDropTarget(row, options.dropLocation);
     return row;
   }
 
   function appendDocumentTreeItem(container, tab, depth, meta) {
-    const isActiveDocument = tab.id === activeTabId;
+    const isActiveDocument = tab.id === activeTabId || (explorerRename && explorerRename.type === 'document' && explorerRename.id === tab.id);
     const consumesRenderBudget = documentSidebarRenderBudget && documentSidebarRenderBudget.remaining > 0;
     if (documentSidebarRenderBudget && documentSidebarRenderBudget.remaining <= 0 && !isActiveDocument) {
       return false;
@@ -7471,6 +7845,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }));
     const workspaceGroup = document.createElement('div');
     workspaceGroup.className = 'document-tree-group document-tree-group--workspace';
+    workspaceGroup.dataset.dropLinkedWorkspace = 'true';
     workspaceGroup.setAttribute('role', 'group');
     workspaceGroup.hidden = !workspaceExpanded;
     tree.appendChild(workspaceGroup);
@@ -7502,7 +7877,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (parent) folderNode(nodes.get(parent.locationId), parent.path).documents.push(tab);
       else individualTabs.push(tab);
     });
-    individualTabs.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); });
+    individualTabs.sort(function(left, right) { return compareNatural(left.title, right.title); });
     individualTabs.forEach(function(tab) {
       if (appendDocumentTreeItem(workspaceGroup, tab, 1, getLinkedDocumentMeta(tab))) renderedDocuments++;
     });
@@ -7555,13 +7930,15 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       const rootGroup = document.createElement('div');
       rootGroup.className = 'document-tree-group document-tree-group--folder';
+      rootGroup.dataset.dropLinkedLocationId = location.id;
+      rootGroup.dataset.dropLinkedPath = '';
       rootGroup.setAttribute('role', 'group');
       rootGroup.hidden = !expanded;
       const appendVirtualNode = function(node, container, depth, pathParts) {
         node.locations.slice().sort(function(left, right) { return compareNatural(left.name, right.name); }).forEach(function(child) {
           renderLocation(child, container, depth);
         });
-        Array.from(node.folders.entries()).sort(function(left, right) { return left[0].localeCompare(right[0]); }).forEach(function(entry) {
+        Array.from(node.folders.entries()).sort(function(left, right) { return compareNatural(left[0], right[0]); }).forEach(function(entry) {
           const folderName = entry[0];
           const child = entry[1];
           if (documentSidebarSearch && !containsMatches(child)) return;
@@ -7592,12 +7969,14 @@ document.addEventListener("DOMContentLoaded", async function () {
           container.appendChild(row);
           const childGroup = document.createElement('div');
           childGroup.className = 'document-tree-group document-tree-group--folder';
+          childGroup.dataset.dropLinkedLocationId = location.id;
+          childGroup.dataset.dropLinkedPath = folderPath;
           childGroup.setAttribute('role', 'group');
           childGroup.hidden = !folderExpanded;
           appendVirtualNode(child, childGroup, depth + 1, pathParts.concat(folderName));
           container.appendChild(childGroup);
         });
-        node.documents.sort(function(left, right) { return (left.title || '').localeCompare(right.title || ''); }).forEach(function(tab) {
+        node.documents.sort(function(left, right) { return compareNatural(left.title, right.title); }).forEach(function(tab) {
           if (appendDocumentTreeItem(container, tab, depth, getLinkedDocumentMeta(tab))) renderedDocuments++;
         });
       };
@@ -7773,6 +8152,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   function renderDocumentSidebar() {
     const tree = document.getElementById('document-tree');
     if (!tree || !documentOrganization) return;
+    const renameInput = tree.querySelector('.document-tree-rename-input');
+    if (explorerRename && renameInput) {
+      renameInput._explorerRefreshing = true;
+      explorerRename.value = renameInput.value;
+      explorerRename.selection = [renameInput.selectionStart, renameInput.selectionEnd];
+    }
     removeDocumentSidebarMenus();
     tree.textContent = '';
     tree.removeAttribute('aria-busy');
@@ -7862,6 +8247,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     const firstRow = tree.querySelector('.document-tree-row');
     if (firstRow && !tree.querySelector('.document-tree-row[tabindex="0"]')) firstRow.setAttribute('tabindex', '0');
+    renderExplorerRename();
     if (!window.MarkdownCloudUI?.mount()) {
       const cloud = tabs.filter(isCloudDocument);
       if (cloud.length) {
@@ -8013,12 +8399,17 @@ document.addEventListener("DOMContentLoaded", async function () {
   function handleDocumentTreeKeydown(event) {
     const tree = document.getElementById('document-tree');
     const row = event.target.closest('.document-tree-row');
-    if (!tree || event.target.closest('.document-menu-btn')) return;
+    if (!tree || event.target.closest('.document-menu-btn, input, textarea')) return;
     if (!row && (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) {
       openDocumentTreeBackgroundContextMenu(event);
       return;
     }
     if (!row) return;
+    if (event.key === 'F2') {
+      const action = getDocumentTreeMenuActionsForRow(row).find(function(item) { return item.id === 'rename'; });
+      if (action) { event.preventDefault(); event.stopPropagation(); action.run(); }
+      return;
+    }
     const rows = Array.from(tree.querySelectorAll('.document-tree-row')).filter(function(item) {
       return item.offsetParent !== null;
     });
@@ -12083,6 +12474,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function beginWorkspaceMaintenance() {
     if (workspaceMaintenancePending || suspendWorkspacePersistence) throw new Error('Workspace maintenance is already active. Reload or wait before retrying.');
+    if (secretWorkspaceLockInProgress) throw new Error('Secret Workspace is still locking. Wait for it to finish, then retry.');
     if (nativeMarkdownSaveInProgress) throw new Error('A file Save is still in progress. Wait for it to finish, then retry.');
     if (liveCollaboration) throw new Error('Leave the live collaboration session before replacing the workspace.');
     workspaceMaintenancePending = true;
@@ -12304,6 +12696,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     await assertOutsideManagedVault(sourcePath);
     if (!canApply()) return null;
     const normalizedPath = String(sourcePath || '').trim();
+    const pendingRenameTab = tabs.find(function(item) {
+      if (!isLinkedDocument(item)) return false;
+      const pending = workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(item.id);
+      return pending && [pending.source, pending.destination].some(function(path) {
+        return normalizeLinkedSourcePath(path) === normalizeLinkedSourcePath(normalizedPath);
+      });
+    });
+    if (pendingRenameTab) {
+      if (settings.open !== false) openSidebarDocument(pendingRenameTab.id);
+      return pendingRenameTab;
+    }
     const incomingContent = String(content == null ? '' : content);
     const incomingHash = await hashLinkedSourceContent(incomingContent);
     if (!canApply()) return null;
@@ -12518,6 +12921,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   async function reloadLinkedDocument(tabId, options) {
     if (workspaceMaintenancePending || suspendWorkspacePersistence) return false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
+    if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tabId)) {
+      if (!(options && options.background)) showAppToast('Resolve the interrupted rename before reloading an original. Your draft was kept.', { tone: 'warning' });
+      return false;
+    }
     if (!isLinkedDocument(tab)) return false;
     if (linkedSourceSavePaths.has(normalizeLinkedSourcePath(tab.sourcePath))) return false;
     const readEpoch = linkedReadEpoch;
@@ -12902,7 +13309,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!hasDesktopFileAccess()) return;
     try {
       const folderPath = await Neutralino.os.showFolderDialog('Link folder');
-      if (folderPath) await linkMarkdownFolderWithProgress(folderPath, { parent: parent });
+      if (folderPath) return await linkMarkdownFolderWithProgress(folderPath, { parent: parent });
     } catch (error) {
       console.warn('Could not link Markdown folder:', error);
       showAppToast(error.message || 'The selected folder could not be linked.', { tone: 'error', title: 'Link failed' });
@@ -12990,9 +13397,182 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   }
 
+  function getFileManagerActionLabel() {
+    if (typeof NL_OS !== 'undefined' && NL_OS === 'Windows') return 'Open in File Explorer';
+    if (typeof NL_OS !== 'undefined' && (NL_OS === 'Darwin' || NL_OS === 'macOS')) return 'Open in Finder';
+    return 'Open in File Manager';
+  }
+
+  function getLinkedRenameParts(source) {
+    const path = typeof NL_OS !== 'undefined' && NL_OS === 'Windows' ? String(source).replace(/\\/g, '/') : String(source);
+    const separator = path.lastIndexOf('/');
+    return { parent: path.slice(0, separator + 1), name: path.slice(separator + 1) };
+  }
+
+  async function renameLinkedOriginal(tab, filename) {
+    if (!hasDesktopFileAccess() || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) {
+      throw new Error('Workspace operation in progress');
+    }
+    const source = tab.sourcePath;
+    const parts = getLinkedRenameParts(source);
+    if (parts.name === filename) return;
+    if (!parts.parent) throw new Error('The original parent directory is unavailable');
+    if (isPrivateStorageMode() || !workspaceStorage || !workspaceStorage.desktop) {
+      throw new Error('Durable rename recovery is unavailable. The original was not renamed.');
+    }
+    if (workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+      throw Object.assign(new Error('Resolve the interrupted rename first.'), { userMessage: 'Use Resolve interrupted rename before renaming this file again.' });
+    }
+    const destination = parts.parent + filename;
+    nativeMarkdownSaveInProgress = true;
+    linkedReadEpoch++;
+    const sourceKey = normalizeLinkedSourcePath(source);
+    const destinationKey = normalizeLinkedSourcePath(destination);
+    linkedSourceSavePaths.add(sourceKey);
+    linkedSourceSavePaths.add(destinationKey);
+    try {
+      await withLinkedLocationMutation(getOverlappingLinkedLocationIds(source), async function() {
+        if (!tabs.includes(tab) || tab.sourcePath !== source) throw new Error('Link changed');
+        if (findTabBySourcePath(destination) && findTabBySourcePath(destination) !== tab) throw new Error('Destination already linked');
+        // The storage backend checks source type, case aliases, occupied names
+        // and inaccessible entries. Never fall back to copying or deleting.
+        await workspaceStorage._desktopCheckMovePaths(source, destination);
+        if (!tabs.includes(tab) || tab.sourcePath !== source) throw new Error('Link changed');
+        const changed = tabs.filter(function(item) { return normalizeLinkedSourcePath(item.sourcePath) === sourceKey; });
+        for (const item of changed) { await ensureTabContent(item); captureLiveLinkedDraft(item); }
+        const ids = changed.map(function(item) { return item.id; });
+        if (!(await _flushTabsToStorage(tabs, { changedIds: ids, requireExactCommit: true }))) {
+          throw new Error('The recovery draft could not be saved. The original was not renamed.');
+        }
+        for (const item of changed) {
+          if (await workspaceStorage.loadDocumentContent(item.id, { fresh: true }) !== item.content) {
+            throw new Error('The recovery draft could not be verified. The original was not renamed.');
+          }
+        }
+        const original = await readLinkedSourceForSave(source);
+        if (original === null) throw new Error('The original is missing. Nothing was renamed.');
+        const hash = await hashLinkedSourceContent(original);
+        await workspaceStorage.prepareLinkedRename(ids, source, destination, hash);
+        try {
+          if (!tabs.includes(tab) || tab.sourcePath !== source || await readLinkedSourceForSave(source) !== original) {
+            throw new Error('The original or link changed before rename.');
+          }
+          await workspaceStorage._desktopCheckMovePaths(source, destination);
+          await Neutralino.filesystem.move(source, destination);
+        } catch (error) {
+          const outcome = await recoverLinkedRenameWithStorageLock(tab.id);
+          if (outcome === 'renamed') {
+            await refreshLinkedRenameMetadata(changed);
+            renderTabBar(tabs, activeTabId);
+            return;
+          }
+          error.userMessage = outcome === 'pending'
+            ? 'The rename result is uncertain. Your draft and recovery details were kept. Use Resolve interrupted rename.'
+            : 'The original was not renamed. Your draft was kept. Try again.';
+          renderDocumentSidebar();
+          throw error;
+        }
+        changed.forEach(function(item) {
+          captureLiveLinkedDraft(item);
+          item.sourcePath = destination;
+          item.title = filename.replace(/\.(md|markdown)$/i, '');
+          if (item.sourceRelativePath) item.sourceRelativePath = getLinkedRenameParts(item.sourceRelativePath).parent + filename;
+          item.sourceMissing = false;
+        });
+        // Once the filesystem rename has succeeded, retain its actual new path
+        // even if persistence fails. Reverting metadata would point at nothing.
+        if (!(await _flushTabsToStorage(tabs, { changedIds: ids, requireExactCommit: true }).catch(function() { return false; }))) {
+          showAppToast('File renamed. Save the workspace again to retain the updated link.', { tone: 'warning' });
+        } else {
+          await recoverLinkedRenameWithStorageLock(tab.id);
+        }
+        renderTabBar(tabs, activeTabId);
+      });
+    } finally {
+      linkedReadEpoch++;
+      linkedSourceSavePaths.delete(sourceKey);
+      linkedSourceSavePaths.delete(destinationKey);
+      nativeMarkdownSaveInProgress = false;
+      await refreshLinkedSourceMonitoring().catch(function(error) { console.warn('Linked monitoring refresh failed:', error); });
+    }
+  }
+
+  function recoverLinkedRenameWithStorageLock(documentId) {
+    workspacePersistenceChain = workspacePersistenceChain.catch(function() {}).then(function() {
+      return workspaceStorage.recoverLinkedRename(documentId);
+    });
+    return workspacePersistenceChain;
+  }
+
+  async function refreshLinkedRenameMetadata(documents) {
+    for (const tab of documents) {
+      const stored = await workspaceStorage.loadDocumentMetadata(tab.id);
+      if (!stored || !tabs.includes(tab)) continue;
+      // Preserve live draft bytes and editor state, including input typed while
+      // the native response was pending. Only refresh link/storage metadata.
+      ['sourcePath', 'sourceRelativePath', 'sourceMissing', 'title', '_storageRevision'].forEach(function(key) {
+        if (Object.prototype.hasOwnProperty.call(stored, key)) tab[key] = stored[key];
+      });
+      if (stored.vaultRelativePath) tab._vaultRelativePath = stored.vaultRelativePath;
+    }
+  }
+
+  async function resolveLinkedRenameRecovery(tab) {
+    if (!tabs.includes(tab) || nativeMarkdownSaveInProgress || workspaceMaintenancePending ||
+        suspendWorkspacePersistence || isPrivateStorageMode()) return;
+    const pending = workspaceStorage.getLinkedRenameRecovery(tab.id);
+    if (!pending) return;
+    nativeMarkdownSaveInProgress = true;
+    linkedReadEpoch++;
+    try {
+      const documents = tabs.filter(function(item) {
+        const record = workspaceStorage.getLinkedRenameRecovery(item.id);
+        return item.id === tab.id || record && record.path === pending.path;
+      });
+      const result = await recoverLinkedRenameWithStorageLock(tab.id);
+      if (result !== 'pending') { await refreshLinkedRenameMetadata(documents); return; }
+      const chosen = await Neutralino.os.showOpenDialog('Select the original after interrupted rename', {
+        multiSelections: false, filters: [{ name: 'Markdown files', extensions: ['md', 'markdown'] }]
+      });
+      if (!chosen || chosen.length !== 1 || !/\.(md|markdown)$/i.test(chosen[0])) return;
+      const path = chosen[0];
+      await assertOutsideManagedVault(path);
+      const existing = findTabBySourcePath(path);
+      if (existing && !documents.includes(existing)) throw new Error('The selected original is already linked to another document.');
+      const content = await readLinkedSourceForSave(path);
+      if (content === null) throw new Error('The selected original is missing.');
+      if (!(await showLinkedConfirmation('Connect the retained draft to ' + path + '? No original will be changed. Review the draft and original before saving.', {
+        title: 'Resolve interrupted rename?', confirmLabel: 'Connect original', cancelLabel: 'Keep draft', focusCancel: true
+      }))) return;
+      if (!tabs.includes(tab) || await readLinkedSourceForSave(path) !== content) throw new Error('The selected original or workspace changed. Retry recovery.');
+      documents.forEach(function(item) {
+        captureLiveLinkedDraft(item);
+        item.sourcePath = path;
+        item.title = getLinkedRenameParts(path).name.replace(/\.(md|markdown)$/i, '');
+        item.sourceMissing = false;
+        // An explicitly selected replacement may be outside its old scan root.
+        delete item.linkedRootId;
+        delete item.sourceRelativePath;
+        delete item.linkedParentId;
+        delete item.linkedParentPath;
+      });
+      if (!(await _flushTabsToStorage(tabs, { changedIds: documents.map(function(item) { return item.id; }), requireExactCommit: true }))) {
+        throw new Error('The recovery link could not be saved. Your draft and recovery details were kept.');
+      }
+      await workspaceStorage.clearLinkedRenameRecovery(tab.id, path);
+    } finally {
+      nativeMarkdownSaveInProgress = false;
+      linkedReadEpoch++;
+      renderTabBar(tabs, activeTabId);
+      renderDocumentSidebar();
+      await refreshLinkedSourceMonitoring().catch(function() {});
+    }
+  }
+
   async function revealLinkedSource(tab) {
     if (!isLinkedDocument(tab)) return;
-    await Neutralino.os.open(getNativeParentPath(tab.sourcePath));
+    try { await Neutralino.os.open(getNativeParentPath(tab.sourcePath)); }
+    catch (error) { console.error('Could not open source folder:', error); showAppToast('Could not open the original folder.', { tone: 'error' }); }
   }
 
   async function convertLinkedDocumentToVault(tabId, destination) {
@@ -13382,6 +13962,301 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (typeof folderPath !== 'string' || !folderPath) return Promise.resolve(null);
     return linkMarkdownFolderWithProgress(folderPath, { silent: true });
   };
+
+  // Native and HTML drops share the same Explorer destination model. Linked
+  // parents are sidebar grouping only: they never relocate original files.
+  function getExternalDropTarget(element) {
+    const row = element && element.closest('#document-tree .document-tree-row');
+    const surface = row || (element && element.closest('#document-tree [data-drop-workspace-id], #document-tree [data-drop-linked-workspace], #document-tree [data-drop-linked-location-id]'));
+    if (!surface) return null;
+    const type = surface.dataset.treeType;
+    if (type === 'linked-workspace' || surface.dataset.dropLinkedWorkspace) return { surface: surface, mode: 'link' };
+    if (surface.dataset.dropLinkedLocationId) {
+      const parent = { locationId: surface.dataset.dropLinkedLocationId, path: surface.dataset.dropLinkedPath || '' };
+      return { surface: surface, mode: 'link', parent: parent };
+    }
+    let location = surface.dataset.dropWorkspaceId ? {
+      workspaceId: surface.dataset.dropWorkspaceId, folderId: surface.dataset.dropFolderId || null
+    } : null;
+    if (type === 'document') {
+      const tab = tabs.find(function(item) { return item.id === surface.dataset.documentId; });
+      if (!tab || isTemporaryDocument(tab)) return { surface: surface, invalid: true };
+      if (isLinkedWorkspaceDocument(tab)) {
+        let parent = getLinkedSidebarParent(tab);
+        if (!parent && tab.linkedRootId && getLinkedLocation(tab.linkedRootId)) {
+          const parts = normalizeLinkedRelativePath(tab.sourceRelativePath).split('/');
+          parts.pop();
+          parent = { locationId: tab.linkedRootId, path: parts.join('/') };
+        }
+        return { surface: surface, mode: 'link', parent: parent };
+      }
+      location = { workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID, folderId: tab.folderId || null };
+    }
+    if (!location || (location.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked())) {
+      return { surface: surface, invalid: true };
+    }
+    return { surface: surface, mode: 'copy', location: location };
+  }
+
+  function nativeDragPoint(detail) {
+    if (!detail || !Number.isFinite(detail.x) || !Number.isFinite(detail.y) ||
+        !(detail.width > 0) || !(detail.height > 0)) return null;
+    return { clientX: detail.x * window.innerWidth / detail.width,
+      clientY: detail.y * window.innerHeight / detail.height };
+  }
+
+  function clearExternalDragFeedback() {
+    dragDepth = 0;
+    if (dragOverlay) {
+      dragOverlay.classList.remove('active', 'is-drop-invalid');
+      dragOverlay.setAttribute('aria-hidden', 'true');
+    }
+    resetDocumentTreeDragFeedback();
+  }
+
+  let nativeDragItems = [];
+  function showExternalDragFeedback(element, items, point) {
+    const destination = getExternalDropTarget(element);
+    const unsupported = items.length && items.every(function(item) {
+      return item.name && !item.directory && !isMarkdownFile(item) && !isMediaFile(item);
+    });
+    const invalid = unsupported || (destination && destination.invalid) || workspaceMaintenancePending || suspendWorkspacePersistence;
+    clearDocumentDropTargets();
+    if (destination) {
+      destination.surface.classList.add(invalid ? 'is-drop-invalid' : 'is-drop-target');
+      if (!invalid) scheduleDocumentTreeDragExpansion(destination.surface, destination.location || destination);
+      else clearDocumentTreeDragExpansion();
+    } else clearDocumentTreeDragExpansion();
+    if (element && element.closest('#document-tree') && point) updateDocumentTreeAutoScroll(point);
+    else stopDocumentTreeAutoScroll();
+    if (!dragOverlay) return;
+    const folders = items.filter(function(item) { return item.directory; }).length;
+    const icon = dragOverlay.querySelector('.drag-overlay-icon');
+    icon.className = 'lucide drag-overlay-icon ' + (folders === items.length && folders ? 'lucide-folder'
+      : items.length > 1 || items.some(function(item) { return item.unknown; }) ? 'lucide-files' : 'lucide-file');
+    const mediaOnly = items.length && items.every(function(item) { return !item.directory && isMediaFile(item); });
+    const title = invalid ? 'Cannot drop here' : mediaOnly ? 'Insert media' : destination
+      ? (destination.mode === 'link' ? 'Link original' : 'Import to Vault')
+      : hasDesktopFileAccess() ? 'Choose a workspace' : 'Drop to import or insert';
+    dragOverlay.querySelector('.drag-overlay-text').textContent = translateUiString(title);
+    const names = items.map(function(item) { return item.name; }).filter(Boolean);
+    const description = destination ? destination.mode === 'link'
+      ? 'Keep originals in place. Saving edits can change them.'
+      : 'Create independent copies. Originals stay unchanged.' : hasDesktopFileAccess()
+      ? 'Drop to choose Vault Workspace or Linked Workspace.' : 'Markdown files, images, GIFs, and videos are supported';
+    const sub = dragOverlay.querySelector('.drag-overlay-sub');
+    sub.setAttribute('data-i18n-skip', '');
+    sub.textContent = names.length ? names.slice(0, 2).join(', ') + (names.length > 2 ? ' …' : '') : translateUiString(description);
+    dragOverlay.classList.toggle('is-drop-invalid', Boolean(invalid));
+    dragOverlay.classList.add('active');
+    dragOverlay.setAttribute('aria-hidden', 'false');
+  }
+
+  window.NL_HANDLE_NATIVE_DRAG = function(detail) {
+    if (!useExperimentalNativeFileDrop() || !detail) return;
+    if (detail.phase === 'leave') {
+      nativeDragItems = [];
+      clearExternalDragFeedback();
+      return;
+    }
+    if (detail.phase === 'enter') {
+      nativeDragItems = (detail.files || []).map(function(path, index) {
+        return { name: getNativePathName(path), directory: Boolean(detail.directories && detail.directories[index]) };
+      });
+    }
+    const point = nativeDragPoint(detail);
+    if (!point || !nativeDragItems.length) return;
+    showExternalDragFeedback(document.elementFromPoint(point.clientX, point.clientY), nativeDragItems, point);
+  };
+
+  let nativeDropQueue = Promise.resolve();
+  window.NL_HANDLE_NATIVE_DROP = function(paths, detail) {
+    const point = nativeDragPoint(detail);
+    const target = point && getExternalDropTarget(document.elementFromPoint(point.clientX, point.clientY));
+    const destination = target && { mode: target.mode, location: target.location, parent: target.parent, invalid: target.invalid };
+    clearExternalDragFeedback();
+    nativeDragItems = [];
+    if (destination && destination.invalid) return Promise.resolve(0);
+    if (workspaceMaintenancePending || suspendWorkspacePersistence || !useExperimentalNativeFileDrop()) return Promise.resolve(0);
+    const readEpoch = linkedReadEpoch;
+    const values = (Array.isArray(paths) ? paths : []).map(function(item) {
+      if (typeof item === 'string') return item;
+      if (item && typeof item.path === 'string') return item.path;
+      if (item && typeof item.filePath === 'string') return item.filePath;
+      return '';
+    }).filter(Boolean);
+    const mediaTarget = { tabId: activeTabId, content: markdownEditor.value,
+      start: markdownEditor.selectionStart, end: markdownEditor.selectionEnd };
+    const operation = nativeDropQueue.then(function() { return processNativeDrop(values, readEpoch, mediaTarget, destination); });
+    nativeDropQueue = operation.catch(function(error) {
+      console.warn('Native drop failed:', error);
+      showAppToast('The dropped items could not be added. Please try again.', { tone: 'error', title: 'Import failed' });
+      return 0;
+    });
+    return nativeDropQueue;
+  };
+
+  async function importNativeFolderToVault(folderPath, destination, canApply) {
+    const location = destination || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null };
+    showImportProgress(0, { title: 'Importing folder', detail: 'Scanning folder…' });
+    let imported = 0;
+    let total = 0;
+    try {
+      // Reuse the bounded, traversal-safe scanner and stage reads before creating
+      // any Vault folders. Linking is never used as a temporary import step.
+      const files = await collectMarkdownFilesFromFolder(folderPath, canApply);
+      if (!canApply()) { finishImportProgress(0, 1, { success: false }); return 0; }
+      total = files.length;
+      const root = ensureWorkspaceFolder(location.workspaceId, getNativePathName(folderPath), location.folderId);
+      if (!root || !(await saveDocumentOrganization())) throw new Error('The destination folders could not be saved.');
+      const ids = [];
+      const parents = new Map();
+      for (const file of files) {
+        if (!canApply()) { finishImportProgress(imported, total, { success: false }); return 0; }
+        const directory = file.relativePath.slice(0, file.relativePath.lastIndexOf('/') + 1);
+        if (!parents.has(directory)) parents.set(directory, ensureGitHubFolderPath(location.workspaceId, root, file.relativePath));
+        const parent = parents.get(directory);
+        const tab = await importMarkdownFile(new File([file.content], getNativePathName(file.path), { type: 'text/markdown' }), {
+          workspaceId: location.workspaceId, folderId: parent.id
+        }, canApply);
+        if (tab) { imported++; ids.push(tab.id); }
+        updateImportProgress(imported, total);
+      }
+      if (!canApply()) { finishImportProgress(imported, total, { success: false }); return 0; }
+      if (ids.length) await persistImportedDocuments(ids, { requireExactCommit: true });
+      if (!(await saveDocumentOrganization())) throw new Error('The destination folders could not be saved.');
+      if (location.workspaceId === SECRET_WORKSPACE_ID && !isPrivateStorageMode()) await flushSecretWorkspaceToStorage();
+      renderDocumentSidebar();
+      finishImportProgress(imported, total);
+      return imported;
+    } catch (error) {
+      if (imported && canApply()) showAppToast('Imported drafts remain in Explorer. Save them again when storage is available.', { tone: 'warning', title: 'Changes not saved' });
+      finishImportProgress(0, Math.max(total, 1), { detail: 'The dropped items could not be added. Please try again.' });
+      throw error;
+    }
+  }
+
+  async function processNativeDrop(values, readEpoch, mediaTarget, destination) {
+    const canApply = function() {
+      if (workspaceMaintenancePending || suspendWorkspacePersistence || readEpoch !== linkedReadEpoch) return false;
+      if (destination && destination.parent && !getLinkedLocation(destination.parent.locationId)) return false;
+      const location = destination && destination.location;
+      if (location && (!getWorkspaceById(location.workspaceId) || (location.folderId && !getFolderById(location.folderId)))) return false;
+      return !(location && location.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked());
+    };
+    if (!canApply()) return 0;
+    const uniquePaths = Array.from(new Map(values.map(function(filePath) {
+      return [normalizeLinkedSourcePath(filePath), filePath];
+    })).values());
+    if (uniquePaths.length > 1000) {
+      showAppToast('Too many dropped items. Drop at most 1,000 files or folders at a time.', { tone: 'error', title: 'Import failed' });
+      return 0;
+    }
+    const markdownPaths = [];
+    const folderPaths = [];
+    const mediaPaths = [];
+    const failedNames = [];
+    let unsupported = false;
+    let linkedFiles = 0;
+    let linkedFolders = 0;
+    let copiedFiles = 0;
+    let insertedMedia = 0;
+    for (const filePath of uniquePaths) {
+      if (!canApply()) return 0;
+      try {
+        const stats = await Neutralino.filesystem.getStats(filePath);
+        if (stats && stats.isDirectory) {
+          folderPaths.push(filePath);
+        } else if (/\.(md|markdown)$/i.test(filePath)) {
+          markdownPaths.push(filePath);
+        } else if (isMediaFile({ name: getNativePathName(filePath) })) {
+          mediaPaths.push(filePath);
+        } else {
+          unsupported = true;
+        }
+      } catch (error) {
+        console.warn('Dropped path could not be inspected:', filePath, error);
+        failedNames.push(getNativePathName(filePath));
+      }
+    }
+    if (!canApply()) return 0;
+    let dropMode = destination && destination.mode;
+    if (!dropMode && (markdownPaths.length || folderPaths.length)) {
+      dropMode = await chooseDesktopMarkdownDropMode(markdownPaths.concat(folderPaths).map(function(filePath) {
+        return { name: getNativePathName(filePath), path: filePath, directory: folderPaths.includes(filePath) };
+      }), { folders: folderPaths.length, media: mediaPaths.length });
+      // No folder linking, file import or media upload happens before this choice.
+      if (!dropMode || !canApply()) return 0;
+    }
+    for (const filePath of mediaPaths) {
+      if (!canApply()) return 0;
+      try {
+        const name = getNativePathName(filePath);
+        const descriptor = { name: name };
+        const video = isVideoFile(descriptor);
+        const mime = video ? getManagedVideoMime(descriptor) : getEmbeddedRasterMime(descriptor);
+        const limit = video ? MANAGED_VIDEO_MAX_BYTES : mime === 'image/gif' ? MANAGED_GIF_MAX_BYTES : MAX_LOCAL_IMAGE_BYTES;
+        const content = await MarkdownNativeSourceReader.readBinary(Neutralino.filesystem, filePath, limit);
+        if (!canApply()) return 0;
+        if (activeTabId !== mediaTarget.tabId || markdownEditor.value !== mediaTarget.content) {
+          announceToScreenReader('Media insertion was cancelled because the document changed.');
+          break;
+        }
+        const count = await insertImageFilesIntoEditor([new File([content], name, { type: mime })], {
+          source: 'drop', selectionStart: mediaTarget.start, selectionEnd: mediaTarget.end
+        });
+        if (!count) break; // Respect consent cancellation for the whole media batch.
+        insertedMedia += count;
+        mediaTarget.content = markdownEditor.value;
+        mediaTarget.start = markdownEditor.selectionStart;
+        mediaTarget.end = markdownEditor.selectionEnd;
+      } catch (error) {
+        console.warn('Dropped media could not be imported:', filePath, error);
+        failedNames.push(getNativePathName(filePath));
+      }
+    }
+    for (const folderPath of folderPaths) {
+      if (!canApply()) return 0;
+      try {
+        if (dropMode === 'copy') {
+          copiedFiles += await importNativeFolderToVault(folderPath, destination && destination.location, canApply);
+        } else if (await linkMarkdownFolderWithProgress(folderPath, { silent: true, parent: destination && destination.parent })) linkedFolders++;
+        else if (canApply()) failedNames.push(getNativePathName(folderPath));
+      } catch (error) {
+        console.warn('Dropped folder could not be linked:', folderPath, error);
+        failedNames.push(getNativePathName(folderPath));
+      }
+    }
+    for (const filePath of markdownPaths) {
+      if (!canApply()) return 0;
+      try {
+        if (dropMode === 'link') {
+          if (await addLinkedFilePath(filePath, { open: false, parent: destination && destination.parent })) linkedFiles++;
+          else if (canApply()) failedNames.push(getNativePathName(filePath));
+        } else if (dropMode === 'copy') {
+          // Import one bounded file at a time instead of retaining an entire batch.
+          const content = await readNativeMarkdownSource(filePath);
+          if (!canApply()) return 0;
+          const count = await importMarkdownFiles([new File([content], getNativePathName(filePath), { type: 'text/markdown' })], {
+            location: destination && destination.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null }, showInvalidAlert: false, requireExactCommit: true, canApply: canApply
+          });
+          copiedFiles += count;
+          if (!count && canApply()) failedNames.push(getNativePathName(filePath));
+        }
+      } catch (error) {
+        console.warn('Dropped Markdown could not be added:', filePath, error);
+        failedNames.push(getNativePathName(filePath));
+      }
+    }
+    if (!canApply()) return 0;
+    if (unsupported) showUnsupportedFileToast('Dropped files must be Markdown, image, GIF, MP4, WebM, or Ogg files.');
+    if (linkedFiles || linkedFolders) {
+      showAppToast('Linked files: ' + linkedFiles + '. Linked folders: ' + linkedFolders + '. Originals remain on disk.', { tone: 'success', title: 'Linked files' });
+    }
+    if (copiedFiles) showAppToast('Files imported to Vault: ' + copiedFiles + '.', { tone: 'success', title: 'Imported to Vault' });
+    if (failedNames.length) showAppToast(translateUiString('Could not add dropped items: {{0}}').replace('{{0}}', failedNames.slice(0, 5).join(', ')), { tone: 'warning', title: 'Import failed' });
+    return linkedFiles + linkedFolders + copiedFiles + insertedMedia;
+  }
 
   function isTabOpen(tab) {
     return Boolean(tab && tab.isOpen !== false);
@@ -14268,14 +15143,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (contentChanged && tab.remoteSource && tab.remoteSource.status === 'saved') tab.remoteSource.status = 'draft';
     tab.content = markdownEditor.value;
     tab.contentLoaded = true;
-    tab.scrollPos = markdownEditor.scrollTop;
-    if (
-      previewHasCommittedRender &&
-      previewLastRenderedTabId === tab.id &&
-      !previewContainsSkeleton()
-    ) {
-      savePreviewScrollSnapshot(tab.id, capturePreviewScroll());
-    }
+    if (markdownEditor.clientHeight) tab.scrollPos = markdownEditor.scrollTop;
+    savePreviewScrollSnapshot(tab.id, captureRenderedPreviewScroll(tab.id));
     tab.viewMode = reviewModeActive && reviewPreviousViewModes.has(activeTabId)
       ? reviewPreviousViewModes.get(activeTabId)
       : (currentViewMode || 'split');
@@ -14667,7 +15536,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     renderDocumentSplitView();
     evictInactiveDocumentContent();
     requestAnimationFrame(function() {
-      markdownEditor.scrollTop = tab.scrollPos || 0;
+      if (activeTabId !== tab.id) return;
+      setSynchronizedScrollTop(markdownEditor, tab.scrollPos || 0);
       updateLiveCursorPosition();
       renderLiveCursors();
     });
@@ -14859,51 +15729,146 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
-    const modal = document.getElementById('rename-modal');
-    const input = document.getElementById('rename-modal-input');
-    const confirmBtn = document.getElementById('rename-modal-confirm');
-    const cancelBtn = document.getElementById('rename-modal-cancel');
-    if (!modal || !input) return;
-    input.value = tab.title;
-
-    function doRename() {
-      const newName = input.value.trim();
-      if (newName) {
-        tab.title = newName;
-        if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) {
-          syncLiveSessionTitle(newName);
+    const linked = isLinkedDocument(tab);
+    const sourcePath = linked ? tab.sourcePath : '';
+    const sourceName = linked ? getLinkedRenameParts(sourcePath).name : '';
+    const extension = linked ? (sourceName.match(/\.(md|markdown)$/i) || ['.md'])[0] : '';
+    const linkedFilename = function(value) { return value + extension; };
+    openExplorerRename({
+      type: 'document', id: tab.id, title: 'Rename file',
+      value: linked ? sourceName.slice(0, -extension.length) : tab.title,
+      validate: function(value) {
+        if (!value) return 'Enter a name.';
+        const windows = typeof NL_OS !== 'undefined' && NL_OS === 'Windows';
+        if (linked && (/[\x00/]/.test(value) ||
+            (windows && (/[\x00-\x1f<>:"\\|?*]/.test(value) || /[. ]$/.test(value) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value))))) {
+          return 'Use a valid filename.';
         }
+        return '';
+      },
+      onConfirm: async function(value) {
+        if (!tabs.includes(tab)) return;
+        if (linked) {
+          if (tab.sourcePath !== sourcePath) throw Object.assign(new Error('Link changed during rename'), { userMessage: 'Item changed. Start Rename again.' });
+          await renameLinkedOriginal(tab, linkedFilename(value));
+          return;
+        }
+        if (tab.title === value) {
+          if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) syncLiveSessionTitle(value);
+          return;
+        }
+        tab.title = value;
+        if (liveCollaboration && liveCollaboration.tabId === tab.id && liveCollaboration.sessionMap) syncLiveSessionTitle(value);
         saveTabsToStorage(tabs, [tab.id]);
         renderTabBar(tabs, activeTabId);
       }
-      closeAppModal(modal);
-      cleanup();
-    }
-
-    function doCancel() {
-      closeAppModal(modal);
-      cleanup();
-    }
-
-    function onKey(e) {
-      if (e.key === 'Enter') doRename();
-    }
-
-    function cleanup() {
-      confirmBtn.removeEventListener('click', doRename);
-      cancelBtn.removeEventListener('click', doCancel);
-      input.removeEventListener('keydown', onKey);
-    }
-
-    confirmBtn.addEventListener('click', doRename);
-    cancelBtn.addEventListener('click', doCancel);
-    input.addEventListener('keydown', onKey);
-
-    openAppModal(modal, {
-      focusTarget: input,
-      onClose: doCancel
     });
-    input.select();
+  }
+
+  async function downloadSelectedDocuments() {
+    const documents = getSelectedDocuments().slice();
+    if (documents.length < 2 || documents.some(isShareSnapshotTab)) return;
+    const secretSession = secretWorkspaceKey;
+    const valid = function() {
+      return !workspaceMaintenancePending && !suspendWorkspacePersistence && documents.every(function(tab) {
+        return tabs.includes(tab) && (tab.workspaceId !== SECRET_WORKSPACE_ID ||
+          (isSecretWorkspaceUnlocked() && secretWorkspaceKey === secretSession));
+      });
+    };
+    try {
+      if (!valid()) return;
+      saveCurrentTabState();
+      saveSecondarySplitState();
+      const JSZip = await ensureJsZip();
+      if (!valid()) return;
+      const zip = new JSZip();
+      const names = new Set();
+      for (const tab of documents) {
+        await ensureTabContent(tab);
+        if (!valid()) return;
+        saveCurrentTabState();
+        saveSecondarySplitState();
+        const filename = getSafeDocumentFilename(tab.title, 'md', 'document.md');
+        let name = filename;
+        let index = 2;
+        while (names.has(name.toLowerCase())) name = filename.slice(0, -3) + ' (' + index++ + ').md';
+        names.add(name.toLowerCase());
+        zip.file(name, typeof tab.content === 'string' ? tab.content : '');
+      }
+      if (hasDesktopFileAccess()) {
+        let destination = await Neutralino.os.showSaveDialog('Download', {
+          defaultPath: 'selected-files.zip', filters: [{ name: 'ZIP archives (*.zip)', extensions: ['zip'] }]
+        });
+        if (!destination || !valid()) return;
+        if (!/\.zip$/i.test(destination)) destination += '.zip';
+        const bytes = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+        if (valid()) await Neutralino.filesystem.writeBinaryFile(destination, bytes);
+      } else {
+        const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+        if (valid()) saveAs(blob, 'selected-files.zip');
+      }
+    } catch (error) {
+      console.error('Selected document download failed:', error);
+      showAppToast('Export failed:', { tone: 'error' });
+    }
+  }
+
+  async function downloadWorkspaceFolder(folderId) {
+    const folder = getFolderById(folderId);
+    if (!folder || (folder.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked())) return;
+    const secretSession = secretWorkspaceKey;
+    const valid = function() {
+      return getFolderById(folderId) === folder && !workspaceMaintenancePending && !suspendWorkspacePersistence &&
+        (folder.workspaceId !== SECRET_WORKSPACE_ID || (isSecretWorkspaceUnlocked() && secretWorkspaceKey === secretSession));
+    };
+    try {
+      saveCurrentTabState();
+      saveSecondarySplitState();
+      const ids = getFolderDescendantIds([folderId]);
+      const folders = documentOrganization.folders.filter(function(item) { return ids.has(item.id); }).map(function(item) { return Object.assign({}, item); });
+      const documents = tabs.filter(function(tab) { return !isTemporaryDocument(tab) && !isLinkedDocument(tab) && ids.has(tab.folderId); });
+      const JSZip = await ensureJsZip();
+      if (!valid()) return;
+      const zip = new JSZip();
+      const paths = new Map();
+      const used = new Set();
+      function unique(parent, name) {
+        const base = String(name || 'Untitled').replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g, '_')
+          .replace(/[. ]+$/, '').replace(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?=\.|$)/i, '_$1') || 'Untitled';
+        let candidate = base;
+        let index = 2;
+        while (used.has((parent + candidate).toLowerCase())) {
+          const match = /^(.*)(\.md)$/i.exec(base);
+          candidate = match ? match[1] + ' (' + index++ + ')' + match[2] : base + ' (' + index++ + ')';
+        }
+        used.add((parent + candidate).toLowerCase());
+        return parent + candidate;
+      }
+      function folderPath(item, visiting) {
+        if (paths.has(item.id)) return paths.get(item.id);
+        if (visiting.has(item.id)) throw new Error('Invalid folder tree');
+        visiting.add(item.id);
+        const parent = item.id === folderId ? null : folders.find(function(other) { return other.id === item.parentFolderId; });
+        const result = unique(parent ? folderPath(parent, visiting) : '', item.name) + '/';
+        paths.set(item.id, result);
+        zip.folder(result);
+        visiting.delete(item.id);
+        return result;
+      }
+      folders.forEach(function(item) { folderPath(item, new Set()); });
+      for (const tab of documents) {
+        await ensureTabContent(tab);
+        if (!valid() || !tabs.includes(tab) || !ids.has(tab.folderId)) return;
+        if (tab.id === activeTabId) saveCurrentTabState();
+        saveSecondarySplitState();
+        zip.file(unique(paths.get(tab.folderId), getSafeDocumentFilename(tab.title, 'md', 'document.md')), typeof tab.content === 'string' ? tab.content : '');
+      }
+      const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+      if (valid()) saveAs(blob, getSafeDocumentFilename(folder.name, 'zip', 'folder.zip'));
+    } catch (error) {
+      console.error('Folder download failed:', error);
+      showAppToast('Folder download failed. Try again.', { tone: 'error' });
+    }
   }
 
   async function duplicateTab(tabId) {
@@ -15116,6 +16081,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       documentOrganization = await loadDocumentOrganization();
       initializeSecretWorkspaceState();
       tabs = await loadTabsFromStorage();
+      if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && tabs.some(function(tab) { return isLinkedDocument(tab) && workspaceStorage.getLinkedRenameRecovery(tab.id); })) {
+        showAppToast('An interrupted rename needs review. Your drafts were kept. Use Resolve interrupted rename in the linked file menu.', {
+          tone: 'warning', title: 'Rename recovery'
+        });
+      }
     } catch (error) {
       if (!documentOrganization) documentOrganization = createDefaultDocumentOrganization();
       return enterWorkspaceStorageRecoveryMode(error);
@@ -15205,7 +16175,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       editorPane.classList.remove('is-loading');
     }
     requestAnimationFrame(function() {
-      if (activeTab) markdownEditor.scrollTop = activeTab.scrollPos || 0;
+      if (activeTab && activeTabId === activeTab.id) setSynchronizedScrollTop(markdownEditor, activeTab.scrollPos || 0);
     });
     renderTabBar(tabs, activeTabId);
     initDocumentSidebar();
@@ -15396,6 +16366,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function showPreviewSkeleton() {
     if (markdownPreview && !markdownPreview.querySelector('#markdown-preview-skeleton')) {
+      savePreviewScrollSnapshot(previewLastRenderedTabId, captureRenderedPreviewScroll(previewLastRenderedTabId));
+      // The placeholder has no document owner. Its clamped scroll events must
+      // never replace the position of the document whose DOM it removed.
+      previewLastRenderedTabId = null;
+      pendingPreviewScrollRestore = null;
+      previewScrollLayoutRetry = null;
       markdownPreview.setAttribute('aria-busy', 'true');
       markdownPreview.dataset.renderState = 'loading';
       markdownPreview.innerHTML = `
@@ -15490,6 +16466,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
   }
 
+  function captureRenderedPreviewScroll(documentId) {
+    // The shared pane is measurable only after this document owns its visible
+    // layout and its pending restoration has finished.
+    if (
+      !documentId || documentId !== activeTabId || documentId !== previewLastRenderedTabId ||
+      !previewHasCommittedRender || pendingPreviewScrollRestore || previewScrollLayoutRetry ||
+      !previewPane || !previewPane.clientHeight || previewContainsSkeleton()
+    ) return null;
+    return capturePreviewScroll();
+  }
+
   function normalizePreviewScrollValue(value) {
     const position = Number(value);
     return Number.isFinite(position) && position >= 0 ? position : 0;
@@ -15516,9 +16503,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     tab.previewScrollLeft = normalizePreviewScrollLeftValue(snapshot.left);
   }
 
-  function restorePreviewScroll(snapshot, context) {
+  function restorePreviewScroll(snapshot, context, layoutRetry) {
     if (!snapshot || !previewPane) return;
+    const restoration = { snapshot, context, layoutRetry };
+    previewScrollLayoutRetry = null;
+    pendingPreviewScrollRestore = restoration;
     requestAnimationFrame(function() {
+      if (pendingPreviewScrollRestore !== restoration) return;
+      pendingPreviewScrollRestore = null;
       if (
         context &&
         (
@@ -15529,11 +16521,36 @@ document.addEventListener("DOMContentLoaded", async function () {
       ) {
         return;
       }
+      // Hidden panes report zero geometry. Keep the document's saved position
+      // until Preview is visible again rather than persisting a clamped zero.
+      if (!previewPane.clientHeight || previewContainsSkeleton()) return;
       const maxTop = Math.max(0, previewPane.scrollHeight - previewPane.clientHeight);
-      previewPane.scrollTop = Math.min(maxTop, normalizePreviewScrollValue(snapshot.top));
+      setSynchronizedScrollTop(previewPane, Math.min(maxTop, normalizePreviewScrollValue(snapshot.top)));
       previewPane.scrollLeft = normalizePreviewScrollLeftValue(snapshot.left);
+      if (snapshot.top > maxTop && (
+        Array.from(markdownPreview.querySelectorAll('img')).some(function(image) { return !image.complete; }) ||
+        previewHasUnsettledAdvancedContent(_lastRenderedContent || '')
+      )) {
+        // Images and async renderers can temporarily make the document shorter.
+        // Retain the requested position until layout settles or the user scrolls.
+        previewScrollLayoutRetry = restoration;
+        return;
+      }
       if (context) savePreviewScrollSnapshot(context.previewDocumentId, capturePreviewScroll());
     });
+  }
+
+  function retryPreviewScrollAfterLayout() {
+    const restoration = previewScrollLayoutRetry;
+    if (!restoration) return;
+    restorePreviewScroll(restoration.snapshot, restoration.context, true);
+  }
+
+  function releasePreviewScrollLayoutRetry() {
+    if (!previewScrollLayoutRetry && !(pendingPreviewScrollRestore && pendingPreviewScrollRestore.layoutRetry)) return;
+    previewScrollLayoutRetry = null;
+    pendingPreviewScrollRestore = null;
+    savePreviewScrollSnapshot(activeTabId, captureRenderedPreviewScroll(activeTabId));
   }
 
   function canReusePreviewNode(currentNode, nextNode, options) {
@@ -15672,9 +16689,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function commitPreviewHtml(sanitizedHtml, referenceData, rawVal, context) {
     const renderedDocumentId = previewLastRenderedTabId;
-    const renderedScrollSnapshot = previewHasCommittedRender && !previewContainsSkeleton()
-      ? capturePreviewScroll()
-      : null;
+    const renderedScrollSnapshot = captureRenderedPreviewScroll(renderedDocumentId);
     if (renderedScrollSnapshot) {
       savePreviewScrollSnapshot(renderedDocumentId, renderedScrollSnapshot);
     }
@@ -16968,14 +17983,14 @@ ${selector} .arrowheadPath {
     await waitForBrowserPrintFrame();
   }
 
-  async function prepareBrowserPrintExport(exportTheme = 'light') {
+  async function prepareBrowserPrintExport(exportTheme = 'light', state) {
     const root = document.documentElement;
     const previousPrintExport = root.getAttribute('data-browser-print-export');
     const targetTheme = getExportTheme(exportTheme);
     let printSnapshot = null;
 
     try {
-      printSnapshot = await createExportRenderElement(markdownEditor.value, targetTheme, 'print');
+      printSnapshot = await createExportRenderElement(markdownEditor.value, targetTheme, 'print', state);
       printSnapshot.classList.add('browser-print-export-snapshot');
       printSnapshot.setAttribute('aria-hidden', 'true');
       root.setAttribute('data-browser-print-export', targetTheme);
@@ -16998,13 +18013,24 @@ ${selector} .arrowheadPath {
   }
 
   async function runBrowserPrintExport(exportTheme = 'light') {
+    if (activePdfExport) return;
+    const state = createPdfProgressState();
+    activePdfExport = state;
+    setPdfExportTriggersBusy(state, true);
+    document.body.appendChild(state.overlay);
+    updatePdfProgress(state, 15, 'Preparing document');
+    state.overlay.querySelector('.pdf-progress-cancel')?.focus();
     const previousDocumentTitle = document.title;
     document.title = getBrowserPrintDocumentTitle();
     let restoreBrowserPrintExport;
     try {
-      restoreBrowserPrintExport = await prepareBrowserPrintExport(exportTheme);
+      restoreBrowserPrintExport = await prepareBrowserPrintExport(exportTheme, state);
+      throwIfPdfExportAborted(state.signal);
     } catch (error) {
+      if (restoreBrowserPrintExport) restoreBrowserPrintExport();
+      cleanupPdfExport(state);
       document.title = previousDocumentTitle;
+      if (error instanceof PdfExportCancelledError) return;
       throw error;
     }
     let restored = false;
@@ -17024,6 +18050,7 @@ ${selector} .arrowheadPath {
         }
       }
       restoreBrowserPrintExport();
+      cleanupPdfExport(state);
       document.title = previousDocumentTitle;
     };
 
@@ -17047,6 +18074,8 @@ ${selector} .arrowheadPath {
     }
 
     try {
+      state.returnFocusAfterPrint = true;
+      state.overlay.remove();
       window.print();
     } catch (error) {
       restoreOnce();
@@ -17718,7 +18747,8 @@ ${selector} .arrowheadPath {
     const targetLocation = location || (documentOrganization
       ? getPreferredDocumentLocation()
       : { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
-    if (targetLocation.workspaceId === SECRET_WORKSPACE_ID && !isSecretWorkspaceUnlocked()) return null;
+    if (targetLocation.workspaceId === SECRET_WORKSPACE_ID &&
+        (secretWorkspaceLockInProgress || !isSecretWorkspaceUnlocked())) return null;
     const tab = createTab(content, title, 'split', targetLocation);
     tab.isOpen = false;
     normalizeTabDocumentMetadata(tab, { allowSecret: targetLocation.workspaceId === SECRET_WORKSPACE_ID });
@@ -17726,16 +18756,23 @@ ${selector} .arrowheadPath {
     return tab;
   }
 
-  async function persistImportedDocuments(documentIds) {
+  async function persistImportedDocuments(documentIds, options) {
     const ids = Array.from(documentIds || []).filter(Boolean);
     if (!ids.length) return;
+    const requireExactCommit = Boolean(options && options.requireExactCommit && !isPrivateStorageMode());
     saveTabsToStorage(tabs, ids);
-    await _flushTabsToStorage(tabs, { changedIds: ids });
+    const saved = await _flushTabsToStorage(tabs, { changedIds: ids, requireExactCommit: requireExactCommit });
     evictInactiveDocumentContent();
     renderDocumentSidebar();
+    if (requireExactCommit && !saved) {
+      // Preserve recoverable drafts: a failed batch can include committed files
+      // or edits made while persistence was pending. Never discard them blindly.
+      showAppToast('Imported drafts remain in Explorer. Save them again when storage is available.', { tone: 'warning', title: 'Changes not saved' });
+      throw new Error('The dropped copy could not be saved.');
+    }
   }
 
-  function importMarkdownFile(file, location) {
+  function importMarkdownFile(file, location, canApply) {
     return new Promise(function(resolve) {
       if (!file) {
         resolve(null);
@@ -17751,6 +18788,7 @@ ${selector} .arrowheadPath {
 
       const reader = new FileReader();
       reader.onload = function(e) {
+        if (canApply && !canApply()) { resolve(null); return; }
         const text = e.target.result || '';
       
         // Simple binary check: look for null bytes in the first 8KB
@@ -17794,16 +18832,22 @@ ${selector} .arrowheadPath {
     const importedDocumentIds = [];
     showImportProgress(filesToImport.length);
     for (let index = 0; index < filesToImport.length; index++) {
-      const importedDocument = await importMarkdownFile(filesToImport[index], settings.location);
+      if (settings.canApply && !settings.canApply()) break;
+      const importedDocument = await importMarkdownFile(filesToImport[index], settings.location, settings.canApply);
       if (importedDocument) {
         importedCount++;
         importedDocumentIds.push(importedDocument.id);
       }
       updateImportProgress(index + 1, filesToImport.length);
     }
-    await persistImportedDocuments(importedDocumentIds);
-    if (settings.location && settings.location.workspaceId === SECRET_WORKSPACE_ID && isSecretWorkspaceUnlocked()) {
-      await flushSecretWorkspaceToStorage();
+    try {
+      await persistImportedDocuments(importedDocumentIds, settings);
+      if (settings.location && settings.location.workspaceId === SECRET_WORKSPACE_ID && isSecretWorkspaceUnlocked()) {
+        await flushSecretWorkspaceToStorage();
+      }
+    } catch (error) {
+      finishImportProgress(0, filesToImport.length, { success: false });
+      throw error;
     }
     finishImportProgress(importedCount, filesToImport.length, {
       detail: importedCount === filesToImport.length
@@ -19501,6 +20545,7 @@ ${selector} .arrowheadPath {
 
   function syncEditorToPreview() {
     if (isSynchronizedScrollEvent(markdownEditor)) return;
+    if (currentViewMode !== 'split' || pendingPreviewScrollRestore || previewScrollLayoutRetry || previewContainsSkeleton()) return;
     // During an outline jump, the preview owns the position until the next user
     // interaction. Delayed editor scroll events must not undo a layout correction.
     if (!syncScrollingEnabled || isPreviewScrolling || isProgrammaticScrolling || documentOutlineScrollTarget) return;
@@ -19536,6 +20581,7 @@ ${selector} .arrowheadPath {
 
   function syncPreviewToEditor() {
     if (isSynchronizedScrollEvent(previewPane)) return;
+    if (currentViewMode !== 'split' || pendingPreviewScrollRestore || previewScrollLayoutRetry || previewContainsSkeleton()) return;
     if (!syncScrollingEnabled || isEditorScrolling || isProgrammaticScrolling) return;
     const sourceDocumentId = previewLastRenderedTabId;
     if (!sourceDocumentId || activeTabId !== sourceDocumentId) return;
@@ -19674,6 +20720,11 @@ ${selector} .arrowheadPath {
     if (mode === currentViewMode) return;
 
     const previousMode = currentViewMode;
+    const viewDocumentId = activeTabId;
+    const viewTab = tabs.find(function(tab) { return tab.id === viewDocumentId; });
+    if (previousMode && viewTab && markdownEditor.clientHeight) viewTab.scrollPos = markdownEditor.scrollTop;
+    savePreviewScrollSnapshot(previewLastRenderedTabId, captureRenderedPreviewScroll(previewLastRenderedTabId));
+    cancelPendingMainScrollSync();
     currentViewMode = mode;
     documentOutlineScrollTarget = null;
 
@@ -19720,6 +20771,12 @@ ${selector} .arrowheadPath {
     // Re-render markdown when switching to a view that includes preview
     if (mode === 'split' || mode === 'preview') {
       renderMarkdown({ reason: 'view-switch' });
+      if (previousMode === 'editor' && previewLastRenderedTabId === getActivePreviewDocumentId()) {
+        restorePreviewScroll(getPreviewScrollSnapshot(previewLastRenderedTabId), {
+          renderId: previewRenderGeneration,
+          previewDocumentId: previewLastRenderedTabId,
+        });
+      }
     }
 
     if (mode === 'split' || mode === 'editor') {
@@ -19727,6 +20784,17 @@ ${selector} .arrowheadPath {
       scheduleLineNumberUpdate({ force: true });
       updateFindHighlights();
       scheduleEditorOverlayScrollSync();
+      if (previousMode === 'preview' && viewTab) {
+        const editorScrollTop = viewTab.scrollPos || 0;
+        // View-button handlers persist immediately after this call, before rAF.
+        setSynchronizedScrollTop(markdownEditor, editorScrollTop);
+        requestAnimationFrame(function() {
+          if (activeTabId === viewDocumentId && currentViewMode !== 'preview') {
+            setSynchronizedScrollTop(markdownEditor, editorScrollTop);
+            syncEditorScrollOverlays();
+          }
+        });
+      }
     }
     if (secondarySplitTabId) renderDocumentSplitView();
     requestAnimationFrame(updateDocumentOutlineActiveHeading);
@@ -23886,6 +24954,7 @@ ${selector} .arrowheadPath {
     if (activeModal && activeModal !== modal) {
       closeAppModal(activeModal);
     }
+    const transition = modal._modalTransition = (modal._modalTransition || 0) + 1;
     lastFocusedElement = options.returnFocus || document.activeElement;
     modal._returnFocus = lastFocusedElement;
     modal.style.display = 'flex';
@@ -23893,10 +24962,11 @@ ${selector} .arrowheadPath {
     activeModal = modal;
     const focusTarget = options.focusTarget || getFocusableElements(modal)[0];
     requestAnimationFrame(function() {
+      if (modal._modalTransition !== transition || activeModal !== modal) return;
       modal.classList.add('is-visible');
       const focusDelay = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 210;
       window.setTimeout(function() {
-        if (activeModal === modal && focusTarget) focusTarget.focus({ preventScroll: true });
+        if (modal._modalTransition === transition && activeModal === modal && focusTarget) focusTarget.focus({ preventScroll: true });
       }, focusDelay);
     });
     const handleKeydown = function(event) {
@@ -23927,6 +24997,7 @@ ${selector} .arrowheadPath {
 
   function closeAppModal(modal) {
     if (!modal) return;
+    const transition = modal._modalTransition = (modal._modalTransition || 0) + 1;
     // Opt-in asynchronous confirmations must resolve safely when another modal
     // closes/replaces them, not leave a native save permanently pending.
     const cancelConfirmation = modal._confirmationCancel;
@@ -23939,7 +25010,7 @@ ${selector} .arrowheadPath {
     if (handlers.handlePointerDown) modal.removeEventListener('mousedown', handlers.handlePointerDown);
     if (activeModal === modal) activeModal = null;
     window.setTimeout(function() {
-      if (!modal.classList.contains('is-visible')) {
+      if (modal._modalTransition === transition && !modal.classList.contains('is-visible')) {
         modal.style.display = 'none';
       }
     }, 200);
@@ -24456,6 +25527,7 @@ ${selector} .arrowheadPath {
   }
 
   function scrollActiveMatchIntoView(match) {
+    releasePreviewScrollLayoutRetry();
     let matchTop = null;
     let matchHeight = cachedLineHeight;
     let activeHighlight = getActiveFindHighlight();
@@ -25762,6 +26834,7 @@ ${selector} .arrowheadPath {
   function scrollToDocumentOutlineTarget() {
     const heading = documentOutlineScrollTarget;
     if (!heading || !heading.isConnected || currentViewMode === 'editor') return;
+    releasePreviewScrollLayoutRetry();
     // Reveal skipped preview blocks before measuring the heading's position.
     cancelPendingMainScrollSync();
     heading.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' });
@@ -27314,6 +28387,16 @@ ${selector} .arrowheadPath {
   initSlashCommandMenu();
   initEditorPageNavigation(markdownEditor);
   initEditorPageNavigation(documentSplitEditor);
+
+  ['pointerdown', 'wheel', 'touchstart', 'keydown'].forEach(function(type) {
+    previewPane.addEventListener(type, releasePreviewScrollLayoutRetry, { capture: true, passive: true });
+    markdownEditor.addEventListener(type, releasePreviewScrollLayoutRetry, { capture: true, passive: true });
+  });
+  markdownPreview.addEventListener('load', retryPreviewScrollAfterLayout, true);
+  markdownPreview.addEventListener('error', retryPreviewScrollAfterLayout, true);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(retryPreviewScrollAfterLayout).observe(markdownPreview);
+  }
   
   markdownEditor.addEventListener("scroll", function() {
     cachedScrollTop = this.scrollTop;
@@ -27327,9 +28410,9 @@ ${selector} .arrowheadPath {
   });
   previewPane.addEventListener("scroll", function() {
     const renderedDocumentId = previewLastRenderedTabId;
-    if (renderedDocumentId) {
-      savePreviewScrollSnapshot(renderedDocumentId, capturePreviewScroll());
-    }
+    const snapshot = captureRenderedPreviewScroll(renderedDocumentId);
+    if (!snapshot) return;
+    savePreviewScrollSnapshot(renderedDocumentId, snapshot);
     if (renderedDocumentId !== activeTabId) return;
     if (secondarySplitTabId && currentViewMode === 'preview') {
       syncDocumentSplitScroll(previewPane, documentSplitPreview);
@@ -27455,6 +28538,9 @@ ${selector} .arrowheadPath {
 
   async function writeLinkedMarkdownSource(tab, content) {
     if (!isLinkedDocument(tab)) return false;
+    if (workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+      throw new Error('Resolve the interrupted rename before saving to an original. Your draft was kept.');
+    }
     await assertOutsideManagedVault(tab.sourcePath);
     const requestedSource = tab.sourcePath;
     const requestedBaseline = tab.sourceContentHash;
@@ -27696,6 +28782,9 @@ ${selector} .arrowheadPath {
       saveCurrentTabState();
       const tab = tabs.find(function(t) { return t.id === (settings.tabId || activeTabId); });
       if (!tab || isTemporaryDocument(tab)) return;
+      if (isLinkedDocument(tab) && workspaceStorage && workspaceStorage.getLinkedRenameRecovery && workspaceStorage.getLinkedRenameRecovery(tab.id)) {
+        throw new Error('Resolve the interrupted rename before saving to an original. Your draft was kept.');
+      }
       await ensureTabContent(tab);
       const snapshot = captureLiveLinkedDraft(tab);
       const content = typeof snapshot.content === 'string' ? snapshot.content : '';
@@ -28522,7 +29611,7 @@ ${selector} .arrowheadPath {
     scale: 2                // html2canvas scale factor
   };
 
-  const PDF_EXPORT_DEBUG = true;
+  const PDF_EXPORT_DEBUG = false;
   let activePdfExport = null;
 
   class PdfExportCancelledError extends Error {
@@ -28625,6 +29714,7 @@ ${selector} .arrowheadPath {
       stepText: overlay.querySelector(".pdf-progress-step"),
       etaText: overlay.querySelector(".pdf-progress-eta"),
       cancelButtons: overlay.querySelectorAll(".pdf-progress-cancel, .pdf-progress-cancel-icon"),
+      previousActiveElement: document.activeElement,
       triggerHtml: new Map(),
       tempElement: null,
       cleanedUp: false
@@ -28680,7 +29770,13 @@ ${selector} .arrowheadPath {
 
   function cleanupPdfExport(state) {
     if (!state || state.cleanedUp) return;
+    const restoreFocus = state.overlay.contains(document.activeElement) ||
+      (state.returnFocusAfterPrint && document.activeElement === document.body);
     state.cleanedUp = true;
+    if (state.rasterCapture) {
+      state.rasterCapture.canvas.width = state.rasterCapture.canvas.height = 0;
+      state.rasterCapture = null;
+    }
 
     if (state.tempElement && state.tempElement.parentNode) {
       if (window.keepTempElementForAudit) {
@@ -28695,6 +29791,9 @@ ${selector} .arrowheadPath {
     }
 
     setPdfExportTriggersBusy(state, false);
+    if (restoreFocus && state.previousActiveElement && state.previousActiveElement.isConnected) {
+      state.previousActiveElement.focus({ preventScroll: true });
+    }
     if (activePdfExport === state) {
       activePdfExport = null;
     }
@@ -28714,13 +29813,6 @@ ${selector} .arrowheadPath {
 
   function markdownLikelyContainsMath(markdown) {
     return /(^|[^\\])\$\$|\\\[|\\\(|(^|[^\\])\$[^$\n]+\$/.test(markdown) || /```math\b/.test(markdown);
-  }
-
-  function choosePdfCanvasScale(element) {
-    const pixelArea = element.offsetWidth * element.scrollHeight;
-    if (pixelArea > 14000000) return 1.25;
-    if (pixelArea > 8000000) return 1.5;
-    return PAGE_CONFIG.scale;
   }
 
   function readPixelStyle(element, propertyName) {
@@ -28748,754 +29840,178 @@ ${selector} .arrowheadPath {
     return true;
   }
 
-  /**
-   * Task 1: Identifies all graphic elements that may need page-break handling
-   * @param {HTMLElement} container - The container element to search within
-   * @returns {Array} Array of {element, type} objects
-   */
-  function identifyGraphicElements(container) {
-    const graphics = [];
+  // Raster pages are cropped at measured gaps between rendered lines. Moving
+  // whole paragraphs cannot align every boundary in a multi-page paragraph.
+  function mergePdfIntervals(intervals) {
+    const sorted = intervals.filter(item => Number.isFinite(item.top) && Number.isFinite(item.bottom) && item.bottom > item.top)
+      .map(item => ({ top: Math.max(0, item.top), bottom: item.bottom }))
+      .sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+    const merged = [];
+    for (const item of sorted) {
+      const previous = merged[merged.length - 1];
+      if (previous && item.top < previous.bottom) previous.bottom = Math.max(previous.bottom, item.bottom);
+      else merged.push(item);
+    }
+    return merged;
+  }
 
-    // Query all targeting elements in precise DOM layout flow order
-    container.querySelectorAll('img, svg, pre, table, p, li, h1, h2, h3, h4, h5, h6, blockquote, hr, .math-block, mjx-container[display="true"]').forEach(el => {
-      const tag = el.tagName.toLowerCase();
-      
-      // Skip any elements nested inside blockquotes to treat blockquotes as atomic containers
-      if (el.parentElement && el.parentElement.closest('blockquote')) {
-        return;
-      }
+  function findPdfInterval(intervals, position) {
+    let low = 0;
+    let high = intervals.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (intervals[middle].top < position) low = middle + 1;
+      else high = middle;
+    }
+    const item = intervals[low - 1];
+    return item && position < item.bottom ? { ...item, index: low - 1 } : null;
+  }
 
-      // Skip any elements nested inside list items that contain block children (treat list items as atomic)
-      if (el.parentElement) {
-        const liAncestor = el.parentElement.closest('li');
-        if (liAncestor) {
-          const hasBlockChildren = liAncestor.querySelector('p, blockquote, pre, table, ul, ol') !== null;
-          if (hasBlockChildren) {
-            return;
-          }
+  function planRasterPdfPages(layout, pageHeight) {
+    if (!Number.isFinite(pageHeight) || pageHeight <= 0 || !Number.isFinite(layout.height) || layout.height < 0) {
+      throw new Error('Invalid PDF page dimensions.');
+    }
+    const hard = mergePdfIntervals(layout.lines);
+    const preferred = mergePdfIntervals(layout.blocks.filter(item => item.bottom - item.top <= pageHeight));
+    const pages = [];
+    let start = 0;
+    while (start < layout.height) {
+      const table = layout.tables.find(item => start >= item.headerBottom && start < item.bottom && item.headerBottom - item.headerTop < pageHeight / 2);
+      const header = table ? { ...table } : null;
+      const headerHeight = header ? header.headerBottom - header.headerTop : 0;
+      const capacity = pageHeight - headerHeight;
+      let end = Math.min(layout.height, start + capacity);
+      if (end < layout.height) {
+        const block = findPdfInterval(preferred, end);
+        if (block && block.top > start && block.bottom - block.top <= capacity) end = block.top;
+        const line = findPdfInterval(hard, end);
+        if (line) {
+          // An indivisible graphic/line taller than a page gets its own scaled
+          // page. It is never clipped or placed in an overflow:hidden wrapper.
+          const previous = hard[line.index - 1];
+          const leadingSpaceOnly = line.bottom - line.top > capacity && (!previous || previous.bottom <= start);
+          end = line.top > start && !leadingSpaceOnly ? line.top : line.bottom;
         }
       }
+      end = Math.min(layout.height, end);
+      if (end <= start) throw new Error('PDF pagination did not advance.');
+      pages.push({ start, end, header });
+      start = end;
+    }
+    if (!pages.length) pages.push({ start: 0, end: 1, header: null });
+    return pages;
+  }
 
-      let type = '';
-      
-      if (tag === 'img') type = 'img';
-      else if (tag === 'svg') {
-        if (!el.closest('mjx-container, .math-block')) {
-          type = 'svg';
+  async function measureRasterPdfLayout(root, state) {
+    const origin = root.getBoundingClientRect();
+    const lines = [];
+    const blocks = [];
+    const tables = [];
+    let bottom = 0;
+    const interval = rect => ({ top: Math.max(0, Math.floor(rect.top - origin.top - 1)), bottom: Math.ceil(rect.bottom - origin.top + 1) });
+    const add = (rect, target) => {
+      if (rect.width <= 0 || rect.height <= 0) return;
+      const item = interval(rect);
+      target.push(item);
+      bottom = Math.max(bottom, item.bottom);
+    };
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    let node;
+    let count = 0;
+    while ((node = walker.nextNode())) {
+      throwIfPdfExportAborted(state.signal);
+      if (node.textContent.trim() && !node.parentElement.closest('svg, mjx-container, script, style')) {
+        range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) add(rect, lines);
+      }
+      if (++count % 250 === 0) await waitForPdfFrame(state);
+    }
+    // Keep images, diagrams and math intact. Text containers and oversized
+    // table rows may flow between their actual lines instead of being shrunk.
+    for (const node of root.querySelectorAll('img, svg, canvas, video, hr, mjx-container')) {
+      if (!node.parentElement.closest('svg, mjx-container')) add(node.getBoundingClientRect(), lines);
+    }
+    for (const node of root.querySelectorAll('p, pre, blockquote, li, tr, h1, h2, h3, h4, h5, h6')) {
+      add(node.getBoundingClientRect(), blocks);
+    }
+    for (const row of root.querySelectorAll('tr')) {
+      const rect = row.getBoundingClientRect();
+      if (rect.height > 0 && rect.height <= origin.width * PAGE_CONFIG.contentHeight / PAGE_CONFIG.contentWidth) {
+        // Adjacent rows share a border, a valid cut; don't inflate these boxes
+        // and accidentally merge the entire table into one indivisible image.
+        lines.push({ top: Math.max(0, rect.top - origin.top), bottom: rect.bottom - origin.top });
+      }
+    }
+    for (const heading of root.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+      const next = heading.nextElementSibling;
+      if (!next) continue;
+      const headingRect = heading.getBoundingClientRect();
+      const nextRect = next.getBoundingClientRect();
+      // Keep the heading with the first line, without making a long following
+      // paragraph, table or code block indivisible.
+      blocks.push({ top: Math.max(0, Math.floor(headingRect.top - origin.top - 1)), bottom: Math.ceil(nextRect.top - origin.top + Math.min(nextRect.height, 32)) });
+    }
+    for (const table of root.querySelectorAll('table')) {
+      if (!table.tHead || !table.tHead.rows.length) continue;
+      const rect = table.getBoundingClientRect();
+      const head = table.tHead.getBoundingClientRect();
+      if (!head.height || !rect.width) continue;
+      // Rowspans and nested tables need their original continuous layout;
+      // repeating only a header for those structures would be misleading.
+      if (table.querySelector('[rowspan]:not([rowspan="1"]), table')) continue;
+      tables.push({ top: rect.top - origin.top, bottom: rect.bottom - origin.top,
+        left: rect.left - origin.left, width: rect.width,
+        headerTop: Math.max(0, Math.floor(head.top - origin.top)), headerBottom: Math.ceil(head.bottom - origin.top) });
+      add(head, lines);
+    }
+    throwIfPdfExportAborted(state.signal);
+    return { width: origin.width, height: Math.max(1, bottom, Math.ceil(origin.height), root.scrollHeight), lines, blocks, tables };
+  }
+
+  async function captureRasterPdfRegion(root, region, theme, state) {
+    // Reuse bounded strips across nearby pages: one render for a small document,
+    // bounded memory for a long one, and no repeated DOM cloning per PDF page.
+    let capture = state.rasterCapture;
+    if (!capture || region.y < capture.y || region.y + region.height > capture.y + capture.height) {
+      if (capture) capture.canvas.width = capture.canvas.height = 0;
+      const width = Math.ceil(root.getBoundingClientRect().width);
+      const scale = Math.min(PAGE_CONFIG.scale, 16384 / Math.max(width, region.height),
+        Math.sqrt(16000000 / (width * region.height)));
+      const maxHeight = Math.floor(Math.min(16384 / scale, 16000000 / (width * scale * scale)));
+      const height = Math.max(region.height, Math.min(state.rasterLayoutHeight - region.y, maxHeight));
+      const canvas = await runPdfAbortable(state, html2canvas(root, {
+        x: 0, y: region.y, width, height, scale,
+        useCORS: true, allowTaint: false, logging: false,
+        backgroundColor: theme === 'dark' ? '#0d1117' : '#ffffff',
+        windowWidth: Math.max(PAGE_CONFIG.windowWidth, width)
+      }).then(canvas => {
+        if (state.signal.aborted) {
+          canvas.width = canvas.height = 0;
+          throw new PdfExportCancelledError();
         }
-      }
-      else if (tag === 'pre') type = 'pre';
-      else if (tag === 'table') type = 'table';
-      else if (tag === 'hr') type = 'hr';
-      else if (tag === 'blockquote') {
-        type = 'blockquote';
-      }
-      else if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
-        type = 'text';
-      } else if (tag === 'li') {
-        // Treat list items with block children as atomic containers, otherwise treat as text
-        const hasBlockChildren = el.querySelector('p, blockquote, pre, table, ul, ol') !== null;
-        if (hasBlockChildren) {
-          type = 'li';
-        } else {
-          type = 'text';
-        }
-      } else if (el.classList.contains('math-block') || tag === 'mjx-container') {
-        type = 'math';
-      }
-      
-      if (type) {
-        graphics.push({ element: el, type: type });
-      }
-    });
-
-    return graphics;
-  }
-
-  /**
-   * Calculates the computed line-height of a text element, defaulting based on tag if "normal"
-   * @param {HTMLElement} element 
-   * @returns {number} The line-height in pixels
-   */
-  function getElementLineHeight(element) {
-    const style = window.getComputedStyle(element);
-    const fontSize = parseFloat(style.fontSize) || 14;
-    let lineHeight = parseFloat(style.lineHeight);
-    
-    if (isNaN(lineHeight)) {
-      const tag = element.tagName.toLowerCase();
-      if (tag.startsWith('h')) {
-        lineHeight = fontSize * 1.25;
-      } else {
-        lineHeight = fontSize * 1.5;
-      }
-    } else if (lineHeight < 10) {
-      // Handle unitless line-height (e.g. "1.5")
-      lineHeight = lineHeight * fontSize;
+        return canvas;
+      }));
+      if (!canvas.width || !canvas.height) throw new Error('PDF capture returned an empty image.');
+      capture = { canvas, y: region.y, height, scale };
+      state.rasterCapture = capture;
     }
-    return lineHeight;
-  }
-
-  /**
-   * Calculates the shift needed to align a split text element's lines with the page boundary
-   * @param {Object} item - The split element item
-   * @param {Array} pageBoundaries - Page break positions
-   * @returns {number} The shift in pixels
-   */
-  function calculateTextElementShift(item, pageBoundaries) {
-    const boundaryY = pageBoundaries[item.splitPageIndex];
-    if (boundaryY === undefined) return 0;
-
-    const element = item.element;
-    const style = window.getComputedStyle(element);
-    
-    const tag = element.tagName.toLowerCase();
-    const isHeading = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
-    
-    // Safety buffer (in pixels) to ensure text rendering, glyph ascenders,
-    // and sub-pixel anti-aliasing are pushed cleanly past the slicing boundary.
-    const SAFETY_BUFFER = 4;
-
-    // Headings should never be split. Push the entire heading to the next page.
-    if (isHeading) {
-      return (boundaryY - item.top) + SAFETY_BUFFER;
-    }
-
-    const paddingTop = parseFloat(style.paddingTop) || 0;
-    const borderTop = parseFloat(style.borderTopWidth) || 0;
-    const paddingBottom = parseFloat(style.paddingBottom) || 0;
-    const borderBottom = parseFloat(style.borderBottomWidth) || 0;
-
-    const lh = getElementLineHeight(element);
-    const contentTop = item.top + paddingTop + borderTop;
-    const contentHeight = item.height - paddingTop - paddingBottom - borderTop - borderBottom;
-    if (contentHeight <= 0) return 0;
-
-    const numLines = Math.max(1, Math.round(contentHeight / lh));
-
-    for (let i = 0; i < numLines; i++) {
-      const lineTop = contentTop + i * lh;
-      const lineBottom = contentTop + (i + 1) * lh;
-
-      // Check if this line is split by boundaryY (using a small tolerance to prevent float vibrations)
-      if (lineTop < boundaryY - 0.5 && lineBottom > boundaryY + 0.5) {
-        // Calculate shift to align the line's top with boundaryY, plus a safety buffer
-        return (boundaryY - lineTop) + SAFETY_BUFFER;
-      }
-    }
-
-    // Fallback: If a short paragraph/list item is split across pages but no single line is cut
-    // (e.g. boundary falls exactly in padding/margin), push the whole element.
-    if (item.height <= lh * 3) {
-      return (boundaryY - item.top) + SAFETY_BUFFER;
-    }
-
-    return 0;
-  }
-
-  /**
-   * Task 2: Calculates element positions relative to the container
-   * @param {Array} elements - Array of {element, type} objects
-   * @param {HTMLElement} container - The container element
-   * @returns {Array} Array with position data added
-   */
-  function calculateElementPositions(elements, container) {
-    const containerRect = container.getBoundingClientRect();
-
-    return elements.map(item => {
-      const rect = item.element.getBoundingClientRect();
-      const top = rect.top - containerRect.top;
-      const height = rect.height;
-      const bottom = top + height;
-
-      return {
-        element: item.element,
-        type: item.type,
-        top: top,
-        height: height,
-        bottom: bottom
-      };
-    });
-  }
-
-  /**
-   * Task 3: Calculates page boundary positions
-   * @param {number} totalHeight - Total height of content in pixels
-   * @param {number} elementWidth - Actual width of the rendered element in pixels
-   * @param {Object} pageConfig - Page configuration object
-   * @returns {Array} Array of y-coordinates where pages end
-   */
-  function calculatePageBoundaries(totalHeight, elementWidth, pageConfig) {
-    const aspectRatio = pageConfig.contentHeight / pageConfig.contentWidth;
-    const pageHeightPx = elementWidth * aspectRatio;
-
-    const boundaries = [];
-    let y = pageHeightPx;
-
-    while (y < totalHeight) {
-      boundaries.push(y);
-      y += pageHeightPx;
-    }
-
-    return { boundaries, pageHeightPx };
-  }
-
-  /**
-   * Task 4: Detects which elements would be split across page boundaries
-   * @param {Array} elements - Array of elements with position data
-   * @param {Array} pageBoundaries - Array of page break y-coordinates
-   * @returns {Array} Array of split elements with additional split info
-   */
-  function detectSplitElements(elements, pageBoundaries) {
-    if (!elements || elements.length === 0) return [];
-    if (!pageBoundaries || pageBoundaries.length === 0) return [];
-
-    const splitElements = [];
-
-    for (const item of elements) {
-      let startPage = 0;
-      for (let i = 0; i < pageBoundaries.length; i++) {
-        if (item.top >= pageBoundaries[i]) {
-          startPage = i + 1;
-        } else {
-          break;
-        }
-      }
-
-      let endPage = 0;
-      for (let i = 0; i < pageBoundaries.length; i++) {
-        if (item.bottom > pageBoundaries[i]) {
-          endPage = i + 1;
-        } else {
-          break;
-        }
-      }
-
-      if (endPage > startPage) {
-        const boundaryY = pageBoundaries[startPage] || pageBoundaries[0];
-        const overflowAmount = item.bottom - boundaryY;
-
-        splitElements.push({
-          element: item.element,
-          type: item.type,
-          top: item.top,
-          height: item.height,
-          splitPageIndex: startPage,
-          overflowAmount: overflowAmount
-        });
-      }
-    }
-
-    return splitElements;
-  }
-
-  /**
-   * Task 5: Main entry point for analyzing graphics for page breaks
-   * @param {HTMLElement} tempElement - The rendered content container
-   * @returns {Object} Analysis result with totalElements, splitElements, pageCount
-   */
-  function analyzeGraphicsForPageBreaks(tempElement, signal) {
+    throwIfPdfExportAborted(state.signal);
+    const page = document.createElement('canvas');
+    page.width = Math.max(1, Math.ceil(region.width * capture.scale));
+    page.height = Math.max(1, Math.ceil(region.height * capture.scale));
     try {
-      throwIfPdfExportAborted(signal);
-
-      const graphics = identifyGraphicElements(tempElement);
-      const elementsWithPositions = calculateElementPositions(graphics, tempElement);
-
-      throwIfPdfExportAborted(signal);
-
-      const totalHeight = Math.ceil(tempElement.getBoundingClientRect().height);
-      const elementWidth = tempElement.offsetWidth;
-      const { boundaries: pageBoundaries, pageHeightPx } = calculatePageBoundaries(
-        totalHeight,
-        elementWidth,
-        PAGE_CONFIG
-      );
-
-      const splitElements = detectSplitElements(elementsWithPositions, pageBoundaries);
-      const pageCount = pageBoundaries.length + 1;
-
-      return {
-        totalElements: graphics.length,
-        splitElements: splitElements,
-        pageCount: pageCount,
-        pageBoundaries: pageBoundaries,
-        pageHeightPx: pageHeightPx
-      };
-    } catch (error) {
-      if (error instanceof PdfExportCancelledError) throw error;
-      console.error('Page-break analysis failed:', error);
-      return {
-        totalElements: 0,
-        splitElements: [],
-        pageCount: 1,
-        pageBoundaries: [],
-        pageHeightPx: 0
-      };
+      const context = page.getContext('2d');
+      context.fillStyle = theme === 'dark' ? '#0d1117' : '#ffffff';
+      context.fillRect(0, 0, page.width, page.height);
+      context.drawImage(capture.canvas, (region.x || 0) * capture.scale, (region.y - capture.y) * capture.scale,
+        region.width * capture.scale, region.height * capture.scale, 0, 0,
+        region.width * capture.scale, region.height * capture.scale);
+      return page.toDataURL('image/png');
+    } finally {
+      page.width = page.height = 0;
     }
   }
-
-  // ============================================
-  // End Page-Break Detection Functions
-  // ============================================
-
-  // ============================================
-  // Page-Break Insertion Functions (Story 1.2)
-  // ============================================
-
-
-
-  /**
-   * Resets temporary styles applied to graphics elements back to their original state.
-   * This is called at the start of each layout iteration in the cascade loop.
-   * @param {HTMLElement} container - The container element to process
-   */
-  function resetGraphicsStyles(container) {
-    // Remove all dynamically inserted page-break spacers
-    container.querySelectorAll('.pdf-page-break-spacer').forEach(el => el.remove());
-
-    container.querySelectorAll('[data-pdf-original-margin-top]').forEach(el => {
-      el.style.marginTop = el.dataset.pdfOriginalMarginTop;
-      el.removeAttribute('data-pdf-original-margin-top');
-    });
-    container.querySelectorAll('[data-pdf-original-margin-bottom]').forEach(el => {
-      el.style.marginBottom = el.dataset.pdfOriginalMarginBottom;
-      el.removeAttribute('data-pdf-original-margin-bottom');
-    });
-    container.querySelectorAll('[data-pdf-original-transform]').forEach(el => {
-      el.style.transform = el.dataset.pdfOriginalTransform;
-      el.style.transformOrigin = '';
-      el.removeAttribute('data-pdf-original-transform');
-    });
-    container.querySelectorAll('[data-pdf-original-width]').forEach(el => {
-      el.style.width = el.dataset.pdfOriginalWidth;
-      el.removeAttribute('data-pdf-original-width');
-    });
-    container.querySelectorAll('[data-pdf-original-height]').forEach(el => {
-      el.style.height = el.dataset.pdfOriginalHeight;
-      el.removeAttribute('data-pdf-original-height');
-    });
-    container.querySelectorAll('[data-pdf-original-max-width]').forEach(el => {
-      el.style.maxWidth = el.dataset.pdfOriginalMaxWidth;
-      el.removeAttribute('data-pdf-original-max-width');
-    });
-    container.querySelectorAll('[data-pdf-original-font-size]').forEach(el => {
-      el.style.fontSize = el.dataset.pdfOriginalFontSize;
-      el.removeAttribute('data-pdf-original-font-size');
-    });
-    container.querySelectorAll('[data-pdf-original-overflow]').forEach(el => {
-      el.style.overflow = el.dataset.pdfOriginalOverflow;
-      el.removeAttribute('data-pdf-original-overflow');
-    });
-  }
-
-  function mergeSplitTables(container) {
-    const groupIds = new Set();
-    container.querySelectorAll('table[data-split-group-id]').forEach(t => {
-      if (t.dataset.splitGroupId) {
-        groupIds.add(t.dataset.splitGroupId);
-      }
-    });
-
-    for (const groupId of groupIds) {
-      const originalTable = container.querySelector(`table[data-split-group-id="${groupId}"]:not([data-split-part="true"])`);
-      if (!originalTable) continue;
-
-      const parts = Array.from(container.querySelectorAll(`table[data-split-group-id="${groupId}"][data-split-part="true"]`));
-      const tbody = originalTable.tBodies[0] || originalTable.querySelector('tbody') || originalTable;
-
-      for (const part of parts) {
-        const partTbody = part.tBodies[0] || part.querySelector('tbody') || part;
-        const rows = Array.from(partTbody.children).filter(child => child.tagName.toLowerCase() === 'tr');
-        for (const row of rows) {
-          tbody.appendChild(row);
-        }
-        part.remove();
-      }
-
-      const spacers = Array.from(container.querySelectorAll(`div[data-split-group-id="${groupId}"][data-split-spacer="true"]`));
-      for (const spacer of spacers) {
-        spacer.remove();
-      }
-
-      originalTable.removeAttribute('data-split-group-id');
-    }
-  }
-
-  function splitTables(container, pageHeightPx) {
-    mergeSplitTables(container);
-
-    const tables = Array.from(container.querySelectorAll('table'));
-    let groupCounter = 0;
-
-    for (const table of tables) {
-      if (table.dataset.splitPart === "true") continue;
-      const tableRect = table.getBoundingClientRect();
-      if (tableRect.height <= pageHeightPx) continue;
-
-      const tbody = table.tBodies[0] || table.querySelector('tbody');
-      if (!tbody) continue;
-
-      const rows = Array.from(tbody.children).filter(child => child.tagName.toLowerCase() === 'tr');
-      if (rows.length === 0) continue;
-
-      const groupId = `table-group-${groupCounter++}`;
-      table.dataset.splitGroupId = groupId;
-      const containerRect = container.getBoundingClientRect();
-
-      const rowPositions = rows.map(row => {
-        const rect = row.getBoundingClientRect();
-        return {
-          row: row,
-          top: rect.top - containerRect.top,
-          bottom: rect.bottom - containerRect.top,
-          height: rect.height
-        };
-      });
-
-      let currentTable = table;
-      let currentTbody = tbody;
-      let accumulatedShift = 0;
-
-      for (let i = 0; i < rowPositions.length; i++) {
-        const pos = rowPositions[i];
-        const shiftedTop = pos.top + accumulatedShift;
-        const shiftedBottom = pos.bottom + accumulatedShift;
-        const currentPageIndex = Math.floor(shiftedTop / pageHeightPx);
-        const nextPageBoundary = (currentPageIndex + 1) * pageHeightPx;
-
-        if (shiftedBottom > nextPageBoundary) {
-          const spacerHeight = nextPageBoundary - shiftedTop;
-          const originalThead = table.querySelector('thead');
-          const theadHeight = originalThead ? originalThead.getBoundingClientRect().height : 0;
-          accumulatedShift += spacerHeight + theadHeight;
-
-          const nextTable = table.cloneNode(false);
-          nextTable.removeAttribute('id');
-          nextTable.dataset.splitGroupId = groupId;
-          nextTable.dataset.splitPart = "true";
-
-          if (originalThead) nextTable.appendChild(originalThead.cloneNode(true));
-          const nextTbody = document.createElement('tbody');
-          nextTable.appendChild(nextTbody);
-
-          const spacer = document.createElement('div');
-          spacer.className = 'table-page-break-spacer';
-          spacer.dataset.splitGroupId = groupId;
-          spacer.dataset.splitSpacer = "true";
-          spacer.style.height = `${spacerHeight}px`;
-          spacer.style.margin = '0';
-          spacer.style.padding = '0';
-          spacer.style.border = 'none';
-
-          currentTable.parentNode.insertBefore(spacer, currentTable.nextSibling);
-          spacer.parentNode.insertBefore(nextTable, spacer.nextSibling);
-          currentTable = nextTable;
-          currentTbody = nextTbody;
-        }
-
-        if (currentTable !== table) currentTbody.appendChild(pos.row);
-      }
-    }
-  }
-
-  function applyPageBreaksWithCascade(tempElement, pageConfig, maxIterations = 10, signal) {
-    let iteration = 0;
-    let analysis;
-
-    const elementWidth = tempElement.offsetWidth;
-    const aspectRatio = pageConfig.contentHeight / pageConfig.contentWidth;
-    const pageHeightPx = elementWidth * aspectRatio;
-
-    const lastAdjustments = new Map(); // Store {margin, scale} for each element
-
-    do {
-      throwIfPdfExportAborted(signal);
-
-      // Reset graphics element styles applied in previous iterations
-      resetGraphicsStyles(tempElement);
-
-      // Split tables at page breaks dynamically using calculated pageHeightPx
-      splitTables(tempElement, pageHeightPx);
-
-      // We must get ALL target elements in document order
-      const graphics = identifyGraphicElements(tempElement);
-      const elementsWithPositions = calculateElementPositions(graphics, tempElement);
-
-      // Get page boundaries based on current height
-      const totalHeight = Math.ceil(tempElement.getBoundingClientRect().height);
-      const { boundaries: pageBoundaries, pageHeightPx: pageHeightPxFromAnalysis } = calculatePageBoundaries(
-        totalHeight,
-        elementWidth,
-        pageConfig
-      );
-
-      let adjustmentsMade = false;
-      let accumulatedShift = 0;
-      const currentIterationAdjustments = new Map();
-
-      for (const item of elementsWithPositions) {
-        throwIfPdfExportAborted(signal);
-
-        const currentTop = item.top + accumulatedShift;
-        const currentBottom = currentTop + item.height;
-
-        let targetMargin = 0;
-        let targetScale = 1.0;
-
-        // 1. Heading Keep-With-Next Rule (must run for all headings regardless of split)
-        const tag = item.element.tagName.toLowerCase();
-        const isHeading = item.type === 'text' && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag);
-        
-        if (isHeading) {
-          let nextBoundaryY = null;
-          for (const boundary of pageBoundaries) {
-            if (currentTop < boundary) {
-              nextBoundaryY = boundary;
-              break;
-            }
-          }
-          if (nextBoundaryY !== null) {
-            const distanceToBoundary = nextBoundaryY - currentTop;
-            if (distanceToBoundary < 70) {
-              targetMargin = distanceToBoundary + 4; // Push heading entirely to next page
-            }
-          }
-        }
-
-        // 2. If not already pushed by Keep-With-Next, perform standard page-split calculations
-        if (targetMargin === 0) {
-          // Check if this element crosses any page boundary or starts extremely close to it (sub-pixel safety)
-          let splitPageIndex = -1;
-          for (let i = 0; i < pageBoundaries.length; i++) {
-            if (currentTop < pageBoundaries[i] + 12 && currentBottom > pageBoundaries[i]) {
-              splitPageIndex = i;
-              break;
-            }
-          }
-
-          if (splitPageIndex !== -1) {
-            const boundaryY = pageBoundaries[splitPageIndex];
-            const remainingSpace = boundaryY - currentTop;
-
-            if (item.type === 'text') {
-              const shiftedItem = { ...item, top: currentTop, splitPageIndex: splitPageIndex };
-              const shift = calculateTextElementShift(shiftedItem, pageBoundaries);
-              if (shift > 0.5) {
-                targetMargin = shift;
-              }
-            } else {
-              // Graphic element splitting (with larger buffer to ensure complete clearance)
-              const buffer = 15;
-              const scaleNeeded = (remainingSpace - buffer) / item.height;
-              const remainingSpacePercent = remainingSpace / pageHeightPxFromAnalysis;
-
-              const isTextContainer = ['blockquote', 'li', 'table', 'pre', 'math'].includes(item.type);
-
-              // Fit on current page by scaling if it's an image/svg and space/scale are acceptable.
-              // Otherwise, always push text/block containers to next page to prevent transform-scaling bugs.
-              if (!isTextContainer && remainingSpacePercent >= 0.20 && scaleNeeded >= 0.6) {
-                targetScale = Math.min(1.0, scaleNeeded);
-              } else {
-                // Push to next page
-                const marginNeeded = boundaryY - currentTop + buffer;
-                targetMargin = marginNeeded;
-
-                // Check if it fits the next page height after being pushed (Rule 3 Case C)
-                const newTop = currentTop + marginNeeded;
-                const newBottom = newTop + item.height;
-                const nextBoundaryY = pageBoundaries[splitPageIndex + 1] || (boundaryY + pageHeightPxFromAnalysis);
-                if (newBottom > nextBoundaryY) {
-                  const scaleToFitPage = (pageHeightPxFromAnalysis - 20) / item.height;
-                  targetScale = Math.max(0.5, Math.min(1.0, scaleToFitPage));
-                }
-              }
-            }
-          } else {
-            // Element is not split. But graphic elements taller than a page must still scale to fit!
-            if (item.type !== 'text' && item.height > pageHeightPxFromAnalysis) {
-              const scaleToFitPage = (pageHeightPxFromAnalysis - 20) / item.height;
-              targetScale = Math.max(0.5, Math.min(1.0, scaleToFitPage));
-            }
-          }
-        }
-
-        // Check if this calculated adjustment is different from the previous iteration
-        const prevAdjustment = lastAdjustments.get(item.element) || { margin: 0, scale: 1.0 };
-        if (Math.abs(targetMargin - prevAdjustment.margin) > 0.1 || Math.abs(targetScale - prevAdjustment.scale) > 0.001) {
-          adjustmentsMade = true;
-        }
-
-        currentIterationAdjustments.set(item.element, { margin: targetMargin, scale: targetScale });
-
-        // Apply style adjustments to the DOM
-        if (targetMargin > 0) {
-          let targetElement = item.element;
-
-          // Redirect inline image or svg margins to their parent block element if nested
-          if (item.type === 'svg' && item.element.parentElement) {
-            const parent = item.element.parentElement;
-            if (['p', 'li', 'blockquote'].includes(parent.tagName.toLowerCase())) {
-              targetElement = parent;
-            } else {
-              targetElement = parent;
-            }
-          } else if (item.type === 'img' && item.element.parentElement) {
-            const parent = item.element.parentElement;
-            if (item.element.classList.contains('mermaid-img')) {
-              if (parent.parentElement && parent.parentElement.classList.contains('mermaid-container')) {
-                targetElement = parent.parentElement;
-              } else {
-                targetElement = parent;
-              }
-            } else if (['p', 'li', 'blockquote'].includes(parent.tagName.toLowerCase())) {
-              targetElement = parent;
-            }
-          }
-
-          // If target is a list item, apply marginTop directly to avoid invalid HTML / collapsed spacers
-          if (targetElement.tagName.toLowerCase() === 'li') {
-            if (!targetElement.dataset.hasOwnProperty('pdfOriginalMarginTop')) {
-              targetElement.dataset.pdfOriginalMarginTop = targetElement.style.marginTop || '';
-            }
-            targetElement.style.marginTop = `${targetMargin}px`;
-          } else {
-            // Create a physical spacer element to avoid margin collapse issues entirely
-            const spacer = document.createElement('div');
-            spacer.className = 'pdf-page-break-spacer';
-            spacer.style.height = `${targetMargin}px`;
-            spacer.style.margin = '0';
-            spacer.style.padding = '0';
-            spacer.style.border = 'none';
-            spacer.style.display = 'block';
-
-            targetElement.parentNode.insertBefore(spacer, targetElement);
-          }
-          accumulatedShift += targetMargin;
-        }
-
-        if (targetScale < 1.0) {
-          applyGraphicScaling(item.element, targetScale, item.type);
-          const heightSaved = item.height * (1.0 - targetScale);
-          accumulatedShift -= heightSaved;
-        }
-      }
-
-      // Copy current adjustments to lastAdjustments
-      lastAdjustments.clear();
-      for (const [el, adj] of currentIterationAdjustments) {
-        lastAdjustments.set(el, adj);
-      }
-
-      if (!adjustmentsMade) {
-        break;
-      }
-
-      iteration++;
-    } while (iteration < maxIterations);
-
-    if (iteration >= maxIterations) {
-      console.warn('Page-break stabilization reached max iterations:', maxIterations);
-    }
-
-    // Return the final page boundaries and height analysis for the export flow
-    analysis = analyzeGraphicsForPageBreaks(tempElement, signal);
-    
-    logPdfExportDebug('Page-break cascade complete:', {
-      iterations: iteration,
-      finalSplitCount: analysis.splitElements.length
-    });
-
-    return analysis;
-  }
-
-  // ============================================
-  // End Page-Break Insertion Functions
-  // ============================================
-
-  // ============================================
-  // Oversized Graphics Scaling Functions (Story 1.3)
-  // ============================================
-
-  const MIN_SCALE_FACTOR = 0.5;
-
-  function calculateScaleFactor(elementHeight, availableHeight, buffer = 5) {
-    const targetHeight = availableHeight - buffer;
-    let scaleFactor = targetHeight / elementHeight;
-    let wasClampedToMin = false;
-
-    if (scaleFactor < MIN_SCALE_FACTOR) {
-      console.warn(
-        `Warning: Large graphic requires ${(scaleFactor * 100).toFixed(0)}% scaling. ` +
-        `Clamping to minimum ${MIN_SCALE_FACTOR * 100}%. Content may be cut off.`
-      );
-      scaleFactor = MIN_SCALE_FACTOR;
-      wasClampedToMin = true;
-    }
-
-    return { scaleFactor, wasClampedToMin };
-  }
-
-  function applyGraphicScaling(element, scaleFactor, elementType) {
-    if (!element.dataset.hasOwnProperty('pdfOriginalTransform')) {
-      element.dataset.pdfOriginalTransform = element.style.transform || '';
-    }
-    if (!element.dataset.hasOwnProperty('pdfOriginalMarginBottom')) {
-      element.dataset.pdfOriginalMarginBottom = element.style.marginBottom || '';
-    }
-
-    if (elementType === 'svg' || elementType === 'img') {
-      if (!element.dataset.hasOwnProperty('pdfOriginalWidth')) {
-        element.dataset.pdfOriginalWidth = element.style.width || '';
-      }
-      if (!element.dataset.hasOwnProperty('pdfOriginalHeight')) {
-        element.dataset.pdfOriginalHeight = element.style.height || '';
-      }
-      if (!element.dataset.hasOwnProperty('pdfOriginalMaxWidth')) {
-        element.dataset.pdfOriginalMaxWidth = element.style.maxWidth || '';
-      }
-
-      let origWidth = parseFloat(element.dataset.pdfOriginalClientWidth);
-      let origHeight = parseFloat(element.dataset.pdfOriginalClientHeight);
-
-      if (isNaN(origWidth) || isNaN(origHeight)) {
-        origWidth = element.clientWidth || element.getBoundingClientRect().width;
-        origHeight = element.clientHeight || element.getBoundingClientRect().height;
-        element.dataset.pdfOriginalClientWidth = String(origWidth);
-        element.dataset.pdfOriginalClientHeight = String(origHeight);
-      }
-
-      // Apply physical scale
-      element.style.width = `${origWidth * scaleFactor}px`;
-      element.style.height = `${origHeight * scaleFactor}px`;
-      if (elementType === 'svg') {
-        element.style.maxWidth = 'none';
-      }
-    } else {
-      // For pre, table, blockquote, math, li, etc.
-      // Use transform: scale combined with physical height and overflow hidden to guarantee no native splits
-      if (!element.dataset.hasOwnProperty('pdfOriginalHeight')) {
-        element.dataset.pdfOriginalHeight = element.style.height || '';
-      }
-      if (!element.dataset.hasOwnProperty('pdfOriginalOverflow')) {
-        element.dataset.pdfOriginalOverflow = element.style.overflow || '';
-      }
-
-      element.style.transform = `scale(${scaleFactor})`;
-      element.style.transformOrigin = 'top left';
-
-      let origHeight = parseFloat(element.dataset.pdfOriginalClientHeight);
-      if (isNaN(origHeight)) {
-        origHeight = element.offsetHeight || element.getBoundingClientRect().height;
-        element.dataset.pdfOriginalClientHeight = String(origHeight);
-      }
-
-      const scaledHeight = origHeight * scaleFactor;
-      element.style.height = `${scaledHeight}px`;
-      element.style.overflow = 'hidden';
-    }
-  }
-
-
 
   function waitForAllImages(container) {
     const imgs = Array.from(container.querySelectorAll('img'));
@@ -29602,7 +30118,7 @@ ${selector} .arrowheadPath {
     root.style.margin = '0';
     root.style.width = mode === 'pdf' ? '210mm' : '1000px';
     root.style.padding = mode === 'image' ? '40px' : mode === 'print' ? '45px' : '0';
-    root.style.fontSize = mode === 'pdf' ? '14px' : '16px';
+    root.style.fontSize = mode === 'print' ? '10pt' : mode === 'pdf' ? '14px' : '16px';
     root.style.backgroundColor = theme === 'dark' ? '#0d1117' : '#ffffff';
     root.style.color = theme === 'dark' ? '#c9d1d9' : '#24292e';
     document.body.appendChild(root);
@@ -29621,10 +30137,6 @@ ${selector} .arrowheadPath {
       throw error;
     }
   }
-
-  // ============================================
-  // End Oversized Graphics Scaling Functions
-  // ============================================
 
   pdfExportClose?.addEventListener("click", () => closeAppModal(pdfExportModal));
 
@@ -29689,6 +30201,7 @@ ${selector} .arrowheadPath {
 
   pdfExportConfirmBtn?.addEventListener("click", async function (event) {
     event.preventDefault();
+    if (activePdfExport) return;
     closeAppModal(pdfExportModal);
 
     const selectedMode = document.querySelector('input[name="pdf-export-mode"]:checked')?.value || 'vector';
@@ -29697,7 +30210,12 @@ ${selector} .arrowheadPath {
 
     if (selectedMode === "vector") {
       logPdfExportDebug("PDF (Vector) export button clicked with theme:", selectedTheme);
-      await runBrowserPrintExport(selectedTheme);
+      try {
+        await runBrowserPrintExport(selectedTheme);
+      } catch (error) {
+        console.error('PDF export failed:', error);
+        alert('PDF export failed: ' + error.message);
+      }
     } else if (selectedMode === "raster") {
       logPdfExportDebug("PDF export button clicked with theme:", selectedTheme);
       if (activePdfExport) {
@@ -29742,7 +30260,7 @@ ${selector} .arrowheadPath {
       fitExportElementToContent(tempElement);
       await waitForPdfFrame(progressState);
 
-      // Await loading of all images and fonts (including converted Mermaid base64 images) before cascade sizing runs
+      // Measure only after images and fonts have settled.
       updatePdfProgress(progressState, 50, "Loading document assets");
       await runPdfAbortable(progressState, Promise.all([
         waitForAllImages(tempElement),
@@ -29751,83 +30269,51 @@ ${selector} .arrowheadPath {
       throwIfPdfExportAborted(progressState.signal);
       await waitForPdfFrame(progressState);
 
-      // Analyze and apply page-breaks for graphics (Story 1.1 + 1.2)
       updatePdfProgress(progressState, 55, "Optimizing page breaks");
-      const pageBreakAnalysis = applyPageBreaksWithCascade(tempElement, PAGE_CONFIG, 10, progressState.signal);
-      throwIfPdfExportAborted(progressState.signal);
-
-      await waitForPdfFrame(progressState);
-
-      const pdfOptions = {
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-        hotfixes: ["px_scaling"]
-      };
-
-      const pdf = new jspdf.jsPDF(pdfOptions);
+      const layout = await measureRasterPdfLayout(tempElement, progressState);
+      progressState.rasterLayoutHeight = layout.height;
+      const pdf = new jspdf.jsPDF({
+        orientation: 'portrait', unit: 'mm', format: 'a4', compress: true, hotfixes: ["px_scaling"]
+      });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 15;
-      const contentWidth = pageWidth - (margin * 2);
-      const captureScale = choosePdfCanvasScale(tempElement);
+      const margin = PAGE_CONFIG.margin;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - margin * 2;
+      const pages = planRasterPdfPages(layout, layout.width * contentHeight / contentWidth);
+      const headers = new Map();
 
-      updatePdfProgress(progressState, 65, "Capturing document");
-      const canvas = await runPdfAbortable(progressState, html2canvas(tempElement, {
-        scale: captureScale,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: isDarkTheme ? "#0d1117" : "#ffffff",
-        windowWidth: Math.max(PAGE_CONFIG.windowWidth, Math.ceil(tempElement.getBoundingClientRect().width)),
-        windowHeight: Math.ceil(tempElement.getBoundingClientRect().height)
-      }));
-      await waitForPdfFrame(progressState);
-      throwIfPdfExportAborted(progressState.signal);
-
-      console.log(`[PDF DEBUG] canvas.width = ${canvas.width}, canvas.height = ${canvas.height}`);
-      console.log(`[PDF DEBUG] tempElement.offsetWidth = ${tempElement.offsetWidth}, rect.width = ${tempElement.getBoundingClientRect().width}`);
-      const scaleFactor = canvas.width / contentWidth;
-      console.log(`[PDF DEBUG] scaleFactor = ${scaleFactor}, PAGE_CONFIG.scale = ${PAGE_CONFIG.scale}, captureScale = ${captureScale}`);
-      const imgHeight = canvas.height / scaleFactor;
-      console.log(`[PDF DEBUG] imgHeight = ${imgHeight}, contentHeight = ${pageHeight - margin * 2}`);
-      // Introduce a 0.5mm tolerance to prevent rounding errors from creating a trailing blank page
-      const pagesCount = Math.ceil((imgHeight - 0.5) / (pageHeight - margin * 2));
-      console.log(`[PDF DEBUG] pagesCount = ${pagesCount}`);
-
-      updatePdfProgress(progressState, 76, "Rendering pages");
-      for (let page = 0; page < pagesCount; page++) {
+      for (let index = 0; index < pages.length; index++) {
         throwIfPdfExportAborted(progressState.signal);
-        const pageProgress = 76 + ((page + 1) / pagesCount) * 18;
-        updatePdfProgress(progressState, pageProgress, `Rendering page ${page + 1} of ${pagesCount}`);
-
-        if (page > 0) pdf.addPage();
-
-        if (isDarkTheme) {
-          pdf.setFillColor(13, 17, 23); // #0d1117
-          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-        } else {
-          pdf.setFillColor(255, 255, 255);
-          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-        }
-
-        const sourceY = page * (pageHeight - margin * 2) * scaleFactor;
-        const sourceHeight = Math.min(canvas.height - sourceY, (pageHeight - margin * 2) * scaleFactor);
-        const destHeight = sourceHeight / scaleFactor;
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
-
-        const ctx = pageCanvas.getContext('2d');
-        ctx.fillStyle = isDarkTheme ? "#0d1117" : "#ffffff";
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-
-        const imgData = pageCanvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, destHeight);
+        const page = pages[index];
+        updatePdfProgress(progressState, 60 + ((index + 1) / pages.length) * 36,
+          `Rendering page ${index + 1} of ${pages.length}`);
         await waitForPdfFrame(progressState);
+        const headerHeight = page.header ? page.header.headerBottom - page.header.headerTop : 0;
+        const height = page.end - page.start;
+        const mmPerPixel = Math.min(contentWidth / layout.width, contentHeight / (height + headerHeight));
+        const left = margin + (contentWidth - layout.width * mmPerPixel) / 2;
+        if (index) pdf.addPage();
+        if (isDarkTheme) pdf.setFillColor(13, 17, 23);
+        else pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+        if (page.header) {
+          const header = page.header;
+          const key = `${header.left}:${header.headerTop}:${header.width}`;
+          if (!headers.has(key)) {
+            headers.set(key, await captureRasterPdfRegion(tempElement, {
+              x: header.left, y: header.headerTop, width: header.width, height: headerHeight
+            }, selectedTheme, progressState));
+          }
+          pdf.addImage(headers.get(key), 'PNG', left + header.left * mmPerPixel, margin,
+            header.width * mmPerPixel, headerHeight * mmPerPixel);
+        }
+        const image = await captureRasterPdfRegion(tempElement, {
+          y: page.start, width: layout.width, height
+        }, selectedTheme, progressState);
+        pdf.addImage(image, 'PNG', left, margin + headerHeight * mmPerPixel,
+          layout.width * mmPerPixel, height * mmPerPixel);
       }
 
       throwIfPdfExportAborted(progressState.signal);
@@ -31750,12 +32236,10 @@ ${selector} .arrowheadPath {
 
   function captureLiveTabSnapshot() {
     const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
-    const previewSnapshot = previewLastRenderedTabId === activeTabId
-      ? capturePreviewScroll()
-      : getPreviewScrollSnapshot(activeTabId);
+    const previewSnapshot = captureRenderedPreviewScroll(activeTabId) || getPreviewScrollSnapshot(activeTabId);
     return {
       content: markdownEditor.value || '',
-      scrollPos: markdownEditor.scrollTop || 0,
+      scrollPos: markdownEditor.clientHeight ? markdownEditor.scrollTop : ((activeTab && activeTab.scrollPos) || 0),
       previewScrollPos: previewSnapshot ? previewSnapshot.top : 0,
       previewScrollLeft: previewSnapshot ? previewSnapshot.left : 0,
       viewMode: currentViewMode || (activeTab && activeTab.viewMode) || 'split'
@@ -32280,12 +32764,10 @@ ${selector} .arrowheadPath {
       removeTabOnLeave = true;
     } else {
       const activeTab = tabs.find(function(t) { return t.id === activeTabId; });
-      const previewSnapshot = previewLastRenderedTabId === activeTabId
-        ? capturePreviewScroll()
-        : getPreviewScrollSnapshot(activeTabId);
+      const previewSnapshot = captureRenderedPreviewScroll(activeTabId) || getPreviewScrollSnapshot(activeTabId);
       originalTabSnapshot = options.originalTabSnapshot || (activeTab ? {
         content: typeof markdownEditor.value === 'string' ? markdownEditor.value : activeTab.content,
-        scrollPos: typeof markdownEditor.scrollTop === 'number' ? markdownEditor.scrollTop : activeTab.scrollPos,
+        scrollPos: markdownEditor.clientHeight ? markdownEditor.scrollTop : activeTab.scrollPos,
         previewScrollPos: previewSnapshot ? previewSnapshot.top : activeTab.previewScrollPos,
         previewScrollLeft: previewSnapshot ? previewSnapshot.left : activeTab.previewScrollLeft,
         viewMode: currentViewMode || activeTab.viewMode
@@ -32766,20 +33248,20 @@ ${selector} .arrowheadPath {
   loadFromLiveHash();
 
   // Document-wide drag-and-drop: track nesting level for reliable enter/leave detection
-  let dragDepth = 0;
-
   document.addEventListener("dragenter", function(e) {
     if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
       e.preventDefault();
       dragDepth++;
-      dragOverlay.classList.add("active");
-      dragOverlay.setAttribute("aria-hidden", "false");
+      showExternalDragFeedback(e.target, MarkdownBrowserDropSource.describe(MarkdownBrowserDropSource.capture(e.dataTransfer)), e);
     }
   }, false);
 
   document.addEventListener("dragover", function(e) {
     if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes("Files")) {
       e.preventDefault();
+      const items = MarkdownBrowserDropSource.describe(MarkdownBrowserDropSource.capture(e.dataTransfer));
+      showExternalDragFeedback(e.target, items, e);
+      e.dataTransfer.dropEffect = dragOverlay.classList.contains('is-drop-invalid') ? 'none' : 'copy';
     }
   }, false);
 
@@ -32788,34 +33270,161 @@ ${selector} .arrowheadPath {
       dragDepth--;
       if (dragDepth <= 0) {
         dragDepth = 0;
-        dragOverlay.classList.remove("active");
-        dragOverlay.setAttribute("aria-hidden", "true");
+        clearExternalDragFeedback();
       }
     }
   }, false);
 
   document.addEventListener("drop", function(e) {
     e.preventDefault();
-    dragDepth = 0;
-    dragOverlay.classList.remove("active");
-    dragOverlay.setAttribute("aria-hidden", "true");
-    resetDocumentTreeDragFeedback();
-    handleDrop(e);
+    clearExternalDragFeedback();
+    void handleDrop(e);
   }, false);
 
   async function handleDrop(e) {
-    const dt = e.dataTransfer;
-    const files = dt && dt.files;
-    if (files && files.length) {
+    // Snapshot before the first await, including drops handled by Explorer rows.
+    const snapshot = MarkdownBrowserDropSource.capture(e.dataTransfer);
+    const destination = getExternalDropTarget(e.target);
+    const location = destination && destination.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null };
+    const epoch = linkedReadEpoch;
+    const canApply = function() {
+      return !workspaceMaintenancePending && !suspendWorkspacePersistence && epoch === linkedReadEpoch &&
+        !(destination && destination.invalid) && Boolean(getWorkspaceById(location.workspaceId)) &&
+        (!location.folderId || Boolean(getFolderById(location.folderId))) &&
+        (location.workspaceId !== SECRET_WORKSPACE_ID || isSecretWorkspaceUnlocked());
+    };
+    if (!snapshot.length || !canApply()) return;
+    const files = snapshot.filter(function(item) { return !(item.entry && item.entry.isDirectory); })
+      .map(function(item) { return item.file; }).filter(Boolean);
+    const folders = snapshot.filter(function(item) { return item.entry && item.entry.isDirectory; });
+    const mediaTarget = { tabId: activeTabId, content: markdownEditor.value,
+      start: markdownEditor.selectionStart, end: markdownEditor.selectionEnd };
+    try {
+      let staged = null;
+      let selected = destination;
+      if (folders.length) {
+        if (!selected && useExperimentalNativeFileDrop()) {
+          const mode = await chooseDesktopMarkdownDropMode(MarkdownBrowserDropSource.describe(snapshot), { folders: folders.length });
+          if (!mode || !canApply()) return;
+          selected = { mode: mode, location: location };
+        }
+        if (selected && selected.mode === 'link') {
+          // Browser entries cannot supply a persistent absolute native path.
+          if (!(await nativeLinkMarkdownFolder(selected.parent)) || !canApply()) return;
+        } else {
+          showImportProgress(0, { title: 'Importing folder', detail: 'Scanning folder…' });
+          staged = await MarkdownBrowserDropSource.collectFolders(snapshot, { canContinue: canApply,
+            limits: { fileBytes: hasDesktopFileAccess() ? MarkdownNativeSourceReader.maxBytes : 10 * 1024 * 1024 } });
+        }
+      }
+      if (!canApply()) { if (folders.length) finishImportProgress(0, 1, { success: false }); return; }
+      // Stage folder reads before importing anything, but insert top-level media
+      // first so an asynchronous scan cannot redirect it into a different tab.
       await handleIncomingDroppedFiles(files, {
-        location: { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null },
+        canApply: canApply, mediaTarget: mediaTarget,
+        destination: selected,
+        location: location,
         source: 'drop'
       });
+      if (staged) {
+        if (canApply()) await importBrowserFolders(staged, location, canApply);
+        else finishImportProgress(0, 1, { success: false });
+      }
+    } catch (error) {
+      console.warn('Browser drop failed:', error);
+      if (canApply()) showAppToast('The dropped items could not be added. Please try again.', { tone: 'error', title: 'Import failed' });
+      if (folders.length) finishImportProgress(0, 1, { success: false });
     }
   }
 
+  async function importBrowserFolders(staged, location, canApply) {
+    const ids = [];
+    const folders = new Map();
+    const key = function(root, path) { return JSON.stringify([root, path]); };
+    showImportProgress(staged.files.length, { title: 'Importing folder' });
+    for (const directory of staged.directories) {
+      if (!canApply()) { finishImportProgress(ids.length, staged.files.length, { success: false }); return; }
+      const parent = folders.get(key(directory.root, directory.path.slice(0, -1)));
+      const folder = ensureWorkspaceFolder(location.workspaceId, directory.path[directory.path.length - 1], parent ? parent.id : location.folderId);
+      if (!folder) throw new Error('The destination folders could not be saved.');
+      folders.set(key(directory.root, directory.path), folder);
+    }
+    if (!(await saveDocumentOrganization())) throw new Error('The destination folders could not be saved.');
+    for (const file of staged.files) {
+      if (!canApply()) { finishImportProgress(ids.length, staged.files.length, { success: false }); return; }
+      const parent = folders.get(key(file.root, file.path.slice(0, -1)));
+      const tab = await importMarkdownFile(new File([file.content], file.name, { type: 'text/markdown' }), {
+        workspaceId: location.workspaceId, folderId: parent.id
+      }, canApply);
+      if (tab) ids.push(tab.id);
+      updateImportProgress(ids.length, staged.files.length);
+    }
+    if (!canApply()) { finishImportProgress(ids.length, staged.files.length, { success: false }); return; }
+    await persistImportedDocuments(ids, { requireExactCommit: true });
+    if (location.workspaceId === SECRET_WORKSPACE_ID) await flushSecretWorkspaceToStorage();
+    renderDocumentSidebar();
+    finishImportProgress(ids.length, staged.files.length);
+  }
+
+  function chooseDesktopMarkdownDropMode(files, options) {
+    const modal = document.getElementById('desktop-drop-modal');
+    const linkButton = document.getElementById('desktop-drop-link');
+    const copyButton = document.getElementById('desktop-drop-copy');
+    const cancelButton = document.getElementById('desktop-drop-modal-cancel');
+    const closeButton = document.getElementById('desktop-drop-modal-close');
+    const summary = document.getElementById('desktop-drop-file-summary');
+    if (!modal || !linkButton || !copyButton || !cancelButton || !closeButton) {
+      return Promise.resolve(null);
+    }
+
+    const droppedFiles = Array.from(files || []);
+    if (summary) {
+      summary.textContent = droppedFiles.map(function(file) { return file.name; }).join(', ');
+    }
+    const folders = droppedFiles.filter(function(file) { return file.directory; }).length;
+    const kind = folders === droppedFiles.length && folders ? 'Folder' : folders ? 'Files and folders' : droppedFiles.length > 1 ? 'Files' : 'File';
+    document.getElementById('desktop-drop-item-kind').textContent = translateUiString(kind);
+    document.getElementById('desktop-drop-item-icon').className = 'lucide ' + (folders === droppedFiles.length && folders ? 'lucide-folder' : droppedFiles.length > 1 ? 'lucide-files' : 'lucide-file');
+    const otherItems = document.getElementById('desktop-drop-other-items');
+    if (otherItems) otherItems.hidden = !(options && (options.folders || options.media));
+
+    if (typeof cancelPendingDesktopDropChoice === 'function') cancelPendingDesktopDropChoice();
+    return new Promise(function(resolve) {
+      let settled = false;
+      function cleanup() {
+        linkButton.removeEventListener('click', chooseLink);
+        copyButton.removeEventListener('click', chooseCopy);
+        cancelButton.removeEventListener('click', cancel);
+        closeButton.removeEventListener('click', cancel);
+        modal._confirmationCancel = null;
+        if (cancelPendingDesktopDropChoice === cancel) cancelPendingDesktopDropChoice = null;
+      }
+      function finish(value, alreadyClosing) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (!alreadyClosing) closeAppModal(modal);
+        resolve(value);
+      }
+      function chooseLink() { finish('link'); }
+      function chooseCopy() { finish('copy'); }
+      function cancel() { finish(null); }
+
+      cancelPendingDesktopDropChoice = cancel;
+      linkButton.addEventListener('click', chooseLink);
+      copyButton.addEventListener('click', chooseCopy);
+      cancelButton.addEventListener('click', cancel);
+      closeButton.addEventListener('click', cancel);
+      modal._confirmationCancel = function() { finish(null, true); };
+      openAppModal(modal, { focusTarget: cancelButton, onClose: cancel });
+    });
+  }
+
+  let cancelPendingDesktopDropChoice = null;
+
   async function handleIncomingDroppedFiles(fileList, options) {
     const settings = options || {};
+    if (settings.canApply && !settings.canApply()) return 0;
     const files = Array.from(fileList || []);
     const imageFiles = files.filter(isMediaFile);
     const markdownFiles = files.filter(isMarkdownFile);
@@ -32823,19 +33432,37 @@ ${selector} .arrowheadPath {
       return isMediaFile(file) || isMarkdownFile(file);
     }).length;
     let handledCount = 0;
+    let mode = settings.destination && settings.destination.mode || 'copy';
+    if (markdownFiles.length && useExperimentalNativeFileDrop() && !settings.destination) {
+      mode = await chooseDesktopMarkdownDropMode(markdownFiles, { media: imageFiles.length });
+      if (!mode || (settings.canApply && !settings.canApply())) return 0;
+    }
     if (supportedFileCount !== files.length) {
       showUnsupportedFileToast('Dropped files must be Markdown, image, GIF, MP4, WebM, or Ogg files.');
     }
-    if (imageFiles.length) {
-      const insertedCount = await insertImageFilesIntoEditor(imageFiles, { source: 'drop' });
+    if (markdownFiles.length && mode === 'link') {
+      showAppToast('Choose a Markdown file (.md or .markdown).', {
+        tone: 'info', title: 'Confirm linked file'
+      });
+      const linkedCount = await nativeLinkMarkdownFiles(settings.destination && settings.destination.parent);
+      if (!linkedCount) return 0;
+      handledCount += linkedCount;
+    }
+    const mediaTarget = settings.mediaTarget;
+    const mediaUnchanged = !mediaTarget || (activeTabId === mediaTarget.tabId && markdownEditor.value === mediaTarget.content);
+    if (imageFiles.length && !mediaUnchanged) announceToScreenReader('Media insertion was cancelled because the document changed.');
+    if (imageFiles.length && mediaUnchanged && (!settings.canApply || settings.canApply())) {
+      const insertedCount = await insertImageFilesIntoEditor(imageFiles, { source: 'drop',
+        selectionStart: mediaTarget && mediaTarget.start, selectionEnd: mediaTarget && mediaTarget.end });
       handledCount += insertedCount;
       if (!insertedCount && !markdownFiles.length && (!hasActiveOpenDocument() || !canMutateEditor())) {
         alert('Open an editable Markdown file before inserting images.');
       }
     }
-    if (markdownFiles.length) {
+    if (markdownFiles.length && mode === 'copy') {
       handledCount += await importMarkdownFiles(markdownFiles, {
         location: settings.location || { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null },
+        canApply: settings.canApply,
         showInvalidAlert: false
       });
     }

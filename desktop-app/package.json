@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer-desktop",
-  "version": "3.10.5",
+  "version": "3.10.6",
   "private": true,
   "description": "A lightweight Neutralinojs desktop build for Markdown Viewer with live preview, diagrams, math, and PDF/HTML/PNG exports.",
   "scripts": {
@@ -12,5 +12,8 @@
     "build": "node build-standalone.js",
     "build:cloud": "node build-cloud-windows.js"
   },
-  "dependencies": {}
+  "devDependencies": {
+    "pe-library": "1.0.1",
+    "resedit": "2.0.3"
+  }
 }

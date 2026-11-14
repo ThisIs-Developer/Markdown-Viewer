@@ -58,6 +58,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
 
 - **Workspace and documents:** organize naturally sorted documents and folders with per-document IndexedDB storage on the web; use Recent, Favorites, search, tabs, bulk actions, an encrypted Secret Workspace, and a 30-day Trash. The desktop app can also link external Markdown files and folders beside independent Vault copies, keeping automatic recovery drafts separate from explicit writes to originals. Middle-click a tab to close it without deleting its saved document.
 - **Backup and restore:** export or import a folder-preserving workspace ZIP; encrypted Secret Workspace files are optional, while trash, desktop history, and recovery journals stay outside the backup. Desktop backups can recover linked drafts but never silently restore write access to external paths.
+- **Native desktop workflows:** install Finder-ready DMGs for Intel, Apple Silicon, or Universal macOS, dependency-aware DEBs for amd64, ARM64, or ARMHF Ubuntu/Debian, a Windows x64 EXE, or optional portable Linux archives. Explorer supports folder import, inline rename, selected-document and folder ZIP downloads, linked-file rename recovery, stable application identity, and a Vault that survives application replacement or uninstall.
 - **Editing and review:** switch among Editor, Split view, and Preview; type `/` at the start of a line for searchable block commands; browse categorized GitHub emojis; use formatting tools, an 8×8 quick table selector, productivity shortcuts, custom undo/redo, Find and Replace, LTR/RTL direction, smooth Page Up/Down navigation, pane-scoped Select All, rich Preview copying, selection-anchored comments, and threaded replies.
 - **Markdown rendering:** use CommonMark-style Markdown, GitHub-Flavored Markdown (GFM), tables, task lists, alerts, footnotes, definition lists, syntax highlighting, sanitized HTML, and MathJax. Preview Styling controls the code theme, math font, Mermaid theme and style, and supported emoji skin tone.
 - **Document Outline:** use the book-text button after Emoji, Find & Replace, and Full Screen to open a resizable right sidebar with collapsible heading branches, a Collapse/Expand All control, and section navigation in Editor, Preview, and Split modes. Copy a GitHub-compatible Markdown TOC with configurable heading depth, bulleted/numbered links or plain text, optional level normalization, and a collapsible wrapper. The outline follows the current document and shares Find & Replace's width and header styling.
@@ -71,7 +72,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
   <img src="https://github.com/user-attachments/assets/bbacabcf-eb19-4430-af19-1ab791afe01c" alt="3D STL Full screen" width="90%" />
 </p>
 
-- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Browser Print/Save as PDF, or a legacy raster PDF with remembered Light or Dark appearance and complete rich-content preparation for PDF and PNG.
+- **Import and export:** open local files or GitHub content from branches, tags, commit SHAs, and optionally private repositories; export Markdown, standalone HTML, PNG, Standard PDF/Save as PDF, or Rendered PDF with remembered Light or Dark appearance and complete rich-content preparation for PDF and PNG.
 
 - **Optional sharing:** create a Share Snapshot with View only or Can edit access, or start a temporary Live Share room with host, Can edit, and View only capabilities.
 
@@ -79,7 +80,7 @@ Turn a document into a Share Snapshot link for quick handoffs, or start access-c
   <img src="https://github.com/user-attachments/assets/0b2080e8-6ba8-4dac-a58a-d043fadeeb61" alt="Live share" width="90%" />
 </p>
 
-- **Multiple delivery options:** use the hosted web app, install the PWA, self-host static files, run Docker, deploy on Cloudflare, or build the Neutralino desktop application.
+- **Multiple delivery options:** use the hosted web app, install the PWA, self-host static files, run Docker, deploy on Cloudflare, or [download the packaged desktop application](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/latest) for Windows, macOS, or Ubuntu/Debian.
 
 For verified behavior, limits, and implementation notes, read the [feature reference](wiki/Features.md).
 
@@ -102,7 +103,7 @@ Other options:
 | PWA or static web hosting | [Installation](wiki/Installation.md) |
 | Docker | [Docker Deployment](wiki/Docker-Deployment.md) |
 | Cloudflare Pages, KV, and Durable Objects | [Configuration](wiki/Configuration.md) |
-| Neutralino desktop application | [Desktop Application](wiki/Desktop-App.md) |
+| Packaged Windows, macOS, or Linux application | [Latest desktop release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/latest) and [Desktop Application](wiki/Desktop-App.md) |
 
 ## Local and Network Behavior
 

@@ -1,98 +1,101 @@
-![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.5`
+![Markdown Viewer logo](assets/icon.jpg) **Markdown Viewer release** · `v3.10.6`
 
-# Welcome to Markdown Viewer 3.10.5
+# Welcome to Markdown Viewer 3.10.6
 
-_Released October 27, 2026_
+_Released November 12, 2026_
 
-This release connects the desktop app safely to existing Markdown files and folders, adds direct control over Preview libraries and emoji appearance, and makes local recovery more dependable when saves, moves, imports, or external edits overlap.
+This release makes macOS and Ubuntu/Linux first-class desktop downloads, strengthens native file workflows, preserves rich Preview formatting when copied into other applications, keeps Preview position stable through loading and view changes, and makes both PDF export paths clearer and more dependable.
 
 Everything here ships with the web, PWA, Docker, and desktop editions unless a feature is explicitly marked desktop-only. **Happy coding!**
 
-[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.5) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
+[View release on GitHub](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.6) [Open the full changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md)
 
 ---
 
 ## Highlights
 
-- **Work with existing files in the desktop app.** Link a Markdown file or folder without importing or moving it, keep automatic recovery drafts separate, and decide explicitly when to write an original.
-- **Tune the Preview to your work.** Choose the code theme, math font, Mermaid theme and style, and supported emoji skin tone from one compact settings dialog.
-- **Find emoji by meaning instead of alphabet.** Browse ten familiar groups, search names, aliases, keywords, or emoji, collect several choices, and copy or insert them in order.
-- **Recover once, then continue normally.** A successfully saved recovered document now consumes only its matching journal, preventing the same recovery copy from returning on every launch.
-- **Keep destructive operations coordinated.** Saves, deletes, moves, workspace replacement, linked scans, and Secret Workspace transitions preserve newer drafts and report partial or failed work accurately.
+- **Install a real Mac or Ubuntu application.** The headline change from [PR #289](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/289) adds Finder-ready DMGs for Intel, Apple Silicon, and Universal Macs plus dependency-aware DEB packages and optional portable archives for three Linux architectures.
+- **Trust the package you selected.** Release assembly now rejects missing, unexpected, empty, or non-file assets, verifies every checksum before publication, and ships platform identity, installation, signing-status, and SHA-256 guidance beside the downloads.
+- **Work more naturally with files and folders.** Import browser folders, rename Explorer items inline, download selected documents or a complete folder as ZIP, and recover linked-file renames without losing newer drafts.
+- **Copy Preview content with its real appearance.** Rich clipboard output now retains computed typography, backgrounds, borders, code styling, list numbering, safe links, and precise partial selections while staying compact.
+- **Return to the same reading position.** Preview scroll survives skeleton loading, tab changes, hidden panes, image settlement, and Editor/Preview view switches without an obsolete render moving another document.
+- **Choose the PDF result you need.** **Standard PDF (Recommended)** preserves selectable, searchable text; **Rendered PDF** produces consistent image-based pages. Long paragraphs, tables, code, lists, images, and repeated headers no longer lose content at page boundaries.
 
-> [!TIP]
-> In the desktop app, open the **Linked Workspace** menu and choose **Link file** or **Link folder**. Editing saves a recovery draft inside the Markdown Viewer vault; press **Ctrl+S** only when you want to update the external original.
+> [!IMPORTANT]
+> macOS and Linux installers are the main v3.10.6 milestone. Open the [GitHub release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.6) for the architecture-first download table, application identity, signing status, managed-deployment notes, and checksums.
 
-## Link desktop files and folders without importing them
+## Native macOS and Linux installers
 
-The new desktop-only **Linked Workspace** sits beside the managed Vault and Secret Workspace. Link one `.md` or `.markdown` file or scan a folder recursively while keeping each original at its existing path. Source paths appear on hover, nested folder structure is retained, linking progress is visible, and normalized path identity avoids accidental duplicate links, including Windows UNC paths.
+The desktop release now treats macOS and Ubuntu/Debian as installed applications rather than raw executable downloads.
 
-Autosave writes a recovery draft under the app's separate Linked Workspace storage instead of changing the original. **Save / Ctrl+S** captures current Editor input, verifies the draft and source, and then writes explicitly. External changes, missing files, and conflicts keep the draft and ask what to do. **Save As…** creates another linked file, while **Convert to Workspace copy** preserves the current draft as an independent Vault document without changing its source.
+### macOS
 
-Folder links support rescanning, sidebar-only grouping, removal that never deletes originals, drag conversion to Vault, and export of a Vault folder as a separate linked folder. Removed or converted paths stay excluded from automatic scans across overlapping roots but can return through an explicit rescan or relink. Browser and Docker builds hide native linking controls.
+- Intel x64, Apple Silicon ARM64, and Universal DMGs contain a real `Markdown Viewer.app`, application icon, Finder metadata, license files, installation instructions, and an Applications shortcut.
+- Intel builds target the current native dependency floor of macOS 10.15; Apple Silicon builds target macOS 11. These are build baselines, not a claim of complete testing on every older system. CI launches installed packages on Intel and Apple Silicon macOS 15 and 26.
+- Every Mach-O slice is checked for its advertised CPU, minimum OS, signature structure, and accidental ScreenCaptureKit dependency. The pinned Neutralino runtime is rebuilt instead of relabelling a newer binary.
+- Tag releases can use Developer ID signing, hardened runtime, notarization, and stapling when repository credentials are configured. `MACOS-SIGNING.txt` records the actual state of this release; ad-hoc builds require the per-app Open Anyway flow and should never require disabling Gatekeeper globally.
 
-Scans are deliberately bounded by file size, staged content, entry, file, directory, depth, and time limits. Workspace backups can retain recoverable linked drafts, but imported paths are treated as data rather than permission: a restored draft must be linked again before it can write an external file. Recovery remains a safety net, not an independent backup.
+### Ubuntu and Debian
 
-## Customize Preview rendering
+- Recommended `.deb` packages are available for amd64, ARM64, and ARMHF. They install executable permissions, WebKitGTK/GTK/tray dependencies, a searchable desktop launcher, the Markdown Viewer icon, and AppStream metadata.
+- Optional portable `.tar.gz` archives retain the same three CPU choices for users who manage their own system libraries.
+- Package metadata identifies **Markdown Viewer**, publisher **ThisIs-Developer**, the **Apache-2.0** project license, maintainer, website, support link, description, and installed size. Ubuntu App Center can still show generic identity fields for a downloaded local DEB because that screen does not consume all packaged AppStream metadata.
 
-Open **Workspace settings → Preview Styling** to manage five saved preferences:
+### Stable application identity and data
 
-- **Code theme** for highlighted code blocks.
-- **Math font** for MathJax output.
-- **Diagram theme** and **Diagram style** for Mermaid.
-- **Emoji skin tone** for supported unqualified shortcodes and picker artwork.
+All desktop packages keep application id `com.markdownviewer.desktop`, the existing restricted native API allowlist, and the fixed `Documents/Markdown Viewer Vault`. Replacing or uninstalling the application does not delete the vault. The release page documents platform trust prompts, fleet-deployment limits, checksums, and which packages are recommended for managed computers.
 
-Changes apply automatically in normal and split Preview. Compact info buttons explain the Mermaid and emoji controls on hover, keyboard focus, or tap. **Reset defaults** changes only these preferences, not document content.
+## Native file and Explorer workflows
 
-Math stays available in the bundled Computer Modern style while an optional font downloads. Shared downloads are reused, only the newest selection can update the renderer, and failed or superseded requests cannot strand MathJax or block Reset. Code-theme and font assets may still require the network, including in the desktop app.
+The standard web and desktop application can import complete folder drops with nested and empty folders, precise Explorer destinations, bounded reads, progress feedback, and Private or Secret Workspace safeguards. Explorer now supports inline file/folder rename, F2, collision and case-only handling, multi-file ZIP download, and folder ZIP download with current drafts and safe duplicate names.
 
-## Browse a categorized emoji picker
+Desktop linked-file rename updates the original path while preserving its Markdown extension, refuses replacement of an occupied destination, and retains recoverable drafts when a filesystem operation is interrupted. Platform actions use **Open in File Explorer**, **Open in Finder**, or **Open in File Manager**.
 
-**GitHub Emojis** now opens a compact grid grouped into smileys, people, nature, food, travel, activities, objects, symbols, flags, and GitHub extras. Search spans all groups using English names, aliases, keywords, or an emoji. Aliases share a tile, while an exact alias search preserves that shortcode.
+The Windows single-instance, native shell-drop, and optional file-association work remains an explicitly isolated trial build. It uses separate identity and storage, does not set Windows UserChoice defaults, and does not broaden the standard desktop app's command permissions.
 
-Selections remain in an ordered tray while you search or change categories. Remove individual choices, copy the complete selection, or insert every shortcode in order. Arrow keys navigate categories and tiles, Space or Enter selects, Escape closes, and narrow layouts provide a swipeable category strip.
+## Rich clipboard fidelity
 
-The picker shows clear catalog, tile-loading, failure, and retry states without briefly switching to a mismatched native emoji style. Images are requested only near visible rows and reused when revisited. The picker and selection tray follow live and saved skin-tone changes without clearing the search or selection; unsupported or unavailable artwork retains a usable fallback.
+Copying from Preview now captures the live computed appearance before sanitizing a detached selection. Supported receiving applications can retain inherited typography, theme backgrounds, individual borders, code wrappers and syntax tokens, semantic emphasis and links, and exact ordered or reversed list numbering.
 
-## Stronger recovery and storage safety
+The context menu records the selection when it opens and serializes only after **Copy** is chosen, so opening the menu stays responsive and stale selections are rejected. UI controls remain excluded, URLs are sanitized, image-only selections work, and every rich copy includes a plain-text alternative. Receiving applications can still rewrite or discard HTML and CSS.
 
-Normal saves now retain newer content or comment journals that arrive while an older write is completing. Successful saves of recovered copies track and consume only the exact source journal they committed, so reopened recovery documents do not multiply indefinitely. Failed saves, metadata-only saves, and newer replacement records remain recoverable.
+## Preview position that survives transitions
 
-Document deletion coordinates with queued writes, desktop moves reject occupied destinations, case-only Vault renames remain possible, and workspace reset or backup restore blocks new editing while pending operations settle. Folder registration, linked exclusions, source refresh, Save As watchers, and conversion commits use durable metadata before reporting success. Moving a Vault document to Secret Workspace preserves the encrypted record before plaintext cleanup.
+Scroll state now belongs only to the visible, committed document and is not overwritten by a temporary loading skeleton or hidden pane. Restoration is guarded by document and render identity, retries while images or advanced renderers temporarily clamp the page, and yields immediately to user scrolling or navigation.
 
-Chooser focus is also safer: delayed reference, media, and table dialogs no longer redirect typing after the originating document or selection changes. Review recovery keeps newer replies instead of restoring stale comment metadata.
+Editor coordinates restore before a view switch persists state, and Editor/Preview synchronization runs only while both panes are visible. The same rules apply to Live Share snapshots and the prepared desktop bundle.
 
-## Interface, startup, and authoring polish
+## Clearer, complete PDF exports
 
-Preview and Explorer now use matching startup placeholders. The slash-command menu shares the app's compact dropdown styling, stays clear of the typing line, completes chooser-based commands, preserves the correct upload target, and aligns primary and secondary Editors. Split documents use consistent spacing and empty-state hints, and inactive panes no longer receive a misleading focus border.
+The export dialog now names the two workflows by their result:
 
-The Linked Workspace guide opens in Split view with concise steps and diagrams. Explorer actions distinguish linking from Trash, header context menus stay disabled, plain file icons keep managed documents visually quiet, and workspace expansion colors remain consistent.
+- **Standard PDF (Recommended):** fast browser/operating-system PDF generation with selectable, searchable text and configurable print settings.
+- **Rendered PDF:** consistent image-based A4 pages for complex visual layouts.
+
+Pagination tracks fractional text boundaries, overlapping ranges, tall cells, code, quotes, lists, repeated table headers, mixed font sizes, images, light and dark appearances, and cancellation or retry. Page slicing preserves source coverage instead of silently dropping lines near a boundary. Browser print settings can still add headers/footers or override page styling.
 
 ## Quality, localization, and distribution
 
-All 15 locale catalogs include the Linked Workspace, Preview Styling, emoji, recovery, and v3.10.5 release-note labels with matching placeholders. Web, service-worker, Docker, and Neutralino resources include the new stores, adapters, native-source bridge, emoji catalog, icons, styles, and tests. DOMPurify and YAML dependencies include their current security fixes for this release line.
+All 15 locale catalogs retain matching keys and placeholders for native file operations, Explorer actions, PDF export names, and the v3.10.6 release-note labels. Root sources and prepared desktop resources remain synchronized.
 
-Coverage now includes linked file/folder workflows, scan boundaries and races, source conflicts, Save As watchers, conversion and removal failures, backup trust boundaries, recovered-journal cleanup, desktop filesystem moves, Preview Styling lifecycle, MathJax resources, syntax themes, emoji categories and lazy loading, startup placeholders, slash commands, localization, and web/desktop isolation.
+Coverage now includes complete release manifests and tamper checks, Debian extraction and installed metadata, macOS architecture and load-command validation, native package launch/import/reopen checks, browser folder drops, linked rename recovery, Secret Workspace races, inline Explorer rename, folder and selection downloads, clipboard fidelity, Preview scroll lifecycle, and PDF pagination.
 
 ## Thank you
 
 ### Contributors
 
-- **[Ioannis Kechagias (@Kechos23)](https://github.com/Kechos23)** — Designed and implemented Linked Workspace, recovery and destructive-operation hardening, locale completion, desktop safety coverage, and supporting documentation.
-- **[Itznan (@itznan)](https://github.com/itznan)** — Added Preview Styling and its library adapters, MathJax lifecycle fixes, syntax-theme isolation, emoji-tone handling, distribution updates, and regression coverage.
-- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Refined Linked Workspace and Preview Styling, rebuilt the emoji picker, fixed recovered-journal cleanup, polished startup and authoring behavior, and completed integration, documentation, and release work.
+- **[Ioannis Kechagias (@Kechos23)](https://github.com/Kechos23)** — Built the native file-handling and Explorer workflow foundation, including folder drops, inline rename, downloads, linked rename recovery, Windows trial integration, safety coverage, and documentation.
+- **[Alain Paulinn (@alainpaulinn)](https://github.com/alainpaulinn)** — Reworked Preview copying to preserve computed rich-text formatting, precise selections, safe clipboard content, and responsive context-menu behavior.
+- **[Baivab Sarkar (@ThisIs-Developer)](https://github.com/ThisIs-Developer)** — Stabilized Preview scroll and PDF pagination, added the branded macOS/Linux release pipeline, completed platform identity and native acceptance coverage, and prepared v3.10.6.
 
 ### Changes included
 
-- [#275 — Match Preview and Explorer startup loading states](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/275)
-- [#276 — Polish slash commands and align split documents](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/276)
-- [#278 — Add Preview Styling for Highlight.js, MathJax, Mermaid, and JoyPixels](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/278)
-- [#281 — Simplify Preview Styling and stabilize math fonts](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/281)
-- [#282 — Redesign the emoji picker with categories and smoother loading](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/282)
-- [#262 — Link Markdown files and folders alongside Vault copies](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/262)
-- [#279 — Preserve recovery drafts and coordinate destructive workspace operations](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/279)
-- [#285 — Stop recovered documents duplicating after reopening](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/285)
+- [#269 — Add native file handling and Explorer improvements](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/269)
+- [#286 — Preserve document scroll through loading and view changes](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/286)
+- [#287 — Preserve PDF page content and clarify selectable export](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/287)
+- [#284 — Preserve rich-text formatting when copying Preview content](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/284)
+- **[#289 — Add branded Mac and Ubuntu installers](https://github.com/ThisIs-Developer/Markdown-Viewer/pull/289)** — main v3.10.6 highlight
 
-Thank you for using Markdown Viewer and helping make every release more useful. For the complete history, read the [project changelog](https://github.com/ThisIs-Developer/Markdown-Viewer/blob/main/CHANGELOG.md).
+Thank you for using Markdown Viewer and helping make every release more useful. For the complete requested development range, compare [`eb9581e…29eb529`](https://github.com/ThisIs-Developer/Markdown-Viewer/compare/eb9581eca284e2881b24873d73c343b04b0b165e...29eb5297a425ec2fae1b0781d2f94e57fcd7aff4).
 
 **Happy coding!**

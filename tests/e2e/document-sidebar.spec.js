@@ -130,7 +130,7 @@ test('folder menus contain management actions without a redundant Open action', 
   await folder.click({ button: 'right' });
   const menu = page.locator('.document-menu-context.open');
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('menuitem')).toContainText(['New file', 'New folder', 'Rename', 'Delete']);
+  await expect(menu.getByRole('menuitem')).toContainText(['New file', 'New folder', 'Rename', 'Download folder', 'Delete']);
   await expect(menu.getByRole('menuitem', { name: /^Open$/ })).toHaveCount(0);
 });
 
@@ -183,6 +183,7 @@ test('Explorer supports modifier selection, contextual bulk delete, and selectio
   await expect(contextMenu).toHaveCount(1);
   await expect(contextMenu.getByRole('menuitem')).toHaveText([
     'Open all',
+    'Download',
     'Move to…',
     'Delete 3 selected items'
   ]);

@@ -22,6 +22,10 @@ No. You edit plain Markdown source. The formatting toolbar inserts or transforms
 
 You can use a modern browser, install the PWA where the browser supports it, self-host the static application, run the Docker image, or use/build the Neutralino desktop application. Exact behavior still depends on browser, webview, operating system, GPU, audio, print engine, and network support.
 
+### Which desktop download should I choose?
+
+Use the [latest GitHub release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/latest). Choose `mac_arm64.dmg` for Apple Silicon, `mac_x64.dmg` for Intel Macs or Intel/AMD-hosted macOS virtual machines, and `mac_universal.dmg` when one Mac package must support both. On Ubuntu/Debian, prefer the architecture-matching `.deb` because it installs dependencies and desktop integration; portable `.tar.gz` archives are for managed systems that already provide those libraries. Windows uses the x64 `.exe`. Verify the file with the release's `SHA256SUMS.txt` before organization-wide deployment.
+
 ## Workspace and Storage
 
 ### Where are my Documents stored?
@@ -148,7 +152,7 @@ Yes. Expand **Private repository access**, give the token a recognizable name, e
 
 ### Which PDF option should I use?
 
-Use Browser Print for most long, text-heavy Documents and selectable text. Use Legacy Raster PDF when screenshot-style capture and its page-break planning are more important. Both methods offer remembered Light or Dark appearance choices and prepare every supported rich-content renderer without changing the visible app theme. Raster export consumes more memory and depends on browser canvas/CORS behavior.
+Use Standard PDF for selectable, searchable document text, then choose **Save as PDF** in the print dialog. Use Rendered PDF when you want image-based pages; its text cannot be selected. Both methods offer remembered Light or Dark appearances and prepare supported rich content without changing the visible app theme. Rendered PDF places page breaks between measured lines and limits individual canvas sizes, but very long exports can still use substantial memory. Images and outlined math/diagrams do not become selectable text through Standard PDF. Standard PDF uses 10 pt body text by default. If your browser still adds the document title, date, URL, or page numbers, turn off **Headers and footers** in its print dialog.
 
 ### Why are images missing from PDF or PNG?
 

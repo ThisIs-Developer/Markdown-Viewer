@@ -7,6 +7,20 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ---
 
+## v3.10.6
+
+- **Description:** Made macOS and Ubuntu/Linux first-class desktop releases, expanded safe native file and Explorer workflows, preserved rich Preview formatting when copied to other applications, stabilized Preview scroll restoration, and completed long-form PDF pagination.
+  - **Mac & Linux Installers — Main Highlight:** Added Finder-ready Intel, Apple Silicon, and Universal DMGs plus amd64, ARM64, and ARMHF DEB installers and optional portable Linux archives. Rebuilt and verified the pinned macOS runtime at architecture-specific native dependency baselines, added application icons and platform metadata, preserved the stable application id and vault, supported optional Developer ID signing/notarization, and gated publication on installed-package launch/import/reopen acceptance checks and complete SHA-256 manifests.
+  - **Native Files & Explorer:** Added bounded browser folder imports, native drop feedback, inline file/folder rename, F2 and collision handling, multi-document and folder ZIP downloads, platform-specific reveal actions, linked-original rename recovery, safer Secret/Private Workspace imports, and an isolated Windows single-instance/native-drop trial that does not alter default file associations.
+  - **Clipboard & Preview Lifecycle:** Preserved computed typography, backgrounds, borders, syntax colors, semantic links, list numbering, partial selections, and plain-text alternatives in rich Preview copies while deferring serialization until Copy. Kept document scroll positions stable through loading skeletons, hidden panes, document/view changes, deferred images, and obsolete renders.
+  - **PDF Export:** Renamed the selectable workflow to **Standard PDF (Recommended)** and the image workflow to **Rendered PDF**; preserved long paragraphs, tables, code, lists, images, repeated headers, mixed font sizes, and complete text coverage across page boundaries in both themes.
+  - **Identity, Documentation & Quality:** Added platform-native publisher, license, website, support, icon, desktop-entry, AppStream, Finder, and Windows resource metadata; documented architecture selection, trust prompts, fleet deployment, data retention, and checksum verification; retained 15-locale parity; and expanded unit, browser, packaging, installed-app, and release-manifest coverage.
+- **Date:** 2026-11-12
+- **Commits:** `eb9581eca284e2881b24873d73c343b04b0b165e` through `29eb5297a425ec2fae1b0781d2f94e57fcd7aff4`
+- **URL:** https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v3.10.6
+
+---
+
 ## v3.10.5
 
 - **Description:** Added a safety-focused desktop Linked Workspace, configurable Preview Styling, and a categorized emoji browser, while strengthening recovery, storage coordination, startup feedback, and editor polish.

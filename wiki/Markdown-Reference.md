@@ -432,9 +432,9 @@ Preview headings and copied links share GitHub-compatible slug generation in doc
 
 ## Export Notes for Markdown Authors
 
-- Browser Print is usually best for long documents.
-- HTML, Browser Print, raster PDF, and PNG each remember a Light or Dark export appearance independently of the visible app theme.
-- Browser Print, raster PDF, and PNG prepare all supported diagrams and rich content in an off-screen snapshot before output; remote renderers still depend on network availability.
+- Standard PDF is usually best for long documents.
+- HTML, Standard PDF, raster PDF, and PNG each remember a Light or Dark export appearance independently of the visible app theme.
+- Standard PDF, raster PDF, and PNG prepare all supported diagrams and rich content in an off-screen snapshot before output; remote renderers still depend on network availability.
 - Raster PDF and PNG are screenshots of rendered HTML and can be affected by cross-origin images and very large canvases.
 - Wide tables, large diagrams, and huge STL models may be scaled or moved during export.
 

@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
-import { webcrypto } from 'node:crypto';
+import { webcrypto, createHash } from 'node:crypto';
 import mock from '../helpers/desktop-filesystem.js';
 
 const source = await fs.readFile(new URL('../../workspace-storage.js', import.meta.url), 'utf8');
@@ -83,3 +83,25 @@ test('case-only containing-folder rename keeps lazy document content available a
   assert.equal(await reopened.loadDocumentContent(tab.id), '# nested');
   assert.equal((await reopened.getDocumentOrganization()).folders[0].name, 'folder');
 });
+
+for (const name of ['After.md', 'before.md']) {
+  test(`interrupted linked rename to ${name} recovers on the real filesystem without writing original bytes`, async t => {
+    const {target, storage} = await setup(t);
+    const parent = path.dirname(storage.vaultPath);
+    const original = path.join(parent, 'Before.md').replaceAll('\\', '/');
+    const destination = path.join(parent, name).replaceAll('\\', '/');
+    await fs.writeFile(original, '# external original Ελληνικά', 'utf8');
+    const tab = {id:'interrupted-linked', title:'Before', sourcePath:original,
+      content:'# retained unsaved draft', contentLoaded:true, workspaceId:'workspace_default'};
+    await storage.saveDocuments([tab], {folders:[]}, {forceContent:true});
+    const fingerprint = createHash('sha256').update('# external original Ελληνικά').digest('hex');
+    await storage.prepareLinkedRename([tab.id], original, destination, fingerprint);
+    await fs.rename(original, destination);
+    const reopened = new target.MarkdownWorkspaceStorage(); await reopened.init();
+    assert.equal((await reopened.loadDocumentMetadata(tab.id)).sourcePath, destination);
+    assert.equal(await reopened.loadDocumentContent(tab.id), '# retained unsaved draft');
+    assert.equal(await fs.readFile(destination, 'utf8'), '# external original Ελληνικά');
+    assert.equal(reopened.getLinkedRenameRecovery(tab.id), null);
+    assert.ok(!(await fs.readdir(parent)).includes('Before.md'));
+  });
+}

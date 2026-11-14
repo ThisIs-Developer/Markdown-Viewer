@@ -88,3 +88,30 @@ test('case-sensitive parent folders are not mistaken for aliases', async () => {
   s.target.__desktopFiles.set(second + '/note.md', '# second');
   await assert.rejects(s.storage._desktopCheckMovePaths(first + '/note.md', second + '/note.md'), /destination.*exists/i);
 });
+
+test('POSIX move checks preserve literal backslashes when listing the original parent', async () => {
+  const { target, storage } = await setup();
+  target.NL_OS = 'Linux';
+  const parent = '/home/notes\\literal';
+  const sourcePath = parent + '/Before.md';
+  const destination = parent + '/After.md';
+  const listings = [];
+  let names = ['Before.md'];
+  target.Neutralino.filesystem.getStats = async path => {
+    if (path === sourcePath) return { isFile: true, isDirectory: false };
+    throw { code: 'NE_FS_NOPATHE' };
+  };
+  target.Neutralino.filesystem.readDirectory = async path => {
+    listings.push(path);
+    assert.equal(path, parent);
+    return names.map(entry => ({ entry, type: 'FILE' }));
+  };
+  await storage._desktopCheckMovePaths(sourcePath, destination);
+  names.push('After.md');
+  await assert.rejects(storage._desktopCheckMovePaths(sourcePath, destination), /cannot be inspected/i);
+  names = ['Before.md'];
+  assert.equal(await storage._desktopPathsShareCaseAlias(sourcePath, parent + '/before.md'), true);
+  names.push('before.md');
+  assert.equal(await storage._desktopPathsShareCaseAlias(sourcePath, parent + '/before.md'), false);
+  assert.equal(listings.length, 4);
+});

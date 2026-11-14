@@ -124,7 +124,7 @@ Cloudflare Pages must include `/live-room/*` in `_routes.json` so WebSocket upgr
 
 ## Desktop Application
 
-Published desktop binaries are available from [GitHub Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases). Use a published build for a stable release, or build from `main` when you need to test changes that have not yet been released.
+Published desktop binaries are available from [GitHub Releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases). v3.10.6 adds the first complete Mac DMGs and Ubuntu/Debian DEBs; its release page includes an architecture-first download table, exact asset sizes, application identity, managed-deployment limits, signing state, and SHA-256 verification. Use a published build for a stable release, or build from `main` when you need to test changes that have not yet been released.
 
 From `desktop-app/`:
 
@@ -133,15 +133,16 @@ npm install
 npm run dev
 ```
 
-Build the seven self-contained platform binaries with:
+Build raw developer executables with:
 
 ```bash
 npm run build
 ```
 
-The results are written to `desktop-app/dist/markdown-viewer/`. Each Windows,
-Linux, and macOS binary embeds the application resources, so users can download
-only the file matching their operating system and architecture.
+The raw results are written to `desktop-app/dist/markdown-viewer/`. End-user Mac
+and Linux downloads need the additional [platform packaging steps](../desktop-app/packaging/README.md).
+Mac installers rebuild the runtime for older Intel and Apple Silicon systems; Ubuntu installers include
+dependency declarations and application-menu integration.
 
 The development and build commands run setup automatically. Setup:
 
@@ -174,22 +175,25 @@ Desktop:
 
 Windows desktop binaries may trigger SmartScreen because they are unsigned. Choose More info, then Run anyway if you trust the build.
 
-Linux binaries may need execute permission:
+For macOS, download the appropriate `.dmg`, drag **Markdown Viewer.app** to
+**Applications**, eject the image and launch the app. On an Intel/AMD VMware host,
+choose `mac_x64.dmg`. Check `MACOS-SIGNING.txt` for notarization status and the
+per-app Open Anyway instructions for test builds. Allow Documents access for the vault.
 
-```bash
-chmod +x markdown-viewer-linux_x64
-./markdown-viewer-linux_x64
-```
+For Ubuntu/Debian, install the matching `.deb` with Software Install, then open
+**Markdown Viewer** from Applications. If needed, use
+`sudo apt install ./markdown-viewer-linux_amd64.deb`. Dependencies and executable
+permissions are handled by the package. Portable `.tar.gz` builds preserve
+permissions but require system libraries separately.
 
-macOS binaries may need quarantine removal:
+See [all download choices](../desktop-app/packaging/RELEASE-DOWNLOADS.md).
+The old v3.10.5 raw Mac downloads require macOS 14 and cannot run on Monterey.
 
-```bash
-xattr -d com.apple.quarantine markdown-viewer-mac_universal
-chmod +x markdown-viewer-mac_universal
-./markdown-viewer-mac_universal
-```
-
-Run quarantine-removal commands only for a binary you trust.
+For organization deployment, pilot the exact CPU/OS package first. The release does not
+provide a Mac PKG/App Store listing, Windows MSI/MSIX, Linux repository, RPM, AppImage,
+Flatpak, or Snap. Review `MACOS-SIGNING.txt`, Windows SmartScreen state, Linux package
+metadata, and `SHA256SUMS.txt`; embedded publisher metadata does not itself certify a
+binary or remove operating-system trust prompts.
 
 ## Official Platform Documentation
 

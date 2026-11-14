@@ -22,5 +22,23 @@
     checkStats(await filesystem.getStats(path));
     return assertContent(content);
   }
-  target.MarkdownNativeSourceReader = Object.freeze({ maxBytes, assertContent, read });
+  async function readBinary(filesystem, path, limit) {
+    if (!Number.isSafeInteger(limit) || limit < 0 || limit > 25 * 1024 * 1024) {
+      throw new Error('Invalid native media size limit.');
+    }
+    function checkStats(stats) {
+      if (!stats || stats.isDirectory || stats.isFile === false ||
+          !Number.isSafeInteger(stats.size) || stats.size < 0 || stats.size > limit) {
+        throw new Error('The dropped media file cannot be read safely or exceeds its size limit.');
+      }
+    }
+    checkStats(await filesystem.getStats(path));
+    const content = await filesystem.readBinaryFile(path, { size: limit + 1 });
+    checkStats(await filesystem.getStats(path));
+    if (!(content instanceof ArrayBuffer) || content.byteLength > limit) {
+      throw new Error('The dropped media file cannot be read safely or exceeds its size limit.');
+    }
+    return content;
+  }
+  target.MarkdownNativeSourceReader = Object.freeze({ maxBytes, assertContent, read, readBinary });
 })(globalThis);

@@ -20,8 +20,6 @@ const FINAL_DIR = path.join(DIST_DIR, "markdown-viewer");
 const TEMP_BUILD_ROOT = path.join(DIST_DIR, ".standalone-build");
 const NEU_CLI = "@neutralinojs/neu@11.7.0";
 
-const targetArgument = process.argv.find(value => value.startsWith("--target="));
-const requestedTarget = targetArgument && targetArgument.slice("--target=".length);
 const TARGETS = [
   "linux_arm64",
   "linux_armhf",
@@ -34,8 +32,7 @@ const TARGETS = [
   sourceName: `neutralino-${platform}`,
   outputName: `markdown-viewer-${platform}`,
   buildKey: platform.replace(/\.exe$/, ""),
-})).filter(target => !requestedTarget || target.buildKey === requestedTarget);
-if (!TARGETS.length) throw new Error("Unknown build target: " + requestedTarget);
+}));
 
 function createConfigOverride(distributionPath, buildKey) {
   const config = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
@@ -81,7 +78,7 @@ function restoreBinaries(hidden) {
   }
 }
 
-function buildTarget(target) {
+async function buildTarget(target) {
   const sourcePath = path.join(BIN_DIR, target.sourceName);
   if (!fs.existsSync(sourcePath)) {
     throw new Error(`Missing ${target.sourceName}. Run npm run setup first.`);
@@ -132,6 +129,7 @@ function buildTarget(target) {
 
     const finalFile = path.join(FINAL_DIR, target.outputName);
     fs.copyFileSync(builtFile, finalFile);
+    if (target.outputName.endsWith(".exe")) await require("./experimental/windows/brand-executable").brandExecutable(finalFile);
     fs.chmodSync(finalFile, 0o755);
   } finally {
     restoreBinaries(hidden);
@@ -140,28 +138,33 @@ function buildTarget(target) {
   }
 }
 
-function main() {
-  fs.rmSync(DIST_DIR, { recursive: true, force: true });
+async function main() {
+  const requested = process.argv.slice(2);
+  const targets = requested.length ? requested.map(key => {
+    const target = TARGETS.find(item => item.buildKey === key);
+    if (!target) throw new Error(`Unknown target: ${key}`);
+    return target;
+  }) : TARGETS;
+  // Keep sibling installers when building another platform in the same tree.
+  fs.rmSync(FINAL_DIR, { recursive: true, force: true });
   fs.mkdirSync(FINAL_DIR, { recursive: true });
 
   try {
-    for (const target of TARGETS) buildTarget(target);
+    for (const target of targets) await buildTarget(target);
   } finally {
     fs.rmSync(TEMP_BUILD_ROOT, { recursive: true, force: true });
   }
 
   const outputs = fs.readdirSync(FINAL_DIR).sort();
-  if (outputs.length !== TARGETS.length) {
-    throw new Error(`Expected ${TARGETS.length} binaries, generated ${outputs.length}.`);
+  if (outputs.length !== targets.length) {
+    throw new Error(`Expected ${targets.length} binaries, generated ${outputs.length}.`);
   }
 
   console.log(`\nGenerated ${outputs.length} standalone binaries in ${FINAL_DIR}:`);
   for (const output of outputs) console.log(`  ${output}`);
 }
 
-try {
-  main();
-} catch (error) {
+main().catch(error => {
   console.error(`\nStandalone build failed: ${error.message}`);
-  process.exit(1);
-}
+  process.exitCode = 1;
+});

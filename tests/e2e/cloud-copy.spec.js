@@ -92,7 +92,7 @@ test('new linked members while choosing a destination require a new copy review'
 
 test('portable copy names do not require renaming local files or folders',async({page})=>{
  await seed(page);
- const rename=async(selector,value)=>{await page.locator(selector).dispatchEvent('contextmenu',{clientX:120,clientY:200});await page.locator('.document-menu-dropdown.open').getByRole('menuitem',{name:'Rename',exact:true}).click();const prefix=selector.includes('data-document-id')?'#rename-modal':'#document-name-modal';await page.locator(prefix+'-input').fill(value);await page.locator(prefix+'-confirm').click();};
+ const rename=async(selector,value)=>{await page.locator(selector).dispatchEvent('contextmenu',{clientX:120,clientY:200});await page.locator('.document-menu-dropdown.open').getByRole('menuitem',{name:'Rename',exact:true}).click();const input=page.locator('.document-tree-rename-input');await input.fill(value);await input.press('Enter');await expect(input).toHaveCount(0);};
  const file='#document-tree [data-document-id="source-a"]',folder='[data-tree-type="folder"][data-tree-id="copy-root"]';
  await rename(file,'Report:2026%');await menu(page,file);await expect(page.locator('#cloud-copy-name')).toHaveValue('Report_2026_.md');await page.locator('#cloud-copy-modal .reset-modal-cancel').click();
  await rename(folder,'Project:2026%');await menu(page,folder);await expect(page.locator('#cloud-copy-name')).toHaveValue('Project_2026_');await page.locator('#cloud-copy-modal .reset-modal-confirm').click();await expect(page.locator('.cloud-copy-status')).toContainText('Copy complete');

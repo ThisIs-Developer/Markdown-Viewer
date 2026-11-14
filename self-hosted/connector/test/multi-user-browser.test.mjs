@@ -8,7 +8,7 @@ import {createRequire} from 'node:module';
 import {createConnector} from '../server.mjs';
 const require=createRequire(new URL('../../../package.json',import.meta.url));
 const {chromium,expect}=require('@playwright/test');
-const {openApp}=require('./tests/helpers/app.js');
+const {openApp,appVersion}=require('./tests/helpers/app.js');
 const root='https://dav.example/Selected/',password='browser-profile-password';
 const xml=(url,folder)=>'<d:response><d:href>'+url+'</d:href><d:propstat><d:prop><d:resourcetype>'+(folder?'<d:collection/>':'')+'</d:resourcetype><d:getetag>"v1"</d:getetag></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>';
 async function fixture(t,{development=true}={}){
@@ -17,7 +17,7 @@ async function fixture(t,{development=true}={}){
  let app,port;const start=async()=>{app=await createConnector({config,key,dataDirectory:directory,transport});await new Promise(resolve=>app.server.listen(port || 0,'127.0.0.1',resolve));port=app.server.address().port;};await start();
  const origin='http://127.0.0.1:'+port,browser=await chromium.launch({headless:true}),context=await browser.newContext({serviceWorkers:'block',viewport:{width:1440,height:1000}}),page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  const scope='guest-fixture-'+randomBytes(12).toString('hex');
- await page.addInitScript(scope=>{if(localStorage.getItem('profile-test-seeded'))return;localStorage.setItem('profile-test-seeded','true');localStorage.setItem('mv-cloud-guest-scope',scope);const prefix='mv-cloud-workspace:'+scope+':';for(const key of ['markdownViewerLastVersion','markdownViewerReleaseNotesSeenVersion'])localStorage.setItem(prefix+key,'3.10.5');localStorage.setItem(prefix+'markdownViewerTabs',JSON.stringify([{id:'guest-draft',title:'Guest draft',content:'# Guest draft',workspaceId:'workspace_default',isOpen:true,createdAt:1,lastOpenedAt:1}]));},scope);
+ await page.addInitScript(({scope,version})=>{if(localStorage.getItem('profile-test-seeded'))return;localStorage.setItem('profile-test-seeded','true');localStorage.setItem('mv-cloud-guest-scope',scope);const prefix='mv-cloud-workspace:'+scope+':';for(const key of ['markdownViewerLastVersion','markdownViewerReleaseNotesSeenVersion'])localStorage.setItem(prefix+key,version);localStorage.setItem(prefix+'markdownViewerTabs',JSON.stringify([{id:'guest-draft',title:'Guest draft',content:'# Guest draft',workspaceId:'workspace_default',isOpen:true,createdAt:1,lastOpenedAt:1}]));},{scope,version:await appVersion()});
  t.after(async()=>{await browser.close();await app.close();await rm(directory,{recursive:true,force:true});});
  await openApp(page,origin);return {page,context,origin,errors,restart:async()=>{await app.close();await start();}};
 }

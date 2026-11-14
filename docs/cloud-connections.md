@@ -1,6 +1,32 @@
 # Cloud connections
 
-Experimental remote folder access for Nextcloud and generic WebDAV, based on upstream 3.10.5. This is explicit remote access, not background synchronization. Provider identity/capabilities and shared recovery, copy and UI workflows are separated from platform transport and credential storage. Other providers are not implemented.
+Experimental remote folder access for Nextcloud and generic WebDAV, based on upstream 3.10.6. This is explicit remote access, not background synchronization. Provider identity/capabilities and shared recovery, copy and UI workflows are separated from platform transport and credential storage. Other providers are not implemented.
+
+## Try the preview
+
+Use a disposable Markdown folder on a Nextcloud or WebDAV server you control. Open **Workspace settings → Cloud connections**, add an account and choose a folder. Open a `.md`, edit it and confirm **Save to cloud**. Check the result in your provider. To try conflict recovery, edit a separate test file on the server after opening it, then try saving your local changes. The local draft stays available when the server refuses the conditional write.
+
+| Platform | Cloud preview |
+| --- | --- |
+| Windows desktop | Nextcloud and WebDAV through the on-demand helper on official Neutralino 6.10.0. |
+| macOS and Linux desktop | The editor remains available. Native cloud adapters are future work. |
+| Self-hosted web and Docker | Browser access through the same-origin connector and locally built image. Cloud is opt-in. |
+| Static web and offline PWA | Local editor and offline assets. Remote cloud access needs the online connector, and cloud PWA installation is outside this preview. |
+
+### Windows
+
+Extract the complete Windows test bundle, keep `extensions` beside `markdown-viewer-win_x64.exe` and launch it. To build from source, install Node 22–26 and the Visual Studio C++ tools, CMake and Ninja, then run `npm ci` and `npm run build:cloud` inside `desktop-app`. The output is `desktop-app/dist/markdown-viewer/`. Use a disposable Windows profile if you want a separate local workspace.
+
+### Docker on this machine
+
+Build from the repository root. Create `self-hosted/.env` locally with `CLOUD_ACCESS_PASSWORD` set to a private value of at least 12 characters. Use the loopback test mode for this short trial.
+
+```sh
+docker build -f self-hosted/Dockerfile -t markdown-viewer-cloud:local .
+docker run --rm --name markdown-viewer-cloud-test -p 127.0.0.1:8080:80 --env-file self-hosted/.env -e CLOUD_ENABLED=true -e CLOUD_DEVELOPMENT=true markdown-viewer-cloud:local
+```
+
+Open `http://127.0.0.1:8080`, unlock cloud access with the test password and connect to an HTTPS provider. This example keeps credentials in the running session. For a persistent HTTPS deployment or isolated multi-user profiles, follow the [Compose guide](../self-hosted/README.md).
 
 ## Files and recovery
 
