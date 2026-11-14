@@ -5,9 +5,11 @@ cd "$(dirname "$0")/.."
 http=(docker compose -p mdv-ci-http -f docker-compose.yml)
 https=(docker compose -p mdv-ci-https -f docker-compose.https.yml)
 
+scratch="$(mktemp -d)"
 cleanup() {
   "${https[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   "${http[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
+  rm -rf "$scratch"
 }
 trap cleanup EXIT
 
@@ -94,6 +96,9 @@ echo "== Docker local HTTPS / port 8443 =="
 "${https[@]}" up -d --build
 wait_for "https://localhost:8443/"
 check_site "https://localhost:8443"
+# Verify HTTPS without -k by explicitly trusting the test Caddy CA.
+"${https[@]}" cp caddy:/data/caddy/pki/authorities/local/root.crt "$scratch/local-root.crt"
+curl --cacert "$scratch/local-root.crt" -fsS --max-time 12 -o /dev/null https://localhost:8443/
 DOCKER_SMOKE_URL=https://localhost:8443 node tests/docker-browser-smoke.cjs
 
 echo "== Validate optional public HTTPS config and Caddyfile without attempting certificate issuance =="

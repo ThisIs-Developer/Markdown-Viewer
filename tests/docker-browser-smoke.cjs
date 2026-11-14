@@ -8,7 +8,14 @@ async function main() {
   const origin = process.env.DOCKER_SMOKE_URL;
   if (!origin) throw new Error('Set DOCKER_SMOKE_URL to the HTTP or HTTPS test origin');
   const mode = origin.startsWith('https:') ? 'https' : 'http';
-  const browser = await chromium.launch({ headless: true });
+  // Chromium's network service validates Service Worker scripts independently of
+  // Playwright's page-level ignoreHTTPSErrors. This bypass applies only to
+  // the CI local-CA browser test; the shell smoke independently verifies the
+  // real localhost certificate against Caddy's own exported root CA.
+  const browser = await chromium.launch({
+    headless: true,
+    args: mode === 'https' ? ['--ignore-certificate-errors'] : []
+  });
   const failedLocalAssets = [];
 
   try {
