@@ -98,5 +98,5 @@ DOCKER_SMOKE_URL=https://localhost:8443 node tests/docker-browser-smoke.cjs
 
 echo "== Validate optional public HTTPS config and Caddyfile without attempting certificate issuance =="
 MDV_DOMAIN=example.com docker compose -f docker-compose.https-public.yml config --quiet
-MDV_DOMAIN=example.com docker compose -f docker-compose.https-public.yml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile
+MDV_DOMAIN=example.com docker compose -f docker-compose.https-public.yml run --rm --no-deps caddy validate --config /etc/caddy/Caddyfile
 echo "PASS: HTTP + HTTPS browser smoke, assets, CSP, MIME, caching, local TLS, public config."
