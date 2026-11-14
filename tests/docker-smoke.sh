@@ -4,9 +4,11 @@ cd "$(dirname "$0")/.."
 
 http=(docker compose -p mdv-ci-http -f docker-compose.yml)
 https=(docker compose -p mdv-ci-https -f docker-compose.https.yml)
+public=(docker compose -p mdv-ci-public -f docker-compose.https-public.yml)
 
 scratch="$(mktemp -d)"
 cleanup() {
+  MDV_DOMAIN=example.com "${public[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   "${https[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   "${http[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$scratch"
@@ -102,6 +104,6 @@ curl --cacert "$scratch/local-root.crt" -fsS --max-time 12 -o /dev/null https://
 DOCKER_SMOKE_URL=https://localhost:8443 node tests/docker-browser-smoke.cjs
 
 echo "== Validate optional public HTTPS config and Caddyfile without attempting certificate issuance =="
-MDV_DOMAIN=example.com docker compose -f docker-compose.https-public.yml config --quiet
-MDV_DOMAIN=example.com docker compose -f docker-compose.https-public.yml run --rm --no-deps caddy validate --config /etc/caddy/Caddyfile
+MDV_DOMAIN=example.com "${public[@]}" config --quiet
+MDV_DOMAIN=example.com "${public[@]}" run --rm --no-deps --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile
 echo "PASS: HTTP + HTTPS browser smoke, assets, CSP, MIME, caching, local TLS, public config."
