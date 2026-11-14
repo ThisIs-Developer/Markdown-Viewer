@@ -14,3 +14,21 @@ Dockerfile
 # Exclude large demo assets not needed at runtime
 assets/live-peview.gif
 assets/*.gif
+
+# Never include connector secrets/configuration in build contexts
+self-hosted/private/
+
+**/node_modules/
+self-hosted/connector/test/
+
+self-hosted/dist/
+
+# Local deployment secrets
+.env
+**/.env
+
+# Never commit or bake connector profile/credential state into images
+**/profiles.sqlite*
+**/credential.key
+**/credentials.enc
+**/cloud-state/

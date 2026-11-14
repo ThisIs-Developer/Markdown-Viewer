@@ -1,0 +1,106 @@
+{
+  "producer": "preserved preview 5 workspace-storage.js",
+  "producerSha256": "4777af80115fce1a149317de215e01d292f7adbbcb491412a53d2ed6bb41a16b",
+  "files": [
+    [
+      "C:/Documents/Markdown Viewer Vault/.markdown-viewer/vault.json",
+      "{\n  \"format\": \"markdown-viewer-vault\",\n  \"version\": 1,\n  \"id\": \"vault_6ebf08df-2259-4ec1-b787-04a31ec35e99\",\n  \"name\": \"Markdown Viewer Vault\",\n  \"createdAt\": 1793104274511,\n  \"updatedAt\": 1793104274511\n}"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/.markdown-viewer/index.json",
+      "{\n  \"version\": 1,\n  \"documents\": [\n    {\n      \"id\": \"preview5-saved\",\n      \"title\": \"saved\",\n      \"workspaceId\": \"workspace_default\",\n      \"isOpen\": true,\n      \"remoteSource\": {\n        \"provider\": \"nextcloud\",\n        \"server\": \"https://cloud.example/subdir\",\n        \"userId\": \"alice\",\n        \"href\": \"https://cloud.example/subdir/remote.php/dav/files/alice/Notes/saved.md\",\n        \"etag\": \"\\\"old-saved\\\"\",\n        \"savedDigest\": \"baseline-saved\",\n        \"status\": \"saved\"\n      },\n      \"contentLoaded\": false,\n      \"vaultRelativePath\": \"Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/saved--ef8475e0b61e1f894859d3006f0500e1.md\",\n      \"storageRevision\": 1,\n      \"storageWriterId\": \"writer_09612786-fa1d-470d-945e-d69912576671\",\n      \"contentSize\": 41\n    },\n    {\n      \"id\": \"preview5-draft\",\n      \"title\": \"draft\",\n      \"workspaceId\": \"workspace_default\",\n      \"isOpen\": true,\n      \"remoteSource\": {\n        \"provider\": \"nextcloud\",\n        \"server\": \"https://cloud.example/subdir\",\n        \"userId\": \"alice\",\n        \"href\": \"https://cloud.example/subdir/remote.php/dav/files/alice/Notes/draft.md\",\n        \"etag\": \"\\\"old-draft\\\"\",\n        \"savedDigest\": \"baseline-draft\",\n        \"status\": \"draft\"\n      },\n      \"contentLoaded\": false,\n      \"vaultRelativePath\": \"Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/draft--2c87312752f5c01695bd24df807e8105.md\",\n      \"storageRevision\": 1,\n      \"storageWriterId\": \"writer_09612786-fa1d-470d-945e-d69912576671\",\n      \"contentSize\": 41\n    },\n    {\n      \"id\": \"preview5-uncertain\",\n      \"title\": \"uncertain\",\n      \"workspaceId\": \"workspace_default\",\n      \"isOpen\": true,\n      \"remoteSource\": {\n        \"provider\": \"nextcloud\",\n        \"server\": \"https://cloud.example/subdir\",\n        \"userId\": \"alice\",\n        \"href\": \"https://cloud.example/subdir/remote.php/dav/files/alice/Notes/uncertain.md\",\n        \"etag\": \"\\\"old-uncertain\\\"\",\n        \"savedDigest\": \"baseline-uncertain\",\n        \"status\": \"uncertain\",\n        \"attemptDigest\": \"unconfirmed-upload\"\n      },\n      \"contentLoaded\": false,\n      \"vaultRelativePath\": \"Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/uncertain--b39d9be59e1a82ab9c66cdba2dfb4eda.md\",\n      \"storageRevision\": 1,\n      \"storageWriterId\": \"writer_09612786-fa1d-470d-945e-d69912576671\",\n      \"contentSize\": 45\n    },\n    {\n      \"id\": \"preview5-conflict\",\n      \"title\": \"conflict\",\n      \"workspaceId\": \"workspace_default\",\n      \"isOpen\": true,\n      \"remoteSource\": {\n        \"provider\": \"nextcloud\",\n        \"server\": \"https://cloud.example/subdir\",\n        \"userId\": \"alice\",\n        \"href\": \"https://cloud.example/subdir/remote.php/dav/files/alice/Notes/conflict.md\",\n        \"etag\": \"\\\"old-conflict\\\"\",\n        \"savedDigest\": \"baseline-conflict\",\n        \"status\": \"conflict\"\n      },\n      \"contentLoaded\": false,\n      \"vaultRelativePath\": \"Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/conflict--1f901c0543b34a2d1a6056b802fe0ec5.md\",\n      \"storageRevision\": 1,\n      \"storageWriterId\": \"writer_09612786-fa1d-470d-945e-d69912576671\",\n      \"contentSize\": 44\n    },\n    {\n      \"id\": \"preview5-recovery\",\n      \"title\": \"Recovery before reload\",\n      \"workspaceId\": \"workspace_default\",\n      \"kind\": \"cloud-recovery\",\n      \"contentLoaded\": false,\n      \"vaultRelativePath\": \"Cloud Workspace/Recovery before reload--d3e0de5f5e178697f4ba9177b1f36c26.md\",\n      \"storageRevision\": 1,\n      \"storageWriterId\": \"writer_09612786-fa1d-470d-945e-d69912576671\",\n      \"contentSize\": 19\n    },\n    {\n      \"id\": \"existing-vault\",\n      \"title\": \"Local Vault\",\n      \"workspaceId\": \"workspace_default\",\n      \"contentLoaded\": false,\n      \"vaultRelativePath\": \"Workspace/Local Vault--9515fb5aba4fd8214b60fc2ae2540d85.md\",\n      \"storageRevision\": 1,\n      \"storageWriterId\": \"writer_09612786-fa1d-470d-945e-d69912576671\",\n      \"contentSize\": 26\n    }\n  ],\n  \"rebuiltAt\": 1793104274512,\n  \"updatedAt\": 1793104274517\n}"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/.markdown-viewer/organization.json",
+      "{\n  \"version\": 1,\n  \"workspaces\": [],\n  \"folders\": [],\n  \"ui\": {}\n}"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/saved--ef8475e0b61e1f894859d3006f0500e1.md",
+      "# Preserved saved\nΕλληνικό draft\n"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/draft--2c87312752f5c01695bd24df807e8105.md",
+      "# Preserved draft\nΕλληνικό draft\n"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/uncertain--b39d9be59e1a82ab9c66cdba2dfb4eda.md",
+      "# Preserved uncertain\nΕλληνικό draft\n"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/Cloud Workspace/cloud.example - alice--dd193eeeb4b5f589b0ceea5d48194470/Notes/conflict--1f901c0543b34a2d1a6056b802fe0ec5.md",
+      "# Preserved conflict\nΕλληνικό draft\n"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/Cloud Workspace/Recovery before reload--d3e0de5f5e178697f4ba9177b1f36c26.md",
+      "# Detached recovery"
+    ],
+    [
+      "C:/Documents/Markdown Viewer Vault/Workspace/Local Vault--9515fb5aba4fd8214b60fc2ae2540d85.md",
+      "# Ordinary Vault unchanged"
+    ]
+  ],
+  "expected": [
+    {
+      "id": "preview5-saved",
+      "content": "# Preserved saved\nΕλληνικό draft\n",
+      "remoteSource": {
+        "provider": "nextcloud",
+        "server": "https://cloud.example/subdir",
+        "userId": "alice",
+        "href": "https://cloud.example/subdir/remote.php/dav/files/alice/Notes/saved.md",
+        "etag": "\"old-saved\"",
+        "savedDigest": "baseline-saved",
+        "status": "saved"
+      }
+    },
+    {
+      "id": "preview5-draft",
+      "content": "# Preserved draft\nΕλληνικό draft\n",
+      "remoteSource": {
+        "provider": "nextcloud",
+        "server": "https://cloud.example/subdir",
+        "userId": "alice",
+        "href": "https://cloud.example/subdir/remote.php/dav/files/alice/Notes/draft.md",
+        "etag": "\"old-draft\"",
+        "savedDigest": "baseline-draft",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "preview5-uncertain",
+      "content": "# Preserved uncertain\nΕλληνικό draft\n",
+      "remoteSource": {
+        "provider": "nextcloud",
+        "server": "https://cloud.example/subdir",
+        "userId": "alice",
+        "href": "https://cloud.example/subdir/remote.php/dav/files/alice/Notes/uncertain.md",
+        "etag": "\"old-uncertain\"",
+        "savedDigest": "baseline-uncertain",
+        "status": "uncertain",
+        "attemptDigest": "unconfirmed-upload"
+      }
+    },
+    {
+      "id": "preview5-conflict",
+      "content": "# Preserved conflict\nΕλληνικό draft\n",
+      "remoteSource": {
+        "provider": "nextcloud",
+        "server": "https://cloud.example/subdir",
+        "userId": "alice",
+        "href": "https://cloud.example/subdir/remote.php/dav/files/alice/Notes/conflict.md",
+        "etag": "\"old-conflict\"",
+        "savedDigest": "baseline-conflict",
+        "status": "conflict"
+      }
+    },
+    {
+      "id": "preview5-recovery",
+      "content": "# Detached recovery",
+      "kind": "cloud-recovery"
+    },
+    {
+      "id": "existing-vault",
+      "content": "# Ordinary Vault unchanged"
+    }
+  ]
+}

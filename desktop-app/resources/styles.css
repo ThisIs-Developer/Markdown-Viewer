@@ -15341,3 +15341,116 @@ body.release-notes-active .mobile-stats-container {
     flex: 0 0 144px;
   }
 }
+/* Nextcloud uses the Explorer's typography, icons, surfaces and shared scroll area. */
+.nextcloud-panel { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border-color); color: var(--text-color); font-size: var(--ui-font-md); }
+.nextcloud-heading, .nextcloud-tools, .nextcloud-navigation, .nextcloud-actions { display: flex; align-items: center; gap: 4px; }
+.nextcloud-heading { min-height: 30px; justify-content: space-between; }
+.nextcloud-panel button { font: inherit; color: inherit; cursor: pointer; }
+.nextcloud-disclosure, .nextcloud-icon-button, .nextcloud-entry { border: 0; background: transparent; border-radius: 5px; }
+.nextcloud-disclosure { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px 6px; font-weight: 600 !important; }
+.nextcloud-disclosure .lucide-cloud-upload { color: var(--accent-color); }
+.nextcloud-disclosure .lucide-chevron-down { color: var(--text-secondary); font-size: 10px; transition: transform .15s; }
+.nextcloud-disclosure .is-collapsed { transform: rotate(-90deg); }
+.nextcloud-icon-button { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex: 0 0 auto; color: var(--text-secondary) !important; }
+.nextcloud-disclosure:hover, .nextcloud-icon-button:hover, .nextcloud-entry:hover { background: var(--toolbar-control-hover); }
+.nextcloud-panel button:focus-visible, .nextcloud-panel input:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 1px; }
+.nextcloud-panel button:disabled { opacity: .45; cursor: default; }
+.nextcloud-panel [hidden] { display: none !important; }
+.nextcloud-body { padding: 0 6px 7px 18px; }
+.nextcloud-account { display: flex; align-items: center; gap: 5px; color: var(--text-secondary); margin: 6px 0; font-size: var(--ui-font-xs); min-width: 0; }
+.nextcloud-account > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nextcloud-account > span:last-child { flex-shrink: 0; margin-left: auto; max-width: 35%; }
+.nextcloud-account > .lucide { display: none; }
+.nextcloud-navigation { margin: 4px 0; color: var(--text-secondary); min-height: 25px; }
+.nextcloud-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--ui-font-sm); }
+.nextcloud-entries { display: grid; gap: 1px; margin: 3px 0 8px; }
+.nextcloud-entry { display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; min-height: 29px; text-align: start; padding: 5px 7px; }
+.nextcloud-entry > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nextcloud-entry > .lucide { flex-shrink: 0; color: var(--text-secondary); }
+.nextcloud-entry.is-folder > .lucide { color: var(--accent-color); }
+.nextcloud-entry.is-active { background: var(--toolbar-control-pressed); }
+.nextcloud-entry.is-active > .lucide { color: var(--accent-color); }
+.nextcloud-button { color:var(--text-color); cursor:pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 29px; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--button-bg); font-size: var(--ui-font-sm) !important; }
+.nextcloud-button:hover { background: var(--button-hover); }
+.nextcloud-primary { color: var(--accent-color) !important; }
+.nextcloud-note, #nextcloud-status { color: var(--text-secondary); font-size: var(--ui-font-xs); line-height: 1.5; overflow-wrap: anywhere; margin: 7px 0 0; }
+#nextcloud-status:empty { display: none; }
+#nextcloud-status[data-tone="error"] { color: var(--color-danger-fg); }
+.nextcloud-panel label { display: block; color: var(--text-secondary); font-size: var(--ui-font-sm); margin: 7px 0 5px; }
+.nextcloud-panel input { width: 100%; min-width: 0; color: var(--text-color); background: var(--editor-bg); border: 1px solid var(--border-color); border-radius: 5px; padding: 7px 8px; font: inherit; font-size: var(--ui-font-sm); margin-bottom: 7px; }
+.nextcloud-panel form > .nextcloud-primary { width: 100%; }
+.cloud-accounts { display: grid; gap: 5px; margin-top: 4px; }
+.cloud-account-row { font-size: var(--ui-font-sm) !important; }
+.cloud-account-heading { display:flex; align-items:center; gap:1px; }
+.cloud-account-heading > .cloud-account-row { flex:1; min-width:0; }
+.cloud-account-heading > .nextcloud-icon-button { width:20px; }
+.cloud-account-copy { display:flex; flex:1; flex-direction:column; gap:2px; min-width:0; }
+.cloud-account-copy > span, .cloud-account-copy > small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cloud-account-copy > small { color:var(--text-secondary); font-size:var(--ui-font-xs); font-weight:400; }
+.cloud-account-row { min-height:43px; }
+.cloud-account-children { margin-inline-start:10px; border-inline-start:1px solid var(--border-color); padding-inline-start:5px; }
+.cloud-connection-dot { width:6px; height:6px; flex:0 0 auto; border-radius:50%; background:var(--text-secondary); }
+.cloud-connection-dot[data-connected="true"] { background:var(--success-color); }
+.nextcloud-panel .nextcloud-account { display:none; }
+.cloud-file-badge { display:inline-flex; align-items:center; gap:3px; flex:0 0 auto; padding:2px 4px; border-radius:4px; font-size:10px; line-height:14px; color:var(--text-secondary); background:var(--toolbar-control-hover); cursor:help; }
+.cloud-file-badge[data-state="draft"], .cloud-file-badge[data-state="saving"] { color:var(--accent-color); background:color-mix(in srgb,var(--accent-color) 11%,transparent); }
+.cloud-file-badge[data-state="saved"] { color:var(--success-color); background:color-mix(in srgb,var(--success-color) 10%,transparent); }
+.cloud-file-badge[data-state="conflict"], .cloud-file-badge[data-state="uncertain"] { color:var(--warning-note-text); background:var(--warning-note-bg); }
+.cloud-file-badge[data-state="missing"] { color:var(--color-danger-fg); }
+.cloud-file-badge:focus-visible { outline:2px solid var(--accent-color); outline-offset:2px; }
+.cloud-file-badge[data-state="saving"] .lucide { animation:cloud-upload-spin 1.2s linear infinite; }
+@keyframes cloud-upload-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .cloud-file-badge[data-state="saving"] .lucide { animation:none; } }
+.cloud-settings-dialog { width:min(520px,calc(100vw - 32px)); }
+.cloud-settings-dialog .modal-body { overflow-y:auto; max-height:70vh; }
+.cloud-settings-dialog .cloud-sidebar-choice { display:flex; gap:8px; align-items:flex-start; margin:0; color:var(--text-color); font-size:var(--ui-font-sm); }
+.cloud-sidebar-choice input { accent-color:var(--accent-color); margin-top:3px; }
+.cloud-settings-account { padding:12px 0; border-bottom:1px solid var(--border-color); }
+.cloud-settings-account > .nextcloud-button { margin:8px 6px 0 0; }
+.cloud-setup-content label:not(.cloud-remember) { display:block; margin:16px 0 6px; font-size:var(--ui-font-sm); }
+.cloud-connection-fields input { width:100%; padding:9px 10px; border:1px solid var(--border-color); border-radius:6px; background:var(--editor-bg); color:var(--text-color); margin-bottom:12px; }
+.cloud-settings-dialog input:focus-visible { outline:2px solid var(--accent-color); outline-offset:2px; }
+.cloud-setup-content .cloud-remember { display:flex; gap:7px; align-items:center; margin-bottom:12px; font-size:var(--ui-font-sm); }
+.cloud-setup-content .nextcloud-primary { width:100%; }
+.cloud-setup-status[data-tone="error"] { color:var(--color-danger-fg); }
+.cloud-setup-content button[hidden] { display:none; }
+.cloud-account-row > .lucide { color: var(--accent-color); }
+.cloud-folders { padding-inline-start: 12px; border-inline-start: 1px solid var(--border-color); margin-inline-start: 9px; }
+.cloud-folder-row { display: flex; align-items: center; gap: 2px; }
+.cloud-folder-row > .nextcloud-entry { flex: 1; }
+.cloud-folder-row > .nextcloud-icon-button { opacity: 0; width: 22px; }
+.cloud-folder-row:hover > .nextcloud-icon-button, .cloud-folder-row:focus-within > .nextcloud-icon-button { opacity: 1; }
+.cloud-accounts:not(:empty) + .nextcloud-browser .nextcloud-account { display: none; }
+.nextcloud-navigation .nextcloud-path { flex: 1; }
+.nextcloud-panel .cloud-remember { display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; margin: 0 0 8px; }
+.nextcloud-panel .cloud-remember > input { flex: 0 0 auto; width: 13px; height: 13px; padding: 0; margin: 2px 0 0; accent-color: var(--accent-color); }
+
+/* Provider fields use the existing cloud dialog sizing and theme. */
+.cloud-setup-content select, .cloud-connection-fields input { width:100%; padding:9px 10px; border:1px solid var(--border-color); border-radius:6px; background:var(--editor-bg); color:var(--text-color); }
+.cloud-setup-content select:disabled { opacity:1; cursor:default; }
+.cloud-setup-content select:focus-visible { outline:2px solid var(--accent-color); outline-offset:2px; }
+
+/* Cloud copy reuses the shared modal shell and themed form controls. */
+#cloud-copy-modal .modal-body.nextcloud-panel { border:0; margin:0; padding:16px; }
+#cloud-copy-modal select { width:100%; color:var(--text-color); background:var(--editor-bg); border:1px solid var(--border-color); padding:8px; border-radius:6px; }
+.cloud-copy-navigation { display:flex; align-items:center; gap:10px; }
+.cloud-copy-path { overflow-wrap:anywhere; font-size:var(--ui-font-sm); }
+.cloud-copy-folders { max-height:180px; overflow:auto; margin:8px 0; border:1px solid var(--border-color); border-radius:6px; }
+.cloud-copy-folders:empty { display:none; }
+
+#cloud-copy-modal .modal-body { gap:8px; }
+#cloud-copy-modal .cloud-copy-source, #cloud-copy-modal .nextcloud-note { margin:0; }
+#cloud-copy-modal .reset-modal-confirm { background:var(--accent-color); border-color:var(--accent-color); color:#fff; }
+[data-theme="dark"] #cloud-copy-modal .reset-modal-confirm { background:#1f6feb; border-color:#1f6feb; }
+#cloud-copy-modal .reset-modal-confirm:hover { filter:brightness(.9); }
+
+/* Connector profile dialogs use the same surfaces as Cloud connections. */
+.cloud-profile-dialog, .cloud-identity-block { position:fixed; inset:0; margin:auto; width:calc(100% - 32px); max-width:480px; max-height:calc(100dvh - 32px); overflow:auto; padding:20px; border:1px solid var(--border-color); border-radius:12px; color:var(--text-color); background:var(--editor-bg); }
+.cloud-profile-dialog::backdrop, .cloud-identity-block::backdrop { background:rgba(0,0,0,.55); }
+.cloud-profile-dialog h2, .cloud-identity-block h2 { font-size:var(--ui-font-lg); margin:0 0 12px; }
+.cloud-profile-dialog label { display:block; font-size:var(--ui-font-sm); margin-top:12px; }
+.cloud-profile-dialog input:not([type=checkbox]) { display:block; box-sizing:border-box; width:100%; padding:9px; margin-top:5px; color:var(--text-color); background:var(--editor-bg); border:1px solid var(--border-color); border-radius:6px; font:inherit; }
+.cloud-profile-dialog .cloud-sidebar-choice { display:flex; gap:7px; align-items:center; }
+.cloud-profile-dialog button, .cloud-profile-controls button { margin:8px 6px 0 0; }
+.cloud-profile-dialog [role=status] { color:var(--color-danger-fg); font-size:var(--ui-font-sm); }
+.cloud-profile-dialog input:focus-visible { outline:2px solid var(--accent-color); outline-offset:1px; }

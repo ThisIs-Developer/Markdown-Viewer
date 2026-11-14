@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const localStorage = globalThis.MarkdownCloudBrowserStorage?.local || globalThis.localStorage;
 
   const STORAGE_KEY = 'mdv.visualSettings.v1';
 

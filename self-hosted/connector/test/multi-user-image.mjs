@@ -1,0 +1,19 @@
+// Disposable production-policy container; no real cloud accounts or deployment changes.
+import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
+import {randomBytes} from 'node:crypto';
+import {request} from 'node:http';
+const image=process.argv[2] || 'markdown-viewer-cloud:multi-user-review',name='mv-multi-image-'+randomBytes(6).toString('hex'),volume=name+'-state';
+const docker=(...args)=>execFileSync('docker',args,{encoding:'utf8',windowsHide:true,stdio:['pipe','pipe','pipe']}).trim();
+const host='cloud-profile-test.example',origin='https://'+host,password=randomBytes(18).toString('base64url');let port,running=false;
+const agent=()=>{const jar=new Map();let csrf='',identity;const send=(route,body={},method='POST')=>new Promise((resolve,reject)=>{const req=request({hostname:'127.0.0.1',port,path:route,method,headers:{Host:host,Origin:origin,'Content-Type':'application/json','X-MV-Connector':'1','X-MV-CSRF':csrf,...(identity?{'X-MV-Workspace':identity.id}:{}),Cookie:[...jar].map(([k,v])=>k+'='+v).join('; ')}},res=>{for(const wire of res.headers['set-cookie'] || []){const [pair]=wire.split(';'),i=pair.indexOf('=');if(pair.slice(i+1))jar.set(pair.slice(0,i),pair.slice(i+1));else jar.delete(pair.slice(0,i));}let text='';res.setEncoding('utf8');res.on('data',value=>text+=value);res.on('end',()=>{let json;try{json=JSON.parse(text);}catch{}resolve({status:res.statusCode,text,json,headers:res.headers});});});req.on('error',reject);req.end(method==='GET'?undefined:JSON.stringify(body));});const boot=async()=>{const r=await send('/api/cloud/bootstrap.js',{},'GET');assert.equal(r.status,200,r.text);const value=JSON.parse(r.text.match(/MarkdownCloudConnector=(.*);/)[1]);csrf=value.csrf;identity=value.identity;return value;};return {send,boot,update:value=>{identity=value.identity;csrf=value.csrf;}};};
+try{
+ docker('run','--detach','--name',name,'--read-only','--cap-drop','ALL','--security-opt','no-new-privileges:true','--pids-limit','64','--memory','512m','--tmpfs','/tmp:size=16m,noexec,nosuid','--publish','127.0.0.1::80','--env','CLOUD_ENABLED=true','--env','CLOUD_MODE=multi-user','--env','CLOUD_REMEMBER_CONNECTIONS=true','--env','CLOUD_REMEMBER_DEVICE=true','--mount','type=volume,source='+volume+',target=/data',image);running=true;
+ const ready=async()=>{port=Number(docker('port',name,'80/tcp').split(':').at(-1));for(let i=0;i<60;i++){try{if((await agent().send('/health',{},'GET')).status===200)return;}catch{}await new Promise(resolve=>setTimeout(resolve,250));}throw Error('Multi-user image did not become healthy.');};await ready();
+ assert.equal(docker('exec',name,'id','-u'),'1000');const a=agent(),b=agent();const guest=await a.boot();assert.equal(guest.identity.kind,'guest');assert.equal(guest.mode,'multi-user');assert.equal(guest.rememberDevice,true);
+ const registration=await a.send('/api/cloud/profile/register',{username:'alice',password,remember:true});assert.equal(registration.status,200,registration.text);a.update(registration.json.result);assert.ok(registration.headers['set-cookie'].some(cookie=>cookie.startsWith('__Host-mv_cloud_device=') && cookie.includes('HttpOnly') && cookie.includes('Secure') && cookie.includes('SameSite=Strict')));
+ await b.boot();assert.deepEqual((await b.send('/api/cloud/accounts/list')).json.result,[]);
+ docker('restart',name);await ready();const restored=await a.boot();assert.equal(restored.identity.kind,'profile');assert.equal(restored.identity.name,'alice');
+ assert.equal((await a.send('/api/cloud/logout')).status,200);assert.equal((await a.boot()).identity.kind,'guest');
+ console.log('Production multi-user image: no shared password, non-root/read-only SQLite persistence, secure device cookie, restart restoration and logout revocation passed.');
+}finally{if(running){try{docker('rm','--force',name);}catch{}}try{docker('volume','rm',volume);}catch{}}

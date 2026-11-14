@@ -45,7 +45,7 @@ function setup() {
       }
     }
   };
-  const names = ['getDirtyDocumentJournalKey', 'clearDirtyDocumentJournal', '_flushTabsToStorage', 'recoverDirtyDocumentJournals'];
+  const names = ['isCloudDocument', 'getDirtyDocumentJournalKey', 'clearDirtyDocumentJournal', '_flushTabsToStorage', 'recoverDirtyDocumentJournals'];
   if (source.includes('function captureDirtyDocumentJournalSnapshot(')) names.unshift('captureDirtyDocumentJournalSnapshot');
   vm.createContext(target);
   vm.runInContext(names.map(productionFunction).join('\n'), target);
@@ -149,12 +149,15 @@ test('a newer journal survives an old save, then is cleared by its own successfu
   assert.equal(target.saved.at(-1), 'NEW');
 });
 
+for (const cloud of [false, true]) {
 for (const location of ['localStorage', 'sessionStorage', 'indexeddb']) {
   for (const scenario of ['saved', 'failed', 'metadata-only', 'newer-before-save', 'newer-during-save']) {
-    test(`recovered copy ${scenario}: ${location} source journal is consumed only by its matching successful save`, async () => {
+    test(`${cloud ? 'cloud' : 'local'} recovered copy ${scenario}: ${location} source journal is consumed only by its matching successful save`, async () => {
       const { target, tab, key } = setup();
       tab._storageRevision = 2;
-      const source = { ...journal('RECOVERED'), expectedRevision: 1, metadata: { reviewThreads: [] } };
+      if (cloud) tab.remoteSource = { provider: 'nextcloud', etag: '"original"' };
+      const originalSource = JSON.stringify(tab.remoteSource);
+      const source = { ...journal('RECOVERED'), expectedRevision: 1, metadata: { reviewThreads: [], ...(cloud ? { cloudRecovery: true } : {}) } };
       const write = value => location === 'indexeddb'
         ? target.journals.set(key, { ...value, journalId: key })
         : target[location].setItem(key, JSON.stringify(value));
@@ -164,6 +167,12 @@ for (const location of ['localStorage', 'sessionStorage', 'indexeddb']) {
       const ids = await target.recoverDirtyDocumentJournals();
       const recovered = target.tabs.find(item => item.id === ids[0]);
       assert.notEqual(recovered.id, source.documentId);
+      if (cloud) {
+        assert.equal(recovered.kind, 'cloud-recovery');
+        assert.equal(recovered.remoteSource, undefined);
+        assert.equal(tab.content, 'OLD');
+        assert.equal(JSON.stringify(tab.remoteSource), originalSource);
+      }
 
       const newer = { ...source, savedAt: 2, metadata: { reviewThreads: [{ body: 'NEW COMMENT' }] } };
       if (scenario === 'newer-before-save') write(newer);
@@ -179,6 +188,7 @@ for (const location of ['localStorage', 'sessionStorage', 'indexeddb']) {
       else assert.equal(read().content, source.content);
     });
   }
+}
 }
 
 test('a tracked key alone cannot authorize cleanup of another document journal', async () => {

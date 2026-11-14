@@ -200,3 +200,7 @@ See the [contributing guide](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT
 ## License
 
 Markdown Viewer is licensed under the [Apache License 2.0](LICENSE).
+
+## Experimental cloud connections
+
+This branch adds Nextcloud and generic WebDAV folder access for Windows desktop and optional personal or multi-user self-hosted web deployments. See the [cloud guide](docs/cloud-connections.md) for behavior, build/deployment instructions and security limits. The connector provides profile isolation, not operator-blind/E2EE hosting; review the deployment limits before Internet exposure.

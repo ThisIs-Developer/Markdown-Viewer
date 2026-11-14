@@ -42,6 +42,21 @@ export declare enum Architecture {
 	ia32 = "ia32",
 	unknown = "unknown"
 }
+export declare enum SendKeyState {
+	press = "press",
+	down = "down",
+	up = "up"
+}
+export declare enum NetworkFamily {
+	ipv4 = "ipv4",
+	ipv6 = "ipv6"
+}
+export declare enum AccessMode {
+	F_OK = 0,
+	R_OK = 4,
+	W_OK = 2,
+	X_OK = 1
+}
 export interface DirectoryEntry {
 	entry: string;
 	path: string;
@@ -128,6 +143,9 @@ declare function setPermissions(path: string, permissions: Permissions$1, mode: 
 declare function getJoinedPath(...paths: string[]): Promise<string>;
 declare function getNormalizedPath(path: string): Promise<string>;
 declare function getUnnormalizedPath(path: string): Promise<string>;
+declare function access(path: string, mode?: number): Promise<string>;
+declare function chmod(path: string, mode: number): Promise<string>;
+declare function chown(path: string, uid: number, gid: number): Promise<string>;
 export interface ExecCommandOptions {
 	stdIn?: string;
 	background?: boolean;
@@ -170,6 +188,7 @@ export interface Filter {
 export interface TrayOptions {
 	icon: string;
 	menuItems: TrayMenuItem[];
+	useTemplateIcon?: boolean;
 }
 export interface TrayMenuItem {
 	id?: string;
@@ -177,12 +196,18 @@ export interface TrayMenuItem {
 	isDisabled?: boolean;
 	isChecked?: boolean;
 }
+export interface LocaleInfo {
+	locale: string;
+	language: string;
+	region: string;
+}
 export type KnownPath = "config" | "data" | "cache" | "documents" | "pictures" | "music" | "video" | "downloads" | "savedGames1" | "savedGames2" | "temp";
 declare function execCommand(command: string, options?: ExecCommandOptions): Promise<ExecCommandResult>;
 declare function spawnProcess(command: string, options?: SpawnedProcessOptions): Promise<SpawnedProcess>;
 declare function updateSpawnedProcess(id: number, event: string, data?: any): Promise<void>;
 declare function getSpawnedProcesses(): Promise<SpawnedProcess[]>;
 declare function getEnv(key: string): Promise<string>;
+declare function setEnv(key: string, value: string): Promise<string>;
 declare function getEnvs(): Promise<Envs>;
 declare function showOpenDialog(title?: string, options?: OpenDialogOptions): Promise<string[]>;
 declare function showFolderDialog(title?: string, options?: FolderDialogOptions): Promise<string>;
@@ -192,6 +217,8 @@ declare function showMessageBox(title: string, content: string, choice?: Message
 declare function setTray(options: TrayOptions): Promise<void>;
 declare function open$1(url: string): Promise<void>;
 declare function getPath(name: KnownPath): Promise<string>;
+declare function trashItem(path: string): Promise<string>;
+declare function getLocaleInfo(): Promise<LocaleInfo>;
 export interface MemoryInfo {
 	physical: {
 		total: number;
@@ -227,6 +254,14 @@ export interface Display {
 	bpp: number;
 	refreshRate: number;
 }
+export interface Disk {
+	id: number;
+	vendor: string;
+	model: string;
+	serial: string;
+	total: number;
+	free: number;
+}
 export interface Resolution {
 	width: number;
 	height: number;
@@ -235,13 +270,29 @@ export interface MousePosition {
 	x: number;
 	y: number;
 }
+export interface NetworkInterfaceAddress {
+	address: string;
+	mac: string;
+	isInternal: boolean;
+	family: NetworkFamily;
+}
+export interface NetworkInterfaceInfo {
+	[key: string]: NetworkInterfaceAddress;
+}
 declare function getMemoryInfo(): Promise<MemoryInfo>;
 declare function getArch(): Promise<string>;
 declare function getKernelInfo(): Promise<KernelInfo>;
 declare function getOSInfo(): Promise<OSInfo>;
 declare function getCPUInfo(): Promise<CPUInfo>;
 declare function getDisplays(): Promise<Display[]>;
+declare function getDisks(): Promise<Disk>;
+declare function getHostname(): Promise<string>;
 declare function getMousePosition(): Promise<MousePosition>;
+declare function setMousePosition(x: number, y: number): Promise<void>;
+declare function setMouseGrabbing(grabbing: boolean): Promise<void>;
+declare function sendKey(key: number, state: SendKeyState): Promise<void>;
+declare function getNetworkInterfaces(): Promise<NetworkInterfaceInfo>;
+declare function getMachineId(): Promise<string>;
 declare function setData(key: string, data: string | null): Promise<void>;
 declare function getData(key: string): Promise<string>;
 declare function removeData(key: string): Promise<void>;
@@ -262,6 +313,7 @@ declare function broadcast(event: string, data?: any): Promise<void>;
 declare function readProcessInput(readAll?: boolean): Promise<string>;
 declare function writeProcessOutput(data: string): Promise<void>;
 declare function writeProcessError(data: string): Promise<void>;
+declare function getProcessId(): Promise<number>;
 export interface WindowOptions extends WindowSizeOptions, WindowPosOptions {
 	title?: string;
 	icon?: string;
@@ -406,6 +458,40 @@ declare function readBinaryFile$1(path: string): Promise<ArrayBuffer>;
 declare function mount(path: string, target: string): Promise<void>;
 declare function unmount(path: string): Promise<void>;
 declare function getMounts(): Promise<Record<string, string>>;
+export interface NetHeaders {
+	[key: string]: string;
+}
+export interface NetParams {
+	[key: string]: string;
+}
+export interface NetRequestOptions {
+	timeout?: boolean;
+	params?: NetParams[];
+	headers?: NetHeaders[];
+	auth?: {
+		username: string;
+		password: string;
+	};
+	encodePath: boolean;
+	keepAlive: boolean;
+}
+export interface NetResponse {
+	status: number;
+	statusText: string;
+	body: string;
+	headers: NetHeaders[];
+	cookies: string;
+	location: string;
+	version: string;
+}
+declare function request(url: string, method?: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function get(url: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function post(url: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function head(url: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function put(url: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function __delete(url: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function patch(url: string, options?: NetRequestOptions): Promise<NetResponse>;
+declare function options(url: string, options?: NetRequestOptions): Promise<NetResponse>;
 declare function getMethods(): Promise<string[]>;
 export interface InitOptions {
 	exportCustomMethods?: boolean;
@@ -467,13 +553,13 @@ declare namespace custom {
 	export { getMethods };
 }
 declare namespace filesystem {
-	export { appendBinaryFile, appendFile, copy, createDirectory, createWatcher, getAbsolutePath, getJoinedPath, getNormalizedPath, getOpenedFileInfo, getPathParts, getPermissions, getRelativePath, getStats, getUnnormalizedPath, getWatchers, move, openFile, readBinaryFile, readDirectory, readFile, remove, removeWatcher, setPermissions, updateOpenedFile, writeBinaryFile, writeFile };
+	export { access, appendBinaryFile, appendFile, chmod, chown, copy, createDirectory, createWatcher, getAbsolutePath, getJoinedPath, getNormalizedPath, getOpenedFileInfo, getPathParts, getPermissions, getRelativePath, getStats, getUnnormalizedPath, getWatchers, move, openFile, readBinaryFile, readDirectory, readFile, remove, removeWatcher, setPermissions, updateOpenedFile, writeBinaryFile, writeFile };
 }
 declare namespace os {
-	export { execCommand, getEnv, getEnvs, getPath, getSpawnedProcesses, open$1 as open, setTray, showFolderDialog, showMessageBox, showNotification, showOpenDialog, showSaveDialog, spawnProcess, updateSpawnedProcess };
+	export { execCommand, getEnv, getEnvs, getLocaleInfo, getPath, getSpawnedProcesses, open$1 as open, setEnv, setTray, showFolderDialog, showMessageBox, showNotification, showOpenDialog, showSaveDialog, spawnProcess, trashItem, updateSpawnedProcess };
 }
 declare namespace computer {
-	export { getArch, getCPUInfo, getDisplays, getKernelInfo, getMemoryInfo, getMousePosition, getOSInfo };
+	export { getArch, getCPUInfo, getDisks, getDisplays, getHostname, getKernelInfo, getMachineId, getMemoryInfo, getMousePosition, getNetworkInterfaces, getOSInfo, sendKey, setMouseGrabbing, setMousePosition };
 }
 declare namespace storage {
 	export { clear, getData, getKeys, removeData, setData };
@@ -482,7 +568,7 @@ declare namespace debug {
 	export { log };
 }
 declare namespace app {
-	export { broadcast, exit, getConfig, killProcess, readProcessInput, restartProcess, writeProcessError, writeProcessOutput };
+	export { broadcast, exit, getConfig, getProcessId, killProcess, readProcessInput, restartProcess, writeProcessError, writeProcessOutput };
 }
 declare namespace window$1 {
 	export { beginDrag, center, create, exitFullScreen, focus$1 as focus, getPosition, getSize, getTitle, hide, isFullScreen, isMaximized, isMinimized, isVisible, maximize, minimize, move$1 as move, print$1 as print, setAlwaysOnTop, setBorderless, setDraggableRegion, setFullScreen, setIcon, setMainMenu, setSize, setTitle, show, snapshot, unmaximize, unminimize, unsetDraggableRegion };
@@ -505,6 +591,9 @@ declare namespace resources {
 declare namespace server {
 	export { getMounts, mount, unmount };
 }
+declare namespace net {
+	export { __delete as delete, get, head, options, patch, post, put, request };
+}
 
 export {
 	Error$1 as Error,
@@ -518,6 +607,7 @@ export {
 	events,
 	extensions,
 	filesystem,
+	net,
 	os,
 	resources,
 	server,
