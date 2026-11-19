@@ -20,6 +20,7 @@ const requiredFiles = [
   'sharing-crypto.js',
   'sharing-media.js',
   'sharing-live.js',
+  'sharing-recovery.js',
   'assets/yjs.mjs',
   'browser-drop-source.js',
   'preview-worker.js',
@@ -55,6 +56,7 @@ const syntaxCheckedFiles = [
   'sharing-crypto.js',
   'sharing-media.js',
   'sharing-live.js',
+  'sharing-recovery.js',
   'src/document-toc.mjs',
   'browser-drop-source.js',
   'assets/document-toc.js',
@@ -87,6 +89,7 @@ const syncedDesktopFiles = [
   ['sharing-crypto.js', 'desktop-app/resources/js/sharing-crypto.js'],
   ['sharing-media.js', 'desktop-app/resources/js/sharing-media.js'],
   ['sharing-live.js', 'desktop-app/resources/js/sharing-live.js'],
+  ['sharing-recovery.js', 'desktop-app/resources/js/sharing-recovery.js'],
   ['script.js', 'desktop-app/resources/js/script.js'],
   ['browser-drop-source.js', 'desktop-app/resources/js/browser-drop-source.js'],
   ['workspace-storage.js', 'desktop-app/resources/js/workspace-storage.js'],
@@ -121,7 +124,7 @@ for (const relativePath of ['manifest.json', 'vercel.json', ...fs.readdirSync(pa
 const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
 const desktopHtml = fs.readFileSync(path.join(rootDir, 'desktop-app/resources/index.html'), 'utf8');
 let previousDesktopScript = -1;
-for (const name of ['neutralino', 'main', 'workspace-storage', 'visual-settings-adapters', 'visual-settings-store', 'sharing-crypto', 'sharing-media', 'sharing-live', 'script']) {
+for (const name of ['neutralino', 'main', 'workspace-storage', 'visual-settings-adapters', 'visual-settings-store', 'sharing-crypto', 'sharing-media', 'sharing-live', 'sharing-recovery', 'script']) {
   const position = desktopHtml.indexOf(`src="/js/${name}.js"`);
   if (position <= previousDesktopScript) throw new Error(`Missing or out-of-order desktop script: ${name}`);
   previousDesktopScript = position;

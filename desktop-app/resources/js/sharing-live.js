@@ -8,6 +8,7 @@
     let sendChain = Promise.resolve(), receiveChain = Promise.resolve();
     let queuedBytes = 0, queuedCount = 0, incomingBytes = 0, incomingCount = 0;
     const waiting = [];
+    const challenge = C.random(16), peers = new Map();
     let resolveReady, rejectReady;
     const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     // A rejected connection is also reported through onStatus; callers may await ready.
@@ -60,6 +61,38 @@
       send({ type: 'presence', participant: options.getParticipant(), cursor: cursor || null });
     }
     const transport = { publishCurrentState, publishReviewState, publishControlState, publishPresence };
+    function hello() { return send({ type: 'hello', challenge }); }
+    function receiveVerified(message) {
+      const id = message.role + ':' + message.sender + ':' + message.session;
+      if (!peers.has(id)) {
+        if (peers.size >= 1024) throw new Error('Too many live sessions.');
+        peers.set(id, { proven: false, challenged: false, replies: new Set() });
+      }
+      const peer = peers.get(id);
+      if (message.type === 'hello') {
+        if (typeof message.challenge !== 'string' || C.decode(message.challenge, 16).length !== 16) throw new Error('Fresh challenge required.');
+        if (!peer.replies.has(message.challenge)) {
+          if (peer.replies.size >= 4) throw new Error('Too many session challenges.');
+          peer.replies.add(message.challenge);
+          send({ type: 'session-proof', recipient: message.sender, recipientSession: message.session,
+            challenge: message.challenge, participant: options.getParticipant() });
+        }
+        if (!peer.challenged) { peer.challenged = true; hello(); }
+        return;
+      }
+      if (message.type === 'session-proof') {
+        if (message.recipient !== options.participantId || message.recipientSession !== cryptoSession.session ||
+            message.challenge !== challenge || peer.proven) return;
+        peer.proven = true;
+        // The authenticated proof establishes this receiver's sequence floor.
+        // No replayed data, presence, or host controls are applied before it.
+        options.onMessage(Object.assign({}, message, { type: 'hello' }), transport);
+        send({ type: 'sync-request' }); send({ type: 'review-sync-request' });
+        publishControlState(); publishCurrentState(); publishReviewState(); publishPresence(options.getCursor());
+        return;
+      }
+      if (peer.proven) options.onMessage(message, transport);
+    }
     const update = (bytes, origin) => {
       if (origin === options.relayOrigin || (options.canSendUpdate && !options.canSendUpdate())) return;
       send({ type: 'y-update', update: C.encode(bytes) });
@@ -73,7 +106,7 @@
     options.controlDoc.on('update', publishControlState);
     socket.addEventListener('open', () => {
       if (destroyed || failed) return;
-      socket.send(JSON.stringify({ v: 2, type: 'authenticate', role: options.role,
+      socket.send(JSON.stringify({ v: 2, freshness: 1, type: 'authenticate', role: options.role,
         capability: options.capability, capabilities: options.role === 'host' ? options.capabilities : undefined,
         sender: options.participantId, session: cryptoSession.session, config: options.encryption.config }));
     });
@@ -87,14 +120,11 @@
       receiveChain = receiveChain.then(async () => {
         if (destroyed || failed) return;
         const frame = JSON.parse(event.data);
-        if (!opened && frame.type === 'ready' && frame.v === 2 && Object.keys(frame).length === 2) {
+        if (!opened && frame.type === 'ready' && frame.v === 2 && frame.freshness === 1 && Object.keys(frame).length === 3) {
           opened = true;
           clearTimeout(timer);
           waiting.splice(0).forEach(value => socket.send(value));
-          send({ type: 'hello', participant: options.getParticipant() });
-          send({ type: 'sync-request' });
-          send({ type: 'review-sync-request' });
-          publishControlState(); publishCurrentState(); publishReviewState(); publishPresence(options.getCursor());
+          hello();
           options.onStatus('Connected to encrypted live room', 'connected');
           resolveReady();
           return;
@@ -102,7 +132,7 @@
         if (!opened) throw new Error('Authentication required');
         const message = await cryptoSession.decrypt(frame);
         if (destroyed || failed || message.sender === options.participantId) return;
-        options.onMessage(message, transport);
+        receiveVerified(message);
       }).catch(() => fail('An encrypted live message could not be verified. Rejoin with the complete invite link.'))
         .finally(() => { incomingCount -= 1; incomingBytes -= event.data.length; });
     });

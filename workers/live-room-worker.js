@@ -119,8 +119,9 @@ function normalizeOutboundMessage(message, fallbackSender, roomId, role) {
 }
 
 export class LiveRoom {
-  constructor(state) {
+  constructor(state, env) {
     this.state = state;
+    this.env = env || {};
     this.sessions = new Map();
   }
 
@@ -263,8 +264,8 @@ export class LiveRoom {
   async authenticateEncrypted(message, roomId) {
     const role = message.role;
     if (!Sharing.exactKeys(message, role === 'host'
-      ? ['type', 'v', 'role', 'sender', 'session', 'config', 'capability', 'capabilities']
-      : ['type', 'v', 'role', 'sender', 'session', 'config', 'capability'])) return null;
+      ? ['type', 'v', 'freshness', 'role', 'sender', 'session', 'config', 'capability', 'capabilities']
+      : ['type', 'v', 'freshness', 'role', 'sender', 'session', 'config', 'capability']) || message.freshness !== 1) return null;
     if (!['host', 'edit', 'view'].includes(role) || !isValidCapability(message.capability) ||
         typeof message.sender !== 'string' || !/^[A-Za-z0-9_-]{16,120}$/.test(message.sender) ||
         typeof message.session !== 'string' || !/^[A-Za-z0-9_-]{22}$/.test(message.session)) return null;
@@ -272,6 +273,7 @@ export class LiveRoom {
     try { config = Sharing.publicConfig(message.config, roomId); } catch (_) { return null; }
     if (config.expiresAt <= Date.now() || config.expiresAt > Date.now() + 86400000) return null;
     const providedHash = await Sharing.hash(message.capability);
+    const sessionHash = await Sharing.hash(JSON.stringify([role, message.sender, message.session]));
     let hashes = null;
     if (role === 'host') {
       const caps = message.capabilities;
@@ -283,15 +285,22 @@ export class LiveRoom {
     const auth = await this.state.storage.transaction(async txn => {
       let current = await txn.get(ENCRYPTED_AUTH_KEY);
       if (!current) {
-        if (role !== 'host') return null;
-        current = { config, hashes, expiresAt: config.expiresAt, ended: false };
-        await txn.put(ENCRYPTED_AUTH_KEY, current);
+        if (role !== 'host' || this.env.SHARING_LIVE_CREATION_ENABLED === 'false') return null;
+        current = { config, hashes, expiresAt: config.expiresAt, ended: false, sessions: [] };
+        await txn.setAlarm(config.expiresAt);
       }
       if (current.ended || current.expiresAt <= Date.now() || current.hashes[role] !== providedHash ||
           JSON.stringify(current.config) !== JSON.stringify(config)) return null;
+      // Upgrade an existing pre-release encrypted room on its first refreshed
+      // admission, retaining its original config, expiry and alarm.
+      if (!Object.hasOwn(current, 'sessions')) current.sessions = [];
+      // One bounded record per admission, never a write for every live frame.
+      // A reconnect must generate a fresh HKDF session and nonce sequence.
+      if (!Array.isArray(current.sessions) || current.sessions.length >= 1024 || current.sessions.includes(sessionHash)) return null;
+      current.sessions.push(sessionHash);
+      await txn.put(ENCRYPTED_AUTH_KEY, current);
       return current;
     });
-    if (auth) await this.state.storage.setAlarm(auth.expiresAt);
     return auth;
   }
 
@@ -326,7 +335,7 @@ export class LiveRoom {
           Object.assign(session, { authenticated: true, role: message.role, participantId: message.sender,
             cryptoSession: message.session, config: auth.config, expiresAt: auth.expiresAt });
           clearTimeout(timeout);
-          safeSend(socket, { type: 'ready', v: 2 });
+          safeSend(socket, { type: 'ready', v: 2, freshness: 1 });
           return;
         }
         if (session.expiresAt <= Date.now()) throw new Error('Room expired');

@@ -112,7 +112,7 @@ Markdown Viewer is local-first, not network-free. The following table shows the 
 | Workflow | Default data path |
 | :--- | :--- |
 | Editing, local imports, Preview, Workspace autosave, and most exports | On the device |
-| Web libraries and uncached renderer dependencies | CDN requests in the web/PWA build |
+| Core web libraries / optional uncached renderer dependencies | Bundled local core assets / CDN requests for optional renderers |
 | GitHub import and emoji lookup | Public content uses GitHub APIs and raw-content hosts; private content uses an optional PAT only with `api.github.com` |
 | PlantUML, D2, Graphviz, Vega-Lite, WaveDrom, and some diagram previews | Diagram source can be sent to PlantUML, Kroki, or mermaid.ink |
 | Consented image, GIF, and video insertion | Encrypted Cloudflare media storage for 90 days |
@@ -121,6 +121,8 @@ Markdown Viewer is local-first, not network-free. The following table shows the 
 | External images, media, links, and map tiles | The referenced external host |
 
 Share Snapshot and Live Share URLs are bearer links. Anyone who obtains a valid link and capability can use the access it grants. New snapshots, managed media, and live rooms use client-side encryption; complete links contain decryption keys. See [Privacy and Security](wiki/Privacy-and-Security.md) before using network features with sensitive content.
+
+Encrypted document recovery files use a separate user-held key and restore as new local documents. See [recovery and rollout](docs/ENCRYPTED_SHARING.md) and [Cloudflare usage limits](docs/SHARING_USAGE.md).
 
 ## Visual Renderer Summary
 

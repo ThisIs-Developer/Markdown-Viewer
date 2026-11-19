@@ -8,6 +8,12 @@ export class TestLiveRoom extends LiveRoom {
     const url = new URL(request.url);
     if (url.pathname === '/__test/inspect') return Response.json(await this.state.storage.get('live-room-auth-v2') || null);
     if (url.pathname === '/__test/alarm') return Response.json(await this.state.storage.getAlarm());
+    if (url.pathname === '/__test/pre-hardening') {
+      const auth = await this.state.storage.get('live-room-auth-v2');
+      delete auth.sessions;
+      await this.state.storage.put('live-room-auth-v2', auth);
+      return Response.json({ seeded: true });
+    }
     if (url.pathname === '/__test/expire') { await super.alarm(); return Response.json({ expired: true }); }
     if (url.pathname === '/__test/legacy') {
       await this.state.storage.put('live-room-auth-v1', await request.json());

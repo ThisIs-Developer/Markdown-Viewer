@@ -196,6 +196,8 @@ See the [Security Policy](../SECURITY.md) for supported versions and vulnerabili
 
 ## Known Limitations
 
+New encrypted rooms require fresh signed, recipient-bound proofs before applying peer state and reject previously admitted sessions. Core parser and sanitizer assets are bundled locally from locked packages. Private SVG presentation attributes block external resources. Encrypted document recovery uses a separate user-held file and key; restores create ordinary local Workspace documents. See [protocol details](../docs/ENCRYPTED_SHARING.md) and [usage limits](../docs/SHARING_USAGE.md).
+
 - Bearer links can be forwarded, logged by surrounding systems, copied into chat, or exposed through browser synchronization.
 - New live rooms encrypt content and retain authentication metadata for 24 hours; complete links still grant bearer access.
 - Snapshot deletion authority is kept only in the current generated-link modal; closing/resetting it loses that credential.

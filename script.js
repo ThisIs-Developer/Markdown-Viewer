@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function () {
+  // Hold private rendering through asynchronous invite loading, before the
+  // default document can start optional remote renderer downloads.
+  let encryptedEntryPending = /^#(?:share=v2\.|id=s2_|live=room2_)/.test(window.location.hash);
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
   const APP_VERSION = '3.10.6';
@@ -547,9 +550,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function isEncryptedSharingActive() {
-    const tab = tabs.find(item => item.id === activeTabId);
-    return Boolean((tab && tab.encryptedSharing) ||
-      (liveCollaboration && liveCollaboration.encryption && liveCollaboration.tabId === activeTabId));
+    if (encryptedEntryPending) return true;
+    const visible = [activeTabId, secondarySplitTabId].filter(Boolean);
+    return Boolean(tabs.some(item => visible.includes(item.id) && item.encryptedSharing) ||
+      (liveCollaboration && liveCollaboration.encryption && visible.includes(liveCollaboration.tabId)));
   }
 
   function prepareSharedPreviewHtml(html) {
@@ -15035,7 +15039,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const referenceData = extractReferenceDefinitions(parsed.body);
     const html = tableHtml + marked.parse(referenceData.cleanedMarkdown);
     disposeDocumentSplitPreviewResources();
-    const privateContent = Boolean(tab.encryptedSharing || (liveCollaboration && liveCollaboration.encryption && liveCollaboration.tabId === tab.id));
+    const privateContent = isEncryptedSharingActive();
     documentSplitPreview.innerHTML = MarkdownShareMedia.prepareHtml(sanitizePreviewHtml(html), { base: getShareApiBaseUrl(), privateContent });
     MarkdownShareMedia.resolve(documentSplitPreview, { base: getShareApiBaseUrl() }).catch(function() {});
     applyReferencePreviewLinks(documentSplitPreview, referenceData.definitions);
@@ -27503,6 +27507,8 @@ ${selector} .arrowheadPath {
     openGitHubImportModal();
   });
   mobileExportMd.addEventListener("click", () => { closeMobileMenu(); exportMd.click(); });
+  document.getElementById('mobile-export-recovery')?.addEventListener('click', () => { closeMobileMenu(); document.getElementById('export-recovery').click(); });
+  document.getElementById('mobile-import-recovery')?.addEventListener('click', () => { closeMobileMenu(); document.getElementById('import-recovery').click(); });
   mobileExportHtml.addEventListener("click", () => { closeMobileMenu(); exportHtml.click(); });
   mobileExportPdf.addEventListener("click", () => { closeMobileMenu(); exportPdf.click(); });
   mobileExportPng.addEventListener("click", () => { closeMobileMenu(); exportPng.click(); });
@@ -27701,6 +27707,10 @@ ${selector} .arrowheadPath {
   async function applyVisualSettings(settings, changedKey) {
     if (window.visualSettingsAdapters) {
       try {
+        if (isEncryptedSharingActive()) {
+          await window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme);
+          return;
+        }
         if (changedKey === 'hljsTheme') {
           await window.visualSettingsAdapters.applyHighlightTheme(settings.hljsTheme);
         } else if (changedKey === 'mathFont') {
@@ -28877,6 +28887,28 @@ ${selector} .arrowheadPath {
       await importMarkdownFiles(e.target.files);
     } finally {
       this.value = "";
+    }
+  });
+
+  MarkdownShareRecovery.attach({
+    openModal: openAppModal, closeModal: closeAppModal, download: saveAs, base: getShareApiBaseUrl,
+    getDocument() {
+      if (!hasActiveOpenDocument() || isReleaseNotesActive() || blockShareSnapshotSourceAccess()) return null;
+      const tab = tabs.find(item => item.id === activeTabId);
+      return { content: markdownEditor.value, title: tab.title || 'Recovered document', reviewThreads: normalizeReviewThreads(tab.reviewThreads) };
+    },
+    async restoreDocument(payload) {
+      const tab = createImportedDocument(payload.content, payload.title + ' (recovered)', { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
+      if (!tab) throw new Error('Workspace is busy. Try restoring again.');
+      tab.reviewThreads = normalizeReviewThreads(payload.reviewThreads);
+      tab.encryptedSharing = true;
+      await switchTab(tab.id);
+      // Commit the opened state and the previous document's pending edits before
+      // reporting recovery complete. An immediate reload must keep both copies.
+      const saved = await _flushTabsToStorage(tabs, { requireExactCommit: !isPrivateStorageMode() });
+      renderDocumentSidebar();
+      if (!saved) throw new Error('The recovered draft could not be saved. Keep your recovery file and try saving again.');
+      showAppToast('Recovered as a new local document. Keep your recovery file and key.', { tone: 'success' });
     }
   });
 
@@ -33132,8 +33164,7 @@ ${selector} .arrowheadPath {
     }
   }
 
-  loadFromShareHash();
-  loadFromLiveHash();
+  Promise.all([loadFromShareHash(), loadFromLiveHash()]).finally(() => { encryptedEntryPending = false; });
 
   // Document-wide drag-and-drop: track nesting level for reliable enter/leave detection
   document.addEventListener("dragenter", function(e) {

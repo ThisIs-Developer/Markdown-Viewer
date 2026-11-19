@@ -25,12 +25,18 @@ test('real Durable Object relays only signed encrypted frames and stores no cont
       assert.equal(response.status, 101);
       const socket = response.webSocket; sockets.push(socket); socket.accept();
       const ready = next(socket);
-      socket.send(JSON.stringify({ type: 'authenticate', v: 2, role, sender, session: crypto.session, config: keys.config,
-        capability: caps[role], ...(role === 'host' ? { capabilities: caps } : {}) }));
-      assert.deepEqual(await ready, { type: 'ready', v: 2 });
-      return { socket, crypto };
+      const authentication = { type: 'authenticate', v: 2, freshness: 1, role, sender, session: crypto.session, config: keys.config,
+        capability: caps[role], ...(role === 'host' ? { capabilities: caps } : {}) };
+      socket.send(JSON.stringify(authentication));
+      assert.deepEqual(await ready, { type: 'ready', v: 2, freshness: 1 });
+      return { socket, crypto, authentication };
     }
     const host = await join('host'), editor = await join('edit'), viewer = await join('view');
+    const replay = await runtime.dispatchFetch(origin + '/live-room/' + roomId + '?v=2', { headers: { Origin: origin, Upgrade: 'websocket' } });
+    const replaySocket = replay.webSocket; sockets.push(replaySocket); replaySocket.accept();
+    const reused = next(replaySocket, 'close');
+    replaySocket.send(JSON.stringify(editor.authentication));
+    assert.equal((await reused).code, 1008, 'a previously admitted crypto session cannot be reused');
     const pending = next(viewer.socket), update = await editor.crypto.encrypt({ type: 'y-update', update: 'SECRET DOCUMENT' });
     editor.socket.send(JSON.stringify(update));
     const wire = await pending;
@@ -44,6 +50,12 @@ test('real Durable Object relays only signed encrypted frames and stores no cont
       assert.equal(JSON.stringify(auth).includes(secret), false);
     }
     assert.equal(auth.expiresAt, keys.config.expiresAt);
+    assert.equal(await (await stub.fetch('https://local/__test/alarm')).json(), keys.config.expiresAt);
+    await stub.fetch('https://local/__test/pre-hardening', { method: 'POST' });
+    await join('edit');
+    const upgraded = await (await stub.fetch('https://local/__test/inspect')).json();
+    assert.equal(upgraded.expiresAt, keys.config.expiresAt);
+    assert.equal(upgraded.sessions.length, 1);
     assert.equal(await (await stub.fetch('https://local/__test/alarm')).json(), keys.config.expiresAt);
 
     const denied = next(viewer.socket, 'close');
@@ -59,7 +71,7 @@ test('real Durable Object relays only signed encrypted frames and stores no cont
     const reconnect = await runtime.dispatchFetch(origin + '/live-room/' + roomId + '?v=2', { headers: { Origin: origin, Upgrade: 'websocket' } });
     const rejected = reconnect.webSocket; sockets.push(rejected); rejected.accept();
     const closed = next(rejected, 'close');
-    rejected.send(JSON.stringify({ type: 'authenticate', v: 2, role: 'view', sender: 'participant-' + C.random(12),
+    rejected.send(JSON.stringify({ type: 'authenticate', v: 2, freshness: 1, role: 'view', sender: 'participant-' + C.random(12),
       session: C.random(16), config: keys.config, capability: caps.view }));
     assert.equal((await closed).code, 1008);
     await stub.fetch('https://local/__test/expire', { method: 'POST' });

@@ -39,6 +39,10 @@ Web Markdown exports inline decrypted managed media. Encrypted-share HTML export
 
 ## Failure and Recovery
 
+Use **Export → Encrypted recovery file** to keep a portable encrypted document copy with comments and managed attachments. Save the displayed recovery key separately. **New → Restore encrypted document** creates a new local document from the file and key without replacing existing documents. The payload limit is 8 MiB; external links remain links. Neither the service nor the file alone can recover a lost key. Test a restore in a separate browser profile. See [protocol and recovery details](../docs/ENCRYPTED_SHARING.md#portable-recovery).
+
+Attachment downloads use a bounded memory-only ciphertext cache for up to 60 seconds, reducing repeat reads during editing. [Usage and free-plan limits](../docs/SHARING_USAGE.md) explains the actual KV operations and separate live-room allowances.
+
 | Symptom | Action |
 | :--- | :--- |
 | Incomplete link or decryption failure | Ask for the entire original link, including everything after `#`; there is no plaintext fallback |

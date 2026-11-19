@@ -28,10 +28,10 @@ async function api(path) {
 const snapshotApi = await api('functions/api/share/[[id]].js');
 const mediaApi = await api('functions/api/image/[[id]].js');
 function kv() {
-  const values = new Map(), writes = [];
-  return { values, writes, async get(id) { return values.get(id) || null; },
+  const values = new Map(), writes = [], reads = [], deletes = [];
+  return { values, writes, reads, deletes, async get(id) { reads.push(id); return values.get(id) || null; },
     async put(id, value, options) { writes.push({ id, value, options }); values.set(id, value); },
-    async delete(id) { values.delete(id); } };
+    async delete(id) { deletes.push(id); values.delete(id); } };
 }
 function request(method, body, id = '', kind = 'share') {
   return new Request('https://markdownviewer.pages.dev/api/' + kind + (id ? '/' + id : ''), {
@@ -73,6 +73,8 @@ test('snapshot API stores only an envelope and separates creator deletion author
   const encrypted = await C.seal({ content, title: 'CONFIDENTIAL TITLE', mode: 'view' }, key, 'snapshot');
   const created = await call(snapshotApi, store, 'POST', { encrypted });
   assert.equal(created.status, 201);
+  assert.equal(store.reads.length, 0, 'creation needs no KV collision lookup');
+  assert.equal(store.writes.length, 1);
   const { id, deleteToken, expiresIn } = await created.json();
   assert.match(id, /^s2_[A-Za-z0-9_-]{24}$/);
   assert.equal(expiresIn, 90 * 86400);
@@ -81,10 +83,12 @@ test('snapshot API stores only an envelope and separates creator deletion author
   assert.equal(store.writes[0].options.expirationTtl, 90 * 86400);
   for (const secret of [key, content, deleteToken, 'CONFIDENTIAL TITLE']) assert.equal(JSON.stringify(record).includes(secret), false);
   const fetched = await call(snapshotApi, store, 'GET', undefined, id);
+  assert.equal(store.reads.length, 1, 'opening a stored snapshot costs one read');
   assert.equal(fetched.headers.get('Cache-Control'), 'no-store');
   assert.deepEqual(await fetched.json(), { encrypted });
   assert.equal((await call(snapshotApi, store, 'DELETE', { deleteToken: key }, id)).status, 404);
   assert.equal((await call(snapshotApi, store, 'DELETE', { deleteToken }, id)).status, 200);
+  assert.equal(store.deletes.length, 1);
   assert.equal((await call(snapshotApi, store, 'GET', undefined, id)).status, 404);
 });
 
@@ -113,6 +117,8 @@ test('managed media uses encrypted random records; legacy media is not refreshed
   const store = kv(), key = C.random(), encrypted = await C.seal({ dataUrl: png }, key, 'media', C.MEDIA_LIMIT);
   const response = await call(mediaApi, store, 'POST', { encrypted });
   assert.equal(response.status, 201);
+  assert.equal(store.reads.length, 0);
+  assert.equal(store.writes.length, 1);
   const result = await response.json();
   assert.match(result.id, /^e2_[A-Za-z0-9_-]{24}$/);
   const raw = store.values.get('managed-media-v2:' + result.id);

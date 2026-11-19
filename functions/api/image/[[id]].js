@@ -1,4 +1,5 @@
 import '../../../sharing-crypto.js';
+import { sharingGuard } from '../../../server/sharing-guard.js';
 const Sharing = globalThis.MarkdownShareCrypto;
 const MAX_IMAGE_BYTES = 300 * 1024;
 const MAX_GIF_BYTES = 5 * 1024 * 1024;
@@ -136,6 +137,8 @@ export async function onRequest({ request, env, params }) {
     return jsonResponse({ error: "media storage is not configured" }, { status: 503 }, request);
   }
 
+  const limited = sharingGuard(request, env);
+  if (limited) return jsonResponse({ error: limited.error }, { status: limited.status, headers: { 'Retry-After': '60' } }, request);
   if (request.method === "POST" && !id) {
     const origin = request.headers.get("Origin") || "";
     if (!isAllowedOrigin(origin)) return jsonResponse({ error: "origin not allowed" }, { status: 403 }, request);
@@ -177,7 +180,7 @@ export async function onRequest({ request, env, params }) {
       if (!Number.isFinite(record.expiresAt) || record.expiresAt <= Date.now()) {
         return jsonResponse({ error: 'media expired' }, { status: 404 }, request);
       }
-      const response = jsonResponse({ encrypted: Sharing.envelope(record.encrypted, Sharing.MEDIA_LIMIT) }, {}, request);
+      const response = jsonResponse({ encrypted: Sharing.envelope(record.encrypted, Sharing.MEDIA_LIMIT), expiresAt: record.expiresAt }, {}, request);
       response.headers.set('Access-Control-Allow-Origin', '*');
       return request.method === 'HEAD' ? new Response(null, { headers: response.headers }) : response;
     } catch (_) { return jsonResponse({ error: 'media unavailable' }, { status: 500 }, request); }

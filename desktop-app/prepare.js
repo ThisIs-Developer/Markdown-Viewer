@@ -49,7 +49,7 @@ console.log("✓ Copied script.js → resources/js/script.js");
 fs.copyFileSync(path.join(ROOT_DIR, "workspace-storage.js"), path.join(jsDest, "workspace-storage.js"));
 fs.copyFileSync(path.join(ROOT_DIR, "native-markdown-source.js"), path.join(jsDest, "native-markdown-source.js"));
 fs.copyFileSync(path.join(ROOT_DIR, "browser-drop-source.js"), path.join(jsDest, "browser-drop-source.js"));
-for (const name of ['sharing-crypto.js', 'sharing-media.js', 'sharing-live.js']) {
+for (const name of ['sharing-crypto.js', 'sharing-media.js', 'sharing-live.js', 'sharing-recovery.js']) {
   fs.copyFileSync(path.join(ROOT_DIR, name), path.join(jsDest, name));
 }
 console.log("✓ Copied workspace-storage.js → resources/js/workspace-storage.js");
@@ -355,7 +355,7 @@ async function prepareOfflineDependencies() {
 
   html = html.replace(/<script src="native-markdown-source\.js" defer><\/script>/g, '<script src="/js/native-markdown-source.js"></script>');
   html = html.replace(/<script src="browser-drop-source\.js" defer><\/script>/g, '<script src="/js/browser-drop-source.js"></script>');
-  html = html.replace(/<script src="(sharing-(?:crypto|media|live)\.js)" defer><\/script>/g, '<script src="/js/$1"></script>');
+  html = html.replace(/<script src="(sharing-(?:crypto|media|live|recovery)\.js)" defer><\/script>/g, '<script src="/js/$1"></script>');
 
   // Preserve script order without requiring adjacent tags: sharing modules load
   // between settings and the application entry point.

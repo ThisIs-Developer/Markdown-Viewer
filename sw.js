@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-v2';
+const CACHE_NAME = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-v2-hardened';
 
 // PERF-011: Split precache into critical (local files) and lazy (CDN libraries)
 // Critical assets are precached during SW install for instant offline startup
@@ -12,7 +12,10 @@ const CRITICAL_ASSETS = [
   './sharing-crypto.js',
   './sharing-media.js',
   './sharing-live.js',
+  './sharing-recovery.js',
   './assets/yjs.mjs',
+  ...['marked.min.js', 'highlight.min.js', 'powershell.min.js', 'purify.min.js', 'FileSaver.min.js',
+    'js-yaml.min.js', 'bootstrap.bundle.min.js', 'bootstrap.min.css', 'github-markdown.css'].map(name => './assets/vendor/' + name),
   './browser-drop-source.js',
   './preview-worker.js',
   './styles.css',
@@ -44,7 +47,10 @@ const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/sharing-crypto.js',
   '/sharing-media.js',
   '/sharing-live.js',
+  '/sharing-recovery.js',
   '/assets/yjs.mjs',
+  ...['marked.min.js', 'highlight.min.js', 'powershell.min.js', 'purify.min.js', 'FileSaver.min.js',
+    'js-yaml.min.js', 'bootstrap.bundle.min.js', 'bootstrap.min.css', 'github-markdown.css'].map(name => '/assets/vendor/' + name),
   '/browser-drop-source.js',
   '/preview-worker.js',
   '/styles.css',

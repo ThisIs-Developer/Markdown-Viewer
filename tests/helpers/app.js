@@ -656,7 +656,7 @@ async function stubLiveShareRuntime(page) {
         window.__liveWireMessages = window.__liveWireMessages || [];
         window.__liveWireMessages.push(message);
         if (message.type === 'authenticate') {
-          setTimeout(() => this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'ready', v: 2 }) })), 0);
+          setTimeout(() => this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'ready', v: 2, freshness: 1 }) })), 0);
           return;
         }
         this.channel.postMessage({ sender: this.id, payload });

@@ -8,7 +8,7 @@
   const LIVE_LIMIT = 8 * 1024 * 1024;
   const MAX_SEQUENCE = 0xffffffff;
   const TOKEN = /^[A-Za-z0-9_-]{16,160}$/;
-  const TYPES = ['hello', 'presence', 'sync-request', 'sync-state', 'y-update',
+  const TYPES = ['hello', 'session-proof', 'presence', 'sync-request', 'sync-state', 'y-update',
     'review-sync-request', 'review-sync-state', 'review-update', 'control-state', 'leave', 'session-end'];
 
   function cryptoApi() {
@@ -122,6 +122,10 @@
   async function verifyFrame(frame, config) {
     liveFrame(frame);
     publicConfig(config, frame.roomId);
+    if (config.expiresAt <= Date.now()) throw new Error('This encrypted room has expired.');
+    const expectedIv = new Uint8Array(12);
+    new DataView(expectedIv.buffer).setUint32(8, frame.seq);
+    if (frame.iv !== encode(expectedIv) || decode(frame.session, 16).length !== 16) throw new Error('Invalid live nonce.');
     const key = await cryptoApi().subtle.importKey('raw', decode(config[frame.role], 65), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
     if (!await cryptoApi().subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, decode(frame.sig, 64), signedBytes(frame))) {
       throw new Error('Invalid live signature.');
@@ -151,6 +155,7 @@
     return {
       session,
       async encrypt(message) {
+        if (config.expiresAt <= Date.now()) throw new Error('This encrypted room has expired.');
         if (!canSend(options.role, message.type) || sequence >= MAX_SEQUENCE) throw new Error('Live message is not permitted.');
         const frame = { v: 2, roomId: options.roomId, sender: options.sender, session,
           seq: ++sequence, type: message.type, role: options.role };
@@ -177,7 +182,8 @@
         const message = JSON.parse(decoder.decode(plaintext));
         if (!message || message.type !== frame.type) throw new Error('Wrong live channel.');
         received.set(peer, frame.seq);
-        return Object.assign({}, message, { sender: frame.sender, roomId: frame.roomId, role: frame.role });
+        return Object.assign({}, message, { sender: frame.sender, roomId: frame.roomId, role: frame.role,
+          session: frame.session, seq: frame.seq });
       }
     };
   }

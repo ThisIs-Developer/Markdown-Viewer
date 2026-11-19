@@ -79,7 +79,7 @@
   let _activeMermaidLook = DEFAULTS.mermaidLook;
   let _activeEmojiSkinTone = DEFAULTS.emojiSkinTone;
 
-  const HLJS_CDN_BASE = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/';
+  const HLJS_CDN_BASE = '/assets/vendor/highlight-styles/';
   const MATHJAX_FONT_CDN_BASE = 'https://cdn.jsdelivr.net/npm/';
 
   // Mapping for highlight.js themes on cdnjs 11.9.0 (dracula & solarized live under base16/)

@@ -1,4 +1,5 @@
 import '../../../sharing-crypto.js';
+import { sharingGuard } from '../../../server/sharing-guard.js';
 const Sharing = globalThis.MarkdownShareCrypto;
 const SHARE_TTL_SECONDS = 60 * 60 * 24 * 90;
 const SHARE_DELETE_TOKEN_BYTES = 18;
@@ -89,14 +90,6 @@ async function hashDeleteToken(token) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function createUniqueShareId(kv) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const id = generateShareId();
-    const existing = await kv.get(storageKey(id));
-    if (!existing) return id;
-  }
-  throw new Error("Unable to allocate share id");
-}
 
 function sanitizeMode(mode) {
   return mode === "edit" ? "edit" : "view";
@@ -120,6 +113,8 @@ export async function onRequest({ request, env, params }) {
   }
 
   const id = getShareId(params);
+  const limited = sharingGuard(request, env);
+  if (limited) return jsonResponse({ error: limited.error }, { status: limited.status, headers: { 'Retry-After': '60' } }, request);
 
   if (request.method === "POST" && !id) {
     let body;
@@ -136,7 +131,9 @@ export async function onRequest({ request, env, params }) {
     try { encrypted = Sharing.envelope(body.encrypted, Sharing.SNAPSHOT_LIMIT); }
     catch (_) { return jsonResponse({ error: 'invalid encrypted snapshot' }, { status: 400 }, request); }
 
-    const shareId = await createUniqueShareId(env.SHARE_KV);
+    // 144 random bits; a KV lookup is not atomic collision protection and would
+    // consume a read on every creation. Every snapshot is an independent object.
+    const shareId = generateShareId();
     const deleteToken = generateShareDeleteToken();
     const record = {
       version: 2,

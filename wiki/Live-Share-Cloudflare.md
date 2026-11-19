@@ -61,4 +61,6 @@ new_sqlite_classes = ["LiveRoom"]
 
 Share Snapshot and managed media use separate key prefixes in `SHARE_KV`; Live Share uses `LIVE_ROOMS`. They should not be described as the same storage path.
 
+New encrypted clients require the matching `freshness: 1` relay handshake and recipient-bound signed proofs before applying peer state. Previously admitted sessions cannot reconnect; clients generate a new session. Keep the Worker and browser assets coordinated during rollout. `SHARING_LIVE_CREATION_ENABLED=false` pauses new encrypted rooms while existing rooms retain their lifetime. [Usage limits](../docs/SHARING_USAGE.md) explains separate Durable Object request, storage and connected-duration allowances.
+
 Related pages: [Share Snapshot](Share-Snapshot.md), [Privacy and Security](Privacy-and-Security.md), [Configuration](Configuration.md), and [Troubleshooting](Troubleshooting.md#live-share-fails-or-reports-an-expired-room).

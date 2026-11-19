@@ -6,10 +6,6 @@
     <meta name="google-site-verification" content="ddzT8Hre9alfB1FfrA_bLf2RmrPVO56uO6usAG-ddSc" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh 'sha256-DgMFO4QE+qqf2xNgeNb5gMKG6BtiiQFniYj21c88yME=' 'sha256-NnbK2LG1LUwYyZ1xgJN7k3oK4oTvHY4o9852VxwNA/o='; script-src-attr 'none'; worker-src 'self'; connect-src 'self' https://markdownviewer.pages.dev https://api.github.com https://raw.githubusercontent.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://kroki.io https://www.plantuml.com https://mermaid.ink https://paulrosen.github.io wss://markdownviewer.pages.dev ws://localhost:* ws://127.0.0.1:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src-attr 'unsafe-inline'; font-src 'self' data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; media-src 'self' blob: data: https:; manifest-src 'self'; frame-src 'none'">
     <!-- DNS Prefetch & Preconnect CDN Origins to Warm Up Latency -->
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
     <!-- PERF-015: Preload critical-path resources for faster discovery -->
     <link rel="preload" href="styles.css" as="style">
@@ -120,8 +116,8 @@
     <script type="module" src="assets/seo-metadata.mjs"></script>
     <link href="assets/icon.jpg" rel="icon" type="image/jpg">
     <!-- Updated libraries to latest versions with Subresource Integrity (SRI) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.3.0/github-markdown.css" integrity="sha384-iACWXAClUhXj3tp/AQeas7im7qS6k8zAMbCeLrK+mfQ0YUsh41TpB+OhLRqAX5N3" crossorigin="anonymous">
+    <link rel="stylesheet" href="assets/vendor/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <link rel="stylesheet" href="assets/vendor/github-markdown.css" integrity="sha384-iACWXAClUhXj3tp/AQeas7im7qS6k8zAMbCeLrK+mfQ0YUsh41TpB+OhLRqAX5N3" crossorigin="anonymous">
     <link rel="stylesheet" href="assets/lucide-icons.css">
     <link rel="stylesheet" href="styles.css">
     <noscript>
@@ -131,13 +127,13 @@
     </noscript>
     
     <!-- Loading order optimized - ensure libraries are loaded asynchronously using defer -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js" integrity="sha384-LWJZQx0dgGhEK7snfNYrQs5K+QKD1sOmE02sOQCz4br9UmqSJDvPLoUVFaUyFnjq" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js" integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx" crossorigin="anonymous" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/marked.min.js" integrity="sha384-odPBjvtXVM/5hOYIr3A1dB+flh0c3wAT3bSesIOqEGmyUA4JoKf/YTWy0XKOYAY7" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/highlight.min.js" integrity="sha384-F/bZzf7p3Joyp5psL90p/p89AZJsndkSoGwRpXcZhleCWhd8SnRuoYo4d0yirjJp" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/powershell.min.js" integrity="sha384-LWJZQx0dgGhEK7snfNYrQs5K+QKD1sOmE02sOQCz4br9UmqSJDvPLoUVFaUyFnjq" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/purify.min.js" integrity="sha384-P0JNneQf81HOl9VwNXK76cQ9VMD6Nfsnepxb0cCOg8+UzEdzgPHAPV4wVQrvYQSx" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/FileSaver.min.js" integrity="sha384-PlRSzpewlarQuj5alIadXwjNUX+2eNMKwr0f07ShWYLy8B6TjEbm7ZlcN/ScSbwy" crossorigin="anonymous" defer></script>
     <!-- PERF-002: MathJax, Mermaid, JoyPixels, jsPDF, html2canvas, pako are now lazy-loaded by script.js on first use -->
-    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js" integrity="sha384-uwLg6oO8ZhFG2SuQfgmkMtosjtrFYlkPspa/cXS+b3D8GLRTHMDl/mTwqImdlKQO" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/js-yaml.min.js" integrity="sha384-uwLg6oO8ZhFG2SuQfgmkMtosjtrFYlkPspa/cXS+b3D8GLRTHMDl/mTwqImdlKQO" crossorigin="anonymous" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -178,6 +174,7 @@
                             <li><a class="dropdown-item app-menu-item" href="#" id="header-new-document"><i class="lucide lucide-file-plus-2" aria-hidden="true"></i><span class="app-menu-label">New document</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-file"><i class="lucide lucide-upload" aria-hidden="true"></i><span class="app-menu-label">From files</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="import-from-github"><i class="bi bi-github" aria-hidden="true"></i><span class="app-menu-label">From GitHub</span></a></li>
+                            <li><a class="dropdown-item app-menu-item" href="#" id="import-recovery">Restore encrypted document</a></li>
                         </ul>
                     </div>
                     <input type="file" id="file-input" class="file-input" accept=".md,.markdown,text/markdown" multiple>
@@ -192,6 +189,7 @@
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end app-command-menu header-command-menu header-export-menu" aria-labelledby="exportDropdown">
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-md"><i class="lucide lucide-file-text" aria-hidden="true"></i><span class="app-menu-label">Markdown (.md)</span></a></li>
+                            <li><a class="dropdown-item app-menu-item" href="#" id="export-recovery">Encrypted recovery file</a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-html"><i class="lucide lucide-file-code-2" aria-hidden="true"></i><span class="app-menu-label">HTML</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-pdf"><i class="lucide lucide-file-text" aria-hidden="true"></i><span class="app-menu-label">PDF</span></a></li>
                             <li><a class="dropdown-item app-menu-item" href="#" id="export-png"><i class="lucide lucide-file-image" aria-hidden="true"></i><span class="app-menu-label">Image (.png)</span></a></li>
@@ -344,6 +342,7 @@
                                         <button id="mobile-import-github-button" class="mobile-menu-item" title="Import from GitHub">
                                             <i class="bi bi-github" aria-hidden="true"></i> From GitHub
                                         </button>
+                                        <button id="mobile-import-recovery" class="mobile-menu-item" type="button">Restore encrypted document</button>
                                     </div>
                                 </section>
 
@@ -355,6 +354,7 @@
                                         <button id="mobile-export-md" class="mobile-menu-item" title="Export as Markdown">
                                             <i class="lucide lucide-file-text" aria-hidden="true"></i> Markdown (.md)
                                         </button>
+                                        <button id="mobile-export-recovery" class="mobile-menu-item" type="button">Encrypted recovery file</button>
                                         <button id="mobile-export-html" class="mobile-menu-item" title="Export as HTML">
                                             <i class="lucide lucide-file-code-2" aria-hidden="true"></i> HTML
                                         </button>
@@ -2447,7 +2447,7 @@ Quote someone famous:
 Markdown Viewer keeps normal editing, previewing, and autosave on your device. Content can leave your device only when you use network features such as GitHub import, remote diagram rendering, Share Snapshot, Live Share, external images, or CDN-hosted libraries.
 </textarea>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
+    <script src="assets/vendor/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous" defer></script>
     <script src="assets/document-toc.js" defer></script>
     <script src="native-markdown-source.js" defer></script>
     <script src="browser-drop-source.js" defer></script>
@@ -2457,6 +2457,7 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="sharing-crypto.js" defer></script>
     <script src="sharing-media.js" defer></script>
     <script src="sharing-live.js" defer></script>
+    <script src="sharing-recovery.js" defer></script>
     <script src="script.js" defer></script>
     <!-- Screen reader dynamic accessibility announcer -->
     <div id="app-accessibility-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>

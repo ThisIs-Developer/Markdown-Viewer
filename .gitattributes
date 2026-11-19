@@ -1,0 +1,2 @@
+# Preserve the exact package bytes used by Subresource Integrity on every OS.
+assets/vendor/** -text
