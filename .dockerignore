@@ -7,6 +7,7 @@ desktop-app
 wiki
 node_modules
 *.md
+!sample.md
 LICENSE
 docker-compose.yml
 Dockerfile
