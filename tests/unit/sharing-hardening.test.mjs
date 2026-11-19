@@ -15,8 +15,11 @@ test('Docker applies the web security headers and ships all local sharing depend
   const nginx = readFileSync('nginx.conf', 'utf8'), docker = readFileSync('Dockerfile', 'utf8');
   for (const line of readFileSync('_headers', 'utf8').trim().split(/\r?\n/).slice(1)) {
     const split = line.indexOf(':');
-    assert.ok(nginx.includes('add_header ' + line.slice(0, split).trim() + ' "' + line.slice(split + 1).trim() + '" always;'));
+    const value = line.slice(split + 1).trim().replace('; upgrade-insecure-requests', '');
+    assert.ok(nginx.includes('add_header ' + line.slice(0, split).trim() + ' "' + value + '" always;'));
   }
+  // The HTTP-only container must not upgrade its own script/style URLs to HTTPS.
+  assert.equal(nginx.includes('upgrade-insecure-requests'), false);
   assert.ok(docker.includes('COPY nginx.conf /etc/nginx/conf.d/default.conf'));
   assert.ok(docker.includes('sharing-recovery.js /usr/share/nginx/html/'));
   assert.ok(docker.includes('COPY assets/ /usr/share/nginx/html/assets/'));
