@@ -11485,6 +11485,15 @@ html[data-theme="dark"] .mermaid svg {
   gap: 8px;
 }
 
+/* Let translated outline controls shrink and wrap in the narrow mobile panel. */
+.document-outline-levels .drawer-field {
+  min-width: 0;
+}
+
+.document-outline-levels .drawer-label {
+  overflow-wrap: anywhere;
+}
+
 .document-outline-list {
   margin: 0;
   padding: 0;

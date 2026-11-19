@@ -5,7 +5,7 @@ const { openApp, setEditorContent, stubExportLibraries } = require('../helpers/a
 
 const rootDir = path.resolve(__dirname, '../..');
 const markmapAssets = [
-  ['https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js', 'd3.min.js'],
+  ['https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js', 'd3.min.js'],
   ['https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js', 'markmap-lib.iife.js'],
   ['https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js', 'markmap-view.js']
 ];

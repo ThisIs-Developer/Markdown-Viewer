@@ -2,7 +2,10 @@
 (function(root) {
   'use strict';
   const C = root.MarkdownShareCrypto;
-  const LIMIT = C.SNAPSHOT_LIMIT;
+  // Backups embed media as base64 data URLs. The snapshot's 8 MiB limit does not
+  // apply to portable recovery. Bound recovery separately to support a full
+  // 10 MiB managed video without allowing unbounded allocations.
+  const LIMIT = 64 * 1024 * 1024;
   function validate(value) {
     if (!C.exactKeys(value, ['content', 'title', 'reviewThreads', 'createdAt']) || typeof value.content !== 'string' ||
         typeof value.title !== 'string' || value.title.length > 512 || !Array.isArray(value.reviewThreads) ||
@@ -36,7 +39,7 @@
       modal.innerHTML = '<div class="reset-modal-box reset-modal-box--wide app-modal-box"><div class="modal-header"><p id="recovery-title" class="reset-modal-message"></p></div><div class="modal-body"><p id="recovery-description"></p><label for="recovery-key">Recovery key</label><input id="recovery-key" class="rename-modal-input" autocomplete="off" spellcheck="false"><div id="recovery-controls"></div><p id="recovery-status" role="status"></p></div><div class="modal-footer"><button id="recovery-cancel" class="reset-modal-btn reset-modal-cancel">Cancel</button><button id="recovery-action" class="reset-modal-btn"></button></div></div>';
       modal.querySelector('#recovery-title').textContent = isExport ? 'Encrypted document recovery' : 'Restore encrypted document';
       modal.querySelector('#recovery-description').textContent = isExport
-        ? 'Keep this key separately from the file. Both are required to restore this document and its comments. Encrypted managed attachments are embedded; external links remain links. Maximum encrypted content: 8 MiB.'
+        ? 'Keep this key separately from the file. Both are required to restore this document and its comments. Encrypted managed attachments are embedded; external links remain links. Maximum recovery content: 64 MiB, including embedded media. Very large documents may need a separate source-file backup.'
         : 'Choose a recovery file and enter its key. A new local document will be created; existing documents are preserved.';
       const key = modal.querySelector('#recovery-key'), action = modal.querySelector('#recovery-action'), status = modal.querySelector('#recovery-status');
       const close = () => { options.closeModal(modal); key.value = ''; modal.remove(); active = null; };
@@ -77,7 +80,7 @@
         ui.action.disabled = true;
         try {
           const file = input.files[0];
-          if (!file || file.size > Math.ceil((LIMIT + 16) * 4 / 3) + 1024) throw new Error('Select a recovery file up to 11 MiB.');
+          if (!file || file.size > Math.ceil((LIMIT + 16) * 4 / 3) + 1024) throw new Error('Select a recovery file up to 90 MiB.');
           const payload = await restore(await file.text(), ui.key.value);
           if (!ui.modal.isConnected) return;
           await options.restoreDocument(payload); ui.close();
@@ -85,6 +88,6 @@
       };
     });
   }
-  root.MarkdownShareRecovery = Object.freeze({ create, restore, attach });
+  root.MarkdownShareRecovery = Object.freeze({ LIMIT, create, restore, attach });
   if (typeof module !== 'undefined' && module.exports) module.exports = root.MarkdownShareRecovery;
 })(globalThis);

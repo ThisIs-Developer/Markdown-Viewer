@@ -169,7 +169,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js': 'sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu',
     'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js': 'sha384-QF8EmP6pyNE+i7WmcltzC4ddzFVKDxfn5WD5gXyKTSE4SCw0R25TI+q0LUlnf7tq',
     'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js': 'sha384-wagZhIFgY4hD+7awjQjR4e2E294y6J2HSnd8eTNc15ZubTeQeVRZwhQJ+W6hnBsf',
-    'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js': 'sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i',
+    'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js': 'sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i',
     'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js': 'sha384-ZlXKtR0wcZqxEYI8i3TPFFiOJR1MEdIzdVvnhSOonCrPsBup4dnkRw49FeYhfsHF',
     'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js': 'sha384-p+gyhsDIg0RmvIKRr9BBGSyJ9NDDkiFsbilRwdZd20Q8mUL2v7e8+orY4pvTV52w',
     'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js': 'sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=='
@@ -246,7 +246,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     three: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
     stlLoader: 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js',
     orbitControls: 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js',
-    d3: 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js',
+    d3: 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js',
     markmapLib: 'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js',
     markmapView: 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js',
     jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',

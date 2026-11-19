@@ -25,18 +25,81 @@ test('Docker applies the web security headers and ships all local sharing depend
   assert.ok(docker.includes('COPY assets/ /usr/share/nginx/html/assets/'));
 });
 
+test('PWA activation replaces the old client cache before controlling pages', async () => {
+  const handlers = new Map(), deleted = [];
+  let claimed = false, pending;
+  const current = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-v2-hardened';
+  runInNewContext(readFileSync('sw.js', 'utf8'), {
+    URL,
+    self: { location: { origin: 'https://markdownviewer.pages.dev' },
+      addEventListener: (event, callback) => handlers.set(event, callback),
+      clients: { claim: async () => { claimed = true; } } },
+    caches: { keys: async () => ['markdown-viewer-cache-v3.10.6', current],
+      delete: async key => { deleted.push(key); return true; } }
+  });
+  handlers.get('activate')({ waitUntil: value => { pending = value; } });
+  await pending;
+  assert.deepEqual(deleted, ['markdown-viewer-cache-v3.10.6']);
+  assert.equal(claimed, true);
+});
+
+test('Markmap D3 dependency is pinned to its verified integrity digest across web, desktop and fixture', () => {
+  const url = 'https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js';
+  const digest = 'sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i';
+  const web = readFileSync('script.js', 'utf8');
+  const desktop = readFileSync('desktop-app/prepare.js', 'utf8');
+  const fixture = readFileSync('tests/e2e/markmap-export.spec.js', 'utf8');
+  for (const source of [web, desktop, fixture]) assert.ok(source.includes(url));
+  assert.ok(web.includes("'" + url + "': '" + digest + "'"));
+  assert.ok(desktop.includes('hash: "' + digest + '"'));
+});
+
+test('desktop recovery implementation matches the web version', () => {
+  assert.equal(readFileSync('desktop-app/resources/js/sharing-recovery.js', 'utf8'),
+    readFileSync('sharing-recovery.js', 'utf8'));
+  assert.equal(readFileSync('desktop-app/resources/js/sharing-live.js', 'utf8'),
+    readFileSync('sharing-live.js', 'utf8'));
+});
+
 test('recovery round trip is local and rejects wrong keys, altered bytes and share substitution', async () => {
   const value = { content: '# Private हिन्दी 😀\n![](' + png + ')', title: 'Private title', reviewThreads: [{ text: 'Private comment' }], createdAt: Date.now() };
   const first = await R.create(value), second = await R.create(value);
   assert.notEqual(first.key, second.key); assert.notEqual(first.file, second.file);
   for (const secret of ['Private', png, first.key]) assert.equal(first.file.includes(secret), false);
   assert.deepEqual(await R.restore(first.file, first.key), value);
+  const oldKey = C.random();
+  const historical = JSON.stringify({ format: 'markdown-viewer-recovery', version: 1,
+    encrypted: await C.seal(value, oldKey, 'document-recovery', C.SNAPSHOT_LIMIT) });
+  assert.deepEqual(await R.restore(historical, oldKey), value);
   await assert.rejects(R.restore(first.file, second.key));
   const tampered = JSON.parse(first.file); const bytes = C.decode(tampered.encrypted.ct, C.SNAPSHOT_LIMIT); bytes[0] ^= 1;
   tampered.encrypted.ct = C.encode(bytes);
   await assert.rejects(R.restore(JSON.stringify(tampered), first.key));
   await assert.rejects(C.open(JSON.parse(first.file).encrypted, first.key, 'snapshot'));
   await assert.rejects(R.restore(JSON.stringify({ ...JSON.parse(first.file), version: 2 }), first.key));
+});
+
+test('recovery independently encrypts and restores a maximum permitted managed video', { timeout: 120000 }, async () => {
+  const bytes = Buffer.alloc(10 * 1024 * 1024);
+  bytes.set([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109], 0);
+  bytes.fill(0x5a, 12);
+  const dataUrl = 'data:video/mp4;base64,' + bytes.toString('base64');
+  assert.equal(M.validateDataUrl(dataUrl).bytes.length, 10 * 1024 * 1024);
+  const value = { content: '# Video\n\n<video controls src="' + dataUrl + '"></video>',
+    title: 'Large encrypted backup', reviewThreads: [{ text: 'Confidential review' }], createdAt: Date.now() };
+  assert.ok(Buffer.byteLength(JSON.stringify(value)) > C.SNAPSHOT_LIMIT);
+  assert.ok(Buffer.byteLength(JSON.stringify(value)) < R.LIMIT);
+  const { file, key } = await R.create(value);
+  assert.equal(file.includes('Confidential review'), false);
+  assert.equal(file.includes('Large encrypted backup'), false);
+  assert.equal(file.includes('data:video/mp4'), false);
+  assert.deepEqual(await R.restore(file, key), value);
+  await assert.rejects(R.restore(file, C.random()));
+});
+
+test('recovery rejects a payload beyond its finite size limit without a partial backup', { timeout: 120000 }, async () => {
+  const value = { content: 'x'.repeat(R.LIMIT), title: 'Overflow', reviewThreads: [], createdAt: Date.now() };
+  await assert.rejects(R.create(value), /too large/);
 });
 
 test('media deduplicates cold requests and reuses only ciphertext, with expiry and bounds', async () => {
@@ -137,4 +200,49 @@ test('fresh recipient-bound proofs gate replayed state and allow legitimate sync
     await until(() => statuses.some(status => status.includes('could not be verified')));
     assert.equal(applied.length, 2);
   } finally { transport.destroy(); }
+});
+
+test('live room drains authenticated session-end before reporting a fast WebSocket close', { timeout: 10000 }, async () => {
+  let socket;
+  class FakeWebSocket {
+    static OPEN = 1;
+    constructor() { socket = this; this.readyState = 1; this.listeners = new Map(); }
+    addEventListener(name, callback) { this.listeners.set(name, callback); }
+    send() {}
+    close() { this.readyState = 3; }
+    emit(name, event) { this.listeners.get(name)(event); }
+  }
+  const cryptoSession = { session: 'local-session', encrypt: async message => message,
+    decrypt: async frame => {
+      if (frame.type === 'session-end') await new Promise(resolve => setTimeout(resolve, 40));
+      return frame;
+    } };
+  const realm = { WebSocket: FakeWebSocket, setTimeout, clearTimeout, Promise,
+    MarkdownShareCrypto: { random: () => 'fresh-challenge', canSend: () => true,
+      LIVE_LIMIT: 1024 * 1024, encode: () => 'AA' } };
+  runInNewContext(readFileSync('sharing-live.js', 'utf8'), realm);
+  const delivered = [], statuses = [];
+  const doc = { on() {}, off() {} };
+  const connection = realm.MarkdownShareLive.connect({
+    encryption: { transport: cryptoSession, config: {} }, socketUrl: 'wss://example.invalid',
+    role: 'view', capability: 'fake-cap', participantId: 'local', ydoc: doc, reviewDoc: doc,
+    controlDoc: doc, Y: { encodeStateAsUpdate: () => new Uint8Array() },
+    getParticipant: () => ({ name: 'Viewer' }), getCursor: () => null,
+    onMessage: message => delivered.push(message.type),
+    onStatus: (message, level) => statuses.push(level)
+  });
+  socket.emit('open', {});
+  socket.emit('message', { data: JSON.stringify({ type: 'ready', v: 2, freshness: 1 }) });
+  await connection.ready;
+  socket.emit('message', { data: JSON.stringify({ type: 'session-proof', sender: 'remote',
+    role: 'host', session: 'remote-session', recipient: 'local',
+    recipientSession: 'local-session', challenge: 'fresh-challenge' }) });
+  await until(() => delivered.includes('hello'));
+  socket.emit('message', { data: JSON.stringify({ type: 'session-end', sender: 'remote',
+    role: 'host', session: 'remote-session' }) });
+  socket.emit('close', {});
+  await until(() => delivered.includes('session-end'));
+  assert.equal(delivered[delivered.length - 1], 'session-end');
+  await until(() => statuses.includes('error'));
+  connection.destroy();
 });

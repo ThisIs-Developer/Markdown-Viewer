@@ -136,8 +136,15 @@
       }).catch(() => fail('An encrypted live message could not be verified. Rejoin with the complete invite link.'))
         .finally(() => { incomingCount -= 1; incomingBytes -= event.data.length; });
     });
-    socket.addEventListener('close', () => fail('Live room disconnected.'));
-    socket.addEventListener('error', () => fail('Encrypted live room connection failed.'));
+    // A valid signed session-end may already be queued for asynchronous AES-GCM
+    // verification when the relay sends its closing frame. Process received
+    // ciphertext before reporting the transport as disconnected; otherwise
+    // fast-close browsers can discard the host's authenticated end command.
+    function reportTransportClosed(message) {
+      receiveChain.then(() => fail(message), () => fail(message));
+    }
+    socket.addEventListener('close', () => reportTransportClosed('Live room disconnected.'));
+    socket.addEventListener('error', () => reportTransportClosed('Encrypted live room connection failed.'));
     return Object.assign({ ready, send, destroy() {
       if (destroyed) return;
       destroyed = true;

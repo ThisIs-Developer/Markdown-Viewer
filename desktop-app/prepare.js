@@ -261,9 +261,9 @@ async function prepareOfflineDependencies() {
       hash: null
     },
     {
-      url: "https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js",
+      url: "https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js",
       dest: path.join(LIBS_DIR, "d3.min.js"),
-      hash: null
+      hash: "sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
     },
     {
       url: "https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.iife.js",

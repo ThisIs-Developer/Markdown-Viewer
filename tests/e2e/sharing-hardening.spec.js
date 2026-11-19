@@ -77,3 +77,27 @@ test('portable recovery embeds relative and HTML-decoded managed attachments', a
   expect(portable).toBe('![](' + png + ')\n<img src="' + png + '">');
   expect(reads).toBe(1);
 });
+
+test('browser Web Crypto backs up a maximum supported managed video without plaintext in recovery file', async ({ page }) => {
+  await openApp(page);
+  const result = await page.evaluate(async () => {
+    const bytes = new Uint8Array(10 * 1024 * 1024);
+    bytes.set([0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]);
+    bytes.fill(0x5a, 12);
+    let raw = '';
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+      raw += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    }
+    const dataUrl = 'data:video/mp4;base64,' + btoa(raw);
+    const media = MarkdownShareMedia.validateDataUrl(dataUrl);
+    const value = { content: '# Private video\n<video controls src="' + dataUrl + '"></video>',
+      title: 'Recovery video test', reviewThreads: [{ text: 'Private review' }], createdAt: Date.now() };
+    const { file, key } = await MarkdownShareRecovery.create(value);
+    const restored = await MarkdownShareRecovery.restore(file, key);
+    return { mediaBytes: media.bytes.length, matches: restored.content === value.content &&
+      restored.title === value.title && restored.reviewThreads[0].text === 'Private review',
+      opaque: !file.includes('video/mp4') && !file.includes('Private review'),
+      exceededSnapshotLimit: value.content.length > MarkdownShareCrypto.SNAPSHOT_LIMIT };
+  });
+  expect(result).toEqual({ mediaBytes: 10 * 1024 * 1024, matches: true, opaque: true, exceededSnapshotLimit: true });
+});
