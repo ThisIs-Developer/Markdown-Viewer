@@ -5,6 +5,8 @@ Non-code commits (documentation, planning, README-only updates) are excluded.
 
 ## Unreleased
 
+- **Encrypted sharing:** Added client-side encryption for new snapshots, managed media and Live Share, with role signatures, fresh peer proofs, bounded replay histories and unchanged expiry for existing shares. Added user-held encrypted document recovery, protected private previews, locally bundled core libraries, stronger Docker headers, and documented free-plan usage controls.
+
 ---
 
 ## v3.10.6

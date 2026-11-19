@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "Udostępnianie szyfrowane. Zachowaj pełny link w tajemnicy; zawiera klucz odszyfrowywania.",
+  "Delete snapshot": "Usuń migawkę",
+  "Snapshot deleted.": "Migawka usunięta.",
+  "Connected to encrypted live room": "Połączono z szyfrowanym pokojem na żywo",
   "Linking folder": "Łączenie folderu",
   "Scanning folder…": "Skanowanie folderu…",
   "Reading files…": "Odczytywanie plików…",

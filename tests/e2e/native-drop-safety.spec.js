@@ -44,8 +44,9 @@ test('cancelling a mixed drop links no folder and reads or uploads no media', as
 
 test('native GIF uses the bounded reader and existing consent/upload flow', async ({ page }) => {
   let uploads = 0;
-  await page.route('**/api/image', route => { uploads++; return route.fulfill({ json: { id: 'reviewNativeMedia00000001' } }); });
-  await page.route('**/api/image/*', route => route.fulfill({ contentType: 'image/gif', body: Buffer.from(gif, 'base64') }));
+  let encryptedUpload;
+  await page.route('**/api/image', route => { uploads++; encryptedUpload = route.request().postDataJSON(); return route.fulfill({ json: { id: 'e2_' + 'N'.repeat(24) } }); });
+  await page.route('**/api/image/*', route => route.fulfill({ json: encryptedUpload }));
   await seedMedia(page);
   await page.evaluate(() => { window.__drop = NL_HANDLE_NATIVE_DROP(['C:/native.gif']); });
   await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
@@ -54,7 +55,7 @@ test('native GIF uses the bounded reader and existing consent/upload flow', asyn
   expect(await page.evaluate(() => __drop)).toBe(1);
   expect(uploads).toBe(1);
   expect(await page.evaluate(() => __binaryLimit)).toBe(5 * 1024 * 1024 + 1);
-  await expect(page.locator('#markdown-editor')).toHaveValue(/reviewNativeMedia00000001/);
+  await expect(page.locator('#markdown-editor')).toHaveValue(/e2_N{24}#key=/);
 });
 
 test('oversized native GIF is rejected before any binary read', async ({ page }) => {

@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "加密分享。请将完整链接保密，其中包含解密密钥。",
+  "Delete snapshot": "删除快照",
+  "Snapshot deleted.": "快照已删除。",
+  "Connected to encrypted live room": "已连接到加密的实时协作房间",
   "Linking folder": "正在链接文件夹",
   "Scanning folder…": "正在扫描文件夹…",
   "Reading files…": "正在读取文件…",

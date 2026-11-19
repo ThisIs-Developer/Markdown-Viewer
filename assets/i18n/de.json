@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "Verschlüsselte Freigabe. Halten Sie den vollständigen Link geheim; er enthält den Entschlüsselungsschlüssel.",
+  "Delete snapshot": "Momentaufnahme löschen",
+  "Snapshot deleted.": "Momentaufnahme gelöscht.",
+  "Connected to encrypted live room": "Mit verschlüsseltem Live-Raum verbunden",
   "Linking folder": "Ordner wird verknüpft",
   "Scanning folder…": "Ordner wird durchsucht…",
   "Reading files…": "Dateien werden gelesen…",

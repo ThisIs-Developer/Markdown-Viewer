@@ -719,10 +719,12 @@ Greetings: :wave: :thumbsup: :smile:
       document.documentElement.setAttribute('data-theme', 'light');
       await window.visualSettingsAdapters.applyHighlightTheme('auto');
     });
-    const autoFnColor = await page.locator('#markdown-preview pre code .hljs-title').first().evaluate(el => {
-      return window.getComputedStyle(el).color;
-    });
-    expect(autoFnColor).toBe('rgb(111, 66, 193)');
+    // The highlight preview can be replaced while its theme stylesheet
+    // settles. Retry the observable color instead of reading a detached node.
+    await expect.poll(async () => {
+      const title = page.locator('#markdown-preview pre code .hljs-title').first();
+      return title.evaluate(el => window.getComputedStyle(el).color);
+    }, { timeout: 10_000 }).toBe('rgb(111, 66, 193)');
 
     // 2. Select Monokai: function name must be Monokai green, NOT legacy purple
     await page.evaluate(async () => {

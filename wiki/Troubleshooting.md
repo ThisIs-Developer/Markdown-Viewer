@@ -182,19 +182,19 @@ The final print layout is controlled by the browser or operating system. Differe
 
 ## Share Snapshot Fails
 
-- Confirm that Pako loaded.
+- Confirm secure-context Web Crypto support and the complete link, including its key. Pako is needed only for legacy inline links.
 - For stored mode, verify `/api/share`, `SHARE_KV`, request origin, and network access.
-- Keep stored content at or below 8,000,000 characters.
+- Keep the encrypted snapshot plaintext payload at or below 8 MiB of UTF-8 JSON.
 - A not-found stored link is invalid, deleted, or expired after 90 days.
 - A snapshot tab is temporary. Export Markdown before closing or reloading if you edited it.
-- The current UI cannot delete a stored snapshot early because it does not expose the API deletion token.
+- **Delete snapshot** is available while the generated-link modal retains its creation credential. After closing/resetting it, the original expiry applies.
 
 See [Share Snapshot](Share-Snapshot.md).
 
 ## Live Share Fails or Reports an Expired Room
 
 - Ask the host to keep the room and original host Document open.
-- Confirm the complete invite URL, including room secret, role, and capability.
+- Confirm the complete invite URL, including its key and role credentials after `#`. New rooms expire after 24 hours.
 - Verify that `/live-room/<room>` upgrades to WebSocket.
 - Check `LIVE_ROOMS`, Worker deployment, Durable Object migration, and allowed Origin.
 - Join within the 8-second initial-state window.

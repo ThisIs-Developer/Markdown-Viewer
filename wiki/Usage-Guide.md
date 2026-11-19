@@ -172,7 +172,7 @@ Scope matching uses Marked's lexer and is best-effort for unusual Markdown.
 
 Use Import > From files, the mobile import button, or drag and drop to save local Markdown files in Explorer. Imported documents remain closed until you select one in Explorer, so large imports do not fill the tab bar. Dropping a file on an Explorer folder imports it there; dropping it elsewhere imports it at the default workspace root. Folders expand after a short drag hover, and the Explorer scrolls automatically near its top and bottom edges.
 
-Paste an image or GIF from the clipboard, drop an image/GIF/video file, or use the media dialog to insert it at the current editor cursor. A progress toast shows preparation and upload status. Still images are optimized, animated GIFs retain their original animation, and MP4, WebM, or Ogg videos are inserted as playable HTML5 media. After first-use consent, the app uploads the file to managed public media storage and inserts a short HTTPS link. Anyone with that unguessable URL can retrieve the media for up to 90 days; after expiry the reference remains in Markdown but the media stops rendering. Documents containing older inline base64 raster images offer to convert them to short links without changing their alt text or title.
+Paste an image or GIF from the clipboard, drop an image/GIF/video file, or use the media dialog to insert it at the current editor cursor. A progress toast shows preparation and upload status. Still images are optimized, animated GIFs retain their original animation, and MP4, WebM, or Ogg videos are inserted as playable HTML5 media. After first-use consent, the app encrypts the file before managed upload and inserts an HTTPS link with a decryption key in its fragment. Anyone with the complete URL can decrypt the media for up to 90 days; after expiry the reference remains in Markdown but the media stops rendering. Documents containing older inline base64 raster images offer to convert them to short links without changing their alt text or title.
 
 - Managed still images are limited to 300 KiB after optimization.
 - Animated GIFs are limited to 5 MiB, and managed videos to 10 MiB.
@@ -227,9 +227,9 @@ Use Share Snapshot when you want to send a point-in-time copy.
 
 View only opens the Document in Preview and hides editing. Can edit opens the copy in Split view so the recipient can edit their own local copy. It is not real-time collaboration.
 
-Small Documents are compressed into the URL hash as `#share=...`. Documents of at least 3,000 UTF-8 bytes, or whose encoded URL exceeds 4,096 characters, are stored through `/api/share` and opened with `#id=...`. Stored snapshots use Cloudflare KV for up to 90 days and can contain up to 8,000,000 characters. They are bearer links: anyone with the URL can open the snapshot.
+New snapshots encrypt the Markdown, title, and access mode on the device. Small encrypted payloads use `#share=v2...&key=...`. Documents of at least 3,000 UTF-8 bytes, or whose encoded URL exceeds 4,096 characters, are stored through `/api/share` and opened with `#id=s2_...&key=...`. Stored snapshots use Cloudflare KV for up to 90 days and can contain up to 8 MiB of UTF-8 JSON before encryption. They are bearer links: anyone with the URL can open the snapshot.
 
-The creation API returns a deletion token, but the current UI does not display it or provide an early-delete action. Normal UI-created stored snapshots therefore remain until expiry. See [Share Snapshot](Share-Snapshot.md).
+The creation API returns a separate deletion token. **Delete snapshot** is available while the generated-link modal retains that credential; after closing/resetting it, the original expiry applies. See [Share Snapshot](Share-Snapshot.md).
 
 Shared snapshot tabs are temporary and are not saved into the recipient's workspace.
 
@@ -243,7 +243,7 @@ Use Live Share when you want a temporary real-time room.
 4. Start the session.
 5. Copy the invite link after the room starts.
 
-Live Share sends real-time Yjs updates through a Cloudflare Durable Object. It does not persist Markdown or comment content server-side. The Durable Object does persist the host, edit, and view capability values plus their creation time. The invite URL contains a room id, room secret, access role/capability, and title, not the full Document body. The server authenticates host, Can edit, and View only capabilities and filters message types by role. Markdown and comment data use separate Yjs documents, so View only participants can synchronize comments without being allowed to edit Markdown.
+New Live Share rooms encrypt and sign Yjs updates before relaying them through a Cloudflare Durable Object. The relay stores capability hashes, public verification keys, expiry, and ended status for 24 hours, without document history. The complete invite fragment contains the read key and selected role credentials. Markdown, Review, and host controls use separate channels, so View only participants can contribute comments without editing Markdown. Encrypted shared previews block automatic external resources and show advanced diagram source locally. Existing shares keep their original lifetime.
 
 Participants get a temporary live tab, presence avatars, and live cursor indicators. The host can end the session for everyone. Rooms are limited to 64 WebSocket participants and 8 MB live messages. Managed images, GIFs, and videos travel as short HTTPS links rather than binary Live Share messages and stop rendering when their 90-day storage TTL expires.
 

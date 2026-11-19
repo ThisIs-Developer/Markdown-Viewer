@@ -9,11 +9,10 @@ const read = relative => fs.readFileSync(new URL(relative, root));
 const manifest = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
 const html = read('index.html').toString();
-const fixtures = read('tests/helpers/app.js').toString();
 
 for (const [name, version, url, asset] of [
-  ['dompurify', '3.4.17', 'https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js', 'dist/purify.min.js'],
-  ['js-yaml', '4.3.2', 'https://cdn.jsdelivr.net/npm/js-yaml@4.3.2/dist/js-yaml.min.js', 'dist/js-yaml.min.js']
+  ['dompurify', '3.4.17', 'assets/vendor/purify.min.js', 'dist/purify.min.js'],
+  ['js-yaml', '4.3.2', 'assets/vendor/js-yaml.min.js', 'dist/js-yaml.min.js']
 ]) {
   test(`${name}: package, lockfile, browser URL and SRI agree`, () => {
     assert.equal(manifest.devDependencies[name], version);
@@ -21,11 +20,11 @@ for (const [name, version, url, asset] of [
     assert.equal(lock.packages[`node_modules/${name}`].version, version);
     assert.equal(JSON.parse(read(`node_modules/${name}/package.json`)).version, version);
     const tag = html.match(/<script\b[^>]*>/g).find(tag => tag.includes(`src="${url}"`));
-    assert.ok(tag, 'Missing pinned CDN script');
+    assert.ok(tag, 'Missing local pinned script');
     const expected = 'sha384-' + crypto.createHash('sha384')
       .update(read(`node_modules/${name}/${asset}`)).digest('base64');
     assert.ok(tag.includes(`integrity="${expected}"`), 'SRI differs from installed browser asset');
-    assert.ok(fixtures.includes(url), 'Browser fixtures must route the same CDN URL');
+    assert.deepEqual(read(url), read(`node_modules/${name}/${asset}`), 'Local vendor bytes must match the locked package');
   });
 }
 

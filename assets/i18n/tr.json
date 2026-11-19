@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "Şifreli paylaşım. Şifre çözme anahtarını içerdiğinden bağlantının tamamını gizli tutun.",
+  "Delete snapshot": "Anlık görüntüyü sil",
+  "Snapshot deleted.": "Anlık görüntü silindi.",
+  "Connected to encrypted live room": "Şifreli canlı odaya bağlanıldı",
   "Linking folder": "Klasör bağlanıyor",
   "Scanning folder…": "Klasör taranıyor…",
   "Reading files…": "Dosyalar okunuyor…",

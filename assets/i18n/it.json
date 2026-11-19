@@ -1,4 +1,8 @@
 {
+  "Encrypted sharing. Keep the complete link private; it includes the decryption key.": "Condivisione crittografata. Mantieni privato il link completo: contiene la chiave di decrittazione.",
+  "Delete snapshot": "Elimina istantanea",
+  "Snapshot deleted.": "Istantanea eliminata.",
+  "Connected to encrypted live room": "Connesso alla stanza live crittografata",
   "Linking folder": "Collegamento della cartella",
   "Scanning folder…": "Scansione della cartella…",
   "Reading files…": "Lettura dei file…",
