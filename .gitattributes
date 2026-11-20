@@ -1,0 +1,2 @@
+# Executed inside Linux containers, including from Windows checkouts.
+docker/*.sh text eol=lf

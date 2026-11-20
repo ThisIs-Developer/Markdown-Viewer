@@ -1,54 +1,217 @@
-name: Build and Push Docker Image
-
+name: Build, Verify and Publish Docker Image
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
-
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 1 * *' # Monthly non-publishing dependency refresh
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_REPO: ghcr.io/thisis-developer/markdown-viewer
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  validate:
+    name: Docker native ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      DOCKER_PLATFORM: linux/${{ matrix.arch }}
+    services:
+      registry:
+        image: registry:3
+        ports:
+          - 5000:5000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+      - name: Build once on the native CPU with attestations
+        id: candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ env.DOCKER_PLATFORM }}
+          pull: true
+          push: true # Localhost only, including on PRs.
+          no-cache: ${{ github.event_name == 'schedule' }}
+          provenance: mode=max
+          sbom: true
+          tags: localhost:5000/markdown-viewer:candidate
+          cache-from: |
+            type=gha,scope=docker-${{ matrix.arch }}
+            type=gha,scope=buildkit
+          cache-to: type=gha,scope=docker-${{ matrix.arch }},mode=max
+      - name: Pin and inspect the exact native candidate
+        env:
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+        run: |
+          set -euo pipefail
+          IMAGE_REF="localhost:5000/markdown-viewer@$CANDIDATE_DIGEST"
+          echo "IMAGE_REF=$IMAGE_REF" >> "$GITHUB_ENV"
+          mkdir -p docker-artifacts
+          printf 'candidate_index_digest=%s\n' "$CANDIDATE_DIGEST" | tee docker-artifacts/candidate-identity.txt
+          docker pull "$IMAGE_REF"
+          actual="$(docker image inspect "$IMAGE_REF" --format '{{.Os}}/{{.Architecture}}')"
+          test "$actual" = "$DOCKER_PLATFORM"
+          bash docker/verify-registry.sh "$IMAGE_REF"
+      - name: Test and scan that candidate on its native CPU
+        uses: ./.github/actions/docker-verify
+        with:
+          image-ref: ${{ env.IMAGE_REF }}
+          architecture: ${{ matrix.arch }}
+      - name: Export the tested image and attestations without changing digests
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y skopeo
+          mkdir -p export
+          skopeo copy --all --preserve-digests --src-tls-verify=false \
+            "docker://$IMAGE_REF" oci-archive:export/image.tar
+          printf '%s\n' "${IMAGE_REF##*@}" > export/digest.txt
+          cp docker-artifacts/candidate-index.json export/index.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-candidate-${{ matrix.arch }}
+          path: export/
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+  assemble:
+    name: Verify multi-platform release
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      registry:
+        image: registry:3
+        ports:
+          - 5000:5000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: docker-candidate-*
+          path: candidates
+      - name: Import tested candidates and assemble their exact manifests
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y skopeo
+          refs=()
+          for arch in amd64 arm64; do
+            directory="candidates/docker-candidate-$arch"
+            expected="$(cat "$directory/digest.txt")"
+            skopeo copy --all --preserve-digests --dest-tls-verify=false \
+              "oci-archive:$directory/image.tar" "docker://localhost:5000/markdown-viewer:$arch"
+            actual="$(docker buildx imagetools inspect "localhost:5000/markdown-viewer:$arch" --format '{{.Manifest.Digest}}')"
+            test "$actual" = "$expected"
+            refs+=("localhost:5000/markdown-viewer@$expected")
+          done
+          docker buildx imagetools create --tag localhost:5000/markdown-viewer:combined "${refs[@]}"
+          digest="$(docker buildx imagetools inspect localhost:5000/markdown-viewer:combined --format '{{.Manifest.Digest}}')"
+          IMAGE_REF="localhost:5000/markdown-viewer@$digest"
+          echo "IMAGE_REF=$IMAGE_REF" >> "$GITHUB_ENV"
+          mkdir -p docker-artifacts
+          docker buildx imagetools inspect --raw "$IMAGE_REF" > docker-artifacts/combined-index.json
+          node docker/verify-assembly.mjs docker-artifacts/combined-index.json \
+            candidates/docker-candidate-amd64/index.json candidates/docker-candidate-arm64/index.json
+          for arch in amd64 arm64; do
+            DOCKER_PLATFORM="linux/$arch" DOCKER_ARTIFACT_DIR="docker-artifacts/$arch" \
+              bash docker/verify-registry.sh "$IMAGE_REF"
+          done
+      - name: Rehearse exact-digest promotion and export the complete release
+        run: |
+          set -euo pipefail
+          bash docker/promote-image.sh "$IMAGE_REF" localhost:5000/markdown-viewer verified latest
+          mkdir -p release
+          skopeo copy --all --preserve-digests --src-tls-verify=false \
+            "docker://$IMAGE_REF" oci-archive:release/image.tar
+          printf '%s\n' "${IMAGE_REF##*@}" > release/digest.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-verified-release
+          path: release/
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload release assembly evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-registry-rehearsal
+          path: docker-artifacts/
+          if-no-files-found: warn
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: assemble
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix=sha-
-          type=raw,value=latest,enable={{is_default_branch}}
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: docker/setup-buildx-action@v3
+      - uses: actions/download-artifact@v4
+        with:
+          name: docker-verified-release
+          path: release
+      - name: Log in to GHCR (main only)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Copy the verified complete release to GHCR without rebuilding
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y skopeo
+          expected="$(cat release/digest.txt)"
+          skopeo copy --all --preserve-digests --dest-authfile "$HOME/.docker/config.json" \
+            oci-archive:release/image.tar "docker://$IMAGE_REPO:candidate-$GITHUB_SHA"
+          actual="$(docker buildx imagetools inspect "$IMAGE_REPO:candidate-$GITHUB_SHA" --format '{{.Manifest.Digest}}')"
+          test "$actual" = "$expected"
+          IMAGE_REF="$IMAGE_REPO@$expected"
+          for arch in amd64 arm64; do
+            DOCKER_PLATFORM="linux/$arch" DOCKER_ARTIFACT_DIR="docker-artifacts/$arch" \
+              bash docker/verify-registry.sh "$IMAGE_REF"
+          done
+          SHORT_SHA="$(printf '%s' "$GITHUB_SHA" | cut -c1-7)"
+          bash docker/promote-image.sh "$IMAGE_REF" "$IMAGE_REPO" "sha-$SHORT_SHA" latest
+      - name: Upload immutable release audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-publish-evidence
+          path: docker-artifacts/
+          if-no-files-found: warn

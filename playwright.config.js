@@ -3,6 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 const PORT = Number(process.env.MARKDOWN_VIEWER_TEST_PORT || 4173);
 const HOST = '127.0.0.1';
 const browserChannel = process.env.PLAYWRIGHT_CHANNEL || undefined;
+const isContainerTest = process.env.MARKDOWN_VIEWER_TEST_CONTAINER === '1';
 
 module.exports = defineConfig({
   testDir: './tests/e2e',
@@ -12,7 +13,7 @@ module.exports = defineConfig({
   },
   fullyParallel: false,
   reporter: [['list'], ['html', { open: 'never' }]],
-  webServer: {
+  webServer: isContainerTest ? undefined : {
     command: 'node tests/helpers/static-server.mjs',
     url: `http://${HOST}:${PORT}/`,
     reuseExistingServer: true,
@@ -21,7 +22,7 @@ module.exports = defineConfig({
   },
   use: {
     baseURL: `http://${HOST}:${PORT}`,
-    serviceWorkers: 'block',
+    serviceWorkers: isContainerTest ? 'allow' : 'block',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'

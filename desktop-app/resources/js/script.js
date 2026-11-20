@@ -30400,7 +30400,7 @@ ${selector} .arrowheadPath {
   function getPublicAppBaseUrl() {
     const isLocal = window.location.origin.includes('localhost') ||
                     window.location.origin.includes('127.0.0.1') ||
-                    window.location.origin.startsWith('file://') ||
+                    window.location.protocol === 'file:' ||
                     typeof Neutralino !== 'undefined';
 
     return isLocal
@@ -30411,7 +30411,7 @@ ${selector} .arrowheadPath {
   function getShareApiBaseUrl() {
     const isLocal = window.location.origin.includes('localhost') ||
                     window.location.origin.includes('127.0.0.1') ||
-                    window.location.origin.startsWith('file://') ||
+                    window.location.protocol === 'file:' ||
                     typeof Neutralino !== 'undefined';
 
     return isLocal ? 'https://markdownviewer.pages.dev' : window.location.origin;
@@ -31245,12 +31245,11 @@ ${selector} .arrowheadPath {
       return wsBase + '/' + encodedRoom + query;
     }
 
-    if (typeof Neutralino !== 'undefined' || window.location.protocol === 'file:') {
-      return 'wss://markdownviewer.pages.dev/live-room/' + encodedRoom + query;
-    }
-
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return wsProtocol + '//' + window.location.host + '/live-room/' + encodedRoom + query;
+    // Localhost/Docker and desktop clients use the same hosted service as
+    // stored snapshots. Deployed web origins retain their same-origin relay.
+    // An explicitly configured relay above always takes precedence.
+    const wsBase = getShareApiBaseUrl().replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+    return wsBase + '/live-room/' + encodedRoom + query;
   }
 
   function ensureLiveShareCompressionReady() {
@@ -35870,13 +35869,22 @@ ${selector} .arrowheadPath {
     });
   }
 
-  // Register Service Worker for offline capabilities
+  // Register even when asynchronous startup finishes after the load event.
+  // A one-shot handler prevents duplicate registrations in the early path.
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
+    function registerMarkdownViewerServiceWorker() {
       navigator.serviceWorker.register('sw.js').catch(function(err) {
-        console.log('ServiceWorker registration failed: ', err);
+        console.warn('ServiceWorker registration failed:', err);
+        window.dispatchEvent(new CustomEvent('markdown-viewer:service-worker-error', {
+          detail: { message: String(err && err.message || err) }
+        }));
       });
-    });
+    }
+    if (document.readyState === 'complete') {
+      registerMarkdownViewerServiceWorker();
+    } else {
+      window.addEventListener('load', registerMarkdownViewerServiceWorker, { once: true });
+    }
   }
 
   // Wait until all editor and collaboration dependencies exist before adding the update tab.

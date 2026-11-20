@@ -10,6 +10,7 @@ const CRITICAL_ASSETS = [
   './visual-settings-store.js',
   './script.js',
   './browser-drop-source.js',
+  './native-markdown-source.js',
   './preview-worker.js',
   './styles.css',
   './assets/seo-metadata.mjs',
@@ -38,6 +39,7 @@ const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/visual-settings-store.js',
   '/script.js',
   '/browser-drop-source.js',
+  '/native-markdown-source.js',
   '/preview-worker.js',
   '/styles.css',
   '/assets/seo-metadata.mjs',
@@ -74,6 +76,29 @@ self.addEventListener('fetch', event => {
   const isCDN = CDN_ORIGINS.some(origin => url.hostname.includes(origin));
 
   if (isLocal) {
+    // Serve the precached editor shell immediately for navigations. This
+    // keeps offline reloads usable even when the browser rejects network
+    // requests before a fetch() fallback. Revalidate in the background.
+    if (event.request.mode === 'navigate') {
+      event.respondWith(caches.open(CACHE_NAME).then(async cache => {
+        const cached = (await cache.match(event.request, { ignoreSearch: true })) ||
+          (await cache.match('./index.html')) || (await cache.match('./'));
+        if (cached) {
+          event.waitUntil(fetch(event.request).then(response => {
+            if (response && response.ok) {
+              return cache.put(event.request, response.clone());
+            }
+          }).catch(() => {}));
+          return cached;
+        }
+        const response = await fetch(event.request);
+        if (response && response.ok) {
+          event.waitUntil(cache.put(event.request, response.clone()));
+        }
+        return response;
+      }));
+      return;
+    }
     const localPath = url.pathname.endsWith('/') ? '/' : url.pathname;
     const shouldUseNetworkFirst =
       event.request.mode === 'navigate' ||
@@ -88,7 +113,20 @@ self.addEventListener('fetch', event => {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;
-          }).catch(() => cache.match(event.request));
+          }).catch(async () => {
+            // A navigation may use a slightly different request URL or cache
+            // mode from install-time precaching. Fall back explicitly to the
+            // offline editor shell rather than returning an undefined response.
+            const cached = await cache.match(event.request, {
+              ignoreSearch: event.request.mode === 'navigate'
+            });
+            if (cached) return cached;
+            if (event.request.mode === 'navigate') {
+              return (await cache.match('./index.html')) ||
+                (await cache.match('./')) || Response.error();
+            }
+            return Response.error();
+          });
         })
       );
       return;
