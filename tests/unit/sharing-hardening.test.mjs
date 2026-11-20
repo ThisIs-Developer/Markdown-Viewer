@@ -28,7 +28,7 @@ test('Docker applies the web security headers and ships all local sharing depend
 test('PWA activation replaces the old client cache before controlling pages', async () => {
   const handlers = new Map(), deleted = [];
   let claimed = false, pending;
-  const current = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-v2-hardened';
+  const current = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-v2-local-renderers';
   runInNewContext(readFileSync('sw.js', 'utf8'), {
     URL,
     self: { location: { origin: 'https://markdownviewer.pages.dev' },

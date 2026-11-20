@@ -32,7 +32,7 @@ const contentTypes = new Map([
 
 function resolveRequestPath(requestUrl) {
   const pathname = decodeURIComponent(new URL(requestUrl || '/', `http://${host}:${port}`).pathname);
-  const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  const relativePath = pathname === '/' ? 'index.html' : (pathname === '/v2' || pathname === '/v2/' ? 'v2/index.html' : pathname.replace(/^\/+/, ''));
   const resolved = path.resolve(rootDir, relativePath);
   const relative = path.relative(rootDir, resolved);
   if (relative.startsWith('..') || path.isAbsolute(relative)) return null;

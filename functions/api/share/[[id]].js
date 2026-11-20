@@ -124,7 +124,8 @@ export async function onRequest({ request, env, params }) {
       return jsonResponse({ error: "invalid json" }, { status: 400 }, request);
     }
 
-    if (!Sharing.exactKeys(body, ['encrypted'])) {
+    const isLiveInvite = Sharing.exactKeys(body, ['encrypted', 'kind']) && body.kind === 'live-invite';
+    if (!Sharing.exactKeys(body, ['encrypted']) && !isLiveInvite) {
       return jsonResponse({ error: 'Update Markdown Viewer to create an encrypted share.' }, { status: 426 }, request);
     }
     let encrypted;
@@ -138,18 +139,19 @@ export async function onRequest({ request, env, params }) {
     const record = {
       version: 2,
       encrypted,
+      kind: isLiveInvite ? 'live-invite' : 'snapshot',
       createdAt: Date.now(),
       deleteTokenHash: await hashDeleteToken(deleteToken)
     };
 
     await env.SHARE_KV.put(storageKey(shareId), JSON.stringify(record), {
-      expirationTtl: SHARE_TTL_SECONDS
+      expirationTtl: isLiveInvite ? 86400 : SHARE_TTL_SECONDS
     });
 
     return jsonResponse({
       id: shareId,
       deleteToken,
-      expiresIn: SHARE_TTL_SECONDS
+      expiresIn: isLiveInvite ? 86400 : SHARE_TTL_SECONDS
     }, { status: 201 }, request);
   }
 

@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function () {
   // Hold private rendering through asynchronous invite loading, before the
   // default document can start optional remote renderer downloads.
-  let encryptedEntryPending = /^#(?:share=v2\.|id=s2_|live=room2_)/.test(window.location.hash);
+  let encryptedEntryPending = /^#(?:share=v2\.|id=s2_|live=room2_|s=|l=)/.test(window.location.hash);
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
   const APP_VERSION = '3.10.6';
@@ -554,6 +554,55 @@ document.addEventListener("DOMContentLoaded", async function () {
     const visible = [activeTabId, secondarySplitTabId].filter(Boolean);
     return Boolean(tabs.some(item => visible.includes(item.id) && item.encryptedSharing) ||
       (liveCollaboration && liveCollaboration.encryption && visible.includes(liveCollaboration.tabId)));
+  }
+
+  const CONFIDENTIAL_RENDERER_PATHS = Object.freeze({
+    mermaid:'libs/mermaid.min.js', mathjax:'libs/tex-svg.js',
+    pako:'libs/pako.min.js', abcjs:'libs/abcjs-basic-min.js',
+    d3:'libs/d3.min.js', markmapLib:'libs/markmap-lib.iife.js',
+    markmapView:'libs/markmap-view.js', leaflet_css:'libs/leaflet.css',
+    leaflet_js:'libs/leaflet.js', topojson:'libs/topojson.min.js',
+    three:'libs/three.min.js', stlLoader:'libs/STLLoader.js',
+    orbitControls:'libs/OrbitControls.js'
+  });
+  function confidentialRendererUrl(path) {
+    return new URL('assets/secure-renderers/' + path, document.baseURI).href;
+  }
+  function richRendererLibraryUrl(name) {
+    return isEncryptedSharingActive() && CONFIDENTIAL_RENDERER_PATHS[name]
+      ? confidentialRendererUrl(CONFIDENTIAL_RENDERER_PATHS[name]) : CDN[name];
+  }
+
+  // Do this on an inert XML DOM, before SVG enters the live document. URL-
+  // bearing attributes, external CSS loads and foreignObject can leak content.
+  function sanitizePrivateSvg(svg) {
+    if (!svg || !isEncryptedSharingActive()) return svg;
+    svg.querySelectorAll('script, iframe, foreignObject, foreignobject, object, embed, link, image, img, video, audio, animate, animateMotion, animateTransform, set, mpath, feImage').forEach(node => node.remove());
+    const unsafeCss = /@import|expression\s*\(|url\s*\(\s*['"]?(?!#)/i;
+    svg.querySelectorAll('style').forEach(node => {
+      if (unsafeCss.test(node.textContent || '')) node.remove();
+    });
+    [svg, ...svg.querySelectorAll('*')].forEach(node => {
+      [...node.attributes].forEach(attr => {
+        const name = attr.name.toLowerCase();
+        const value = String(attr.value || '').trim();
+        if (name.startsWith('on') || name === 'xml:base' || name === 'base' ||
+            ((name === 'href' || name === 'xlink:href' || name === 'src') && !value.startsWith('#')) ||
+            (['style','fill','stroke','filter','clip-path','mask','marker','marker-start','marker-mid','marker-end'].includes(name) && unsafeCss.test(value))) {
+          node.removeAttribute(attr.name);
+        }
+      });
+    });
+    return svg;
+  }
+
+  let confidentialRendererModule;
+  async function compileConfidentialDiagram(engine, source) {
+    if (engine === 'plantuml') {
+      await loadDiagramLibrary(confidentialRendererUrl('plantuml/viz-global.js'));
+    }
+    confidentialRendererModule ||= import(confidentialRendererUrl('private-renderer.mjs'));
+    return (await confidentialRendererModule).render(engine, source);
   }
 
   function prepareSharedPreviewHtml(html) {
@@ -3677,6 +3726,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     const rendererSource = normalizeDiagramSourceForRenderer(engine, source);
+    if (isEncryptedSharingActive()) {
+      return compileConfidentialDiagram(engine, rendererSource);
+    }
 
     if (adapter.local && typeof Neutralino !== 'undefined') {
       try {
@@ -3724,9 +3776,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       return Promise.resolve(window.markmap);
     }
     if (!markmapLibraryPromise) {
-      markmapLibraryPromise = loadDiagramLibrary(CDN.d3)
-        .then(() => loadDiagramLibrary(CDN.markmapLib))
-        .then(() => loadDiagramLibrary(CDN.markmapView))
+      markmapLibraryPromise = loadDiagramLibrary(richRendererLibraryUrl('d3'))
+        .then(() => loadDiagramLibrary(richRendererLibraryUrl('markmapLib')))
+        .then(() => loadDiagramLibrary(richRendererLibraryUrl('markmapView')))
         .then(() => {
           if (!window.markmap || !window.markmap.Transformer || !window.markmap.Markmap) {
             throw new Error('Official Markmap API did not initialize.');
@@ -3912,6 +3964,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
       });
     });
+    sanitizePrivateSvg(svg);
     node.replaceChildren(document.importNode(svg, true));
     prepareDiagramSvg(node.querySelector('svg'), engine);
     normalizeDiagramSvg(node, engine, source);
@@ -4088,7 +4141,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     setDiagramRenderState(container, 'loading', `Rendering ${REMOTE_DIAGRAM_ENGINES[engine].label}…`);
     try {
       if (engine === 'markmap') {
-        await renderMarkmapIntoElement(node, source, false, Boolean(context && context.exportCapture));
+        const safeSource = isEncryptedSharingActive()
+          ? source.replace(/!\[[^\]]*\]\([^)]+\)/g, '[Image blocked in private diagram]').replace(/<img\b[^>]*>/gi, '')
+          : source;
+        await renderMarkmapIntoElement(node, safeSource, false, Boolean(context && context.exportCapture));
+        if (isEncryptedSharingActive()) {
+          node.querySelectorAll('svg').forEach(sanitizePrivateSvg);
+        }
         if (!isPreviewRenderContextCurrent(context) || !document.body.contains(node)) return;
         setDiagramRenderState(container, 'ready');
         mountDiagramViewer(container, engine);
@@ -4136,7 +4195,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
 
     if (typeof pako === 'undefined') {
-      return loadDiagramLibrary(CDN.pako).then(renderAdapterTargets).catch(error => {
+      return loadDiagramLibrary(richRendererLibraryUrl('pako')).then(renderAdapterTargets).catch(error => {
         console.warn('Failed to load diagram encoder; POST fallbacks remain available', error);
         return renderAdapterTargets();
       });
@@ -4196,6 +4255,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       output: {
         // The combined bundle includes Modern. Load optional fonts only after
         // startup so an unavailable font cannot leave startup.promise pending.
+        // The local MathJax SVG bundle embeds the Modern font. NewCM is an
+        // optional package that triggers a remote CDN fetch and leaks the
+        // private share visit, so never request it for encrypted documents.
         font: 'mathjax-modern'
       },
       tex: {
@@ -4215,7 +4277,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     configureMathJax();
-    mathJaxLoadPromise = loadScript(CDN.mathjax)
+    mathJaxLoadPromise = loadScript(richRendererLibraryUrl('mathjax'))
       .then(function() {
         return MathJax.startup && MathJax.startup.promise
           ? MathJax.startup.promise
@@ -4227,7 +4289,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
         // Keep math usable in Modern while the saved font downloads. The
         // adapter rerenders when the latest selection is ready or falls back.
-        if (window.visualSettingsAdapters) {
+        if (window.visualSettingsAdapters && !isEncryptedSharingActive()) {
           window.visualSettingsAdapters.applyMathFont(
             window.visualSettingsAdapters.getCurrentMathFont()
           ).catch(function(error) {
@@ -4237,7 +4299,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       })
       .catch(function(error) {
         mathJaxLoadPromise = null;
-        _loadedScripts.delete(CDN.mathjax);
+        _loadedScripts.delete(richRendererLibraryUrl('mathjax'));
         if (window.MathJax && typeof MathJax.typesetPromise !== 'function') {
           try {
             delete window.MathJax;
@@ -15049,7 +15111,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     namespaceSplitPreviewIds(documentSplitPreview, tab.id);
     documentSplitPreviewTabId = tab.id;
     documentSplitPreviewContent = content;
-    if (privateContent) return;
     const context = {
       isCurrent: function() {
         return (
@@ -16723,9 +16784,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         return mermaid.render(renderId, code);
       });
       if (!isPreviewRenderContextCurrent(context)) return false;
-      node.innerHTML = result.svg;
-      if (typeof result.bindFunctions === 'function') {
-        result.bindFunctions(node);
+      if (isEncryptedSharingActive()) {
+        const parsed = new DOMParser().parseFromString(result.svg, 'image/svg+xml');
+        if (parsed.querySelector('parsererror') || parsed.documentElement.nodeName.toLowerCase() !== 'svg')
+          throw new Error('Invalid local Mermaid SVG');
+        sanitizePrivateSvg(parsed.documentElement);
+        node.replaceChildren(document.importNode(parsed.documentElement, true));
+      } else {
+        node.innerHTML = result.svg;
+        if (typeof result.bindFunctions === 'function') result.bindFunctions(node);
       }
       setDiagramRenderState(container, 'ready');
       return true;
@@ -16780,7 +16847,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
 
     if (typeof mermaid === 'undefined') {
-      return loadDiagramLibrary(CDN.mermaid)
+      return loadDiagramLibrary(richRendererLibraryUrl('mermaid'))
         .then(function() {
           return renderLoadedNodes(true);
         })
@@ -16888,7 +16955,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       return abcNodes;
     };
     const loadAndRender = function() {
-      return loadDiagramLibrary(CDN.abcjs).then(function() {
+      return loadDiagramLibrary(richRendererLibraryUrl('abcjs')).then(function() {
         if (!isPreviewRenderContextCurrent(context)) return [];
         return renderNodes();
       }).catch(function(error) {
@@ -17051,11 +17118,17 @@ document.addEventListener("DOMContentLoaded", async function () {
         tileAttribution += ' &copy; <a href="https://carto.com/attributions">CARTO</a>';
       }
       
-      L.tileLayer(tileUrl, {
-        attribution: tileAttribution,
-        maxZoom: 19,
-        crossOrigin: context && context.exportCapture ? true : false
-      }).addTo(map);
+      // Geographic tile requests reveal the viewport coordinates to third
+      // parties. Draw private GeoJSON/TopoJSON vectors without any tile layer.
+      if (!isEncryptedSharingActive()) {
+        L.tileLayer(tileUrl, {
+          attribution: tileAttribution,
+          maxZoom: 19,
+          crossOrigin: context && context.exportCapture ? true : false
+        }).addTo(map);
+      } else {
+        node.style.backgroundColor = currentTheme === 'dark' ? '#1f2937' : '#f1f5f9';
+      }
       
       const geojsonLayer = L.geoJSON(geojsonData, {
         onEachFeature: function(feature, layer) {
@@ -17108,11 +17181,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
     const loadPromises = [];
     if (typeof L === 'undefined') {
-      loadPromises.push(loadStyle(CDN.leaflet_css));
-      loadPromises.push(loadScript(CDN.leaflet_js));
+      loadPromises.push(loadStyle(richRendererLibraryUrl('leaflet_css')));
+      loadPromises.push(loadScript(richRendererLibraryUrl('leaflet_js')));
     }
     if (topojsonNodes.length > 0 && !getTopoJsonLibrary()) {
-      loadPromises.push(loadScript(CDN.topojson).then(function() {
+      loadPromises.push(loadScript(richRendererLibraryUrl('topojson')).then(function() {
         if (!getTopoJsonLibrary()) {
           throw new Error('TopoJSON renderer failed to initialize.');
         }
@@ -17490,6 +17563,49 @@ document.addEventListener("DOMContentLoaded", async function () {
     document.getElementById('stl-modal-viewer').innerHTML = '';
   }
 
+  // When WebGL is unavailable, render a bounded local static projection.
+  function renderPrivateStlFallback(node, code) {
+    validateStlSource(code);
+    const geometry = new THREE.STLLoader().parse(new TextEncoder().encode(code).buffer);
+    validateStlGeometry(geometry);
+    const position = geometry.getAttribute('position');
+    const limit = Math.min(position.count, 9000);
+    const triangles = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i + 2 < limit; i += 3) {
+      const points = [];
+      for (let j = 0; j < 3; j++) {
+        const x = position.getX(i + j), y = position.getY(i + j), z = position.getZ(i + j);
+        const px = (x - y) * 0.866, py = (x + y) * 0.5 - z;
+        points.push([px, py]);
+        minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+        minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+      }
+      triangles.push(points);
+    }
+    if (!triangles.length) throw new Error('STL geometry is empty');
+    const scale = 350 / Math.max(maxX - minX, maxY - minY, 1e-9);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 400 400');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Static STL model preview (WebGL unavailable)');
+    svg.style.width = '100%';
+    svg.style.height = '400px';
+    for (const triangle of triangles) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const d = triangle.map((v, index) => (index ? 'L' : 'M') +
+        (25 + (v[0] - minX) * scale).toFixed(2) + ' ' +
+        (375 - (v[1] - minY) * scale).toFixed(2)).join(' ') + 'Z';
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke-width', '1.5');
+      svg.appendChild(path);
+    }
+    node.replaceChildren(svg);
+    geometry.dispose();
+  }
+
   function renderStlNode(node, context) {
     if (!node || !node.isConnected || !isPreviewRenderContextCurrent(context)) return;
     const originalCode = node.getAttribute('data-original-code');
@@ -17512,6 +17628,15 @@ document.addEventListener("DOMContentLoaded", async function () {
     } catch (err) {
       if (!isPreviewRenderContextCurrent(context) || !node.isConnected) return;
       console.error("STL rendering failed:", err);
+      if (isEncryptedSharingActive()) {
+        try {
+          renderPrivateStlFallback(node, decodedCode);
+          if (container) container.classList.remove('is-loading');
+          return;
+        } catch (fallbackError) {
+          console.warn('Private STL static projection failed:', fallbackError);
+        }
+      }
       node.innerHTML = `<div class="render-error-msg" style="padding: 2em; color: var(--text-color); text-align: center;">Error rendering 3D model: ${escapeHtml(err.message)}</div>`;
       if (container) container.classList.remove('is-loading');
     }
@@ -17530,15 +17655,15 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (!isPreviewRenderContextCurrent(context)) return Promise.resolve();
       const loadPromises = [];
       if (typeof THREE.STLLoader === 'undefined') {
-        loadPromises.push(loadScript(CDN.stlLoader));
+        loadPromises.push(loadScript(richRendererLibraryUrl('stlLoader')));
       }
       if (typeof THREE.OrbitControls === 'undefined') {
-        loadPromises.push(loadScript(CDN.orbitControls));
+        loadPromises.push(loadScript(richRendererLibraryUrl('orbitControls')));
       }
       return loadPromises.length > 0 ? Promise.all(loadPromises) : Promise.resolve();
     };
     const threeReady = typeof THREE === 'undefined'
-      ? loadScript(CDN.three)
+      ? loadScript(richRendererLibraryUrl('three'))
       : Promise.resolve();
 
     return threeReady.then(function() {
@@ -17558,7 +17683,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function updateMapThemes() {
-    if (typeof L === 'undefined') return;
+    if (typeof L === 'undefined' || isEncryptedSharingActive()) return;
     const mapNodes = queryPreviewRoots([markdownPreview, documentSplitPreview], '.geojson-map, .topojson-map');
     mapNodes.forEach(node => {
       const map = node._leafletMap;
@@ -17740,7 +17865,7 @@ ${selector} .arrowheadPath {
       const mermaidNodes = Array.from(markdownPreview.querySelectorAll('.mermaid'));
       if (mermaidNodes.length > 0) {
         if (typeof mermaid === 'undefined') {
-          await loadDiagramLibrary(CDN.mermaid);
+          await loadDiagramLibrary(richRendererLibraryUrl('mermaid'));
         }
         initMermaid(true);
         mermaidNodes.forEach(function(node) {
@@ -18004,14 +18129,7 @@ ${selector} .arrowheadPath {
 
   function postProcessPreview(rawVal, context, patchResult) {
     const roots = getPreviewPostProcessRoots(patchResult, context);
-    if (isEncryptedSharingActive()) {
-      roots.forEach(root => { enhancePreviewCodeBlocks(root); enhanceGitHubAlerts(root); });
-      refreshDocumentOutline();
-      decorateReviewTargets();
-      updateFindHighlights();
-      scheduleLineNumberUpdate();
-      return;
-    }
+    const privateContent = isEncryptedSharingActive();
 
     // Clean up orphaned STL views that are no longer present in the document
     activeStlViews.forEach((view, id) => {
@@ -18021,7 +18139,7 @@ ${selector} .arrowheadPath {
     });
 
     roots.forEach(function(root) {
-      processEmojis(root);
+      if (!privateContent) processEmojis(root);
       enhancePreviewCodeBlocks(root);
       enhanceGitHubAlerts(root);
     });
@@ -23257,7 +23375,7 @@ ${selector} .arrowheadPath {
     
     if (typeof pako === 'undefined') {
       try {
-        await loadDiagramLibrary(CDN.pako);
+        await loadDiagramLibrary(richRendererLibraryUrl('pako'));
       } catch (e) {
         console.warn('Failed to load pako library for diagram previews:', e);
       }
@@ -29918,10 +30036,6 @@ ${selector} .arrowheadPath {
 
   async function renderExportRichContent(root, markdown, exportTheme, state) {
     await MarkdownShareMedia.resolve(root, { base: getShareApiBaseUrl() });
-    if (isEncryptedSharingActive()) {
-      await waitForExportWork(state, waitForAllImages(root));
-      return;
-    }
     const theme = getExportTheme(exportTheme);
     const context = {
       theme,
@@ -30477,6 +30591,18 @@ ${selector} .arrowheadPath {
       : window.location.origin + window.location.pathname;
   }
 
+  // Share-v2 links point to a real static /v2/ entry. Secrets remain in the
+  // fragment and are never part of the server-visible path or query string.
+  function getVersionedShareBaseUrl() {
+    return new URL('/v2/', getPublicAppBaseUrl()).href;
+  }
+
+  function parseCompactShareLink(hash, type) {
+    const match = String(hash || '').match(new RegExp('^#' + type + '=([A-Za-z0-9_-]{24})\\.([A-Za-z0-9_-]{43})$'));
+    if (!match) throw new Error('The encrypted share link is incomplete or invalid.');
+    return { id: 's2_' + match[1], key: match[2] };
+  }
+
   function getShareApiBaseUrl() {
     const isLocal = window.location.origin.includes('localhost') ||
                     window.location.origin.includes('127.0.0.1') ||
@@ -30584,7 +30710,7 @@ ${selector} .arrowheadPath {
     generatedShareSnapshotId = payload.id;
     generatedShareSnapshotDeleteToken = typeof payload.deleteToken === 'string' ? payload.deleteToken : '';
 
-    return getPublicAppBaseUrl() + '#id=' + payload.id + '&key=' + prepared.key;
+    return getVersionedShareBaseUrl() + '#s=' + payload.id.slice(3) + '.' + prepared.key;
   }
 
   function formatShareExpiry(seconds) {
@@ -30641,10 +30767,9 @@ ${selector} .arrowheadPath {
   async function createShareSnapshotLink() {
     const mode = getCurrentShareMode();
     const prepared = await buildShareUrl(mode);
-    if (prepared.byteLength >= SERVER_SHARE_THRESHOLD_BYTES || prepared.inlineUrl.length > MAX_LEGACY_SHARE_URL_LENGTH) {
-      return await createStoredShareUrl(prepared);
-    }
-    return prepared.inlineUrl;
+    // Even small plaintexts must not create very long ciphertext-in-fragment URLs.
+    // Use the same ciphertext-only KV storage for every newly created snapshot.
+    return await createStoredShareUrl(prepared);
   }
 
   function openShareModal() {
@@ -31317,7 +31442,7 @@ ${selector} .arrowheadPath {
 
   function ensureLiveShareCompressionReady() {
     if (typeof pako !== 'undefined') return Promise.resolve();
-    return loadScript(CDN.pako);
+    return loadScript(richRendererLibraryUrl('pako'));
   }
 
   function decodeLiveSeedFromShare(encoded) {
@@ -31530,6 +31655,50 @@ ${selector} .arrowheadPath {
     return (normalized || 'Live Share').slice(0, 120);
   }
 
+  // Short encrypted invites are stored under independent random invite keys:
+  // the server stores only AES-GCM ciphertext, never the room content key,
+  // role signing key, capability, or invitation key.
+  async function createCompactLiveInvite(roomId, role, capabilities, encryption) {
+    const key = MarkdownShareCrypto.random();
+    const invite = {
+      v: 2, roomId, role, capability: capabilities[role],
+      encryption: { key: encryption.key, config: encryption.config, signingKey: encryption.signing[role] }
+    };
+    const encrypted = await MarkdownShareCrypto.seal(invite, key, 'live-invite', 8192);
+    const response = await fetch(getShareApiBaseUrl() + '/api/share', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ encrypted, kind: 'live-invite' })
+    });
+    if (!response.ok) throw new Error('Unable to store a private Live Share invitation (' + response.status + ').');
+    const payload = await response.json();
+    if (!payload || !/^s2_[A-Za-z0-9_-]{24}$/.test(payload.id || '')) throw new Error('Invalid encrypted invite ID.');
+    return getVersionedShareBaseUrl() + '#l=' + payload.id.slice(3) + '.' + key;
+  }
+
+  async function readCompactLiveInvite(hash) {
+    const link = parseCompactShareLink(hash, 'l');
+    const response = await fetch(getShareApiBaseUrl() + '/api/share/' + encodeURIComponent(link.id));
+    if (!response.ok) throw new Error('This invitation is unavailable or expired.');
+    const record = await response.json();
+    const invite = await MarkdownShareCrypto.open(record && record.encrypted, link.key, 'live-invite', 8192);
+    if (!MarkdownShareCrypto.exactKeys(invite, ['v', 'roomId', 'role', 'capability', 'encryption']) ||
+        invite.v !== 2 || !/^room2_[A-Za-z0-9_-]{24}$/.test(invite.roomId || '') ||
+        !['view', 'edit'].includes(invite.role) ||
+        typeof invite.capability !== 'string' || !/^[A-Za-z0-9_-]{16,160}$/.test(invite.capability) ||
+        !MarkdownShareCrypto.exactKeys(invite.encryption, ['key', 'config', 'signingKey']) ||
+        typeof invite.encryption.key !== 'string' || typeof invite.encryption.signingKey !== 'string') {
+      throw new Error('Invalid encrypted live invitation.');
+    }
+    const config = MarkdownShareCrypto.publicConfig(invite.encryption.config, invite.roomId);
+    if (config.expiresAt <= Date.now()) throw new Error('This private invitation has expired.');
+    return {
+      roomId: invite.roomId, secret: '', title: 'Live Share',
+      role: invite.role, accessMode: invite.role,
+      capability: invite.capability, encryption: { key: invite.encryption.key,
+        config, signingKey: invite.encryption.signingKey }
+    };
+  }
+
   function buildLiveInviteUrl(roomId, secret, title, accessMode, capabilities, encryption) {
     const isLocal = window.location.origin.includes('localhost') ||
                     window.location.origin.startsWith('file://') ||
@@ -31541,11 +31710,7 @@ ${selector} .arrowheadPath {
 
     if (encryption) {
       const role = normalizeLiveAccessMode(accessMode);
-      if (!capabilities || !encryption.signing) return '';
-      const params = new URLSearchParams({ live: roomId, v: '2', key: encryption.key,
-        sig: encryption.signing[role], pub: MarkdownShareCrypto.pack(encryption.config, 4096),
-        access: role, role, cap: capabilities[role] });
-      return baseUrl + '#' + params.toString();
+      return encryption.inviteUrls && encryption.inviteUrls[role] || '';
     }
     const base = baseUrl + '#live=' + encodeURIComponent(roomId + '.' + secret);
     const params = [];
@@ -32610,6 +32775,13 @@ ${selector} .arrowheadPath {
     const liveCapability = isHost
       ? liveCapabilities.host
       : (options.capability || '');
+    if (isHost && encryption) {
+      const [view, edit] = await Promise.all([
+        createCompactLiveInvite(roomId, 'view', liveCapabilities, encryption),
+        createCompactLiveInvite(roomId, 'edit', liveCapabilities, encryption)
+      ]);
+      encryption.inviteUrls = { view, edit };
+    }
     const inviteUrl = buildLiveInviteUrl(roomId, secret, hostTitle, requestedAccessMode, liveCapabilities, encryption);
     if (isHost && yText.length === 0) {
       yText.insert(0, markdownEditor.value || '');
@@ -32908,8 +33080,11 @@ ${selector} .arrowheadPath {
 
   async function loadFromLiveHash() {
     let parsed;
-    try { parsed = parseLiveHash(); }
-    catch (_) { alert('The encrypted invite is incomplete or unsupported.'); return; }
+    try {
+      parsed = window.location.hash.startsWith('#l=')
+        ? await readCompactLiveInvite(window.location.hash)
+        : parseLiveHash();
+    } catch (_) { alert('The encrypted invite is incomplete, expired, or unsupported.'); return; }
     if (!parsed) return;
     try {
       const originalTabSnapshot = captureLiveTabSnapshot();
@@ -33114,6 +33289,15 @@ ${selector} .arrowheadPath {
 
   async function loadFromShareHash() {
     const hash = window.location.hash;
+    if (hash.startsWith('#s=')) {
+      try {
+        const link = parseCompactShareLink(hash, 's');
+        await loadStoredShareHash('#id=' + link.id + '&key=' + link.key);
+      } catch (_) {
+        alert('The encrypted snapshot link is incomplete or invalid.');
+      }
+      return;
+    }
     if (hash.startsWith('#id=')) {
       await loadStoredShareHash(hash);
       return;
@@ -33134,7 +33318,7 @@ ${selector} .arrowheadPath {
 
     // PERF-002: Lazy-load pako when loading shared URL content
     if (typeof pako === 'undefined') {
-      loadScript(CDN.pako).then(function() {
+      loadScript(richRendererLibraryUrl('pako')).then(function() {
         loadFromShareHash();
       }).catch(function(e) {
         console.error('Failed to load pako for shared URL:', e);
@@ -36011,13 +36195,16 @@ ${selector} .arrowheadPath {
     });
   }
 
-  // Register Service Worker for offline capabilities
+  // Register even if asynchronous initialization finished after the load event.
+  // Use a root-relative URL so the compact /v2/ entry shares the same SW scope.
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('sw.js').catch(function(err) {
+    const registerOfflineWorker = () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(err) {
         console.log('ServiceWorker registration failed: ', err);
       });
-    });
+    };
+    if (document.readyState === 'complete') registerOfflineWorker();
+    else window.addEventListener('load', registerOfflineWorker, { once: true });
   }
 
   // Wait until all editor and collaboration dependencies exist before adding the update tab.

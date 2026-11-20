@@ -68,6 +68,28 @@ test('snapshot authentication rejects wrong keys, contexts, tags, IVs and unsupp
   assert.throws(() => C.decode('AB', 10));
 });
 
+test('short-lived live invitations store only ciphertext and preserve role secrets', async () => {
+  const store = kv();
+  const invitationKey = C.random(), contentKey = C.random(), signingKey = C.random();
+  const roomId = 'room2_' + C.random(18);
+  const encrypted = await C.seal({ role: 'edit', key: contentKey, signingKey, roomId }, invitationKey, 'live-invite', 8192);
+  const created = await call(snapshotApi, store, 'POST', { encrypted, kind: 'live-invite' });
+  assert.equal(created.status, 201);
+  const { id, expiresIn } = await created.json();
+  assert.equal(expiresIn, 86400);
+  assert.equal(store.writes[0].options.expirationTtl, 86400);
+  const stored = JSON.parse(store.values.get('share-v2:' + id));
+  assert.equal(stored.kind, 'live-invite');
+  for (const secret of [invitationKey, contentKey, signingKey]) {
+    assert.equal(JSON.stringify(stored).includes(secret), false);
+  }
+  const opened = await call(snapshotApi, store, 'GET', undefined, id);
+  const payload = await opened.json();
+  assert.deepEqual(await C.open(payload.encrypted, invitationKey, 'live-invite', 8192),
+    { role: 'edit', key: contentKey, signingKey, roomId });
+  await assert.rejects(C.open(payload.encrypted, invitationKey, 'snapshot', 8192));
+});
+
 test('snapshot API stores only an envelope and separates creator deletion authority', async () => {
   const store = kv(), key = C.random(), content = 'PRIVATE API MARKER';
   const encrypted = await C.seal({ content, title: 'CONFIDENTIAL TITLE', mode: 'view' }, key, 'snapshot');
@@ -79,8 +101,9 @@ test('snapshot API stores only an envelope and separates creator deletion author
   assert.match(id, /^s2_[A-Za-z0-9_-]{24}$/);
   assert.equal(expiresIn, 90 * 86400);
   const record = JSON.parse(store.values.get('share-v2:' + id));
-  assert.deepEqual(Object.keys(record).sort(), ['createdAt', 'deleteTokenHash', 'encrypted', 'version']);
+  assert.deepEqual(Object.keys(record).sort(), ['createdAt', 'deleteTokenHash', 'encrypted', 'kind', 'version']);
   assert.equal(store.writes[0].options.expirationTtl, 90 * 86400);
+  assert.equal(record.kind, 'snapshot');
   for (const secret of [key, content, deleteToken, 'CONFIDENTIAL TITLE']) assert.equal(JSON.stringify(record).includes(secret), false);
   const fetched = await call(snapshotApi, store, 'GET', undefined, id);
   assert.equal(store.reads.length, 1, 'opening a stored snapshot costs one read');

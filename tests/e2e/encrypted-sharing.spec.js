@@ -24,7 +24,7 @@ async function localServices(context, writes = []) {
     await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: Buffer.from(await response.arrayBuffer()) });
   });
 }
-const localLink = (link, base) => base + '/' + new URL(link).hash;
+const localLink = (link, base) => base + new URL(link).pathname + new URL(link).hash;
 
 test('stored snapshots keep payloads opaque, require a key, and retain legacy reads', async ({ page, browser, baseURL }) => {
   const writes = [];
@@ -35,12 +35,16 @@ test('stored snapshots keep payloads opaque, require a key, and retain legacy re
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#id=s2_.*&key=/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/\/v2\/#s=[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{43}$/);
   const link = await page.locator('#share-url-input').inputValue();
-  const params = new URLSearchParams(new URL(link).hash.slice(1));
-  const stored = await kv.get('share-v2:' + params.get('id'));
+  expect(link.length).toBeLessThan(140);
+  expect(new URL(link).pathname).toBe('/v2/');
+  const match = new URL(link).hash.match(/^#s=([A-Za-z0-9_-]{24})\.([A-Za-z0-9_-]{43})$/);
+  expect(match).not.toBeNull();
+  const id = 's2_' + match[1], key = match[2];
+  const stored = await kv.get('share-v2:' + id);
   expect(stored).not.toContain('Opaque snapshot');
-  expect(stored).not.toContain(params.get('key'));
+  expect(stored).not.toContain(key);
   expect(writes[0].body).toEqual({ encrypted: expect.objectContaining({ v: 2, alg: 'A256GCM' }) });
   expect(JSON.stringify(writes)).not.toContain('Private Unicode');
   const recipient = await browser.newContext();
@@ -54,7 +58,7 @@ test('stored snapshots keep payloads opaque, require a key, and retain legacy re
     new MutationObserver(() => document.querySelectorAll('.app-toast-message').forEach(node => window.__messages.push(node.textContent)))
       .observe(document, { childList: true, subtree: true });
   });
-  await openApp(invalid, baseURL + '/#id=' + params.get('id'), { expectEditorVisible: false });
+  await openApp(invalid, baseURL + '/#id=' + id, { expectEditorVisible: false });
   await expect.poll(() => invalid.evaluate(() => window.__messages.join(' '))).toContain('complete link');
   await expect(invalid.locator('#markdown-preview')).not.toContainText('Opaque snapshot');
   const legacyId = 'abcdefghjk';
@@ -71,7 +75,7 @@ test('stored snapshots keep payloads opaque, require a key, and retain legacy re
   await expect(page.locator('#share-delete-btn')).toBeVisible();
   await page.locator('#share-delete-btn').click();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
-  await expect.poll(() => kv.get('share-v2:' + params.get('id'))).toBeNull();
+  await expect.poll(() => kv.get('share-v2:' + id)).toBeNull();
   await recipient.close();
 });
 
@@ -96,7 +100,7 @@ test('managed uploads decrypt in preview and export without sending the media ke
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#share=v2/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/\/v2\/#s=[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{43}$/);
   const recipient = await browser.newContext();
   await localServices(recipient);
   const guest = await recipient.newPage();
@@ -139,7 +143,7 @@ test('real encrypted relay synchronizes host and editor with content-free wire f
   await page.locator('input[name="live-share-access-mode"][value="edit"]').check();
   await page.locator('#live-share-display-name').fill('Confidential host name');
   await page.locator('#live-share-start-btn').click();
-  await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=room2_/);
+  await expect(page.locator('#live-share-url-input')).toHaveValue(/\/v2\/#l=[A-Za-z0-9_-]{24}\.[A-Za-z0-9_-]{43}$/);
   const invite = await page.locator('#live-share-url-input').inputValue();
   await page.locator('#live-share-modal-close-icon').click();
   const recipient = await browser.newContext();
@@ -149,10 +153,12 @@ test('real encrypted relay synchronizes host and editor with content-free wire f
   await expect(guest.locator('#markdown-editor')).toHaveValue(/Host text/);
   await setEditorContent(guest, '# Real encrypted live fixture\n\nEditor update confidential.');
   await expect(page.locator('#markdown-editor')).toHaveValue(/Editor update confidential/);
-  const params = new URLSearchParams(new URL(invite).hash.slice(1));
+  expect(invite.length).toBeLessThan(140);
+  const inviteMatch = new URL(invite).hash.match(/^#l=([A-Za-z0-9_-]{24})\.([A-Za-z0-9_-]{43})$/);
+  expect(inviteMatch).not.toBeNull();
   expect(urls.every(url => /\?v=2$/.test(url))).toBe(true);
   const wire = frames.join('\n');
-  for (const value of ['Host text', 'Confidential host name', 'Editor update confidential', params.get('key'), params.get('sig')]) expect(wire).not.toContain(value);
+  for (const value of ['Host text', 'Confidential host name', 'Editor update confidential', inviteMatch[2]]) expect(wire).not.toContain(value);
   expect(frames.some(frame => JSON.parse(frame).type === 'y-update' && JSON.parse(frame).ct)).toBe(true);
   await page.locator('#live-share-button').click();
   await page.locator('#live-share-end-btn').click();

@@ -3,6 +3,7 @@ FROM nginx:alpine
 
 # PERF-019: Only copy necessary web files (exclude .git, desktop-app, wiki, etc.)
 COPY index.html /usr/share/nginx/html/
+COPY v2/ /usr/share/nginx/html/v2/
 COPY workspace-storage.js /usr/share/nginx/html/
 COPY visual-settings-adapters.js /usr/share/nginx/html/
 COPY visual-settings-store.js /usr/share/nginx/html/

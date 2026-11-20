@@ -115,17 +115,10 @@
         }
       });
       content.querySelectorAll('style, link, iframe, object, embed').forEach(node => node.remove());
-      // Render source locally rather than allowing renderer-specific remote assets/fallbacks.
-      content.querySelectorAll('.mermaid, .plantuml-diagram, .d2-diagram, .graphviz-diagram, .kroki-diagram, .geojson-map, .topojson-map, .stl-viewer, .abc-notation').forEach(node => {
-        const pre = document.createElement('pre');
-        const code = document.createElement('code');
-        let source = node.getAttribute('data-original-code');
-        try { source = source ? decodeURIComponent(source) : node.textContent; } catch (_) { source = node.textContent; }
-        code.textContent = source || '';
-        pre.appendChild(code);
-        const shell = node.closest('.diagram-viewer, .mermaid-container, .geojson-container, .topojson-container, .stl-container, .abc-container');
-        (shell || node).replaceWith(pre);
-      });
+      // Private diagrams are rendered by pinned, same-origin engines after this
+      // inert template is committed. Do not replace their source nodes with
+      // code blocks; that previously disabled diagrams and LaTeX for guests.
+      // Remote URLs and active styles have already been stripped above.
     }
     return template.innerHTML;
   }

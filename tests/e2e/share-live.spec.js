@@ -4,13 +4,31 @@ const {
   openApp,
   setEditorContent,
   storedDocuments,
-  stubClipboard,
-  stubLiveShareRuntime
+  stubClipboard
 } = require('../helpers/app');
 
+test.describe.configure({ timeout: 180_000 });
+let runtime, liveBase;
+test.beforeAll(async () => {
+  test.setTimeout(120000);
+  runtime = await (await import('../helpers/encrypted-sharing-runtime.mjs')).sharingRuntime();
+  liveBase = (await runtime.ready).origin + '/live-room';
+});
+test.afterAll(async () => { await runtime?.dispose(); });
+async function localServices(context) {
+  await context.addInitScript(base => { window.MARKDOWN_VIEWER_LIVE_ROOM_URL = base; }, liveBase);
+  await context.route('https://markdownviewer.pages.dev/api/**', async route => {
+    const req = route.request();
+    const res = await runtime.dispatchFetch(req.url(), { method:req.method(),
+      headers:{Origin:'http://127.0.0.1:4173','Content-Type':'application/json'},
+      ...(req.postData() ? {body:req.postData()} : {}) });
+    await route.fulfill({status:res.status,headers:Object.fromEntries(res.headers),
+      body:Buffer.from(await res.arrayBuffer())});
+  });
+}
 function localizeAppLink(url, baseURL) {
   const parsed = new URL(url);
-  return `${baseURL}/${parsed.hash}`;
+  return baseURL + parsed.pathname + parsed.hash;
 }
 
 async function selectLiveReviewText(page, selector, text) {
@@ -31,16 +49,19 @@ async function selectLiveReviewText(page, selector, text) {
 }
 
 test('Share Snapshot creates a view-only hash link that opens without permanent tab persistence', async ({ browser, page, baseURL }) => {
+  await localServices(page.context());
   await openApp(page);
   await setEditorContent(page, await fixture('share.md'));
 
   await page.locator('#share-button').click();
   await expect(page.locator('#share-modal')).toHaveClass(/is-visible/);
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#share=/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/\/v2\/#s=/);
 
   const generatedUrl = await page.locator('#share-url-input').inputValue();
+  expect(generatedUrl.length).toBeLessThan(140);
   const sharedContext = await browser.newContext();
+  await localServices(sharedContext);
   const sharedPage = await sharedContext.newPage();
   await openApp(sharedPage, localizeAppLink(generatedUrl, baseURL), { expectEditorVisible: false });
 
@@ -74,16 +95,19 @@ test('Share Snapshot creates a view-only hash link that opens without permanent 
 });
 
 test('Share Snapshot edit links open with editable source', async ({ browser, page, baseURL }) => {
+  await localServices(page.context());
   await openApp(page);
   await setEditorContent(page, await fixture('share.md'));
 
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#share=v2\..*&key=/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/\/v2\/#s=/);
 
   const generatedUrl = await page.locator('#share-url-input').inputValue();
+  expect(generatedUrl.length).toBeLessThan(140);
   const sharedContext = await browser.newContext();
+  await localServices(sharedContext);
   const sharedPage = await sharedContext.newPage();
   await openApp(sharedPage, localizeAppLink(generatedUrl, baseURL));
 
@@ -95,7 +119,7 @@ test('Share Snapshot edit links open with editable source', async ({ browser, pa
 });
 
 test('Live Share host and guest can use a local mocked view-only room', async ({ browser, page, baseURL }) => {
-  await stubLiveShareRuntime(page);
+  await localServices(page.context());
   await openApp(page);
   await setEditorContent(page, '# Live Share Local Mock\n\nHost content.');
 
@@ -106,13 +130,13 @@ test('Live Share host and guest can use a local mocked view-only room', async ({
 
   await expect(page.locator('#live-share-status-text')).toContainText(/Connected|Room active|waiting/i);
   await expect(page.locator('#live-share-access-label')).toContainText('View only');
-  await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=/);
+  await expect(page.locator('#live-share-url-input')).toHaveValue(/\/v2\/#l=/);
   const inviteUrl = await page.locator('#live-share-url-input').inputValue();
-  expect(inviteUrl).toContain('access=view');
-  expect(inviteUrl).toContain('role=view');
+  expect(inviteUrl.length).toBeLessThan(140);
+  expect(inviteUrl).toContain('/v2/#l=');
 
   const guestPage = await page.context().newPage();
-  await stubLiveShareRuntime(guestPage);
+
   await openApp(guestPage, localizeAppLink(inviteUrl, baseURL));
 
   await expect(guestPage.locator('#live-share-button')).toHaveAttribute('aria-pressed', 'true');
@@ -126,7 +150,7 @@ test('Live Share host and guest can use a local mocked view-only room', async ({
 
 test('Live Share synchronizes Review feedback with view-only participants', async ({ browser, page, baseURL }) => {
   const markdown = '# Live review sync\n\nParagraph for shared feedback.';
-  await stubLiveShareRuntime(page);
+  await localServices(page.context());
   await openApp(page);
   await setEditorContent(page, markdown);
 
@@ -134,12 +158,13 @@ test('Live Share synchronizes Review feedback with view-only participants', asyn
   await page.locator('input[name="live-share-access-mode"][value="view"]').check();
   await page.locator('#live-share-display-name').fill('Host');
   await page.locator('#live-share-start-btn').click();
-  await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=/);
+  await expect(page.locator('#live-share-url-input')).toHaveValue(/\/v2\/#l=/);
   const inviteUrl = await page.locator('#live-share-url-input').inputValue();
+  expect(inviteUrl.length).toBeLessThan(140);
   await page.locator('#live-share-modal-close-icon').click();
 
   const guestPage = await page.context().newPage();
-  await stubLiveShareRuntime(guestPage);
+
   await openApp(guestPage, localizeAppLink(inviteUrl, baseURL));
   await expect(guestPage.locator('#markdown-preview h1')).toHaveText('Live review sync');
   await expect(guestPage.locator('#markdown-editor')).toHaveJSProperty('readOnly', true);

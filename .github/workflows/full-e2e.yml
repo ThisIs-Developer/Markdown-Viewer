@@ -1,0 +1,66 @@
+name: Full Chromium E2E Regression
+
+on:
+  push:
+    branches:
+      - fix/compact-private-sharing-20261120
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/full-e2e.yml'
+      - 'index.html'
+      - 'v2/**'
+      - 'script.js'
+      - 'sharing-*.js'
+      - 'sw.js'
+      - 'styles.css'
+      - 'assets/secure-renderers/**'
+      - 'scripts/build-private-renderers.mjs'
+      - 'scripts/build-share-routes.mjs'
+      - 'functions/api/share/**'
+      - 'tests/e2e/**'
+      - 'tests/helpers/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    name: Chromium E2E (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node desktop-app/prepare.js
+      - run: npx playwright install --with-deps chromium
+      - name: Run full Chromium suite, sharded
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/4 --workers=2 --retries=0 --reporter=line
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chromium-e2e-shard-${{ matrix.shard }}-failure
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
