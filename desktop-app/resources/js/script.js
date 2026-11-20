@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", async function () {
   // Hold private rendering through asynchronous invite loading, before the
   // default document can start optional remote renderer downloads.
-  let encryptedEntryPending = /^#(?:share=v2\.|id=s2_|live=room2_)/.test(window.location.hash);
+  let encryptedEntryPending = /^#(?:share=v2\.|id=s2_|live=room2_|[lsi]=)/.test(window.location.hash);
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
   const APP_VERSION = '3.10.6';
@@ -15049,7 +15049,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     namespaceSplitPreviewIds(documentSplitPreview, tab.id);
     documentSplitPreviewTabId = tab.id;
     documentSplitPreviewContent = content;
-    if (privateContent) return;
+    if (privateContent) { renderPrivateRichContent(documentSplitPreview, () => renderGeneration === documentSplitPreviewRenderGeneration); return; }
     const context = {
       isCurrent: function() {
         return (
@@ -17729,7 +17729,7 @@ ${selector} .arrowheadPath {
   }
 
   async function renderThemeSensitivePreviewContentForPrint() {
-    if (isEncryptedSharingActive()) return;
+    if (isEncryptedSharingActive()) { await renderPrivateRichContent(markdownPreview); await waitForAllImages(markdownPreview); return; }
     const context = {
       renderId: previewRenderGeneration,
       previewDocumentId: getActivePreviewDocumentId(),
@@ -18002,10 +18002,85 @@ ${selector} .arrowheadPath {
     });
   }
 
+
+  const privateRenderTasks = new WeakMap();
+  async function renderPrivateRichContent(root, isCurrent = () => true) {
+    const tasks = [];
+    root.querySelectorAll('[data-private-rendering]').forEach(node => {
+      const pending = privateRenderTasks.get(node);
+      if (pending) tasks.push(pending);
+    });
+    const engineClasses = { mermaid: 'mermaid', 'plantuml-diagram': 'plantuml', 'd2-diagram': 'd2',
+      'graphviz-diagram': 'graphviz', 'markmap-diagram': 'markmap', 'abc-notation': 'abc',
+      'geojson-map': 'geojson', 'topojson-map': 'topojson', 'stl-viewer': 'stl' };
+    const renderNode = (node, engine, source, options = {}) => {
+      if (privateRenderTasks.has(node)) return privateRenderTasks.get(node);
+      const task = (async () => {
+      node.dataset.privateRendering = 'true';
+      try {
+        const svg = await MarkdownPrivateRenderers.render(engine, source, options);
+        if (!isCurrent()) return;
+        const image = document.createElement('img');
+        image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        image.alt = engine === 'math' ? source : engine + ' diagram';
+        image.dataset.privateDiagram = engine;
+        image.style.maxWidth = '100%';
+        if (engine !== 'math') {
+          image.style.background = '#fff';
+          const dimensions = svg.match(/<svg\b[^>]*\bviewBox=["']([\d+.,eE \-]+)["']/)?.[1].trim().split(/[ ,]+/).map(Number);
+          if (dimensions?.length === 4 && Number.isFinite(dimensions[2]) && dimensions[2] > 0) image.width = Math.ceil(Math.min(dimensions[2], 1600));
+        }
+        if (engine === 'math' && !options.display) { image.style.height = '1.4em'; image.style.verticalAlign = 'middle'; }
+        node.replaceChildren(image);
+        node.dataset.privateRendered = 'true';
+        const shell = node.closest('.diagram-viewer, .geojson-container, .topojson-container, .stl-container, .abc-container');
+        if (shell) { shell.classList.remove('is-loading'); shell.querySelector('.diagram-status')?.remove(); }
+      } catch (error) {
+        if (!isCurrent()) return;
+        node.textContent = 'Unable to render ' + engine + ' locally: ' + error.message;
+        node.classList.add('render-error-msg');
+        const shell = node.closest('.is-loading');
+        shell?.classList.remove('is-loading');
+        shell?.querySelector('.diagram-status')?.remove();
+      }
+      })();
+      privateRenderTasks.set(node, task);
+      return task;
+    };
+    root.querySelectorAll('[data-original-code]').forEach(node => {
+      const engine = Object.entries(engineClasses).find(([name]) => node.classList.contains(name))?.[1] ||
+        (node.classList.contains('kroki-diagram') ? node.closest('[data-diagram-engine]')?.dataset.diagramEngine : null);
+      if (!engine) return;
+      try { tasks.push(renderNode(node, engine, decodeURIComponent(node.dataset.originalCode))); } catch (_) {}
+    });
+    // Walk text after Markdown parsing so code fences and inline code remain literal.
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const mathNodes = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.parentElement.closest('pre, code, [data-original-code], [data-private-rendering], script, style')) mathNodes.push(node);
+    }
+    const pattern = /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|(?<![\\$])\$([^$\n]+?)\$(?!\$)/g;
+    for (const text of mathNodes) {
+      const matches = [...text.textContent.matchAll(pattern)];
+      if (!matches.length) continue;
+      const fragment = document.createDocumentFragment(); let end = 0;
+      for (const match of matches) {
+        fragment.append(document.createTextNode(text.textContent.slice(end, match.index)));
+        const span = document.createElement('span'); span.textContent = match[0]; fragment.append(span);
+        const source = match[1] ?? match[2] ?? match[3] ?? match[4];
+        tasks.push(renderNode(span, 'math', source, { display: match[1] !== undefined || match[2] !== undefined }));
+        end = match.index + match[0].length;
+      }
+      fragment.append(document.createTextNode(text.textContent.slice(end))); text.replaceWith(fragment);
+    }
+    await Promise.all(tasks);
+  }
+
   function postProcessPreview(rawVal, context, patchResult) {
     const roots = getPreviewPostProcessRoots(patchResult, context);
     if (isEncryptedSharingActive()) {
-      roots.forEach(root => { enhancePreviewCodeBlocks(root); enhanceGitHubAlerts(root); });
+      roots.forEach(root => { enhancePreviewCodeBlocks(root); enhanceGitHubAlerts(root); renderPrivateRichContent(root, () => isPreviewRenderContextCurrent(context)); });
       refreshDocumentOutline();
       decorateReviewTargets();
       updateFindHighlights();
@@ -29004,6 +29079,8 @@ ${selector} .arrowheadPath {
       tempContainer.innerHTML = prepareSharedPreviewHtml(sanitizedHtml);
       await MarkdownShareMedia.resolve(tempContainer, { base: getShareApiBaseUrl(), inline: true });
       if (privateExport) {
+        await renderPrivateRichContent(tempContainer);
+        removeExportOnlyControls(tempContainer);
         const secureHtml = '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data:; media-src data:; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>Shared document</title><style>body{font:16px/1.6 system-ui;max-width:900px;margin:40px auto;padding:24px}pre{white-space:pre-wrap}img,video{max-width:100%}</style></head><body>' + tempContainer.innerHTML + '</body></html>';
         saveAs(new Blob([secureHtml], { type: 'text/html;charset=utf-8' }), getExportFilename('html', 'document.html'));
         return;
@@ -29916,9 +29993,10 @@ ${selector} .arrowheadPath {
     return state ? runPdfAbortable(state, promise) : promise;
   }
 
-  async function renderExportRichContent(root, markdown, exportTheme, state) {
+  async function renderExportRichContent(root, markdown, exportTheme, state, privateContent) {
     await MarkdownShareMedia.resolve(root, { base: getShareApiBaseUrl() });
-    if (isEncryptedSharingActive()) {
+    if (privateContent) {
+      await waitForExportWork(state, renderPrivateRichContent(root));
       await waitForExportWork(state, waitForAllImages(root));
       return;
     }
@@ -29961,6 +30039,7 @@ ${selector} .arrowheadPath {
   }
 
   async function createExportRenderElement(markdown, exportTheme, mode, state) {
+    const privateContent = isEncryptedSharingActive();
     const theme = getExportTheme(exportTheme);
     const { html, referenceData } = buildExportHtml(markdown);
     const root = document.createElement('article');
@@ -29985,7 +30064,7 @@ ${selector} .arrowheadPath {
     enhanceGitHubAlerts(root);
 
     try {
-      await renderExportRichContent(root, markdown, theme, state);
+      await renderExportRichContent(root, markdown, theme, state, privateContent);
       return root;
     } catch (error) {
       if (!state || !window.keepTempElementForAudit) {
@@ -30556,7 +30635,7 @@ ${selector} .arrowheadPath {
     const key = MarkdownShareCrypto.random();
     const payload = { content: markdownEditor.value || '', title: getActiveShareTitle(), mode };
     const encrypted = await MarkdownShareCrypto.seal(payload, key, 'snapshot');
-    const inlineUrl = getPublicAppBaseUrl() + '#share=v2.' + MarkdownShareCrypto.pack(encrypted) + '&key=' + key;
+    const inlineUrl = getPublicAppBaseUrl() + MarkdownShareCrypto.compactSnapshot(encrypted, key);
     return { key, encrypted, inlineUrl, byteLength: new TextEncoder().encode(payload.content).length };
   }
 
@@ -30584,7 +30663,7 @@ ${selector} .arrowheadPath {
     generatedShareSnapshotId = payload.id;
     generatedShareSnapshotDeleteToken = typeof payload.deleteToken === 'string' ? payload.deleteToken : '';
 
-    return getPublicAppBaseUrl() + '#id=' + payload.id + '&key=' + prepared.key;
+    return getPublicAppBaseUrl() + '#s=' + payload.id.slice(3) + '.' + prepared.key;
   }
 
   function formatShareExpiry(seconds) {
@@ -31542,6 +31621,7 @@ ${selector} .arrowheadPath {
     if (encryption) {
       const role = normalizeLiveAccessMode(accessMode);
       if (!capabilities || !encryption.signing) return '';
+      if (encryption.inviteKeys) return baseUrl + '#l=' + roomId.slice(6) + '.' + role[0] + encryption.inviteKeys[role];
       const params = new URLSearchParams({ live: roomId, v: '2', key: encryption.key,
         sig: encryption.signing[role], pub: MarkdownShareCrypto.pack(encryption.config, 4096),
         access: role, role, cap: capabilities[role] });
@@ -31565,8 +31645,19 @@ ${selector} .arrowheadPath {
     return params.length ? base + '&' + params.join('&') : base;
   }
 
-  function parseLiveHash() {
+  async function parseLiveHash() {
     const hash = window.location.hash || '';
+    if (hash.startsWith('#l=')) {
+      const link = MarkdownShareCrypto.parseShortLive(hash);
+      const url = new URL(getLiveRoomSocketUrl(link.roomId, '', { encrypted: true }));
+      url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+      url.searchParams.set('invite', link.role);
+      const response = await fetch(url, { credentials: 'omit', cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('This live invitation is unavailable or expired.');
+      const body = await MarkdownShareCrypto.readJson(response, 8192);
+      if (!MarkdownShareCrypto.exactKeys(body, ['encrypted'])) throw new Error('Invalid live invitation.');
+      return MarkdownShareCrypto.openInvite(body.encrypted, link);
+    }
     if (!hash.startsWith('#live=')) return null;
     const encryptedParams = new URLSearchParams(hash.slice(1));
     if (encryptedParams.has('v')) {
@@ -32409,7 +32500,7 @@ ${selector} .arrowheadPath {
 
     if ((message.type === 'y-update' || message.type === 'sync-state') && message.update) {
       const hostParticipantId = liveCollaboration.sessionMap ? liveCollaboration.sessionMap.get('hostId') : null;
-      if (getCurrentLiveAccessMode() === LIVE_SHARE_ACCESS_VIEW && hostParticipantId && sender !== hostParticipantId) {
+      if (getCurrentLiveAccessMode() === LIVE_SHARE_ACCESS_VIEW && (liveCollaboration.encryption ? message.role !== 'host' : hostParticipantId && sender !== hostParticipantId)) {
         return;
       }
       try {
@@ -32606,6 +32697,7 @@ ${selector} .arrowheadPath {
         : (sessionMap.get('accessMode') || options.accessMode || LIVE_SHARE_ACCESS_VIEW)
     );
     const liveCapabilities = isHost ? (options.capabilities || createLiveCapabilities()) : null;
+    if (isHost && encryption) Object.assign(encryption, await MarkdownShareCrypto.createInvites(encryption, liveCapabilities));
     const liveRole = isHost ? 'host' : normalizeLiveSocketRole(options.role || requestedAccessMode);
     const liveCapability = isHost
       ? liveCapabilities.host
@@ -32908,7 +33000,7 @@ ${selector} .arrowheadPath {
 
   async function loadFromLiveHash() {
     let parsed;
-    try { parsed = parseLiveHash(); }
+    try { parsed = await parseLiveHash(); }
     catch (_) { alert('The encrypted invite is incomplete or unsupported.'); return; }
     if (!parsed) return;
     try {
@@ -32967,7 +33059,7 @@ ${selector} .arrowheadPath {
         setLiveShareStartLoading(false);
         liveShareStartBtn.disabled = false;
         setLiveShareStatus('Unable to start live room', 'error');
-        alert('Failed to start Live Share. Please check your connection and try again.');
+        alert(error.message || 'Failed to start Live Share. Please check your connection and try again.');
       });
     });
   }
@@ -33113,18 +33205,24 @@ ${selector} .arrowheadPath {
   }
 
   async function loadFromShareHash() {
-    const hash = window.location.hash;
+    let hash = window.location.hash;
+    if (hash.startsWith('#s=')) {
+      const match = /^#s=([A-Za-z0-9_-]{24})\.([A-Za-z0-9_-]{43})$/.exec(hash);
+      if (!match) { alert('The encrypted snapshot link is incomplete.'); return; }
+      hash = '#id=s2_' + match[1] + '&key=' + match[2];
+    }
     if (hash.startsWith('#id=')) {
       await loadStoredShareHash(hash);
       return;
     }
-    if (!hash.startsWith('#share=')) return;
+    if (!hash.startsWith('#share=') && !hash.startsWith('#i=')) return;
 
-    if (hash.startsWith('#share=v2.')) {
+    if (hash.startsWith('#share=v2.') || hash.startsWith('#i=')) {
       try {
         const params = new URLSearchParams(hash.slice(1));
-        const encrypted = MarkdownShareCrypto.unpack(params.get('share').slice(3), MAX_SHARE_URL_LENGTH);
-        const payload = await MarkdownShareCrypto.open(encrypted, params.get('key'), 'snapshot');
+        const compact = hash.startsWith('#i=') ? MarkdownShareCrypto.parseCompactSnapshot(hash) : null;
+        const encrypted = compact ? compact.encrypted : MarkdownShareCrypto.unpack(params.get('share').slice(3), MAX_SHARE_URL_LENGTH);
+        const payload = await MarkdownShareCrypto.open(encrypted, compact ? compact.key : params.get('key'), 'snapshot');
         if (!payload || typeof payload.content !== 'string' || typeof payload.title !== 'string' ||
             !['view', 'edit'].includes(payload.mode)) throw new Error('Invalid encrypted snapshot.');
         await openShareSnapshotTab(payload.content, payload.title, payload.mode, true);

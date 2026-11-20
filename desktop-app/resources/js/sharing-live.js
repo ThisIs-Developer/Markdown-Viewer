@@ -1,10 +1,21 @@
 (function(root) {
   'use strict';
+  async function checkRelay(socketUrl) {
+    const url = new URL(socketUrl);
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+    url.pathname = url.pathname.replace(/[^/]+$/, '__protocol');
+    url.search = ''; url.hash = '';
+    const response = await fetch(url, { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(5000) });
+    const info = await response.json().catch(() => null);
+    if (!response.ok || info?.protocol !== 2 || info?.freshness !== 1 || info?.invitations !== 1) {
+      throw new Error('Live Share needs a relay update. Please try again after the service is updated.');
+    }
+  }
   function connect(options) {
     const C = root.MarkdownShareCrypto;
     const cryptoSession = options.encryption.transport;
     const socket = new WebSocket(options.socketUrl);
-    let opened = false, destroyed = false, failed = false;
+    let opened = false, destroyed = false, failed = false, closingReported = false;
     let sendChain = Promise.resolve(), receiveChain = Promise.resolve();
     let queuedBytes = 0, queuedCount = 0, incomingBytes = 0, incomingCount = 0;
     const waiting = [];
@@ -108,7 +119,8 @@
       if (destroyed || failed) return;
       socket.send(JSON.stringify({ v: 2, freshness: 1, type: 'authenticate', role: options.role,
         capability: options.capability, capabilities: options.role === 'host' ? options.capabilities : undefined,
-        sender: options.participantId, session: cryptoSession.session, config: options.encryption.config }));
+        sender: options.participantId, session: cryptoSession.session, config: options.encryption.config,
+        invites: options.role === 'host' ? options.encryption.invites : undefined }));
     });
     socket.addEventListener('message', event => {
       if (destroyed || failed) return;
@@ -141,7 +153,17 @@
     // ciphertext before reporting the transport as disconnected; otherwise
     // fast-close browsers can discard the host's authenticated end command.
     function reportTransportClosed(message) {
-      receiveChain.then(() => fail(message), () => fail(message));
+      if (closingReported) return;
+      closingReported = true;
+      receiveChain.then(async () => {
+        if (!opened && !destroyed && !failed) {
+          try { await checkRelay(options.socketUrl); }
+          catch (error) {
+            if (error.message.startsWith('Live Share needs')) message = error.message;
+          }
+        }
+        fail(message);
+      }, () => fail(message));
     }
     socket.addEventListener('close', () => reportTransportClosed('Live room disconnected.'));
     socket.addEventListener('error', () => reportTransportClosed('Encrypted live room connection failed.'));
@@ -162,5 +184,5 @@
       }).catch(() => {}).finally(() => socket.close());
     } }, transport);
   }
-  root.MarkdownShareLive = Object.freeze({ connect });
+  root.MarkdownShareLive = Object.freeze({ connect, checkRelay });
 })(globalThis);

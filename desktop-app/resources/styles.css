@@ -2850,6 +2850,18 @@ body {
   background-color: transparent;
 }
 
+html[data-theme="dark"] .markdown-body img[data-private-diagram="math"] {
+  filter: invert(1);
+}
+.pdf-export.theme-light img[data-private-diagram="math"] {
+  filter: none;
+}
+@media print {
+  html:not([data-browser-print-export="dark"]) img[data-private-diagram="math"] {
+    filter: none;
+  }
+}
+
 .markdown-body video {
   display: block;
   width: min(100%, 880px);

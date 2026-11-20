@@ -13,7 +13,7 @@ const until = async predicate => { const deadline = performance.now() + 5000; wh
 
 test('Docker applies the web security headers and ships all local sharing dependencies', () => {
   const nginx = readFileSync('nginx.conf', 'utf8'), docker = readFileSync('Dockerfile', 'utf8');
-  for (const line of readFileSync('_headers', 'utf8').trim().split(/\r?\n/).slice(1)) {
+  for (const line of readFileSync('_headers', 'utf8').split('/assets/private-renderers/*')[0].trim().split(/\r?\n/).slice(1)) {
     const split = line.indexOf(':');
     const value = line.slice(split + 1).trim().replace('; upgrade-insecure-requests', '');
     assert.ok(nginx.includes('add_header ' + line.slice(0, split).trim() + ' "' + value + '" always;'));
@@ -28,7 +28,7 @@ test('Docker applies the web security headers and ships all local sharing depend
 test('PWA activation replaces the old client cache before controlling pages', async () => {
   const handlers = new Map(), deleted = [];
   let claimed = false, pending;
-  const current = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-v2-hardened';
+  const current = 'markdown-viewer-cache-v3.10.6-encrypted-sharing-local-renderers';
   runInNewContext(readFileSync('sw.js', 'utf8'), {
     URL,
     self: { location: { origin: 'https://markdownviewer.pages.dev' },

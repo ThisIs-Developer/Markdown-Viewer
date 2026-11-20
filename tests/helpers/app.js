@@ -113,6 +113,7 @@ async function openApp(page, url = '/', options = {}) {
   if (options.showReleaseNotes !== true) {
     const version = await appVersion();
     await page.addInitScript(currentVersion => {
+      if (window !== window.top) return;
       localStorage.setItem('markdownViewerLastVersion', currentVersion);
       localStorage.setItem('markdownViewerReleaseNotesSeenVersion', currentVersion);
       localStorage.removeItem('markdownViewerPendingReleaseNotesVersion');
@@ -633,6 +634,15 @@ async function stubLiveShareRuntime(page) {
   });
 
   await page.addInitScript(() => {
+    const originalFetch = window.fetch;
+    window.fetch = (input, options) => {
+      const url = new URL(String(input), location.href);
+      if (url.pathname.startsWith('/live-room/') && url.searchParams.has('invite')) {
+        const invites = JSON.parse(localStorage.getItem('test-invites:' + url.pathname.split('/').pop()) || 'null');
+        return Promise.resolve(new Response(JSON.stringify({ encrypted: invites?.[url.searchParams.get('invite')] }), { status: invites ? 200 : 404 }));
+      }
+      return originalFetch(input, options);
+    };
     class FakeWebSocket extends EventTarget {
       constructor(url) {
         super();
@@ -656,6 +666,7 @@ async function stubLiveShareRuntime(page) {
         window.__liveWireMessages = window.__liveWireMessages || [];
         window.__liveWireMessages.push(message);
         if (message.type === 'authenticate') {
+          if (message.invites) localStorage.setItem('test-invites:' + message.config.roomId, JSON.stringify(message.invites));
           setTimeout(() => this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify({ type: 'ready', v: 2, freshness: 1 }) })), 0);
           return;
         }

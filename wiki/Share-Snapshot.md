@@ -33,13 +33,13 @@ API clients can retain the creation response's `deleteToken` separately and subm
 
 New managed images, GIFs, and videos are encrypted separately before upload. Their complete URLs, including media keys, are inside the encrypted Markdown. The browser retrieves ciphertext without the key and renders decrypted bytes locally. Media expires 90 days after its own upload.
 
-Encrypted shared previews block automatic external media and remote diagram requests. Advanced diagrams/maps are shown as local source; explicit link navigation remains available. Upload required images through the encrypted media flow before sharing. Older managed URLs are preserved for existing documents but are not automatically loaded in encrypted shared previews. Review comments are not included in snapshots.
+Encrypted shared previews block automatic external media and remote diagram requests. Supported diagrams, charts, vector maps, inline STL, music notation and LaTeX render locally; explicit link navigation remains available. Private diagrams are static SVG previews. External map tiles, diagram includes and URL-based chart data are not loaded automatically. Upload required images through the encrypted media flow before sharing. Older managed URLs are preserved for existing documents but are not automatically loaded in encrypted shared previews. Review comments are not included in snapshots.
 
 Web Markdown exports inline decrypted managed media. Encrypted-share HTML exports use local content, inline media, and a restrictive content security policy without scripts. Exported files contain readable content: protect them as documents.
 
 ## Failure and Recovery
 
-Use **Export → Encrypted recovery file** to keep a portable encrypted document copy with comments and managed attachments. Save the displayed recovery key separately. **New → Restore encrypted document** creates a new local document from the file and key without replacing existing documents. The payload limit is 8 MiB; external links remain links. Neither the service nor the file alone can recover a lost key. Test a restore in a separate browser profile. See [protocol and recovery details](../docs/ENCRYPTED_SHARING.md#portable-recovery).
+Use **Export → Encrypted recovery file** to keep a portable encrypted document copy with comments and managed attachments. Save the displayed recovery key separately. **New → Restore encrypted document** creates a new local document from the file and key without replacing existing documents. The recovery payload limit is 64 MiB; external links remain links. Neither the service nor the file alone can recover a lost key. Test a restore in a separate browser profile. See [protocol and recovery details](../docs/ENCRYPTED_SHARING.md#portable-recovery).
 
 Attachment downloads use a bounded memory-only ciphertext cache for up to 60 seconds, reducing repeat reads during editing. [Usage and free-plan limits](../docs/SHARING_USAGE.md) explains the actual KV operations and separate live-room allowances.
 
@@ -48,7 +48,7 @@ Attachment downloads use a bounded memory-only ciphertext cache for up to 60 sec
 | Incomplete link or decryption failure | Ask for the entire original link, including everything after `#`; there is no plaintext fallback |
 | Stored snapshot missing | Check expiry or deletion; ask the sender for a new snapshot |
 | Creation unavailable | Refresh the app and check connectivity, secure-context Web Crypto support, deployment bindings, and payload size |
-| External image or diagram source shown | Expected private preview behavior; use encrypted managed attachments |
+| External resource blocked | Use encrypted managed attachments and self-contained diagram data |
 | Managed attachment missing | Check the complete media key, connection, and its separate expiry |
 
 See [Privacy and Security](Privacy-and-Security.md), [Configuration](Configuration.md#share-api), and the [protocol and rollout notes](../docs/ENCRYPTED_SHARING.md).

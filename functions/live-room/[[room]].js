@@ -1,8 +1,27 @@
 export async function onRequest(context) {
   const { request, env, params } = context;
   const upgradeHeader = request.headers.get("Upgrade") || "";
+  const url = new URL(request.url);
+  const inviteRequest = request.method === 'GET' && !upgradeHeader && url.searchParams.get('v') === '2' && ['edit','view'].includes(url.searchParams.get('invite'));
 
-  if (upgradeHeader.toLowerCase() !== "websocket") {
+  // Probe the bound relay, rather than reporting Pages itself as healthy.
+  // This object never reads or writes room storage.
+  if (new URL(request.url).pathname.endsWith('/__protocol')) {
+    const headers = secureHeaders({ 'Cache-Control': 'no-store', 'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*', 'Cross-Origin-Resource-Policy': 'cross-origin' });
+    if (!env?.LIVE_ROOMS) return new Response(JSON.stringify({ error: 'Live relay unavailable' }), { status: 503, headers });
+    try {
+      const id = env.LIVE_ROOMS.idFromName('protocol-health');
+      const response = await env.LIVE_ROOMS.get(id).fetch(new Request('https://live-room.internal/__protocol'));
+      const body = await response.json();
+      if (body.protocol !== 2 || body.freshness !== 1 || body.invitations !== 1) throw new Error('Incompatible relay');
+      return new Response(JSON.stringify(body), { headers });
+    } catch (_) {
+      return new Response(JSON.stringify({ error: 'Live relay update required' }), { status: 503, headers });
+    }
+  }
+
+  if (upgradeHeader.toLowerCase() !== "websocket" && !inviteRequest) {
     return new Response("Markdown Viewer live room endpoint", {
       headers: secureHeaders({
         "Cache-Control": "no-store",
@@ -22,7 +41,7 @@ export async function onRequest(context) {
   }
 
   const origin = request.headers.get("Origin") || "";
-  if (!isAllowedLiveOrigin(origin)) {
+  if (!isAllowedLiveOrigin(origin) && !(inviteRequest && !origin)) {
     return new Response("Live room origin is not allowed", {
       status: 403,
       headers: secureHeaders({
@@ -37,9 +56,8 @@ export async function onRequest(context) {
   if (!roomName || roomName.length > 160) {
     return new Response("Invalid live room", { status: 400 });
   }
-  const url = new URL(request.url);
   const encrypted = url.searchParams.get('v') === '2';
-  if ((url.searchParams.has('v') && !encrypted) || (encrypted && url.searchParams.size !== 1)) {
+  if ((url.searchParams.has('v') && !encrypted) || (encrypted && url.searchParams.size !== (inviteRequest ? 2 : 1))) {
     return new Response('Unsupported live room protocol', { status: 400 });
   }
   const secret = url.searchParams.get("secret") || "";

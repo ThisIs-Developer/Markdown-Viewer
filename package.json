@@ -13,12 +13,13 @@
     "miniflare": {
       "sharp": "0.35.5",
       "undici": "7.30.1"
-    }
+    },
+    "katex": "0.18.2"
   },
   "scripts": {
     "start": "node tests/helpers/static-server.mjs",
     "dev": "node tests/helpers/static-server.mjs",
-    "build": "npm run build:sharing && npm run build:toc && npm run check:static && npm run check:seo",
+    "build": "npm run build:sharing && npm run build:private-renderers && npm run build:toc && npm run check:static && npm run check:seo",
     "build:sharing": "node scripts/build-sharing.mjs",
     "build:toc": "node scripts/build-document-toc.mjs",
     "check:static": "node tests/helpers/static-build-check.mjs",
@@ -33,12 +34,20 @@
     "test:e2e:cross-browser": "playwright test tests/e2e/smoke.spec.js",
     "test:e2e:ui": "playwright test --project=chromium --ui",
     "test:e2e:headed": "playwright test --project=chromium --headed",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "build:private-renderers": "node scripts/build-private-renderers.mjs",
+    "check:live-relay": "node scripts/check-live-relay.mjs",
+    "deploy:live": "npx --yes wrangler@4.165.0 deploy --config wrangler.live-room.toml"
   },
   "devDependencies": {
+    "@d2lang/d2": "0.1.34",
     "@highlightjs/cdn-assets": "11.9.0",
+    "@plantuml/core": "1.2026.10",
     "@playwright/test": "1.61.1",
+    "@viz-js/viz": "3.31.0",
+    "abcjs": "6.5.2",
     "bootstrap": "5.3.2",
+    "d3": "7.9.0",
     "dompurify": "3.4.17",
     "emoji-toolkit": "9.0.1",
     "entities": "6.0.1",
@@ -49,15 +58,26 @@
     "highlight.js": "11.9.0",
     "html2canvas": "1.4.1",
     "js-yaml": "4.3.2",
+    "json5": "2.2.3",
     "jspdf": "4.2.1",
     "jszip": "3.10.1",
+    "leaflet": "1.9.4",
     "marked": "9.1.6",
+    "markmap-lib": "0.18.12",
+    "markmap-view": "0.18.12",
     "mathjax": "4.0.0-beta.7",
     "mathjax-asana-font": "4.0.0-beta.7",
     "mathjax-stix2-font": "4.0.0-beta.7",
+    "mermaid": "11.16.1",
     "miniflare": "4.20260730.0",
     "pako": "2.1.0",
     "pdfjs-dist": "5.4.624",
+    "three": "0.128.0",
+    "topojson-client": "3.1.0",
+    "vega": "6.2.0",
+    "vega-interpreter": "2.3.2",
+    "vega-lite": "6.4.1",
+    "wavedrom": "3.5.0",
     "yjs": "13.6.31"
   }
 }

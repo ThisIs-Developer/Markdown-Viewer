@@ -37,7 +37,7 @@ test('Share Snapshot creates a view-only hash link that opens without permanent 
   await page.locator('#share-button').click();
   await expect(page.locator('#share-modal')).toHaveClass(/is-visible/);
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#share=/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/#i=/);
 
   const generatedUrl = await page.locator('#share-url-input').inputValue();
   const sharedContext = await browser.newContext();
@@ -80,7 +80,7 @@ test('Share Snapshot edit links open with editable source', async ({ browser, pa
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#share=v2\..*&key=/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/#i=/);
 
   const generatedUrl = await page.locator('#share-url-input').inputValue();
   const sharedContext = await browser.newContext();
@@ -106,10 +106,10 @@ test('Live Share host and guest can use a local mocked view-only room', async ({
 
   await expect(page.locator('#live-share-status-text')).toContainText(/Connected|Room active|waiting/i);
   await expect(page.locator('#live-share-access-label')).toContainText('View only');
-  await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=/);
+  await expect(page.locator('#live-share-url-input')).toHaveValue(/#l=/);
   const inviteUrl = await page.locator('#live-share-url-input').inputValue();
-  expect(inviteUrl).toContain('access=view');
-  expect(inviteUrl).toContain('role=view');
+  expect(new URL(inviteUrl).hash).toMatch(/^#l=[A-Za-z0-9_-]{24}\.v/);
+  expect(inviteUrl.length).toBeLessThan(120);
 
   const guestPage = await page.context().newPage();
   await stubLiveShareRuntime(guestPage);
@@ -134,7 +134,7 @@ test('Live Share synchronizes Review feedback with view-only participants', asyn
   await page.locator('input[name="live-share-access-mode"][value="view"]').check();
   await page.locator('#live-share-display-name').fill('Host');
   await page.locator('#live-share-start-btn').click();
-  await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=/);
+  await expect(page.locator('#live-share-url-input')).toHaveValue(/#l=/);
   const inviteUrl = await page.locator('#live-share-url-input').inputValue();
   await page.locator('#live-share-modal-close-icon').click();
 

@@ -86,6 +86,7 @@ for (const relativePath of syntaxCheckedFiles) {
 }
 
 const syncedDesktopFiles = [
+  ['private-renderers.js', 'desktop-app/resources/js/private-renderers.js'],
   ['sharing-crypto.js', 'desktop-app/resources/js/sharing-crypto.js'],
   ['sharing-media.js', 'desktop-app/resources/js/sharing-media.js'],
   ['sharing-live.js', 'desktop-app/resources/js/sharing-live.js'],
@@ -124,7 +125,7 @@ for (const relativePath of ['manifest.json', 'vercel.json', ...fs.readdirSync(pa
 const indexHtml = fs.readFileSync(path.join(rootDir, 'index.html'), 'utf8');
 const desktopHtml = fs.readFileSync(path.join(rootDir, 'desktop-app/resources/index.html'), 'utf8');
 let previousDesktopScript = -1;
-for (const name of ['neutralino', 'main', 'workspace-storage', 'visual-settings-adapters', 'visual-settings-store', 'sharing-crypto', 'sharing-media', 'sharing-live', 'sharing-recovery', 'script']) {
+for (const name of ['neutralino', 'main', 'workspace-storage', 'visual-settings-adapters', 'visual-settings-store', 'sharing-crypto', 'sharing-media', 'private-renderers', 'sharing-live', 'sharing-recovery', 'script']) {
   const position = desktopHtml.indexOf(`src="/js/${name}.js"`);
   if (position <= previousDesktopScript) throw new Error(`Missing or out-of-order desktop script: ${name}`);
   previousDesktopScript = position;

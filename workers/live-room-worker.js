@@ -175,7 +175,19 @@ export class LiveRoom {
   }
 
   async fetch(request) {
+    const requestUrl = new URL(request.url);
+    if (new URL(request.url).pathname === '/__protocol') {
+      return Response.json({ protocol: 2, freshness: 1, invitations: 1 }, { headers: { 'Cache-Control': 'no-store' } });
+    }
     const upgradeHeader = request.headers.get("Upgrade") || "";
+    if (request.method === 'GET' && requestUrl.searchParams.get('v') === '2' && requestUrl.searchParams.has('invite')) {
+      const role = requestUrl.searchParams.get('invite');
+      const headers = secureHeaders({ 'Cache-Control':'no-store', 'Access-Control-Allow-Origin':'*', 'Cross-Origin-Resource-Policy':'cross-origin' });
+      if (requestUrl.searchParams.size !== 2 || !['edit','view'].includes(role)) return new Response('Invalid invitation', { status:400, headers });
+      const auth = await this.state.storage.get(ENCRYPTED_AUTH_KEY);
+      if (!auth || auth.ended || auth.expiresAt <= Date.now() || !auth.invites?.[role]) return new Response('Invitation unavailable', { status:404, headers });
+      return Response.json({ encrypted: auth.invites[role] }, { headers });
+    }
     if (upgradeHeader.toLowerCase() !== "websocket") {
       return new Response("Markdown Viewer live room Durable Object", {
         headers: secureHeaders({
@@ -263,8 +275,9 @@ export class LiveRoom {
 
   async authenticateEncrypted(message, roomId) {
     const role = message.role;
+    const inviteFields = role === 'host' && Object.hasOwn(message, 'invites') ? ['invites'] : [];
     if (!Sharing.exactKeys(message, role === 'host'
-      ? ['type', 'v', 'freshness', 'role', 'sender', 'session', 'config', 'capability', 'capabilities']
+      ? ['type', 'v', 'freshness', 'role', 'sender', 'session', 'config', 'capability', 'capabilities', ...inviteFields]
       : ['type', 'v', 'freshness', 'role', 'sender', 'session', 'config', 'capability']) || message.freshness !== 1) return null;
     if (!['host', 'edit', 'view'].includes(role) || !isValidCapability(message.capability) ||
         typeof message.sender !== 'string' || !/^[A-Za-z0-9_-]{16,120}$/.test(message.sender) ||
@@ -275,6 +288,13 @@ export class LiveRoom {
     const providedHash = await Sharing.hash(message.capability);
     const sessionHash = await Sharing.hash(JSON.stringify([role, message.sender, message.session]));
     let hashes = null;
+    let invites;
+    if (inviteFields.length) {
+      try {
+        if (!Sharing.exactKeys(message.invites, ['edit','view'])) return null;
+        invites = { edit: Sharing.envelope(message.invites.edit,4096), view: Sharing.envelope(message.invites.view,4096) };
+      } catch (_) { return null; }
+    }
     if (role === 'host') {
       const caps = message.capabilities;
       if (!Sharing.exactKeys(caps, ['host', 'edit', 'view']) || !['host', 'edit', 'view'].every(name => isValidCapability(caps[name])) ||
@@ -286,7 +306,7 @@ export class LiveRoom {
       let current = await txn.get(ENCRYPTED_AUTH_KEY);
       if (!current) {
         if (role !== 'host' || this.env.SHARING_LIVE_CREATION_ENABLED === 'false') return null;
-        current = { config, hashes, expiresAt: config.expiresAt, ended: false, sessions: [] };
+        current = { config, hashes, expiresAt: config.expiresAt, ended: false, sessions: [], ...(invites ? { invites } : {}) };
         await txn.setAlarm(config.expiresAt);
       }
       if (current.ended || current.expiresAt <= Date.now() || current.hashes[role] !== providedHash ||
@@ -381,7 +401,8 @@ export default {
 
     const url = new URL(request.url);
     const origin = request.headers.get("Origin") || "";
-    if (!isAllowedLiveOrigin(origin)) {
+    const inviteRequest = request.method === 'GET' && !request.headers.get('Upgrade') && url.searchParams.get('v') === '2' && ['edit','view'].includes(url.searchParams.get('invite'));
+    if (!isAllowedLiveOrigin(origin) && !(inviteRequest && !origin)) {
       return new Response("Live room origin is not allowed", {
         status: 403,
         headers: secureHeaders({ "Cache-Control": "no-store" })
@@ -398,7 +419,7 @@ export default {
 
     const encrypted = url.searchParams.get('v') === '2';
     if ((url.searchParams.has('v') && !encrypted) ||
-        (encrypted && (url.searchParams.size !== 1 || !/^room2_[A-Za-z0-9_-]{24}$/.test(roomId)))) {
+        (encrypted && (url.searchParams.size !== (inviteRequest ? 2 : 1) || !/^room2_[A-Za-z0-9_-]{24}$/.test(roomId)))) {
       return new Response('Unsupported live room protocol', { status: 400 });
     }
     const secret = url.searchParams.get("secret") || "";

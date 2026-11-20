@@ -7,6 +7,7 @@ COPY workspace-storage.js /usr/share/nginx/html/
 COPY visual-settings-adapters.js /usr/share/nginx/html/
 COPY visual-settings-store.js /usr/share/nginx/html/
 COPY script.js native-markdown-source.js browser-drop-source.js preview-worker.js /usr/share/nginx/html/
+COPY private-renderers.js /usr/share/nginx/html/
 COPY sharing-crypto.js sharing-media.js sharing-live.js sharing-recovery.js /usr/share/nginx/html/
 COPY styles.css /usr/share/nginx/html/
 COPY sw.js /usr/share/nginx/html/

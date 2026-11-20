@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { handleSeoRequest } from '../../seo/server-render.mjs';
 
 const host = '127.0.0.1';
-const port = Number(process.env.MARKDOWN_VIEWER_TEST_PORT || 4173);
+const port = Number(process.env.MARKDOWN_VIEWER_TEST_PORT || process.argv[2] || 4173);
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const contentTypes = new Map([
@@ -56,7 +56,10 @@ const server = createServer(async (request, response) => {
     try {
       const result = await handleSeoRequest({
         request: new Request(url, { method: request.method }),
-        next: async () => new Response(await readFile(path.join(rootDir, 'index.html'), 'utf8'), {
+        // The local Miniflare integration relay uses a random HTTP port for
+        // encrypted invitation GETs as well as its existing WebSocket port.
+        next: async () => new Response((await readFile(path.join(rootDir, 'index.html'), 'utf8'))
+          .replace('ws://127.0.0.1:*', 'ws://127.0.0.1:* http://127.0.0.1:*'), {
           headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
         })
       });
@@ -83,6 +86,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, {
       'Cache-Control': 'no-store',
       'Content-Length': fileStats.size,
+      ...(url.pathname.startsWith('/assets/private-renderers/') ? { 'Access-Control-Allow-Origin': '*', 'Cross-Origin-Resource-Policy': 'cross-origin', 'Content-Security-Policy': url.pathname.endsWith('/frame.html') ? "frame-ancestors 'self'" : "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src blob:; connect-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'" } : {}),
       'Content-Type': contentTypes.get(path.extname(filePath).toLowerCase()) || 'application/octet-stream'
     });
     if (request.method === 'HEAD') response.end();

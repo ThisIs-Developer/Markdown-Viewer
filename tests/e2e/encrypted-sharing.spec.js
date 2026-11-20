@@ -19,7 +19,7 @@ async function localServices(context, writes = []) {
     const request = route.request();
     if (request.method() === 'POST') writes.push({ url: request.url(), body: request.postDataJSON() });
     const response = await runtime.dispatchFetch(request.url(), { method: request.method(),
-      headers: { Origin: 'http://127.0.0.1:4173', 'Content-Type': 'application/json' },
+      headers: { Origin: request.headers().origin || new URL(request.frame().url()).origin, 'Content-Type': 'application/json' },
       ...(request.postData() ? { body: request.postData() } : {}) });
     await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: Buffer.from(await response.arrayBuffer()) });
   });
@@ -35,9 +35,10 @@ test('stored snapshots keep payloads opaque, require a key, and retain legacy re
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#id=s2_.*&key=/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/#s=/);
   const link = await page.locator('#share-url-input').inputValue();
-  const params = new URLSearchParams(new URL(link).hash.slice(1));
+  const [suffix, key] = new URL(link).hash.slice(3).split('.');
+  const params = new URLSearchParams({ id: 's2_' + suffix, key });
   const stored = await kv.get('share-v2:' + params.get('id'));
   expect(stored).not.toContain('Opaque snapshot');
   expect(stored).not.toContain(params.get('key'));
@@ -96,7 +97,7 @@ test('managed uploads decrypt in preview and export without sending the media ke
   await page.locator('#share-button').click();
   await page.locator('#share-mode-edit').check();
   await page.locator('#share-generate-btn').click();
-  await expect(page.locator('#share-url-input')).toHaveValue(/#share=v2/);
+  await expect(page.locator('#share-url-input')).toHaveValue(/#i=/);
   const recipient = await browser.newContext();
   await localServices(recipient);
   const guest = await recipient.newPage();
@@ -114,15 +115,17 @@ test('managed uploads decrypt in preview and export without sending the media ke
   await recipient.close();
 });
 
-test('encrypted recipients do not automatically fetch external content or remote diagrams', async ({ page, baseURL }) => {
+test('encrypted recipients render local diagrams without fetching external content', async ({ page, baseURL }) => {
   const requests = [];
   await page.route(/private-resource\.invalid|kroki\.io|plantuml\.com|mermaid\.ink/, async route => { requests.push(route.request().url()); await route.abort(); });
   const key = C.random();
   const content = '# Private rendering\n\n![external](https://private-resource.invalid/pixel)\n\n```plantuml\n@startuml\nAlice -> Bob: private diagram\n@enduml\n```';
   const encrypted = await C.seal({ content, title: 'Private', mode: 'edit' }, key, 'snapshot');
   await openApp(page, baseURL + '/#share=v2.' + C.pack(encrypted) + '&key=' + key);
-  await expect(page.locator('#markdown-preview')).toContainText('private diagram');
-  await expect(page.locator('#markdown-preview img')).not.toHaveAttribute('src');
+  await expect(page.locator('#markdown-preview img[src*="private-resource.invalid"]')).toHaveCount(0);
+  const diagram = page.locator('#markdown-preview img[data-private-diagram="plantuml"]');
+  await expect(diagram).toHaveAttribute('src', /^data:image\/svg\+xml/, { timeout: 45000 });
+  expect(decodeURIComponent(await diagram.getAttribute('src'))).toContain('private diagram');
   expect(requests).toEqual([]);
 });
 
@@ -139,7 +142,7 @@ test('real encrypted relay synchronizes host and editor with content-free wire f
   await page.locator('input[name="live-share-access-mode"][value="edit"]').check();
   await page.locator('#live-share-display-name').fill('Confidential host name');
   await page.locator('#live-share-start-btn').click();
-  await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=room2_/);
+  await expect(page.locator('#live-share-url-input')).toHaveValue(/#l=/);
   const invite = await page.locator('#live-share-url-input').inputValue();
   await page.locator('#live-share-modal-close-icon').click();
   const recipient = await browser.newContext();
@@ -149,10 +152,10 @@ test('real encrypted relay synchronizes host and editor with content-free wire f
   await expect(guest.locator('#markdown-editor')).toHaveValue(/Host text/);
   await setEditorContent(guest, '# Real encrypted live fixture\n\nEditor update confidential.');
   await expect(page.locator('#markdown-editor')).toHaveValue(/Editor update confidential/);
-  const params = new URLSearchParams(new URL(invite).hash.slice(1));
+  const shortInvite = C.parseShortLive(new URL(invite).hash);
   expect(urls.every(url => /\?v=2$/.test(url))).toBe(true);
   const wire = frames.join('\n');
-  for (const value of ['Host text', 'Confidential host name', 'Editor update confidential', params.get('key'), params.get('sig')]) expect(wire).not.toContain(value);
+  for (const value of ['Host text', 'Confidential host name', 'Editor update confidential', shortInvite.inviteKey]) expect(wire).not.toContain(value);
   expect(frames.some(frame => JSON.parse(frame).type === 'y-update' && JSON.parse(frame).ct)).toBe(true);
   await page.locator('#live-share-button').click();
   await page.locator('#live-share-end-btn').click();

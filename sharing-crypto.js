@@ -105,6 +105,47 @@
     return { key: random(), config: { v: 2, roomId, expiresAt: Date.now() + 86400000, host: host.publicKey, edit: edit.publicKey, view: view.publicKey },
       signing: { host: host.privateKey, edit: edit.privateKey, view: view.privateKey } };
   }
+  // Each role's invitation has its own key; knowing the room content key or a
+  // view invitation must never reveal the editor's signing key/capability.
+  async function createInvites(room, capabilities) {
+    const invites = {}, inviteKeys = {};
+    for (const role of ['edit', 'view']) {
+      const key = random();
+      invites[role] = await seal({ roomId: room.config.roomId, role, capability: capabilities[role],
+        key: room.key, signingKey: room.signing[role], config: room.config }, key,
+      'live-invite:' + room.config.roomId + ':' + role, 4096);
+      inviteKeys[role] = key;
+    }
+    return { invites, inviteKeys };
+  }
+  function parseShortLive(hash) {
+    const match = /^#l=([A-Za-z0-9_-]{24})\.([ev])([A-Za-z0-9_-]{43})$/.exec(hash);
+    if (!match) throw new Error('Invalid encrypted invite.');
+    decode(match[1],18); decode(match[3],32);
+    return { roomId: 'room2_' + match[1], role: match[2] === 'e' ? 'edit' : 'view', inviteKey: match[3] };
+  }
+  async function openInvite(encrypted, link) {
+    const value = await open(encrypted, link.inviteKey, 'live-invite:' + link.roomId + ':' + link.role, 4096);
+    if (!exactKeys(value, ['roomId','role','capability','key','signingKey','config']) ||
+        value.roomId !== link.roomId || value.role !== link.role || !/^[A-Za-z0-9_-]{24,160}$/.test(value.capability)) {
+      throw new Error('Invalid encrypted invite.');
+    }
+    const config = publicConfig(value.config, link.roomId);
+    if (config.expiresAt <= Date.now() || decode(value.key,32).length !== 32) throw new Error('This encrypted room has expired or is invalid.');
+    return { roomId: link.roomId, secret: '', title: 'Live Share', role: link.role, accessMode: link.role,
+      capability: value.capability, encryption: { key: value.key, config, signingKey: value.signingKey } };
+  }
+  function compactSnapshot(record, key) {
+    const value = envelope(record, SNAPSHOT_LIMIT);
+    if (decode(key,32).length !== 32) throw new Error('Invalid share key.');
+    return '#i=' + key + '.' + value.iv + value.ct;
+  }
+  function parseCompactSnapshot(hash) {
+    const match = /^#i=([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]+)$/.exec(hash);
+    if (!match || hash.length > Math.ceil((SNAPSHOT_LIMIT + 16) * 4 / 3) + 100) throw new Error('Invalid encrypted snapshot.');
+    if (decode(match[1],32).length !== 32) throw new Error('Invalid share key.');
+    return { key: match[1], encrypted: envelope({ v:2, alg:'A256GCM', iv:match[2].slice(0,16), ct:match[2].slice(16) }, SNAPSHOT_LIMIT) };
+  }
   function header(frame) {
     return JSON.stringify(['markdown-viewer:live', 2, frame.roomId, frame.sender, frame.session, frame.seq, frame.type, frame.role]);
   }
@@ -207,7 +248,8 @@
     return JSON.parse(decoder.decode(bytes));
   }
   const api = { SNAPSHOT_LIMIT, MEDIA_LIMIT, LIVE_LIMIT, MAX_SEQUENCE, encode, decode, random, pack, unpack,
-    seal, open, envelope, exactKeys, hash, canSend, publicConfig, createRoom, liveFrame, verifyFrame, liveSession, readJson };
+    seal, open, envelope, exactKeys, hash, canSend, publicConfig, createRoom, createInvites, parseShortLive, openInvite,
+    compactSnapshot, parseCompactSnapshot, liveFrame, verifyFrame, liveSession, readJson };
   root.MarkdownShareCrypto = Object.freeze(api);
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);
