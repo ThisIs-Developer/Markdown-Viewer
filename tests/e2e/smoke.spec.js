@@ -115,3 +115,18 @@ test('release notes behave as an application surface instead of a document', asy
   await expect(page.locator('.app-status-bar')).toBeVisible();
   await expect(page.locator('#document-tree [aria-current="page"]')).toHaveCount(1);
 });
+
+
+test('release notes bypass a stale unversioned response after an app upgrade', async ({ page }) => {
+  let staleRequests=0;
+  await page.route('**/RELEASE_NOTES', route => {
+    staleRequests++;
+    return route.fulfill({contentType:'text/markdown',body:'# Welcome to Markdown Viewer 3.10.4'});
+  });
+  await openApp(page);
+  await page.locator('#header-about-button').click();
+  await page.getByRole('button', { name: 'Show Release Notes' }).click();
+  await expect(page.locator('#markdown-preview')).toContainText('Welcome to Markdown Viewer 3.10.5');
+  await expect(page.locator('#markdown-preview')).not.toContainText('Welcome to Markdown Viewer 3.10.4');
+  expect(staleRequests).toBe(0);
+});

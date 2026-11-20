@@ -1,0 +1,44 @@
+services:
+  markdown-viewer:
+    image: markdown-viewer-cloud:local
+    build:
+      context: ..
+      dockerfile: self-hosted/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      CLOUD_ENABLED: "true"
+      CLOUD_MODE: "multi-user"
+      CLOUD_REMEMBER_CONNECTIONS: "true"
+      CLOUD_REMEMBER_DEVICE: "true"
+      CLOUD_MAX_PROFILES: "100"
+      # Personal mode: use ONE password source.
+      # CLOUD_ACCESS_PASSWORD: "${CLOUD_ACCESS_PASSWORD:?Set a password of at least 12 characters}"
+      # CLOUD_ACCESS_PASSWORD_FILE: "/run/secrets/cloud_access_password"
+
+      # Optional HTTPS origins (comma-separated).
+      # CLOUD_ALLOWED_SERVERS: "https://nextcloud.example.com"
+      # CLOUD_PRIVATE_SERVERS: "https://nextcloud.example.com"  # Applies to guests too.
+
+      # Storage defaults.
+      # CLOUD_DATA_DIR: "/data"
+      # CLOUD_CREDENTIAL_KEY_FILE: "/run/secrets/cloud_credential_key"  # Exactly 32 bytes.
+
+      # Network defaults.
+      # CLOUD_PUBLIC_URL: "https://markdown.example.com"  # Usually unnecessary.
+      # PORT: "80"
+      # HOST: "0.0.0.0"
+      # CLOUD_DEVELOPMENT: "false"  # Local HTTP testing only.
+    volumes:
+      - cloud-state:/data
+      # Optional secret files.
+      # - ./secrets/cloud_access_password:/run/secrets/cloud_access_password:ro
+      # - ./secrets/cloud_credential_key:/run/secrets/cloud_credential_key:ro
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+volumes:
+  cloud-state:

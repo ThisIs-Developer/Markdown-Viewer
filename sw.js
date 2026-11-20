@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markdown-viewer-cache-v3.10.6';
+const CACHE_NAME = 'markdown-viewer-cache-v3.10.6-cloud-preview.1';
 
 // PERF-011: Split precache into critical (local files) and lazy (CDN libraries)
 // Critical assets are precached during SW install for instant offline startup
@@ -8,6 +8,19 @@ const CRITICAL_ASSETS = [
   './workspace-storage.js',
   './visual-settings-adapters.js',
   './visual-settings-store.js',
+  './native-markdown-source.js',
+  './cloud-model.js',
+  './cloud-providers.js',
+  './cloud-platform.js',
+  './webdav-source.js',
+  './nextcloud-source.js',
+  './nextcloud-provider.js',
+  './webdav-provider.js',
+  './cloud-operations.js',
+  './cloud-copy.js',
+  './cloud-workspace.js',
+  './nextcloud-ui.js',
+
   './script.js',
   './browser-drop-source.js',
   './preview-worker.js',
@@ -36,6 +49,19 @@ const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/workspace-storage.js',
   '/visual-settings-adapters.js',
   '/visual-settings-store.js',
+  '/native-markdown-source.js',
+  '/cloud-model.js',
+  '/cloud-providers.js',
+  '/cloud-platform.js',
+  '/webdav-source.js',
+  '/nextcloud-source.js',
+  '/nextcloud-provider.js',
+  '/webdav-provider.js',
+  '/cloud-operations.js',
+  '/cloud-copy.js',
+  '/cloud-workspace.js',
+  '/nextcloud-ui.js',
+
   '/script.js',
   '/browser-drop-source.js',
   '/preview-worker.js',
@@ -45,6 +71,7 @@ const NETWORK_FIRST_LOCAL_PATHS = new Set([
   '/seo/welcome-content.mjs',
   '/assets/lucide-icons.css',
   '/assets/document-toc.js',
+  '/RELEASE_NOTES',
   '/sw.js'
 ]);
 
@@ -73,6 +100,9 @@ self.addEventListener('fetch', event => {
   const isLocal = url.origin === self.location.origin;
   const isCDN = CDN_ORIGINS.some(origin => url.hostname.includes(origin));
 
+  // A worker left over from static hosting must never cache cloud sessions.
+  if (event.request.method !== 'GET' || (isLocal && url.pathname.startsWith('/api/cloud/'))) return;
+
   if (isLocal) {
     const localPath = url.pathname.endsWith('/') ? '/' : url.pathname;
     const shouldUseNetworkFirst =
@@ -84,7 +114,8 @@ self.addEventListener('fetch', event => {
       event.respondWith(
         caches.open(CACHE_NAME).then(cache => {
           return fetch(event.request).then(networkResponse => {
-            if (networkResponse && networkResponse.status === 200) {
+            if (networkResponse && networkResponse.status === 200 &&
+                !/\b(?:no-store|private)\b/i.test(networkResponse.headers.get('Cache-Control') || '')) {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;
@@ -99,7 +130,8 @@ self.addEventListener('fetch', event => {
       caches.open(CACHE_NAME).then(cache => {
         return cache.match(event.request).then(cachedResponse => {
           const fetchPromise = fetch(event.request).then(networkResponse => {
-            if (networkResponse && networkResponse.status === 200) {
+            if (networkResponse && networkResponse.status === 200 &&
+                !/\b(?:no-store|private)\b/i.test(networkResponse.headers.get('Cache-Control') || '')) {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;

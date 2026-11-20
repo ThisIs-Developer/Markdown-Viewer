@@ -9,7 +9,8 @@
     "predev": "npm run setup",
     "dev": "npx -y @neutralinojs/neu@11.7.0 run",
     "prebuild": "npm run setup",
-    "build": "node build-standalone.js"
+    "build": "node build-standalone.js",
+    "build:cloud": "node build-cloud-windows.js"
   },
   "devDependencies": {
     "pe-library": "1.0.1",

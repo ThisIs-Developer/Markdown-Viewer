@@ -163,6 +163,9 @@
                             <button id="private-mode-toggle" class="settings-menu-item app-menu-item settings-menu-item--toggle" type="button" aria-pressed="false" title="Toggle private mode">
                                 <i class="lucide lucide-hat-glasses" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Private mode</span><span id="private-mode-description" class="app-menu-description">Data is stored locally</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                             </button>
+                            <button id="cloud-connections-button" class="settings-menu-item app-menu-item" type="button" hidden>
+                                <i class="lucide lucide-cloud-upload" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Cloud connections</span><span class="app-menu-description">Connect an account or manage cloud visibility</span></span>
+                            </button>
                             <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and backup">
                                 <i class="lucide lucide-box" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage and Backup</span><span class="app-menu-description">Back up or restore your workspace</span></span>
                             </button>
@@ -2352,6 +2355,17 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="assets/document-toc.js" defer></script>
     <script src="/js/native-markdown-source.js"></script>
     <script src="/js/browser-drop-source.js"></script>
+    <script src="/js/cloud-model.js"></script>
+    <script src="/js/cloud-providers.js"></script>
+    <script src="/js/cloud-platform.js"></script>
+    <script src="/js/webdav-source.js"></script>
+    <script src="/js/nextcloud-source.js"></script>
+    <script src="/js/nextcloud-provider.js"></script>
+    <script src="/js/webdav-provider.js"></script>
+    <script src="/js/cloud-operations.js"></script>
+    <script src="/js/cloud-copy.js"></script>
+    <script src="/js/cloud-workspace.js"></script>
+    <script src="/js/nextcloud-ui.js"></script>
     <script src="/js/neutralino.js"></script>
     <script src="/js/main.js"></script>
     <script src="/js/workspace-storage.js"></script>

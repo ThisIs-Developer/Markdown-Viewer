@@ -62,7 +62,7 @@ test('an uncommitted encrypted save cannot remove the existing plaintext', async
     workspaceStorage: { deleteDocument: async () => { deletes++; } },
     saveDocumentOrganization() {}, renderDocumentSidebar() {}, alert() {}
   };
-  vm.createContext(context); vm.runInContext(script.slice(start, end), context);
+  vm.createContext(context); vm.runInContext(script.slice(script.indexOf('  function isCloudDocument('), script.indexOf('  function isLinkedWorkspaceDocument(')) + script.slice(start, end), context);
   assert.equal(await context.moveDocumentToLocation(tab.id, 'workspace_secret', null), false);
   assert.equal(deletes, 0);
   assert.equal(tab.workspaceId, 'workspace_default');
@@ -95,7 +95,7 @@ test('a failed Vault restore after cleanup retains the durable encrypted documen
     } },
     saveDocumentOrganization() {}, renderDocumentSidebar() {}, alert() {}
   };
-  vm.createContext(context); vm.runInContext(script.slice(start, end), context);
+  vm.createContext(context); vm.runInContext(script.slice(script.indexOf('  function isCloudDocument('), script.indexOf('  function isLinkedWorkspaceDocument(')) + script.slice(start, end), context);
   assert.equal(await context.moveDocumentToLocation(tab.id, 'workspace_secret', null), false);
   assert.equal(plaintext, false);
   assert.equal(encrypted, true);

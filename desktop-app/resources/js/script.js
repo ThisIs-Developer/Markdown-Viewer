@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", async function () {
+  if((window.MarkdownCloudConnector?.mode==='multi-user' || document.documentElement.dataset.cloudMode==='multi-user') && !window.MarkdownCloudBrowserStorage){
+    const error=document.createElement('p');error.id='cloud-storage-error';error.setAttribute('role','alert');error.textContent='The isolated cloud workspace could not be initialized. Reload this page without clearing browser storage.';document.querySelector('.app-container')?.replaceChildren(error);return;
+  }
+  const localStorage = window.MarkdownCloudBrowserStorage?.local || window.localStorage;
+  const sessionStorage = window.MarkdownCloudBrowserStorage?.session || window.sessionStorage;
   window.alert = function(message) { showAppToast(message); };
   const PRIVATE_MODE_KEY = 'markdownViewerPrivateMode';
   const APP_VERSION = '3.10.6';
@@ -15,6 +20,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function getDocumentFileIcon(tab) {
     if (getBuiltInGuideLabel(tab)) return 'lucide-book-open';
+    if (isCloudDocument(tab)) return tab.remoteSource ? 'lucide-cloud-upload' : 'lucide-file';
     return isLinkedDocument(tab) ? 'lucide-file-symlink' : 'lucide-file';
   }
   const RELEASE_NOTES_LAST_VERSION_KEY = 'markdownViewerLastVersion';
@@ -68,6 +74,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function isLinkedDocument(tab) {
     return Boolean(hasDesktopFileAccess() && tab && tab.sourcePath);
+  }
+
+  function isCloudDocument(tab) {
+    return Boolean(tab && (tab.remoteSource || tab.kind === 'cloud-recovery'));
   }
 
   function isLinkedWorkspaceDocument(tab) {
@@ -772,7 +782,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function loadCurrentReleaseNotes() {
     if (!releaseNotesContentPromise) {
-      releaseNotesContentPromise = fetch('RELEASE_NOTES').then(function(response) {
+      releaseNotesContentPromise = fetch('RELEASE_NOTES?v=' + encodeURIComponent(APP_VERSION), { cache: 'no-store' }).then(function(response) {
         if (!response.ok) throw new Error('Release notes returned ' + response.status);
         return response.text();
       }).catch(function(error) {
@@ -1834,7 +1844,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     addOrganizationFoldersToZip(zip, backupData.organization);
 
     for (const item of backupData.documents) {
-      const path = normalizeTrustedBackupPath(item.path, ['Workspace/', 'Linked Workspace/']);
+      const path = normalizeTrustedBackupPath(item.path, ['Workspace/', 'Linked Workspace/', 'Cloud Workspace/']);
       const content = typeof item.content === 'string' ? item.content : '';
       zip.file(path, content);
       documentIndex.push({
@@ -2027,7 +2037,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       const metadata = sanitizeImportedMetadata(item && item.metadata);
       if (seenDocumentIds.has(metadata.id)) throw new Error('The backup contains duplicate document IDs.');
       seenDocumentIds.add(metadata.id);
-      const path = normalizeTrustedBackupPath(item && item.path, ['Workspace/', 'Linked Workspace/']);
+      const path = normalizeTrustedBackupPath(item && item.path, ['Workspace/', 'Linked Workspace/', 'Cloud Workspace/']);
       if (seenDocumentPaths.has(path)) throw new Error('The backup contains duplicate document paths.');
       seenDocumentPaths.add(path);
       const entry = zip.file(path);
@@ -5528,12 +5538,17 @@ document.addEventListener("DOMContentLoaded", async function () {
       input.removeEventListener('keydown', onKeydown);
     }
 
+    let settled = false;
     function cancel() {
+      if (settled) return;
+      settled = true;
       cleanup();
       closeAppModal(modal);
+      if (typeof options.onCancel === 'function') options.onCancel();
     }
 
     function submit() {
+      if (settled) return;
       const value = input.value.trim();
       const validationMessage = options.validate ? options.validate(value) : (!value ? 'Enter a name.' : '');
       if (validationMessage) {
@@ -5542,6 +5557,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         input.focus();
         return;
       }
+      settled = true;
       cleanup();
       closeAppModal(modal);
       options.onConfirm(value);
@@ -6106,6 +6122,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       actionButton.className = 'tab-menu-item' + (action.danger ? ' tab-menu-item-danger' : '');
       actionButton.setAttribute('role', 'menuitem');
       actionButton.setAttribute('data-action', action.id);
+      actionButton.disabled = Boolean(action.disabled);
       actionButton.disabled = action.disabled === true;
       const actionIcon = document.createElement('i');
       actionIcon.className = 'lucide ' + action.icon;
@@ -6175,7 +6192,125 @@ document.addEventListener("DOMContentLoaded", async function () {
     return button;
   }
 
+  async function copyCloudDocumentToVault(tabId) {
+    let locked = false;
+    try {
+      if (workspaceMaintenancePending || suspendWorkspacePersistence || nativeMarkdownSaveInProgress || isPrivateStorageMode()) throw new Error('Wait for the current operation and turn off Private mode before creating a copy.');
+      nativeMarkdownSaveInProgress = true; locked = true;
+      saveCurrentTabState(); saveSecondarySplitState();
+      const source = tabs.find(item => item.id === tabId);
+      if (!source || !isCloudDocument(source)) return;
+      await ensureTabContent(source);
+      const copy = createTab(source.content, source.title, source.viewMode, { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
+      copy.reviewThreads = normalizeReviewThreads(source.reviewThreads);
+      tabs.push(copy);
+      if (!(await _flushTabsToStorage(tabs, { changedIds: [source.id, copy.id], requireExactCommit: true }))) throw new Error('The Vault copy could not be saved. Your cloud draft was kept.');
+      await switchTab(copy.id); renderTabBar(tabs, activeTabId); renderDocumentSidebar();
+      showAppToast('An independent Vault copy was created. The cloud document was kept.', { tone:'success', title:'Vault copy created' });
+    } catch (error) { showAppToast(error.message, { tone:'error', title:'Cloud document' }); }
+    finally { if (locked) nativeMarkdownSaveInProgress = false; }
+  }
+
+  async function removeCloudDocument(tabId) {
+    let locked = false;
+    let editorStates = [];
+    try {
+      if (workspaceMaintenancePending || suspendWorkspacePersistence || nativeMarkdownSaveInProgress || isPrivateStorageMode()) throw new Error('Wait for the current operation and turn off Private mode before removing a cloud draft.');
+      saveCurrentTabState(); saveSecondarySplitState();
+      const tab = tabs.find(item => item.id === tabId);
+      if (!tab || !isCloudDocument(tab)) return false;
+      await ensureTabContent(tab);
+      const approved = { content: tab.content, source: JSON.stringify(tab.remoteSource || null) };
+      const accepted = await showLinkedConfirmation('Move the local recovery draft for ' + tab.title + ' to Trash? The file on Nextcloud will not be deleted.', {
+        title:'Remove cloud draft?', confirmLabel:'Move draft to Trash', cancelLabel:'Keep draft', focusCancel:true, destructive:true, cloudSource:true, dedupeKey:'cloud-remove:' + tab.id
+      });
+      if (!accepted) return false;
+      saveCurrentTabState(); saveSecondarySplitState();
+      if (!tabs.includes(tab) || tab.content !== approved.content || JSON.stringify(tab.remoteSource || null) !== approved.source || nativeMarkdownSaveInProgress || workspaceMaintenancePending) throw new Error('The draft or source changed while confirmation was open. Nothing was removed.');
+      nativeMarkdownSaveInProgress = true; locked = true;
+      editorStates = [tab.id === activeTabId ? markdownEditor : null, tab.id === secondarySplitTabId ? documentSplitEditor : null].filter(Boolean).map(editor => ({ editor, readOnly:editor.readOnly }));
+      editorStates.forEach(state => { state.editor.readOnly = true; });
+      if (!(await _flushTabsToStorage(tabs, { changedIds:[tab.id], requireExactCommit:true }))) throw new Error('The recovery draft could not be committed. Nothing was removed.');
+      return await deleteTab(tab.id, { cloudApproved:true });
+    } catch (error) { showAppToast(error.message, { tone:'error', title:'Cloud document' }); return false; }
+    finally { editorStates.forEach(state => { state.editor.readOnly = state.readOnly; }); if (locked) nativeMarkdownSaveInProgress = false; }
+  }
+
+  function canCopyLocalToCloud(tab) {
+    return Boolean(window.MarkdownCloudUI?.available() && tab && !isTemporaryDocument(tab) && !isCloudDocument(tab) && tab.workspaceId === DEFAULT_WORKSPACE_ID && tab.kind !== LINKED_WORKSPACE_GUIDE_KIND);
+  }
+  function copyLocalAction(descriptor) {
+    return {id:'copy-to-cloud',icon:'lucide-cloud-upload',label:'Copy to cloud…',run:function(){void window.MarkdownCloudUI.copyLocal(descriptor);}};
+  }
+  function cloudCopyInventory(descriptor) {
+    if(isPrivateStorageMode())throw new Error('Turn off Private mode before copying to cloud, so recovery drafts can be stored.');
+    const copy=window.MarkdownCloudCopy,folders=[],files=[],used=new Map();let label,name,folder=true;
+    function unique(parent,value,isFile){
+      const parts=parent.slice(),base=copy.suggestName(value,{file:isFile});
+      const parentKey=parts.join('/');if(!used.has(parentKey))used.set(parentKey,new Set());const names=used.get(parentKey);
+      let result=base,index=2;while(names.has(result.normalize('NFC').toLowerCase())){const suffix=index++;result=isFile?base.slice(0,-3)+' ('+suffix+').md':base+' ('+suffix+')';}
+      names.add(result.normalize('NFC').toLowerCase());return result;
+    }
+    const eligible=tab=>canCopyLocalToCloud(tab);
+    if(descriptor.type==='file'){
+      const tab=tabs.find(item=>item.id===descriptor.id);if(!eligible(tab))throw new Error('This source cannot be copied to cloud.');
+      folder=false;label=tab.title;name=copy.suggestName(tab.title,{file:true});files.push({tab,path:[name]});
+    }else if(descriptor.type==='vault-folder'){
+      const root=getFolderById(descriptor.id);if(!root || root.workspaceId!==DEFAULT_WORKSPACE_ID)throw new Error('The Vault folder changed.');
+      name=copy.suggestName(root.name);label='Vault / '+getFolderPath(root.id);const ids=getFolderDescendantIds([root.id]),paths=new Map([[root.id,[]]]);
+      function pathFor(id,visited=new Set()){
+        if(paths.has(id))return paths.get(id);if(visited.has(id) || visited.size>=copy.LIMITS.depth)throw new Error('Invalid folder hierarchy.');
+        const current=getFolderById(id);if(!current || current.workspaceId!==DEFAULT_WORKSPACE_ID || !ids.has(id))throw new Error('Invalid Vault folder.');
+        const chain=new Set(visited);chain.add(id);const parent=pathFor(current.parentFolderId,chain),parts=[...parent,unique(parent,current.name,false)];paths.set(id,parts);folders.push(parts);return parts;
+      }
+      if(ids.size>copy.LIMITS.folders+1)throw new Error('Select a smaller folder.');for(const id of ids)pathFor(id);
+      for(const tab of tabs.filter(tab=>eligible(tab) && !tab.sourcePath && ids.has(tab.folderId))){const parent=paths.get(tab.folderId);files.push({tab,path:[...parent,unique(parent,tab.title,true)]});}
+    }else if(descriptor.type==='linked-folder'){
+      const root=getLinkedLocation(descriptor.id),prefix=normalizeLinkedSidebarPath(descriptor.path || '');
+      if(!root || prefix===null)throw new Error('The linked folder changed.');
+      name=copy.suggestName(prefix?prefix.split('/').pop():root.name);label='Linked / '+(prefix || root.name);const dirs=new Map([['',[]]]);
+      for(const tab of tabs.filter(tab=>eligible(tab) && tab.sourcePath && tab.linkedRootId===root.id && (!prefix || String(tab.sourceRelativePath || '').startsWith(prefix+'/')))){
+        const relative=normalizeLinkedSidebarPath(prefix?tab.sourceRelativePath.slice(prefix.length+1):tab.sourceRelativePath);if(!relative)throw new Error('Invalid linked copy hierarchy.');
+        const parts=relative.split('/');let parent=[],source='';for(const part of parts.slice(0,-1)){source+=(source?'/':'')+part;if(!dirs.has(source)){const path=[...parent,unique(parent,part,false)];dirs.set(source,path);folders.push(path);}parent=dirs.get(source);}
+        files.push({tab,path:[...parent,unique(parent,parts.at(-1),true)]});
+      }
+    }else throw new Error('Unsupported cloud copy source.');
+    if(files.length>copy.LIMITS.files || folders.length>copy.LIMITS.folders)throw new Error('Select a smaller folder.');
+    const signature=JSON.stringify([descriptor,files.map(item=>[item.tab.id,item.path,item.tab.sourcePath,item.tab.linkedRootId,item.tab.folderId,item.tab.workspaceId]),folders]);
+    return {folder,label,name,files,folders,signature};
+  }
+  async function captureCloudCopySource(descriptor,expectedSignature) {
+    if(workspaceMaintenancePending || suspendWorkspacePersistence || linkedFolderConversionInProgress || isPrivateStorageMode())throw new Error('Wait for workspace operations to finish before copying.');
+    const inventory=cloudCopyInventory(descriptor);
+    if(inventory.signature!==expectedSignature)throw new Error('The source folder changed while the destination picker was open. Review the copy again.');
+    for(const item of inventory.files)await ensureTabContent(item.tab);
+    saveCurrentTabState();saveSecondarySplitState();
+    if(cloudCopyInventory(descriptor).signature!==inventory.signature)throw new Error('The source folder changed. Review the copy again. Nothing was uploaded.');
+    const plan=MarkdownCloudCopy.validatePlan({folder:inventory.folder,folders:inventory.folders,files:inventory.files.map(item=>({path:item.path,content:item.tab.content}))});
+    if(!(await _flushTabsToStorage(tabs,{requireExactCommit:true})))throw new Error('Source drafts could not be saved. Nothing was uploaded.');
+    saveCurrentTabState();saveSecondarySplitState();
+    if(cloudCopyInventory(descriptor).signature!==inventory.signature || isPrivateStorageMode() || inventory.files.some((item,index)=>item.tab.content!==plan.files[index].content))throw new Error('The source changed while preparing the copy. Nothing was uploaded.');
+    return plan;
+  }
+
   function getDocumentMenuActions(tab) {
+    if (isCloudDocument(tab)) {
+      const actions = [{ id: 'open', icon: 'lucide-file-text', label: 'Open', run: function() { openSidebarDocument(tab.id); } }];
+      if (tab.remoteSource) actions.push(
+        { id: 'cloud-save', icon: 'lucide-cloud-upload', label: 'Save to cloud', disabled:!window.MarkdownCloudUI?.canSave(tab.remoteSource), run: function() { void window.MarkdownCloudUI.save(tab.id); } },
+        { id: 'cloud-check', icon: 'lucide-refresh-cw', label: 'Check server version', disabled:!window.MarkdownCloudUI?.canAccess(tab.remoteSource), run: function() { void window.MarkdownCloudUI.check(tab.id); } },
+        { id: 'cloud-reload', icon: 'lucide-refresh-cw', label: 'Reload from cloud', disabled:!window.MarkdownCloudUI?.canAccess(tab.remoteSource), run: function() { void window.MarkdownCloudUI.reload(tab.id); } },
+        { id:'cloud-new', icon:'lucide-file-plus', label:'New Markdown file', disabled:!window.MarkdownCloudUI?.canCreate(tab.remoteSource), run:function(){ void window.MarkdownCloudUI.newForDocument(tab.id); } },
+        { id:'cloud-delete', icon:'lucide-trash-2', label:'Delete from cloud', danger:true, disabled:!window.MarkdownCloudUI?.canDelete(tab.remoteSource), run:function(){ void window.MarkdownCloudUI.remove(tab.id); } },
+        ...(window.MarkdownCloudUI?.canResolve(tab.id) ? [{ id: 'cloud-resolve', icon: 'lucide-git-branch', label: 'Resolve using my draft', run: function() { void window.MarkdownCloudUI.resolve(tab.id); } }] : [])
+      );
+      actions.push({ separator: true },
+        { id: 'cloud-copy', icon: 'lucide-copy-plus', label: 'Create Vault copy', run: function() { void copyCloudDocumentToVault(tab.id); } },
+        { id: 'download', icon: 'lucide-download', label: 'Download Markdown', run: function() { void downloadTabMarkdown(tab.id); } },
+        { id: 'cloud-remove', icon: 'lucide-x', label: 'Remove from Cloud Workspace', danger: true, run: function() { void removeCloudDocument(tab.id); } }
+      );
+      return actions;
+    }
     if (tab && tab.kind === LINKED_WORKSPACE_GUIDE_KIND) {
       return [
         { id: 'open', icon: 'lucide-folder-open', label: 'Open', run: function() { openSidebarDocument(tab.id); } },
@@ -6204,6 +6339,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           }); }
         });
       }
+      if(canCopyLocalToCloud(tab))linkedActions.splice(-1,0,copyLocalAction({type:'file',id:tab.id}));
       return linkedActions;
     }
     const actions = [
@@ -6229,6 +6365,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       actions.push({ id: 'move', icon: 'lucide-arrow-right-to-line', label: 'Move', run: function() { openMoveDocumentDialog(tab.id); } });
       actions.push({ id: 'download', icon: 'lucide-download', label: 'Download Markdown', run: function() { downloadTabMarkdown(tab.id); } });
     }
+    if(canCopyLocalToCloud(tab))actions.push(copyLocalAction({type:'file',id:tab.id}));
     actions.push({
       id: 'delete',
       icon: isTemporaryDocument(tab) ? 'lucide-x' : 'lucide-trash-2',
@@ -6281,6 +6418,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (!hasDesktopFileAccess()) {
       actions.splice(3, 0, { id: 'download-folder', icon: 'lucide-download', label: 'Download folder', run: function() { void downloadWorkspaceFolder(folder.id); } });
     }
+    if(window.MarkdownCloudUI?.available() && folder.workspaceId===DEFAULT_WORKSPACE_ID)actions.splice(-1,0,copyLocalAction({type:'vault-folder',id:folder.id}));
     if (hasDesktopFileAccess() && folder.workspaceId === DEFAULT_WORKSPACE_ID) {
       actions.splice(3, 0, { id: 'save-linked-folder', icon: 'lucide-save-plus', label: 'Save As linked folder…', run: function() { void nativeSaveVaultFolderAsLinked(folder.id); } });
     }
@@ -6906,6 +7044,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   async function moveDocumentToLocation(tabId, workspaceId, folderId, options) {
+    if (tabs.some(tab => tab.id === tabId && isCloudDocument(tab))) {
+      showAppToast('Use Create Vault copy for cloud documents. The remote source was kept.', { tone:'info', title:'Cloud document' });
+      return false;
+    }
     const shouldAnnounce = !options || options.announce !== false;
     const tab = tabs.find(function(item) { return item.id === tabId; });
     if (!tab || isTemporaryDocument(tab)) return false;
@@ -7213,6 +7355,10 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   async function dropSidebarDocuments(tabIds, location) {
     const documents = tabIds.map(function(id) { return tabs.find(function(tab) { return tab.id === id; }); }).filter(Boolean);
+    if (documents.some(isCloudDocument)) {
+      showAppToast('Use Create Vault copy to make an independent copy of a cloud document.', { tone: 'info', title: 'Cloud document' });
+      return;
+    }
     if (!documents.some(isLinkedDocument)) {
       return moveDocumentsToLocation(documents.map(function(tab) { return tab.id; }), location.workspaceId, location.folderId || null);
     }
@@ -7478,7 +7624,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       type: 'document',
       id: tab.id,
       documentId: tab.id,
-      disableDrag: tab.kind === LINKED_WORKSPACE_GUIDE_KIND,
+      disableDrag: tab.kind === LINKED_WORKSPACE_GUIDE_KIND || isCloudDocument(tab),
       label: tab.title || 'Untitled',
       hoverTitle: getBuiltInGuideLabel(tab) || (tab.kind === 'linked-recovery' ? getDocumentTabHoverTitle(tab) : isLinkedDocument(tab) ? tab.sourcePath : tab.title || 'Untitled'),
       ariaLabel: (tab.id === activeTabId ? 'Active document, ' : 'Document, ') + (tab.title || 'Untitled') + (isLinkedDocument(tab) ? ', linked file' : '') + (tab.favorite ? ', favorite' : ''),
@@ -7492,6 +7638,31 @@ document.addEventListener("DOMContentLoaded", async function () {
         openSidebarDocument(tab.id);
       }
     });
+    if (isCloudDocument(tab)) {
+      row.classList.add('is-cloud-document'); row.dataset.cloudDocument = tab.id;
+      const cloudMenu = row.querySelector('.document-menu-btn');
+      if (cloudMenu && cloudMenu._documentMenu) cloudMenu._documentMenu.dataset.cloudDocumentMenu = 'true';
+      if (tab.remoteSource) {
+        row.title = window.MarkdownCloudProviders.describe(tab.remoteSource);
+      }
+      const source = tab.remoteSource;
+      const state = !source ? 'recovery' : window.MarkdownCloudUI?.isUploading(tab.id) ? 'saving' : source.status === 'conflict' ? 'conflict' : source.status === 'uncertain' ? 'uncertain' : source.availability === 'missing' ? 'missing' : source.availability === 'unavailable' || !window.MarkdownCloudUI?.canAccess(source) ? 'offline' : source.status === 'draft' ? 'draft' : 'saved';
+      const states = {
+        recovery:['Recovery','history','Local recovery copy. No cloud file is connected.'],
+        saving:['Saving','refresh-cw','Uploading this draft and verifying the result.'],
+        conflict:['Conflict','git-branch','The server version changed. Your draft is safe locally; check the server version.'],
+        uncertain:['Check save','circle-alert','The upload result is unconfirmed. Check the server version before retrying.'],
+        missing:['Missing','file-text','The cloud file is missing. Your draft is safe locally.'],
+        offline:['Offline','cloud-upload','Cloud access is unavailable. Your draft is safe locally; reconnect to upload.'],
+        draft:['Draft','circle-dot','Saved locally. These edits have not been uploaded to the cloud.'],
+        saved:['Saved','check','Matches the last verified cloud version. Later server changes are checked when you save or check the server.']
+      };
+      const [label, glyph, explanation] = states[state];
+      const indicator = document.createElement('span'); indicator.className = 'cloud-file-badge'; indicator.dataset.state = state;
+      indicator.title = explanation; indicator.tabIndex = 0; indicator.setAttribute('aria-label',label + '. ' + explanation);
+      const mark = document.createElement('i'); mark.className = 'lucide lucide-' + glyph; mark.setAttribute('aria-hidden','true');
+      indicator.append(mark, document.createTextNode(label)); row.insertBefore(indicator, cloudMenu);
+    }
     if (isLinkedDocument(tab)) {
       row.classList.add('is-linked-document');
       row.title = tab.sourcePath;
@@ -7564,7 +7735,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function renderFlatDocumentView(tree, filter) {
     let documents = tabs.filter(function(tab) {
-      if (isTemporaryDocument(tab)) return false;
+      if (isTemporaryDocument(tab) || isCloudDocument(tab)) return false;
       if (filter === 'favorites' && !tab.favorite) return false;
       return documentMatchesSidebarSearch(tab);
     });
@@ -7633,6 +7804,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       { id: 'reveal', icon: 'lucide-folder-input', label: 'Open folder', run: function() { void Neutralino.os.open(location.path); } },
       { separator: true },
       { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedFolderToVault(location.id); } },
+      ...(window.MarkdownCloudUI?.available() ? [copyLocalAction({type:'linked-folder',id:location.id,path:''})] : []),
       { id: 'unlink', icon: 'lucide-x', label: 'Remove linked folder', danger: true, run: function() { void removeLinkedLocation(location.id); } }
     ]);
   }
@@ -7640,7 +7812,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   function getLinkedVirtualFolderMenuActions(location, path) {
     return getLinkedWorkspaceMenuActions({ locationId: location.id, path: path }).concat([
       { separator: true },
-      { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedFolderToVault(location.id, path); } }
+      { id: 'convert-vault', icon: 'lucide-copy-plus', label: 'Convert to Workspace copy', run: function() { void convertLinkedFolderToVault(location.id, path); } },
+      ...(window.MarkdownCloudUI?.available() ? [copyLocalAction({type:'linked-folder',id:location.id,path})] : [])
     ]);
   }
 
@@ -7838,7 +8011,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       if (isSecretWorkspace) renderedDocuments += renderLinkedLocationsTree(tree);
       const secretLocked = isSecretWorkspace && !isSecretWorkspaceUnlocked();
       const workspaceDocuments = tabs.filter(function(tab) {
-        return !isTemporaryDocument(tab) && !isLinkedWorkspaceDocument(tab) && tab.workspaceId === workspace.id;
+        return !isTemporaryDocument(tab) && !isLinkedWorkspaceDocument(tab) && !isCloudDocument(tab) && tab.workspaceId === workspace.id;
       });
       const folders = documentOrganization.folders.filter(function(folder) { return folder.workspaceId === workspace.id; });
       const matchingDocuments = workspaceDocuments.filter(documentMatchesSidebarSearch);
@@ -7993,7 +8166,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     let renderedCount = filter === 'all' ? renderWorkspaceTree(tree) : renderFlatDocumentView(tree, filter);
     documentSidebarRenderBudget = null;
     let visibleDocumentCount = tabs.filter(function(tab) {
-      if (isReleaseNotesTab(tab)) return false;
+      if (isReleaseNotesTab(tab) || isCloudDocument(tab)) return false;
       if (filter !== 'all' && isTemporaryDocument(tab)) return false;
       if (filter === 'favorites' && !tab.favorite) return false;
       return documentMatchesSidebarSearch(tab);
@@ -8075,6 +8248,14 @@ document.addEventListener("DOMContentLoaded", async function () {
     const firstRow = tree.querySelector('.document-tree-row');
     if (firstRow && !tree.querySelector('.document-tree-row[tabindex="0"]')) firstRow.setAttribute('tabindex', '0');
     renderExplorerRename();
+    if (!window.MarkdownCloudUI?.mount()) {
+      const cloud = tabs.filter(isCloudDocument);
+      if (cloud.length) {
+        const group = document.createElement('div'); group.className = 'cloud-offline-section';
+        const label = document.createElement('p'); label.className = 'document-tree-section-label'; label.textContent = 'Cloud Workspace · local recovery'; group.append(label);
+        cloud.forEach(tab => appendDocumentTreeItem(group,tab,0)); tree.append(group);
+      }
+    }
   }
 
   function isDocumentSidebarMobile() {
@@ -11610,6 +11791,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function writeDirtyDocumentJournal(tab, content) {
+    if (tab && tab.remoteSource && tab.remoteSource.status === 'saved') tab.remoteSource.status = 'draft';
     if (!tab || isTemporaryDocument(tab) || isPrivateStorageMode()) return true;
     if (tab.workspaceId === SECRET_WORKSPACE_ID) {
       writeSecretDirtyDocumentJournal(tab, content);
@@ -11625,6 +11807,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         savedAt: Date.now(),
         metadata: {
           title: tab.title || 'Untitled',
+          cloudRecovery: Boolean(tab.remoteSource || tab.kind === 'cloud-recovery'),
           reviewThreads: tab.reviewThreads || [],
           workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
           folderId: tab.folderId || null,
@@ -11656,6 +11839,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           savedAt: Date.now(),
           metadata: {
             title: tab.title || 'Untitled',
+            cloudRecovery: Boolean(tab.remoteSource || tab.kind === 'cloud-recovery'),
             reviewThreads: tab.reviewThreads || [],
             workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
             folderId: tab.folderId || null,
@@ -11998,6 +12182,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         (Number(existing._storageRevision) || 0) === (Number(journal.expectedRevision) || 0);
       if (canRestoreOriginal) {
         existing.content = journal.content;
+        if (existing.remoteSource && existing.remoteSource.status === 'saved') existing.remoteSource.status = 'draft';
         existing.contentLoaded = true;
         existing.lastEditedAt = Number(journal.savedAt) || Date.now();
         if (journal.metadata && Array.isArray(journal.metadata.reviewThreads)) existing.reviewThreads = normalizeReviewThreads(journal.metadata.reviewThreads);
@@ -12014,6 +12199,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         folderId: metadata.folderId || null
       });
       recovered.favorite = metadata.favorite === true;
+      if (metadata.cloudRecovery || isCloudDocument(existing)) recovered.kind = 'cloud-recovery';
       recovered.reviewThreads = normalizeReviewThreads(metadata.reviewThreads);
       recovered.createdAt = Number(metadata.createdAt) || recovered.createdAt;
       recovered.lastOpenedAt = Number(metadata.lastOpenedAt) || recovered.lastOpenedAt;
@@ -12098,8 +12284,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     const linkedSourcePath = isLinkedDocument(activeDocument) ? activeDocument.sourcePath : '';
     const linkedConflict = Boolean(linkedSourcePath && activeDocument.sourceConflict);
+    const remoteSource = activeDocument && activeDocument.remoteSource;
     const presentation = {
-      saving: { icon: 'lucide lucide-refresh-cw', text: 'Saving...' },
+      saving: { icon: 'lucide lucide-refresh-cw', text: remoteSource ? 'Saving draft locally…' : 'Saving...' },
       saved: { icon: linkedConflict ? 'lucide lucide-triangle-alert' : 'lucide lucide-check', text: linkedConflict ? 'Draft saved · Original changed' : linkedSourcePath ? 'Draft saved · Ctrl+S updates original' : 'All changes saved' },
       private: { icon: 'lucide lucide-hat-glasses', text: 'Private mode is on' },
       error: { icon: 'lucide lucide-circle-alert', text: 'Changes not saved' }
@@ -12119,6 +12306,21 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     saveStatusIcon.className = presentation.icon;
     saveStatusText.textContent = presentation.text;
+    if (nextState === 'saved' && remoteSource) {
+      const remoteState = remoteSource.status;
+      saveStatusText.textContent = !window.MarkdownCloudUI?.canAccess(remoteSource) ? 'Draft saved · Cloud disconnected' : remoteState === 'saved' ? 'Saved to cloud' :
+        remoteState === 'conflict' ? 'Draft saved · Cloud file changed' :
+        remoteState === 'uncertain' ? 'Draft saved · Check cloud version' : 'Draft saved · Ctrl+S uploads to cloud';
+      if (remoteSource.availability === 'missing' || remoteSource.availability === 'unavailable') saveStatusText.textContent = 'Draft saved · Cloud source unavailable';
+      const readOnlyReason=window.MarkdownCloudUI?.readOnlyReason(remoteSource);
+      if(readOnlyReason && !['conflict','uncertain'].includes(remoteState) && window.MarkdownCloudUI?.canAccess(remoteSource))saveStatusText.textContent='Draft saved · Cloud file is read-only';
+      saveStatus.title = (readOnlyReason ? readOnlyReason+' ' : '')+'Local recovery copy. Cloud source: ' + window.MarkdownCloudProviders.describe(remoteSource);
+    }
+    if (nextState === 'saved' && activeDocument?.kind === 'cloud-recovery') saveStatusText.textContent = 'Cloud recovery saved locally';
+    if (remoteSource && window.MarkdownCloudUI?.isUploading(activeDocument.id)) {
+      saveStatusIcon.className = 'lucide lucide-refresh-cw'; saveStatusText.textContent = 'Uploading to cloud…';
+    }
+    if (window.MarkdownCloudUI) window.MarkdownCloudUI.refresh();
   }
 
   async function loadTabsFromStorage() {
@@ -14313,6 +14515,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function createTabActionMenu(tab, options) {
+    if (isCloudDocument(tab)) {
+      const button = createDocumentMenuButton(tab.title || 'Cloud document', getDocumentMenuActions(tab).concat([
+        { separator:true }, { id:'close', icon:'lucide-x', label:'Close', run:function() { closeTab(tab.id); } }
+      ]));
+      button.classList.add('tab-menu-btn');
+      return { button:button, dropdown:button._documentMenu };
+    }
     const isMobileMenu = options && options.isMobileMenu;
     const menuIdPrefix = options && options.menuIdPrefix ? options.menuIdPrefix : 'tab-menu';
     const menuId = menuIdPrefix + '-' + tab.id;
@@ -14931,6 +15140,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const tab = tabs.find(function(t) { return t.id === activeTabId; });
     if (!tab) return;
     const contentChanged = tab.content !== markdownEditor.value;
+    if (contentChanged && tab.remoteSource && tab.remoteSource.status === 'saved') tab.remoteSource.status = 'draft';
     tab.content = markdownEditor.value;
     tab.contentLoaded = true;
     if (markdownEditor.clientHeight) tab.scrollPos = markdownEditor.scrollTop;
@@ -14962,6 +15172,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const tab = tabs.find(function(item) { return item.id === secondarySplitTabId; });
     if (!tab) return;
     const contentChanged = tab.content !== documentSplitEditor.value;
+    if (contentChanged && tab.remoteSource && tab.remoteSource.status === 'saved') tab.remoteSource.status = 'draft';
     tab.content = documentSplitEditor.value;
     tab.contentLoaded = true;
     tab.splitScrollPos = documentSplitEditor.scrollTop;
@@ -15357,6 +15568,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   let documentDeletionChain = Promise.resolve();
   function deleteTab(tabId, options) {
+    const cloudTab = tabs.find(item => item.id === tabId);
+    if (cloudTab && (cloudTab.remoteSource || cloudTab.kind === 'cloud-recovery') && !(options && options.cloudApproved)) return removeCloudDocument(tabId);
     if (workspaceMaintenancePending || suspendWorkspacePersistence) return Promise.resolve(false);
     const operation = documentDeletionChain.catch(function() {}).then(function() {
       return deleteTabSnapshot(tabId, options);
@@ -15510,6 +15723,10 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function renameTab(tabId) {
+    if (tabs.some(tab => tab.id === tabId && isCloudDocument(tab))) {
+      showAppToast('Renaming cloud sources is not available. Create a Vault copy to rename it locally.', { tone:'info', title:'Cloud document' });
+      return;
+    }
     const tab = tabs.find(function(t) { return t.id === tabId; });
     if (!tab) return;
     const linked = isLinkedDocument(tab);
@@ -18332,7 +18549,7 @@ ${selector} .arrowheadPath {
     const modal = document.getElementById('linked-confirm-modal');
     // Never stack decisions or replace another dialog. A rejected concurrent
     // request cancels its operation rather than sharing another request's approval.
-    if (!hasDesktopFileAccess() || !modal || linkedConfirmationPending || activeModal) return Promise.resolve(false);
+    if ((!hasDesktopFileAccess() && !(settings.cloudSource && window.MarkdownCloudUI?.available())) || !modal || linkedConfirmationPending || activeModal) return Promise.resolve(false);
     linkedConfirmationPending = true;
     return new Promise(function(resolve) {
       const title = document.getElementById('linked-confirm-modal-title');
@@ -28549,6 +28766,11 @@ ${selector} .arrowheadPath {
   }
 
   async function nativeSaveMarkdown(options) {
+    const remoteSettings = options || {};
+    const remoteTab = tabs.find(function(t) { return t.id === (remoteSettings.tabId || activeTabId); });
+    if (remoteSettings.useLinkedSource && remoteTab && remoteTab.remoteSource && window.MarkdownCloudUI) {
+      return window.MarkdownCloudUI.save(remoteTab.id);
+    }
     if (!hasDesktopFileAccess() || nativeMarkdownSaveInProgress || linkedFolderConversionInProgress || workspaceMaintenancePending || suspendWorkspacePersistence) return;
     nativeMarkdownSaveInProgress = true;
     // Reject reads begun before this save, including folder snapshots staged
@@ -33349,9 +33571,11 @@ ${selector} .arrowheadPath {
 
     if (isCmdOrCtrl && !e.shiftKey && !e.altKey && !e.isComposing && (key === 's' || e.code === 'KeyS')) {
       e.preventDefault();
-      if (hasDesktopFileAccess()) nativeSaveMarkdown({ useLinkedSource: true,
-        tabId: e.target === documentSplitEditor && secondarySplitTabId ? secondarySplitTabId : activeTabId });
-      else exportMd.click();
+      const saveTabId = e.target === documentSplitEditor && secondarySplitTabId ? secondarySplitTabId : activeTabId;
+      const saveTab = tabs.find(item => item.id === saveTabId);
+      if (hasDesktopFileAccess() || (saveTab?.remoteSource && window.MarkdownCloudUI?.available())) {
+        void nativeSaveMarkdown({ useLinkedSource: true, tabId: saveTabId });
+      } else exportMd.click();
     }
     // Story 1.2: Only allow sync toggle shortcut when in split view
     if (isCmdOrCtrl && e.shiftKey && key === 's') {
@@ -35871,7 +36095,7 @@ ${selector} .arrowheadPath {
   }
 
   // Register Service Worker for offline capabilities
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && !window.MarkdownCloudConnector) {
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('sw.js').catch(function(err) {
         console.log('ServiceWorker registration failed: ', err);
@@ -35896,6 +36120,197 @@ ${selector} .arrowheadPath {
     applyVisualSettings(initialVisualSettings, '*');
   }
 
+  if (window.MarkdownCloudUI) {
+    async function persistCloudTab(tab) {
+      if (workspaceMaintenancePending || suspendWorkspacePersistence) throw new Error('Wait for workspace maintenance to finish.');
+      const saved = await _flushTabsToStorage(tabs, { changedIds: [tab.id], requireExactCommit: true });
+      if (saved !== true) throw new Error('The local recovery draft could not be saved. No upload was started.');
+    }
+    window.MarkdownCloudUI.init({
+      statusChanged: function() { updateSaveStatus('saved'); },
+      openDialog: function(modal, focus, onClose) {
+        const toggle = document.getElementById('workspaceSettingsDropdown');
+        if (toggle && window.bootstrap?.Dropdown) bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+        openAppModal(modal,{focusTarget:focus,onClose:onClose});
+      },
+      closeDialog: function(modal) { closeAppModal(modal); },
+      renderFile: function(container, source) {
+        const tab = tabs.find(item => MarkdownCloudProviders.sameFile(item.remoteSource,source));
+        if (!tab) return false;
+        const rendered = appendDocumentTreeItem(container, tab, 0);
+        const button = container.lastElementChild?.querySelector('.document-menu-btn');
+        if (button?._documentMenu) button._documentMenu.dataset.cloudPanelMenu = 'true';
+        return rendered;
+      },
+      renderRecovery: function(container, visible) {
+        const drafts = tabs.filter(tab => isCloudDocument(tab) && !(visible.some(source=>MarkdownCloudProviders.sameFile(tab.remoteSource,source))));
+        for (const tab of drafts) {
+          appendDocumentTreeItem(container, tab, 0);
+          const button = container.lastElementChild?.querySelector('.document-menu-btn');
+          if (button?._documentMenu) button._documentMenu.dataset.cloudPanelMenu = 'true';
+        }
+        return drafts.length;
+      },
+      revision: function() { return JSON.stringify([activeTabId, tabs.filter(isCloudDocument).map(tab => [tab.id,tab.title,tab.remoteSource,tab.isOpen])]); },
+      flushDrafts: async function() {
+        if (workspaceMaintenancePending || suspendWorkspacePersistence || nativeMarkdownSaveInProgress || isPrivateStorageMode()) throw new Error('Wait for the current operation and turn off Private mode before removing connections.');
+        saveCurrentTabState(); saveSecondarySplitState();
+        if (!(await _flushTabsToStorage(tabs, { requireExactCommit:true }))) throw new Error('Local drafts could not be committed. The connection was kept.');
+      },
+      flushIdentityDrafts: async function() {
+        if(workspaceMaintenancePending || suspendWorkspacePersistence || nativeMarkdownSaveInProgress || isPrivateStorageMode())throw new Error('Finish current operations and turn off Private mode before switching profiles.');
+        saveSecondarySplitState();await flushWorkspaceBeforeExit();
+      },
+      preserveIdentityDrafts: async function() {
+        if(isPrivateStorageMode())throw new Error('Turn off Private mode before leaving this workspace.');
+        saveCurrentTabState(); saveSecondarySplitState();
+        const snapshots=tabs.filter(tab=>tab.contentLoaded!==false && typeof tab.content==='string' && !isTemporaryDocument(tab));
+        for(const tab of snapshots)if(!writeDirtyDocumentJournal(tab,tab.content))throw new Error('Recovery storage is unavailable. Keep this tab open.');
+        await secretDirtyJournalChain;
+        if(isSecretWorkspaceUnlocked())await flushSecretWorkspaceToStorage();
+        if(emergencySavePendingCount>0 || secretJournalPendingCount>0)throw new Error('Recovery could not be confirmed. Keep this tab open.');
+      },
+      confirm: function(text, options) { return showLinkedConfirmation(text, Object.assign({}, options, { cloudSource:true })); },
+      requestName: function(options) {
+        if (activeModal || linkedConfirmationPending) return Promise.resolve(null);
+        return new Promise(resolve => openDocumentNameDialog(Object.assign({},options,{onConfirm:resolve,onCancel:() => resolve(null)})));
+      },
+      findRemote: function(source) {
+        return tabs.find(tab => MarkdownCloudProviders.sameFile(tab.remoteSource,source))?.id;
+      },
+      describeCopySource: function(descriptor) {const value=cloudCopyInventory(descriptor);return {label:value.label,name:value.name,folder:value.folder,count:value.files.length,signature:value.signature};},
+      captureCopySource: captureCloudCopySource,
+      assertCopyAllowed: function() {if(isPrivateStorageMode() || workspaceMaintenancePending || suspendWorkspacePersistence)throw new Error('Copy stopped to preserve local recovery. Check the server before retrying.');},
+      createRemoteDraft: async function(content,name,source,options) {
+        saveCurrentTabState(); saveSecondarySplitState();
+        if (!(await _flushTabsToStorage(tabs,{requireExactCommit:true}))) throw new Error('Existing drafts could not be committed. No cloud operation was started.');
+        if (tabs.some(tab => MarkdownCloudProviders.sameFile(tab.remoteSource,source))) throw new Error('A local draft already exists for this cloud file. Open it before creating another file.');
+        const tab = createTab(content,name,'split',{workspaceId:DEFAULT_WORKSPACE_ID,folderId:null});
+        tab.remoteSource=MarkdownCloudProviders.serializeSource(source);if(options?.activate===false)tab.isOpen=false; tabs.push(tab);
+        writeDirtyDocumentJournal(tab,content);
+        await persistCloudTab(tab);
+        if(options?.activate!==false)await switchTab(tab.id); renderTabBar(tabs,activeTabId); renderDocumentSidebar();
+        return tab.id;
+      },
+      detachRemote: async function(tabId,expectedSource) {
+        saveCurrentTabState(); saveSecondarySplitState();
+        const tab=tabs.find(item=>item.id===tabId);
+        if (!tab || JSON.stringify(MarkdownCloudProviders.normalizeSource(tab.remoteSource))!==JSON.stringify(MarkdownCloudProviders.normalizeSource(expectedSource))) throw new Error('The cloud source changed. Your draft was kept; check the server.');
+        await ensureTabContent(tab);
+        const oldKind=tab.kind;
+        tab.kind='cloud-recovery'; delete tab.remoteSource;
+        writeDirtyDocumentJournal(tab,tab.content);
+        try { await persistCloudTab(tab); }
+        catch(error) { tab.remoteSource=expectedSource; if(oldKind)tab.kind=oldKind;else delete tab.kind; throw error; }
+        renderTabBar(tabs,activeTabId);renderDocumentSidebar();updateSaveStatus('saved');
+      },
+      showMenu: function(anchor, label, actions, event) {
+        if (event) { event.preventDefault(); event.stopPropagation(); }
+        const prepared = actions.map(action => action.separator ? action : Object.assign({}, action, { run: function() { void Promise.resolve().then(action.run).catch(error => showAppToast(error.message, { tone:'error', title:'Cloud Workspace' })); } }));
+        const virtual = createDocumentMenuButton(label, prepared);
+        const rect = anchor.getBoundingClientRect();
+        openDocumentMenu(virtual, virtual._documentMenu, event && (event.clientX || event.clientY) ? { x:event.clientX, y:event.clientY } : { x:rect.left, y:rect.bottom }, anchor);
+        virtual._documentMenu.classList.add('document-menu-context');
+      },
+      replaceRemote: async function(tabId, expected, remote) {
+        saveCurrentTabState(); saveSecondarySplitState();
+        const tab = tabs.find(item => item.id === tabId);
+        if (!tab || tab.content !== expected.content || JSON.stringify(MarkdownCloudProviders.normalizeSource(tab.remoteSource)) !== JSON.stringify(expected.remoteSource)) throw new Error('The draft changed during reload. Your edits were kept.');
+        const states = [activeTabId === tab.id ? markdownEditor : null, secondarySplitTabId === tab.id ? documentSplitEditor : null].filter(Boolean).map(editor => ({ editor, readOnly:editor.readOnly }));
+        states.forEach(state => { state.editor.readOnly = true; });
+        try {
+          tab.content = remote.content; tab.contentLoaded = true;
+          tab.remoteSource = MarkdownCloudProviders.serializeSource(Object.assign({}, tab.remoteSource, { version:remote.version, savedDigest:remote.digest, status:'saved', availability:'available' }));
+          delete tab.remoteSource.attemptDigest;
+          refreshLinkedEditors(tab);
+          await persistCloudTab(tab);
+          initTabHistory(tab.id,tab.content);
+          renderTabBar(tabs, activeTabId); renderDocumentSidebar(); updateSaveStatus('saved');
+        } catch (error) {
+          tab.content = expected.content; tab.remoteSource = expected.remoteSource;
+          refreshLinkedEditors(tab);
+          writeDirtyDocumentJournal(tab,tab.content);
+          throw error;
+        } finally { states.forEach(state => { state.editor.readOnly = state.readOnly; }); }
+      },
+      preserveDraft: async function(tabId, expected) {
+        saveCurrentTabState(); saveSecondarySplitState();
+        const tab = tabs.find(item => item.id === tabId);
+        if (!tab || tab.content !== expected.content || JSON.stringify(MarkdownCloudProviders.normalizeSource(tab.remoteSource)) !== JSON.stringify(expected.remoteSource)) throw new Error('The draft changed before recovery could be saved.');
+        const backup = createTab(tab.content, tab.title + ' (before reload)', tab.viewMode, { workspaceId:DEFAULT_WORKSPACE_ID, folderId:null });
+        backup.kind = 'cloud-recovery'; backup.isOpen = false;
+        tabs.push(backup);
+        await persistCloudTab(backup);
+      },
+      currentRemote: function() {
+        const tab = tabs.find(function(item) { return item.id === activeTabId; });
+        return tab ? { id: tab.id, title: tab.title, remoteSource: tab.remoteSource } : null;
+      },
+      beginSave: function() {
+        if (workspaceMaintenancePending || suspendWorkspacePersistence || nativeMarkdownSaveInProgress) throw new Error('Wait for the current file operation to finish.');
+        if (isPrivateStorageMode()) throw new Error('Turn off Private mode before saving to cloud, so a recovery draft can be stored.');
+        nativeMarkdownSaveInProgress = true;
+      },
+      endSave: function() { nativeMarkdownSaveInProgress = false; },
+      snapshot: async function(tabId) {
+        saveCurrentTabState();
+        saveSecondarySplitState();
+        const tab = tabs.find(function(item) { return item.id === (tabId || activeTabId); });
+        if (!tab) return null;
+        await ensureTabContent(tab);
+        saveCurrentTabState(); saveSecondarySplitState();
+        return { id: tab.id, title: tab.title, content: tab.content, remoteSource: tab.remoteSource && MarkdownCloudProviders.normalizeSource(tab.remoteSource) };
+      },
+      activateRemote: async function(reference) {
+        const tab = tabs.find(function(item) {
+          const source = item.remoteSource;
+          return MarkdownCloudProviders.sameFile(source,reference);
+        });
+        if (!tab) return false;
+        await switchTab(tab.id);
+        return true;
+      },
+      openRemote: async function(content, name, source) {
+        const existing = tabs.find(function(item) {
+          return MarkdownCloudProviders.sameFile(item.remoteSource,source);
+        });
+        if (existing) { await switchTab(existing.id); return; }
+        const tab = createTab(content, name, 'split', { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
+        tab.remoteSource = MarkdownCloudProviders.serializeSource(source);
+        tabs.push(tab);
+        await persistCloudTab(tab);
+        await switchTab(tab.id);
+        renderTabBar(tabs, activeTabId);
+        renderDocumentSidebar();
+      },
+      updateRemote: async function(tabId, source) {
+        saveCurrentTabState();
+        saveSecondarySplitState();
+        const tab = tabs.find(function(item) { return item.id === tabId; });
+        if (!tab || !tab.remoteSource) throw new Error('The document was closed or removed. Check the cloud server before retrying.');
+        if (source.status === 'saved') {
+          const content = tab.content;
+          const currentDigest = await MarkdownCloudModel.digest(content);
+          if (currentDigest !== source.savedDigest || tab.content !== content) source = Object.assign({}, source, { status: 'draft' });
+        }
+        if (!tabs.includes(tab)) throw new Error('The document was removed during Save.');
+        tab.remoteSource = MarkdownCloudProviders.serializeSource(source);
+        await persistCloudTab(tab);
+        return tab.remoteSource.status;
+      },
+      openComparison: async function(content, name) {
+        const tab = createTab(content, name, 'split', { workspaceId: DEFAULT_WORKSPACE_ID, folderId: null });
+        tab.kind = 'cloud-recovery';
+        tabs.push(tab);
+        await persistCloudTab(tab);
+        await switchTab(tab.id);
+        renderTabBar(tabs, activeTabId);
+        renderDocumentSidebar();
+      },
+      notify: function(text, error) { showAppToast(text, { tone: error ? 'error' : 'info', title: 'Cloud Workspace' }); }
+    });
+  }
   document.documentElement.dataset.appReady = 'true';
+  updateSaveStatus('saved');
   window.dispatchEvent(new Event('markdown-viewer:ready'));
 });

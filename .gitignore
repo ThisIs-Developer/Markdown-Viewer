@@ -17,3 +17,22 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Self-hosted connector credentials and local configuration
+self-hosted/private/
+
+# Local Docker transfer bundles
+self-hosted/dist/
+
+# Local deployment secrets
+.env
+**/.env
+
+# Isolated browser verification output
+test-results-copy-*/
+
+# Never commit or bake connector profile/credential state into images
+**/profiles.sqlite*
+**/credential.key
+**/credentials.enc
+**/cloud-state/

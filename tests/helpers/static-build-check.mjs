@@ -69,6 +69,9 @@ const syntaxCheckedFiles = [
   'assets/i18n/audit-ui-locales.mjs'
 ];
 
+const cloudModules=['cloud-model','cloud-providers','cloud-platform','webdav-source','nextcloud-source','nextcloud-provider','webdav-provider','cloud-operations','cloud-copy','cloud-workspace','nextcloud-ui'];
+syntaxCheckedFiles.push(...cloudModules.map(name=>name+'.js'));
+
 for (const relativePath of syntaxCheckedFiles) {
   execFileSync(process.execPath, ['--check', path.join(rootDir, relativePath)], {
     encoding: 'utf8',
@@ -89,6 +92,8 @@ if (fs.existsSync(path.join(rootDir, 'visual-settings-store.js'))) {
 if (fs.existsSync(path.join(rootDir, 'visual-settings-adapters.js'))) {
   syncedDesktopFiles.push(['visual-settings-adapters.js', 'desktop-app/resources/js/visual-settings-adapters.js']);
 }
+
+syncedDesktopFiles.push(...cloudModules.map(name=>[name+'.js','desktop-app/resources/js/'+name+'.js']));
 
 for (const [sourcePath, desktopPath] of syncedDesktopFiles) {
   const source = fs.readFileSync(path.join(rootDir, sourcePath));

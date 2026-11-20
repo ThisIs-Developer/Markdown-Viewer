@@ -260,6 +260,9 @@
                             <button id="private-mode-toggle" class="settings-menu-item app-menu-item settings-menu-item--toggle" type="button" aria-pressed="false" title="Toggle private mode">
                                 <i class="lucide lucide-hat-glasses" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Private mode</span><span id="private-mode-description" class="app-menu-description">Data is stored locally</span></span><span class="settings-switch themed-settings-switch" aria-hidden="true"><span></span></span>
                             </button>
+                            <button id="cloud-connections-button" class="settings-menu-item app-menu-item" type="button" hidden>
+                                <i class="lucide lucide-cloud-upload" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Cloud connections</span><span class="app-menu-description">Connect an account or manage cloud visibility</span></span>
+                            </button>
                             <button id="storage-settings-button" class="settings-menu-item app-menu-item" type="button" title="Storage and backup">
                                 <i class="lucide lucide-box" aria-hidden="true"></i><span class="app-menu-copy"><span class="app-menu-label">Storage and Backup</span><span class="app-menu-description">Back up or restore your workspace</span></span>
                             </button>
@@ -2449,6 +2452,17 @@ Markdown Viewer keeps normal editing, previewing, and autosave on your device. C
     <script src="assets/document-toc.js" defer></script>
     <script src="native-markdown-source.js" defer></script>
     <script src="browser-drop-source.js" defer></script>
+    <script src="cloud-model.js" defer></script>
+    <script src="cloud-providers.js" defer></script>
+    <script src="cloud-platform.js" defer></script>
+    <script src="webdav-source.js" defer></script>
+    <script src="nextcloud-source.js" defer></script>
+    <script src="nextcloud-provider.js" defer></script>
+    <script src="webdav-provider.js" defer></script>
+    <script src="cloud-operations.js" defer></script>
+    <script src="cloud-copy.js" defer></script>
+    <script src="cloud-workspace.js" defer></script>
+    <script src="nextcloud-ui.js" defer></script>
     <script src="workspace-storage.js" defer></script>
     <script src="visual-settings-adapters.js" defer></script>
     <script src="visual-settings-store.js" defer></script>

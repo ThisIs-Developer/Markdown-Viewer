@@ -34,3 +34,6 @@ resources/js/desktop-runtime-features.js
 # Custom runtime source is separate from neu-managed .tmp downloads
 /.native-runtime/
 /.macos-runtime/
+# Native cloud extension build outputs
+/cloud-extension/build/
+/extensions/cloud/*.exe
