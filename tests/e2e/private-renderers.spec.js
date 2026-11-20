@@ -46,6 +46,7 @@ for (const headerless of [false, true]) test('encrypted snapshots render the com
   expect(errors.filter(error => !/favicon/.test(error))).toEqual([]);
   const frame = page.locator('iframe[sandbox="allow-scripts"]');
   await expect(frame).toHaveCount(1);
+  if (!headerless) await expect.poll(() => page.frames().some(child => new URL(child.url()).pathname === '/assets/private-renderers/frame')).toBe(true);
   expect(await frame.evaluate(element => { try { return element.contentWindow.document !== undefined; } catch (_) { return false; } })).toBe(false);
   await page.locator('#exportDropdown').click();
   await page.locator('#export-html').click();

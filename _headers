@@ -19,3 +19,8 @@
 /assets/private-renderers/frame.html
   ! Content-Security-Policy
   Content-Security-Policy: frame-ancestors 'self'
+
+# Cloudflare Pages canonicalizes .html asset URLs before serving them.
+/assets/private-renderers/frame
+  ! Content-Security-Policy
+  Content-Security-Policy: frame-ancestors 'self'

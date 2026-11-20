@@ -30,9 +30,30 @@ const contentTypes = new Map([
   ['.xml', 'application/xml; charset=utf-8']
 ]);
 
+// Apply the real Pages rules in file order, including header detachment.
+const headerRules = [];
+for (const line of (await readFile(path.join(rootDir, '_headers'), 'utf8')).split(/\r?\n/)) {
+  if (!line.trim() || line.trimStart().startsWith('#')) continue;
+  if (!/^\s/.test(line)) headerRules.push({ pattern: line.trim(), entries: [] });
+  else headerRules.at(-1)?.entries.push(line.trim());
+}
+function rendererHeaders(pathname) {
+  const headers = {};
+  for (const rule of headerRules) {
+    if (!(rule.pattern.endsWith('*') ? pathname.startsWith(rule.pattern.slice(0,-1)) : pathname === rule.pattern)) continue;
+    for (const entry of rule.entries) {
+      if (entry.startsWith('! ')) { delete headers[entry.slice(2).toLowerCase()]; continue; }
+      const colon = entry.indexOf(':');
+      const key = entry.slice(0,colon).toLowerCase(), value = entry.slice(colon+1).trim();
+      headers[key] = headers[key] ? headers[key] + ', ' + value : value;
+    }
+  }
+  return headers;
+}
+
 function resolveRequestPath(requestUrl) {
   const pathname = decodeURIComponent(new URL(requestUrl || '/', `http://${host}:${port}`).pathname);
-  const relativePath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  const relativePath = pathname === '/' ? 'index.html' : pathname === '/assets/private-renderers/frame' ? 'assets/private-renderers/frame.html' : pathname.replace(/^\/+/, '');
   const resolved = path.resolve(rootDir, relativePath);
   const relative = path.relative(rootDir, resolved);
   if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
@@ -47,6 +68,12 @@ const server = createServer(async (request, response) => {
   }
 
   const url = new URL(request.url, `http://${host}:${port}`);
+  // Match Pages' HTML canonicalization so renderer CSP is tested on its final URL.
+  if (url.pathname === '/assets/private-renderers/frame.html') {
+    response.writeHead(301, { Location: '/assets/private-renderers/frame' });
+    response.end();
+    return;
+  }
   if (url.pathname === '/tips' || url.pathname === '/index.html') {
     response.writeHead(301, { Location: '/' + url.search });
     response.end();
@@ -86,7 +113,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, {
       'Cache-Control': 'no-store',
       'Content-Length': fileStats.size,
-      ...(url.pathname.startsWith('/assets/private-renderers/') ? { 'Access-Control-Allow-Origin': '*', 'Cross-Origin-Resource-Policy': 'cross-origin', 'Content-Security-Policy': url.pathname.endsWith('/frame.html') ? "frame-ancestors 'self'" : "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src blob:; connect-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'" } : {}),
+      ...(url.pathname.startsWith('/assets/private-renderers/') ? rendererHeaders(url.pathname) : {}),
       'Content-Type': contentTypes.get(path.extname(filePath).toLowerCase()) || 'application/octet-stream'
     });
     if (request.method === 'HEAD') response.end();
