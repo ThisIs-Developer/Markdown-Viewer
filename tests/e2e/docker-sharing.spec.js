@@ -95,16 +95,23 @@ for (const mode of ['view', 'edit']) {
     test.setTimeout(hosted ? 150_000 : 90_000);
     const services = hosted ? null : await installSharingServices(context);
     const violations = [];
-    context.on('page', guest => guest.on('console', message => {
-      if (/Content Security Policy|violates.*directive/i.test(message.text())) violations.push(message.text());
-    }));
-    page.on('console', message => {
-      if (/Content Security Policy|violates.*directive/i.test(message.text())) violations.push(message.text());
-    });
+    const runtimeErrors = [];
+    function captureErrors(participant) {
+      participant.on('pageerror', error => runtimeErrors.push(error.message));
+      participant.on('console', message => {
+        if (/Content Security Policy|violates.*directive/i.test(message.text())) violations.push(message.text());
+        if (/Live Share .*failed:|Failed to (fully close live session|broadcast live session end):/i.test(message.text())) {
+          runtimeErrors.push(message.text());
+        }
+      });
+    }
+    context.on('page', captureErrors);
+    captureErrors(page);
     await openApp(page);
     const initial = '# Docker Live Share\n\nSynthetic host text.';
     await setEditorContent(page, initial);
     let guest;
+    let endRequested = false;
     try {
       await page.locator('#live-share-button').click();
       await page.locator('input[name="live-share-access-mode"][value="' + mode + '"]').check();
@@ -139,9 +146,13 @@ for (const mode of ['view', 'edit']) {
       }
       await page.locator('#live-share-button').click();
       await page.locator('#live-share-end-btn').click();
+      endRequested = true;
       await expect(guest.locator('#live-share-button')).toHaveAttribute('aria-pressed', 'false');
+      // The host allows its end message to drain before disconnecting.
+      await expect(page.locator('#live-share-button')).toHaveAttribute('aria-pressed', 'false');
+      expect(runtimeErrors).toEqual([]);
     } finally {
-      if (await page.locator('#live-share-button').getAttribute('aria-pressed') === 'true') {
+      if (!endRequested && await page.locator('#live-share-button').getAttribute('aria-pressed') === 'true') {
         if (!await page.locator('#live-share-end-btn').isVisible()) await page.locator('#live-share-button').click();
         await page.locator('#live-share-end-btn').click();
         await expect(page.locator('#live-share-button')).toHaveAttribute('aria-pressed', 'false');

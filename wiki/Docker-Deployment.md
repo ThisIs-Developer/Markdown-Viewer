@@ -164,6 +164,8 @@ npx playwright test tests/e2e/docker-sharing.spec.js --project=chromium --worker
 
 This uses synthetic documents, deletes only snapshots created by the test,
 and ends its test rooms. It also checks a Docker host with a public-web guest.
+Live Share checks wait for both participants to disconnect and reject browser
+runtime errors, including updates arriving while the session closes.
 
 Startup recovery is also tested while the sending tab finishes an autosave.
 An identical saved edit is accepted; different edits are retained in a recovery

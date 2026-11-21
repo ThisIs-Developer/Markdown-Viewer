@@ -32365,8 +32365,12 @@ ${selector} .arrowheadPath {
         return;
       }
       try {
-        liveCollaboration.Y.applyUpdate(liveCollaboration.ydoc, decodeLiveBytes(message.update), LIVE_RELAY_ORIGIN);
-        markLiveJoinSynced(liveCollaboration.yText ? liveCollaboration.yText.toString() : '');
+        const receivingSession = liveCollaboration;
+        receivingSession.Y.applyUpdate(receivingSession.ydoc, decodeLiveBytes(message.update), LIVE_RELAY_ORIGIN);
+        // Yjs observers run synchronously; an endedAt update can disconnect
+        // this session before applyUpdate returns.
+        if (liveCollaboration !== receivingSession) return;
+        markLiveJoinSynced(receivingSession.yText ? receivingSession.yText.toString() : '');
       } catch (error) {
         console.warn('Live Share update failed:', error);
       }
