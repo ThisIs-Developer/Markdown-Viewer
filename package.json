@@ -51,6 +51,7 @@
     "mathjax-asana-font": "4.0.0-beta.7",
     "mathjax-stix2-font": "4.0.0-beta.7",
     "pako": "2.1.0",
-    "pdfjs-dist": "5.4.624"
+    "pdfjs-dist": "5.4.624",
+    "yjs": "13.6.10"
   }
 }

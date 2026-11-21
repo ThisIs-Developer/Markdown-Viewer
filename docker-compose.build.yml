@@ -1,0 +1,8 @@
+# Developer override:
+# docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  markdown-viewer:
+    image: markdown-viewer:dev
+    build:
+      context: .
+      dockerfile: Dockerfile

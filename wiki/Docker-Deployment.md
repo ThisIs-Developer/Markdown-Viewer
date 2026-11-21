@@ -1,161 +1,202 @@
-# Docker Deployment for the Markdown Viewer Web App
+# Docker Deployment for Markdown Viewer
 
-Markdown Viewer's Docker image serves the browser-based Markdown editor and viewer as a static web app with Nginx. It is useful for local networks, self-hosting, and reverse-proxy deployments.
+Markdown Viewer is an HTTP-only, static browser application served by NGINX.
+The runtime is custom-compiled upstream NGINX 1.31.9 on
+Alpine Linux 3.24, without OpenSSL. No certificates, backend database,
+Kubernetes or Node.js production server are required for ordinary local use.
 
-## Quick Start
+## Quick start: use the published image
 
-```bash
-docker run -d \
-  --name markdown-viewer \
-  -p 8080:80 \
-  --restart unless-stopped \
-  ghcr.io/thisis-developer/markdown-viewer:latest
-```
+With Docker Desktop / Docker Engine running:
 
-Open `http://localhost:8080`.
+~~~sh
+docker pull ghcr.io/thisis-developer/markdown-viewer:latest
+docker run -d --name markdown-viewer -p 127.0.0.1:8080:80 \
+  --restart unless-stopped ghcr.io/thisis-developer/markdown-viewer:latest
+~~~
 
-## Docker Compose
+Open http://localhost:8080.
 
-The repository includes:
+**Important:** The latest tag points to the published GHCR release, not an
+open PR. Git clone downloads source; it does not pull or build a Docker image.
+A registry pull avoids installing compiler, git and build dependencies locally.
 
-```yaml
-services:
-  markdown-viewer:
-    build: .
-    ports:
-      - "8080:80"
-```
+## Host and processor support
 
-Run:
+Release images contain **linux/amd64 and linux/arm64** variants. CI builds,
+runs the browser tests, and scans each on a matching native Ubuntu runner;
+it then verifies that the combined release preserves both tested images and
+their attestations. Docker selects the matching variant automatically.
 
-```bash
+| Host | Docker requirement | Image variant |
+| --- | --- | --- |
+| Linux, including Ubuntu, on Intel/AMD 64-bit | Supported Docker Engine | linux/amd64 |
+| Linux on ARM64, including a supported 64-bit Raspberry Pi OS | Supported ARM64 Docker Engine | linux/arm64 |
+| Windows on Intel/AMD, including Home | Docker Desktop with Linux containers / WSL 2 | linux/amd64 |
+| Intel Mac | Supported Docker Desktop | linux/amd64 |
+| Apple Silicon Mac | Supported Docker Desktop | linux/arm64 |
+| Windows on ARM | A supported ARM64 Docker Desktop / WSL 2 installation; vendor support may be preview | linux/arm64 |
+
+This is Linux-container support on the two common 64-bit architectures,
+not a native Windows-container image or a promise to run on every device.
+32-bit x86/ARM, unsupported host OS versions and phones are not Docker
+deployment targets. Phones can use the web app served by another device.
+Host Docker/virtualization requirements still apply. Native Linux CI does
+not replace testing every Windows/macOS Docker Desktop version or physical
+device. Desktop-app installer CI is separate from Docker coverage.
+
+Production-style Compose now uses the prebuilt registry image:
+
+~~~sh
 docker compose up -d
-```
-
-Rebuild after local source changes:
-
-```bash
-docker compose up -d --build
-```
-
-Stop:
-
-```bash
+docker compose logs --tail=50
 docker compose down
-```
+~~~
 
-## Building Locally
+The port binds only to localhost by default. To serve LAN/Internet clients,
+adjust port exposure deliberately and use the required network protection.
+HTTPS for remote deployments belongs at an optional external reverse proxy,
+not in this HTTP-only application image. Remote insecure origins do not offer
+all localhost browser secure-context APIs.
 
-```bash
-docker build -t markdown-viewer:local .
-docker run -d --name markdown-viewer-local -p 8080:80 markdown-viewer:local
-```
+## Developers: compile locally
 
-The root `.dockerignore` excludes desktop build output and unrelated local files from the web container.
+~~~sh
+git clone https://github.com/ThisIs-Developer/Markdown-Viewer.git
+cd Markdown-Viewer
+docker build --pull -t markdown-viewer:dev .
+docker run --rm -d --name mdv-dev -p 127.0.0.1:8081:80 markdown-viewer:dev
+~~~
 
-## What the Container Provides
+Or, use the optional Compose build override:
 
-The container serves the static browser shell: `index.html`, `workspace-storage.js`, `script.js`, `styles.css`, `sw.js`, `manifest.json`, `robots.txt`, `sitemap.xml`, and `assets/`. It provides the Editor, main-thread Preview, local storage, local imports, most exports, and CDN-loaded renderer libraries.
+~~~sh
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+~~~
 
-On `localhost`, managed-media and stored Share Snapshot requests use the production `https://markdownviewer.pages.dev` API. Live Share defaults to the Docker origin and fails unless a compatible `/live-room` endpoint is available or `window.MARKDOWN_VIEWER_LIVE_ROOM_URL` is configured in a custom deployment.
+The source build compiles NGINX in a disposable builder stage. It may take
+several minutes on a cold machine; a fully cached local rebuild can take
+seconds. Do not use --no-cache for every development iteration. The builder
+cache can be much larger than the final runtime image. Do not globally prune
+unrelated Docker resources to save space.
 
-The container alone does not provide Cloudflare KV or Durable Objects. Self-hosted stored Share Snapshot and Live Share require separately deployed compatible endpoints.
+The previous Dockerfile used a precompiled nginx:alpine image. This one
+compiles NGINX to omit TLS/OpenSSL, so a first source build is inherently more
+work, particularly on older dual-core processors. Compiler installation is
+a separate cached layer, so changing the NGINX source pin need not download
+the toolchain again. Changing web files reuses the compiled server layer.
+This improves repeat/update builds; it does not make a cold compile as fast
+as pulling a prebuilt server. Build speed is not editor/rendering speed.
 
-## Known Stock Image Limitation
+For normal installation or updates, use docker compose pull followed by
+docker compose up -d. The build override is for source development. While a
+PR is open, the latest registry tag still contains the existing release.
+Avoid forcing --platform linux/amd64 on an ARM device: emulation can slow
+both compilation and execution.
 
-The checked-in root `Dockerfile` does not copy:
+## Runtime behavior, tests and logs
 
-- `preview-worker.js`; or
-- `sample.md`.
+- NGINX listens on internal port 80. The root master launches nginx workers.
+  A fully non-root/container-read-only runtime is future hardening, not a
+  proven property of this PR.
+- Docker uses SIGQUIT for graceful stop and a local HTTP healthcheck. For
+  larger downloads, permit an appropriate stop grace period.
+- NGINX server and shared security headers are maintained as source files:
+  docker/nginx-server.conf and docker/security-headers.conf.
+- JavaScript modules are served with JavaScript MIME, missing code returns
+  404, and the Service Worker can precache all required local files.
+- Stable filenames (HTML, JS, CSS, manifest and worker files) revalidate,
+  rather than using one-year immutable caching. ETags enable 304 responses.
+- When upgrading from an older image that already sent one-year immutable
+  headers, perform a browser hard refresh once if old behavior persists.
+  New server headers cannot retroactively expire an existing browser HTTP
+  cache entry. Do not clear site storage: that can delete local documents.
+- Normal file content is browser-local. CDN renderers are loaded lazily:
+  complete offline rendering requires those dependencies to have been fetched.
+- The final image does not contain the APK command or OpenSSL runtime libs.
+  No in-container package upgrade is supported; updates are new builds.
 
-Both files are listed in `sw.js` as critical precache assets. The consequences are:
+Basic diagnostics:
 
-- Documents eligible for Preview Worker rendering receive a Worker load failure and fall back to main-thread rendering; and
-- Service Worker installation can fail because `cache.addAll()` rejects the complete precache when either asset returns `404`.
+~~~sh
+docker logs --tail=100 markdown-viewer
+docker exec markdown-viewer nginx -t
+docker inspect markdown-viewer --format '{{json .State.Health}}'
+docker scout cves ghcr.io/thisis-developer/markdown-viewer:latest
+~~~
 
-This is an implementation packaging limitation, not a documentation configuration step. The documentation audit records it without changing Docker behavior.
+Scans must target the actual deployed image digest. A Trivy zero-count does
+not prove a custom NGINX binary has no vulnerabilities.
 
-If you maintain a custom image, copy both files to `/usr/share/nginx/html/`, rebuild, and verify that every `CRITICAL_ASSETS` URL in `sw.js` returns `200` with the correct MIME type.
+## Privacy and sharing service boundaries
 
-## Nginx and Headers
+The container serves a static web client, not Cloudflare KV, Durable Objects,
+or a Live Share signaling service. The normal editor stores documents in the
+browser. When opened on localhost or 127.0.0.1, both stored Share Snapshot
+and Live Share use the existing markdownviewer.pages.dev services. Small
+snapshots remain embedded in their links. Generating a stored snapshot sends
+that document to the hosted snapshot API; starting/joining Live Share sends
+collaboration data through the hosted WebSocket relay. Ordinary local editing
+does not start either sharing operation. Internet access is required for the
+hosted services and collaboration library.
 
-The Docker image uses `nginx:alpine`. Production deployments should keep these behaviors:
+Docker's CSP permits the specific hosted HTTPS/WSS endpoints and esm.sh Yjs
+module. The hosted services already permit localhost origins. Public/LAN
+custom hostnames are not automatically accepted by their origin policy:
+self-host those compatible APIs or explicitly configure a trusted backend
+origin policy. For custom Live Share deployments, the existing
+window.MARKDOWN_VIEWER_LIVE_ROOM_URL override takes precedence over defaults;
+both the HTML and NGINX CSP must permit the chosen endpoint. Use HTTPS for
+remote deployments. This change does not open the backend to arbitrary origins
+or deploy a backend inside the container. Standard HTTP access logging applies.
 
-- Serve `index.html`, `workspace-storage.js`, `script.js`, `styles.css`, `preview-worker.js`, `sw.js`, `manifest.json`, and `assets/`.
-- Serve `sample.md` because the Service Worker includes it in the critical precache.
-- Serve JavaScript files with correct MIME types.
-- Allow Service Worker registration from the app origin.
-- Send security headers that match the app's CSP and deployment policy. The current Docker image includes:
+Docker CI covers embedded and stored snapshots in view/edit modes and real
+Yjs host/guest updates, read-only access, and session ending. It intercepts
+backend I/O with the actual snapshot handler and a test relay to avoid writing
+test documents to production on every PR. A separate opt-in acceptance run
+uses the real hosted API, CDN and WebSocket service:
 
-```nginx
-add_header X-Frame-Options "SAMEORIGIN" always;
-add_header X-Content-Type-Options "nosniff" always;
-add_header X-XSS-Protection "1; mode=block" always;
-add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-```
+~~~sh
+MARKDOWN_VIEWER_TEST_CONTAINER=1 MARKDOWN_VIEWER_TEST_PORT=8080 \
+MARKDOWN_VIEWER_TEST_HOSTED_SHARING=1 \
+npx playwright test tests/e2e/docker-sharing.spec.js --project=chromium --workers=1
+~~~
 
-The Dockerfile also sets a Content-Security-Policy with the external origins required by the web app. Review that policy when adding a renderer or changing lazy-loaded resources.
+This uses synthetic documents, deletes only snapshots created by the test,
+and ends its test rooms. It also checks a Docker host with a public-web guest.
 
-Cloudflare Pages deployments use the stricter root `_headers` and `_redirects` files, including CSP, HSTS, clickjacking, permissions, cross-origin, and sensitive-path protections. When self-hosting behind Docker or another reverse proxy, keep the CSP compatible with `index.html`, lazy-loaded renderers, Share Snapshot, and Live Share instead of copying a wildcard policy.
+## Release integrity and maintenance
 
-Use long caching carefully. `sw.js`, `index.html`, `workspace-storage.js`, `script.js`, and `styles.css` are update-sensitive; stale versions can keep old app behavior alive.
+PR verification never writes to GHCR. Separate native AMD64/ARM64 jobs test
+and scan immutable candidates in disposable local registries. OCI archives
+preserve all image and attestation digests between jobs. An assembly job
+combines the exact verified manifests, checks SBOM/provenance for both
+architectures, and rehearses digest-preserving promotion. Main publishing
+copies that complete verified release to GHCR without a rebuild, verifies
+the registry digest and attestations again, then promotes release tags.
+A failed architecture check or digest mismatch prevents latest promotion.
 
-## Reverse Proxy Examples
+The release includes an upstream NGINX source commit identifier, upstream
+license, supplementary SPDX inventory and owner-maintained NGINX advisory
+procedure (see docker/SECURITY-MAINTENANCE.md). Package scanners that enumerate
+only Alpine packages do not automatically cover custom-compiled NGINX.
 
-Nginx:
+Current CI validates **linux/amd64 and linux/arm64 natively**. Production-load
+behavior must be tested separately before being advertised. There is no
+in-container auto-updater. Record digest-specific releases for rollback rather
+than relying only on the mutable latest tag.
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name markdown.example.com;
+Performance and footprint should distinguish final image size, compressed
+registry transfer, builder cache, runtime memory at peak load and cold/warm
+build times. Optional compression tuning is deferred until measured.
 
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
+## Operations
 
-Caddy:
+The Compose service uses Docker local log rotation. Outside Compose, the
+configured host logging driver applies. Resource ceilings should follow real
+measurements, not arbitrary values that might break large files. Previous
+NGINX_HOST and NGINX_PORT Compose variables were removed: they did not affect
+the custom hardcoded NGINX config.
 
-```caddyfile
-markdown.example.com {
-    reverse_proxy localhost:8080
-}
-```
-
-Traefik labels:
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.mdviewer.rule=Host(`markdown.example.com`)"
-  - "traefik.http.routers.mdviewer.entrypoints=websecure"
-  - "traefik.http.routers.mdviewer.tls.certresolver=letsencrypt"
-  - "traefik.http.services.mdviewer.loadbalancer.server.port=80"
-```
-
-## Custom Sub-Paths
-
-Serving from a sub-path such as `/editor/` requires testing:
-
-- Worker URL resolution for `preview-worker.js`.
-- Service Worker scope.
-- Manifest path.
-- Asset paths in `index.html`.
-- Dynamic library loading in `script.js`.
-- Share and Live Share public base URL behavior.
-
-Root hosting is the simplest and best-tested deployment mode.
-
-## Privacy Notes for Self-Hosting
-
-- Normal documents stay in the user's browser storage.
-- Your server will serve static assets and may log normal HTTP requests.
-- URL-hash Share Snapshot content is not sent to the server as an HTTP fragment, but users can paste links into other systems.
-- Stored Share Snapshot and Live Share need Cloudflare or compatible services and have their own data flows.
-- The stock localhost client sends consented managed-media and stored Share Snapshot requests to the production Markdown Viewer API.
-
-For the complete boundary, see [Privacy and Security](Privacy-and-Security.md). For diagnostics, see [Troubleshooting](Troubleshooting.md#docker-preview-or-pwa-offline-support-is-incomplete).
+More context: Privacy-and-Security.md; Troubleshooting.md; and
+docker/SECURITY-MAINTENANCE.md.

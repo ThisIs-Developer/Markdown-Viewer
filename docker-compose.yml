@@ -1,14 +1,14 @@
-# PERF-035: Removed deprecated 'version' key (Docker Compose v2+ ignores it)
-
+# Pull the prebuilt release by default; no local compiler toolchain needed.
 services:
   markdown-viewer:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:80"
+    image: ghcr.io/thisis-developer/markdown-viewer:latest
     container_name: markdown-viewer
+    ports:
+      - "127.0.0.1:8080:80"
     restart: unless-stopped
-    environment:
-      - NGINX_HOST=localhost
-      - NGINX_PORT=80
+    stop_grace_period: 20s
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"

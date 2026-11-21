@@ -1,0 +1,81 @@
+name: Verify Docker candidate
+description: Tests and scans the exact candidate on its native CPU architecture
+inputs:
+  image-ref:
+    description: Immutable registry digest for the native platform
+    required: true
+  architecture:
+    description: Native CPU architecture used to distinguish audit artifacts
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: NGINX, package inventory, content, headers and cache checks
+      shell: bash
+      run: bash docker/verify-image.sh '${{ inputs.image-ref }}'
+    - name: Verify graceful NGINX shutdown using an active transfer
+      shell: bash
+      run: bash docker/verify-graceful.sh '${{ inputs.image-ref }}'
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: npm
+    - name: Verify host source independently
+      shell: bash
+      run: |
+        npm ci
+        npm run check:static
+        node --test tests/unit/docker-attestations.test.mjs tests/unit/docker-assembly.test.mjs
+    - name: Install Chromium
+      shell: bash
+      run: npx playwright install --with-deps chromium
+    - name: Run browser against the actual Docker container
+      shell: bash
+      run: bash docker/verify-browser.sh '${{ inputs.image-ref }}'
+    - name: Prepare reports
+      shell: bash
+      if: always()
+      run: mkdir -p docker-artifacts
+    - name: Generate inspectable SPDX SBOM for the exact candidate
+      uses: anchore/sbom-action@v0
+      with:
+        image: '${{ inputs.image-ref }}'
+        format: spdx-json
+        output-file: docker-artifacts/syft-sbom.spdx.json
+        upload-artifact: false
+        upload-release-assets: false
+    - name: Verify custom NGINX version is represented in the generated SBOM
+      shell: bash
+      run: |
+        node docker/verify-attestations.mjs docker-artifacts/syft-sbom.spdx.json
+    - name: Full vulnerability report (all severity levels)
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        image-ref: '${{ inputs.image-ref }}'
+        format: json
+        output: docker-artifacts/trivy-vulnerabilities.json
+        scanners: vuln
+        vuln-type: os,library
+        severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+        exit-code: '0'
+    - name: Block fixable Critical/High vulnerabilities
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        image-ref: '${{ inputs.image-ref }}'
+        format: table
+        scanners: vuln
+        vuln-type: os,library
+        severity: CRITICAL,HIGH
+        ignore-unfixed: true
+        exit-code: '1'
+    - name: Upload scan and browser traces
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-tested-candidate-evidence-${{ inputs.architecture }}
+        path: |
+          docker-artifacts/
+          test-results/
+          playwright-report/
+        if-no-files-found: warn

@@ -1,0 +1,40 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Markdown-Viewer-Custom-NGINX-Component",
+  "documentNamespace": "https://github.com/ThisIs-Developer/Markdown-Viewer/spdx/nginx/1.31.9-c2c44702c2fbc572e4cfb0a52331061d7fcaca16",
+  "creationInfo": {
+    "creators": [
+      "Organization: ThisIs-Developer"
+    ],
+    "created": "2026-11-20T00:00:00Z"
+  },
+  "packages": [
+    {
+      "name": "nginx",
+      "SPDXID": "SPDXRef-Package-nginx",
+      "versionInfo": "1.31.9",
+      "downloadLocation": "https://github.com/nginx/nginx/archive/c2c44702c2fbc572e4cfb0a52331061d7fcaca16.tar.gz",
+      "filesAnalyzed": false,
+      "licenseDeclared": "BSD-2-Clause",
+      "licenseConcluded": "NOASSERTION",
+      "copyrightText": "Copyright (C) 2002-2021 Igor Sysoev; Copyright (C) 2011-2026 Nginx, Inc.",
+      "sourceInfo": "Upstream release-1.31.9 pinned to commit c2c44702c2fbc572e4cfb0a52331061d7fcaca16; HTTP-only custom build",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/nginx@1.31.9"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Package-nginx",
+      "relationshipType": "DESCRIBES"
+    }
+  ]
+}
