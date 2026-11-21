@@ -1,4 +1,6 @@
-const CACHE_NAME = 'markdown-viewer-cache-v3.10.6';
+const APP_VERSION = '3.10.6';
+const CACHE_NAME = 'markdown-viewer-cache-v' + APP_VERSION;
+const RELEASE_NOTES_PATH = new URL('./RELEASE_NOTES', self.location.href).pathname;
 
 // PERF-011: Split precache into critical (local files) and lazy (CDN libraries)
 // Critical assets are precached during SW install for instant offline startup
@@ -19,6 +21,7 @@ const CRITICAL_ASSETS = [
   './assets/lucide-icons.css',
   './assets/document-toc.js',
   './RELEASE_NOTES',
+  './RELEASE_NOTES?v=' + APP_VERSION,
   './sample.md',
   './assets/icon.jpg',
   './manifest.json'
@@ -100,15 +103,18 @@ self.addEventListener('fetch', event => {
       return;
     }
     const localPath = url.pathname.endsWith('/') ? '/' : url.pathname;
+    const isReleaseNotes = url.pathname === RELEASE_NOTES_PATH;
     const shouldUseNetworkFirst =
       event.request.mode === 'navigate' ||
+      isReleaseNotes ||
       NETWORK_FIRST_LOCAL_PATHS.has(localPath) ||
       localPath.startsWith('/assets/i18n/');
 
     if (shouldUseNetworkFirst) {
       event.respondWith(
         caches.open(CACHE_NAME).then(cache => {
-          return fetch(event.request).then(networkResponse => {
+          return fetch(event.request, isReleaseNotes ? { cache: 'no-cache' } : undefined).then(networkResponse => {
+            if (isReleaseNotes && !networkResponse.ok) throw new Error('Release notes unavailable');
             if (networkResponse && networkResponse.status === 200) {
               cache.put(event.request, networkResponse.clone());
             }

@@ -115,6 +115,7 @@ Scale the same format to the release size:
 
 Authoring rules:
 
+- Keep the version heading in the form `# Welcome to Markdown Viewer X.Y.Z`, matching `APP_VERSION`. The application checks this heading before displaying release details so a stale PWA response cannot appear under a newer version title.
 - Use the Markdown syntax supported by the editor: headings, paragraphs, emphasis, inline or fenced code, links, images, blockquotes, GitHub-style alerts, ordered or unordered lists, task lists, tables, definition lists, footnotes, and horizontal rules. Use a construct only when it helps explain the release.
 - Do not embed HTML elements, inline styles, `<style>` blocks, or scripts in `RELEASE_NOTES`. Presentation belongs to the scoped release-note renderer and stylesheet.
 - Describe user impact instead of copying commit subjects.

@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   function markReleaseNotesSeen(tab) {
-    if (!isReleaseNotesTab(tab)) return;
+    if (!isReleaseNotesTab(tab) || tab.releaseNotesUnavailable) return;
     const version = tab.releaseVersion || APP_VERSION;
     saveStorageItem(RELEASE_NOTES_SEEN_VERSION_KEY, version);
     if (readReleaseNotesStorage(RELEASE_NOTES_PENDING_VERSION_KEY) === version) {
@@ -772,12 +772,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   function loadCurrentReleaseNotes() {
     if (!releaseNotesContentPromise) {
-      releaseNotesContentPromise = fetch('RELEASE_NOTES').then(function(response) {
+      // A versioned URL also bypasses an older worker's stale-while-revalidate cache.
+      releaseNotesContentPromise = fetch('RELEASE_NOTES?v=' + encodeURIComponent(APP_VERSION), { cache: 'no-cache' }).then(function(response) {
         if (!response.ok) throw new Error('Release notes returned ' + response.status);
         return response.text();
+      }).then(function(content) {
+        const heading = content.match(/^# (?:Welcome to )?Markdown Viewer ([^\s]+)\s*$/m);
+        if (!heading || heading[1] !== APP_VERSION) throw new Error('Release notes do not match ' + APP_VERSION);
+        return content;
       }).catch(function(error) {
         console.warn('Failed to load release notes:', error);
-        return '# Markdown Viewer ' + APP_VERSION + '\n\nThe release notes could not be loaded. Visit the [project releases](https://github.com/ThisIs-Developer/Markdown-Viewer/releases) for the latest changes.';
+        releaseNotesContentPromise = null;
+        return null;
       });
     }
     return releaseNotesContentPromise;
@@ -789,7 +795,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const existing = tabs.find(function(tab) {
       return isReleaseNotesTab(tab) && tab.releaseVersion === APP_VERSION;
     });
-    if (existing) {
+    if (existing && !existing.releaseNotesUnavailable) {
       if (shouldActivate) {
         await switchTab(existing.id);
         updateLiveEditorAccess();
@@ -799,14 +805,25 @@ document.addEventListener("DOMContentLoaded", async function () {
       return existing;
     }
 
-    const content = await loadCurrentReleaseNotes();
-    const tab = createTab(content, 'Release Notes: ' + APP_VERSION, 'preview');
+    const releaseContent = await loadCurrentReleaseNotes();
+    const content = releaseContent || '# Markdown Viewer ' + APP_VERSION + '\n\nThe release notes could not be loaded. Reopen Release Notes to retry, or visit the [project release](https://github.com/ThisIs-Developer/Markdown-Viewer/releases/tag/v' + APP_VERSION + ') for the changes.';
+    // The tab can be closed or opened by another request while the fetch is pending.
+    const tab = tabs.find(function(item) {
+      return isReleaseNotesTab(item) && item.releaseVersion === APP_VERSION;
+    }) || createTab(content, 'Release Notes: ' + APP_VERSION, 'preview');
+    tab.content = content;
     tab.kind = RELEASE_NOTES_TAB_KIND;
     tab.temporary = true;
     tab.releaseVersion = APP_VERSION;
-    tabs.push(tab);
+    tab.releaseNotesUnavailable = !releaseContent;
+    if (!tabs.includes(tab)) tabs.push(tab);
     if (shouldActivate) {
-      await switchTab(tab.id);
+      if (activeTabId === tab.id) {
+        markdownEditor.value = content;
+        renderMarkdown();
+      } else {
+        await switchTab(tab.id);
+      }
       updateLiveEditorAccess();
     } else {
       renderTabBar(tabs, activeTabId);
@@ -5489,10 +5506,26 @@ document.addEventListener("DOMContentLoaded", async function () {
       ? requestedWorkspaceId
       : DEFAULT_WORKSPACE_ID;
     const folder = getFolderById(documentOrganization.ui.lastFolderId);
+    const folderIsOpen = folder && folder.workspaceId === workspaceId &&
+      getWorkspaceById(workspaceId).expanded !== false &&
+      getFolderAncestors(folder.id).every(function(ancestor) { return ancestor.expanded !== false; });
     return {
       workspaceId: workspaceId,
-      folderId: folder && folder.workspaceId === workspaceId ? folder.id : null
+      folderId: folderIsOpen ? folder.id : null
     };
+  }
+
+  function revealCreatedDocumentLocation(workspaceId, folderId) {
+    const workspace = getWorkspaceById(workspaceId);
+    if (workspace) workspace.expanded = true;
+    getFolderAncestors(folderId).forEach(function(folder) { folder.expanded = true; });
+    documentOrganization.ui.lastWorkspaceId = workspaceId;
+    documentOrganization.ui.lastFolderId = folderId || null;
+    documentOrganization.ui.filter = 'all';
+    documentSidebarSearch = '';
+    const search = document.getElementById('document-sidebar-search');
+    if (search) search.value = '';
+    saveDocumentOrganization();
   }
 
   function getDocumentActivityTime(tab) {
@@ -5632,11 +5665,12 @@ document.addEventListener("DOMContentLoaded", async function () {
           createdAt: Date.now()
         };
         documentOrganization.folders.push(folder);
-        workspace.expanded = true;
-        documentOrganization.ui.lastWorkspaceId = workspaceId;
-        documentOrganization.ui.lastFolderId = folder.id;
-        saveDocumentOrganization();
+        revealCreatedDocumentLocation(workspaceId, folder.id);
+        setSingleDocumentTreeSelection('folder', folder.id);
+        openDocumentSidebar();
         renderDocumentSidebar();
+        const row = document.querySelector('.document-tree-row[data-tree-id="' + folder.id + '"]');
+        if (row) row.focus();
         announceToScreenReader('Folder created: ' + value);
       }
     });
@@ -7880,6 +7914,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             return;
           }
           workspace.expanded = !expanded;
+          if (workspace.expanded) documentOrganization.ui.lastWorkspaceId = workspace.id;
+          if (documentOrganization.ui.lastWorkspaceId === workspace.id) documentOrganization.ui.lastFolderId = null;
           saveDocumentOrganization();
           renderDocumentSidebar();
         },
@@ -7937,6 +7973,12 @@ document.addEventListener("DOMContentLoaded", async function () {
           menuActions: getFolderMenuActions(folder),
           onToggle: function() {
             folder.expanded = !folderExpanded;
+            if (folder.expanded) {
+              documentOrganization.ui.lastWorkspaceId = workspace.id;
+              documentOrganization.ui.lastFolderId = folder.id;
+            } else if (getFolderAncestors(documentOrganization.ui.lastFolderId).some(function(ancestor) { return ancestor.id === folder.id; })) {
+              documentOrganization.ui.lastFolderId = null;
+            }
             saveDocumentOrganization();
             renderDocumentSidebar();
           },
@@ -8210,6 +8252,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const expandableItems = getExpandableDocumentTreeItems();
     const shouldExpand = !expandableItems.some(function(item) { return item.expanded !== false; });
     expandableItems.forEach(function(item) { item.expanded = shouldExpand; });
+    if (!shouldExpand) documentOrganization.ui.lastFolderId = null;
     saveDocumentOrganization();
     renderDocumentSidebar();
     announceToScreenReader(shouldExpand ? 'All workspace folders expanded.' : 'All workspace folders collapsed.');
@@ -15348,6 +15391,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     if (options && options.builtInWorkspaceGuide === true) tab.kind = WORKSPACE_GUIDE_KIND;
     normalizeTabDocumentMetadata(tab, { allowSecret: targetLocation.workspaceId === SECRET_WORKSPACE_ID });
     tabs.push(tab);
+    revealCreatedDocumentLocation(tab.workspaceId, tab.folderId);
     selectedDocumentId = tab.id;
     switchTab(tab.id);
     markdownEditor.focus();
