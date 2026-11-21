@@ -165,6 +165,13 @@ npx playwright test tests/e2e/docker-sharing.spec.js --project=chromium --worker
 This uses synthetic documents, deletes only snapshots created by the test,
 and ends its test rooms. It also checks a Docker host with a public-web guest.
 
+Startup recovery is also tested while the sending tab finishes an autosave.
+An identical saved edit is accepted; different edits are retained in a recovery
+copy without overwriting the newer document. Failed recovery writes keep their
+journals and open recovery mode instead of leaving the loading screen stuck.
+CI retains browser traces on the first failure and logs startup errors so a
+regression can be diagnosed without relying on a successful retry.
+
 ## Release integrity and maintenance
 
 PR verification never writes to GHCR. Separate native AMD64/ARM64 jobs test

@@ -135,7 +135,12 @@ async function openApp(page, url = '/', options = {}) {
     await expect(page.locator('#markdown-editor')).toBeAttached();
   }
   await expect(page.locator('#markdown-preview')).toBeVisible();
-  await waitForAppReady(page);
+  try {
+    await waitForAppReady(page);
+  } catch (error) {
+    console.error('Application startup errors:', JSON.stringify(criticalErrors));
+    throw error;
+  }
   return criticalErrors;
 }
 

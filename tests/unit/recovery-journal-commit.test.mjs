@@ -45,7 +45,7 @@ function setup() {
       }
     }
   };
-  const names = ['getDirtyDocumentJournalKey', 'clearDirtyDocumentJournal', '_flushTabsToStorage', 'recoverDirtyDocumentJournals'];
+  const names = ['getDirtyDocumentJournalKey', 'clearDirtyDocumentJournal', '_flushTabsToStorage', 'recoverDirtyDocumentJournals', 'commitRecoveredDocumentJournals'];
   if (source.includes('function captureDirtyDocumentJournalSnapshot(')) names.unshift('captureDirtyDocumentJournalSnapshot');
   vm.createContext(target);
   vm.runInContext(names.map(productionFunction).join('\n'), target);
@@ -53,6 +53,69 @@ function setup() {
   return { target, tab, key: tab._dirtyJournalKeys[0] };
 }
 function journal(content, savedAt = 1) { return { documentId: 'notes', content, savedAt }; }
+
+for (const scenario of ['identical', 'newer-body', 'newer-comments', 'newer-journal', 'copy-fails']) {
+  test(`startup recovery handles a concurrent save: ${scenario}`, async () => {
+    const { target, tab, key } = setup();
+    tab.reviewThreads = [];
+    target.localStorage.setItem(key, JSON.stringify(journal('OLD')));
+    target.journals.set(key, { ...journal('OLD'), journalId: key });
+    const remote = { id: tab.id, title: 'Newer title', _storageRevision: 2,
+      reviewThreads: scenario === 'newer-comments' ? [{ body: 'Remote comment' }] : [] };
+    const different = ['newer-body', 'copy-fails'].includes(scenario);
+    target.workspaceStorage.saveDocuments = async ([document]) => {
+      if (document.id === tab.id) {
+        if (scenario === 'newer-journal') {
+          target.localStorage.setItem(key, JSON.stringify(journal('NEW', 2)));
+          target.journals.set(key, { ...journal('NEW', 2), journalId: key });
+        }
+        throw Object.assign(Error('Concurrent save'), { name: 'WorkspaceConflictError', documentId: tab.id,
+          storedMetadata: remote, storedContent: different ? 'REMOTE' : 'OLD' });
+      }
+      if (scenario === 'copy-fails') throw Error('Disk full');
+      target.saved.push({ ...document });
+    };
+    if (scenario === 'copy-fails') {
+      await assert.rejects(target.commitRecoveredDocumentJournals([tab.id]), /Disk full/);
+      assert.equal(JSON.parse(target.localStorage.getItem(key)).content, 'OLD');
+      assert.equal(target.journals.has(key), true);
+      assert.equal(target.tabs.length, 1);
+      return;
+    }
+    await target.commitRecoveredDocumentJournals([tab.id]);
+    assert.equal(tab.content, different ? 'REMOTE' : 'OLD');
+    assert.equal(tab.title, 'Newer title');
+    assert.equal(tab._storageRevision, 2);
+    const copyNeeded = scenario === 'newer-body' || scenario === 'newer-comments';
+    assert.equal(target.saved.length, copyNeeded ? 1 : 0);
+    if (copyNeeded) {
+      assert.equal(target.saved[0].content, 'OLD');
+      assert.deepEqual(Array.from(target.saved[0].reviewThreads), []);
+      assert.notEqual(target.saved[0].id, tab.id);
+    }
+    if (scenario === 'newer-journal') {
+      assert.equal(JSON.parse(target.localStorage.getItem(key)).content, 'NEW');
+      assert.equal(target.journals.get(key).content, 'NEW');
+    } else {
+      assert.equal(target.localStorage.getItem(key), null);
+      assert.equal(target.journals.has(key), false);
+    }
+  });
+}
+
+test('startup recovery commits every recovered document despite an earlier revision conflict', async () => {
+  const { target, tab } = setup();
+  target.tabs.push({ id: 'second', content: 'SECOND', contentLoaded: true });
+  target.workspaceStorage.saveDocuments = async ([document]) => {
+    if (document.id === tab.id) throw Object.assign(Error('Already saved'), {
+      name: 'WorkspaceConflictError', documentId: tab.id,
+      storedMetadata: { id: tab.id, _storageRevision: 2 }, storedContent: tab.content
+    });
+    target.saved.push(document.id);
+  };
+  await target.commitRecoveredDocumentJournals(['notes', 'second']);
+  assert.deepEqual(target.saved, ['second']);
+});
 
 test('conflict recovery is not an exact commit but ordinary autosave remains recovered', async () => {
   for (const exact of [false, true]) {

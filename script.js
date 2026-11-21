@@ -12027,6 +12027,52 @@ document.addEventListener("DOMContentLoaded", async function () {
     return recoveredIds;
   }
 
+  async function commitRecoveredDocumentJournals(recoveredIds) {
+    if (!recoveredIds.length) return;
+    if (!workspaceStorage) {
+      if (!(await _flushTabsToStorage(tabs, { changedIds: recoveredIds }))) {
+        throw new Error('Recovered edits could not be committed to workspace storage.');
+      }
+      return;
+    }
+    for (const id of recoveredIds) {
+      const tab = tabs.find(function(item) { return item.id === id; });
+      if (!tab) throw new Error('Recovered document is no longer available.');
+      const snapshot = (await captureDirtyDocumentJournalSnapshot([tab], [id])).get(id);
+      try {
+        await workspaceStorage.saveDocuments([tab], documentOrganization, { changedIds: [id] });
+      } catch (error) {
+        if (error.name !== 'WorkspaceConflictError' || error.documentId !== id) throw error;
+        // The original tab can finish autosaving after this tab reads its
+        // journal. Accept an identical committed edit; otherwise save a new
+        // recovery copy without overwriting the newer document or metadata.
+        const sameEdit = tab.content === error.storedContent &&
+          JSON.stringify(normalizeReviewThreads(tab.reviewThreads)) ===
+          JSON.stringify(normalizeReviewThreads(error.storedMetadata && error.storedMetadata.reviewThreads));
+        if (!sameEdit) {
+          const recovered = createTab(tab.content, (tab.title || 'Untitled') + ' (recovered edit)', tab.viewMode || 'split', {
+            workspaceId: tab.workspaceId || DEFAULT_WORKSPACE_ID,
+            folderId: tab.folderId || null
+          });
+          recovered.reviewThreads = normalizeReviewThreads(tab.reviewThreads);
+          recovered.favorite = tab.favorite === true;
+          await workspaceStorage.saveDocuments([recovered], documentOrganization, {
+            changedIds: [recovered.id], forceContent: true
+          });
+          tabs.splice(tabs.indexOf(tab) + 1, 0, recovered);
+        }
+        Object.assign(tab, error.storedMetadata, {
+          content: error.storedContent,
+          contentLoaded: true,
+          _persistedContent: error.storedContent
+        });
+      }
+      // Only consume the exact journal whose body/comments are now durable.
+      // A newer edit can reuse its key while either save is in flight.
+      if (snapshot) await clearDirtyDocumentJournal(tab, snapshot);
+    }
+  }
+
   async function preserveWorkspaceConflict(error) {
     if (!error || error.name !== 'WorkspaceConflictError' || !error.documentId) return false;
     const sourceTab = tabs.find(function(tab) { return tab.id === error.documentId; });
@@ -15874,7 +15920,14 @@ document.addEventListener("DOMContentLoaded", async function () {
       return enterWorkspaceStorageRecoveryMode(error);
     }
     document.documentElement.dataset.workspaceStorageState = 'ready';
-    const recoveredIds = await recoverDirtyDocumentJournals();
+    let recoveredIds;
+    try {
+      recoveredIds = await recoverDirtyDocumentJournals();
+      // Commit recovery before metadata migrations can save the restored tabs.
+      await commitRecoveredDocumentJournals(recoveredIds);
+    } catch (error) {
+      return enterWorkspaceStorageRecoveryMode(error);
+    }
     const hadExistingWorkspace = tabs.length > 0;
     activeTabId = loadActiveTabId();
     await migrateLegacyWorkspaceGuideIdentity();
@@ -15929,10 +15982,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
     await migrateDocumentsToOrganization();
     if (recoveredIds.length) {
-      const recovered = await _flushTabsToStorage(tabs, { changedIds: recoveredIds });
-      if (!recovered) {
-        throw new Error('Recovered edits could not be committed to workspace storage.');
-      }
       showAppToast(recoveredIds.length + ' interrupted edit' + (recoveredIds.length === 1 ? '' : 's') + ' recovered.', {
         tone: 'info',
         title: 'Unsaved work restored'

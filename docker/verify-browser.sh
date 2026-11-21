@@ -12,5 +12,5 @@ for i in $(seq 1 30); do
 done
 test "$ready" -eq 1 || { echo "FAIL: missing browser test Docker server" >&2; exit 1; }
 MARKDOWN_VIEWER_TEST_CONTAINER=1 MARKDOWN_VIEWER_TEST_PORT=18080 \
-  npx playwright test tests/e2e/smoke.spec.js tests/e2e/docker.spec.js tests/e2e/docker-sharing.spec.js \
+  npx playwright test tests/e2e/smoke.spec.js tests/e2e/docker.spec.js tests/e2e/docker-sharing.spec.js tests/e2e/startup-recovery.spec.js \
   --project=chromium --grep-invert='static build smoke check passes'
