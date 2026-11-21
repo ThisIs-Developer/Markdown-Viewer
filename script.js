@@ -31510,15 +31510,7 @@ ${selector} .arrowheadPath {
   }
 
   function buildLiveInviteUrl(roomId, secret, title, accessMode, capabilities) {
-    const isLocal = window.location.origin.includes('localhost') ||
-                    window.location.origin.startsWith('file://') ||
-                    typeof Neutralino !== 'undefined';
-
-    const baseUrl = isLocal
-      ? 'https://markdownviewer.pages.dev/'
-      : window.location.origin + window.location.pathname;
-
-    const base = baseUrl + '#live=' + encodeURIComponent(roomId + '.' + secret);
+    const base = getPublicAppBaseUrl() + '#live=' + encodeURIComponent(roomId + '.' + secret);
     const params = [];
     const normalizedAccess = normalizeLiveAccessMode(accessMode);
     const role = normalizedAccess === LIVE_SHARE_ACCESS_EDIT ? LIVE_SHARE_ACCESS_EDIT : LIVE_SHARE_ACCESS_VIEW;

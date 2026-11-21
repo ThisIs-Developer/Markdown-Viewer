@@ -140,6 +140,11 @@ collaboration data through the hosted WebSocket relay. Ordinary local editing
 does not start either sharing operation. Internet access is required for the
 hosted services and collaboration library.
 
+Live Share invitations created on localhost or 127.0.0.1 open the public app
+at https://markdownviewer.pages.dev/, so recipients do not need access to your
+local Docker port. Keep the host session open while collaborating. Invitations
+from custom deployed hostnames retain that deployment's address and path.
+
 Docker's CSP permits the specific hosted HTTPS/WSS endpoints and esm.sh Yjs
 module. The hosted services already permit localhost origins. Public/LAN
 custom hostnames are not automatically accepted by their origin policy:
@@ -163,7 +168,8 @@ npx playwright test tests/e2e/docker-sharing.spec.js --project=chromium --worker
 ~~~
 
 This uses synthetic documents, deletes only snapshots created by the test,
-and ends its test rooms. It also checks a Docker host with a public-web guest.
+and ends its test rooms. It also checks the generated invitation address and
+a Docker host with public-web guests in both view and edit modes.
 Live Share checks wait for both participants to disconnect and reject browser
 runtime errors, including updates arriving while the session closes.
 

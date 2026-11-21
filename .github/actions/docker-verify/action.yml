@@ -26,7 +26,7 @@ runs:
       run: |
         npm ci
         npm run check:static
-        node --test tests/unit/docker-attestations.test.mjs tests/unit/docker-assembly.test.mjs tests/unit/recovery-journal-commit.test.mjs tests/unit/live-share-shutdown.test.mjs
+        node --test tests/unit/docker-attestations.test.mjs tests/unit/docker-assembly.test.mjs tests/unit/recovery-journal-commit.test.mjs tests/unit/live-share-shutdown.test.mjs tests/unit/live-share-invite.test.mjs
     - name: Install Chromium
       shell: bash
       run: npx playwright install --with-deps chromium

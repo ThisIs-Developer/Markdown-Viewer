@@ -96,10 +96,20 @@ for (const mode of ['view', 'edit']) {
     const services = hosted ? null : await installSharingServices(context);
     const violations = [];
     const runtimeErrors = [];
+    const blockedHostedAnalytics = new Set();
     function captureErrors(participant) {
       participant.on('pageerror', error => runtimeErrors.push(error.message));
       participant.on('console', message => {
-        if (/Content Security Policy|violates.*directive/i.test(message.text())) violations.push(message.text());
+        if (/Content Security Policy|violates.*directive/i.test(message.text())) {
+          // Cloudflare injects optional analytics into the public guest page.
+          // Record its known blocked script; still reject every other violation.
+          if (hosted && new URL(participant.url()).origin === serviceOrigin &&
+              message.text().startsWith("Loading the script 'https://static.cloudflareinsights.com/beacon.min.js' violates ")) {
+            blockedHostedAnalytics.add(message.text());
+          } else {
+            violations.push(message.text());
+          }
+        }
         if (/Live Share .*failed:|Failed to (fully close live session|broadcast live session end):/i.test(message.text())) {
           runtimeErrors.push(message.text());
         }
@@ -120,6 +130,10 @@ for (const mode of ['view', 'edit']) {
       await expect(page.locator('#live-share-status-text')).toContainText(/Connected|Room active|waiting/i);
       await expect(page.locator('#live-share-url-input')).toHaveValue(/#live=/);
       const invite = new URL(await page.locator('#live-share-url-input').inputValue());
+      // Assert the generated address before CI redirects the guest locally.
+      // A working relay alone does not make a loopback invitation shareable.
+      expect(invite.origin).toBe(serviceOrigin);
+      expect(invite.pathname).toBe('/');
       // Remove the initial document seed: receiving host content must use the
       // actual WebSocket/Yjs synchronization, not merely decode the invite.
       const params = new URLSearchParams(invite.hash.slice(1));
@@ -128,7 +142,8 @@ for (const mode of ['view', 'edit']) {
       await page.locator('#live-share-modal-close-icon').click();
       guest = await context.newPage();
       // Hosted acceptance also proves Docker-to-public-web interoperability.
-      await openApp(guest, hosted && mode === 'view' ? invite.href : localLink(invite.href, baseURL));
+      await openApp(guest, hosted ? invite.href : localLink(invite.href, baseURL));
+      if (hosted) expect(new URL(guest.url()).origin).toBe(serviceOrigin);
       await expect(guest.locator('#markdown-editor')).toHaveValue(initial);
       await expect(guest.locator('#markdown-editor')).toHaveJSProperty('readOnly', mode === 'view');
       const updated = initial + '\n\nHost update after the guest joined.';
@@ -151,6 +166,9 @@ for (const mode of ['view', 'edit']) {
       // The host allows its end message to drain before disconnecting.
       await expect(page.locator('#live-share-button')).toHaveAttribute('aria-pressed', 'false');
       expect(runtimeErrors).toEqual([]);
+      for (const warning of blockedHostedAnalytics) {
+        test.info().annotations.push({ type: 'blocked-hosted-analytics', description: warning });
+      }
     } finally {
       if (!endRequested && await page.locator('#live-share-button').getAttribute('aria-pressed') === 'true') {
         if (!await page.locator('#live-share-end-btn').isVisible()) await page.locator('#live-share-button').click();
