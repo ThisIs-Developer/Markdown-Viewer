@@ -15,6 +15,8 @@ const localBrowserAssets = [
   ['https://cdn.jsdelivr.net/npm/github-markdown-css@5.3.0/github-markdown.css', 'node_modules/github-markdown-css/github-markdown.css', 'text/css'],
   ['https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js', 'node_modules/marked/marked.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js', 'node_modules/@highlightjs/cdn-assets/highlight.min.js', 'application/javascript'],
+  ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css', 'node_modules/@highlightjs/cdn-assets/styles/github.min.css', 'text/css'],
+  ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css', 'node_modules/@highlightjs/cdn-assets/styles/github-dark.min.css', 'text/css'],
   ['https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js', 'node_modules/@highlightjs/cdn-assets/languages/powershell.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.17/purify.min.js', 'node_modules/dompurify/dist/purify.min.js', 'application/javascript'],
   ['https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js', 'node_modules/file-saver/dist/FileSaver.min.js', 'application/javascript'],
